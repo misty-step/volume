@@ -16,7 +16,8 @@
     "prepare": "husky",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "sync:prod": "./scripts/pull-prod-data.sh"
   },
   "packageManager": "pnpm@10.17.1",
   "dependencies": {
