@@ -1,4 +1,4 @@
 {
-  "buildCommand": "npx convex deploy --cmd 'pnpm run build'",
+  "buildCommand": "npx convex deploy --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL --cmd 'pnpm run build'",
   "framework": "nextjs"
 }

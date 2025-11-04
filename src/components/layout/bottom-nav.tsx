@@ -3,10 +3,11 @@
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, History, Settings } from "lucide-react";
+import { Home, BarChart3, History, Settings } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Today", icon: Home },
+  { href: "/analytics", label: "Stats", icon: BarChart3 },
   { href: "/history", label: "History", icon: History },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

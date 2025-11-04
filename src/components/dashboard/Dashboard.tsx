@@ -57,7 +57,7 @@ export function Dashboard() {
     if (!allSets) return undefined;
     const { start, end } = getTodayRange();
     return allSets.filter(
-      (set) => set.performedAt >= start && set.performedAt <= end
+      (set: any) => set.performedAt >= start && set.performedAt <= end
     );
   }, [allSets]);
 
@@ -68,8 +68,8 @@ export function Dashboard() {
   );
 
   // Build exercise Map for O(1) lookups (fixes BACKLOG #11)
-  const exerciseMap = useMemo(
-    () => new Map((exercises ?? []).map((ex) => [ex._id, ex])),
+  const exerciseMap: Map<Id<"exercises">, Exercise> = useMemo(
+    () => new Map((exercises ?? []).map((ex: any) => [ex._id, ex])),
     [exercises]
   );
 

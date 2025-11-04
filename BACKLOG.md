@@ -2,11 +2,397 @@
 
 _A comprehensive map of opportunities to improve product, codebase, and development experience._
 
-**Last Groomed:** 2025-10-12
-**Status:** Post-MVP - Clean codebase, IDOR vulnerability FIXED (2025-10-07)
+**Last Groomed:** 2025-11-03
+**Status:** Production Hotfix Complete - Deployment Process Improved
 **Audit Method:** 7-perspective analysis (complexity, architecture, security, performance, maintainability, UX, product-vision)
 
-**Summary**: Analyzed 89 findings across 7 specialized perspectives. Overall grade: **B+ (Very Good for MVP)**. Strong foundations with tactical debt accumulation. Recent PR #8 fixed 3 CRITICAL issues (IDOR, type duplication, O(n²) lookups).
+**Summary**: Analyzed 89 findings across 7 specialized perspectives. Overall grade: **B+ (Very Good for MVP)**. Strong foundations with tactical debt accumulation. Recent PR #8 fixed 3 CRITICAL issues (IDOR, type duplication, O(n²) lookups). **Nov 3, 2025**: Resolved production exercise creation failure, documented deployment process.
+
+---
+
+## 🔴 Production Incident Learnings (Nov 3, 2025)
+
+**Incident**: Exercise creation broken in production due to `setTimeout` constraint violation in Convex mutations.
+
+**Root Cause**: `createExercise` mutation called `classifyExercise()` (OpenAI SDK), which uses `setTimeout` for HTTP timeouts/retries. Convex platform forbids `setTimeout` in mutations/queries.
+
+**Resolution**: Path chosen after investigation → [to be documented after hotfix complete]
+
+**Process Improvements Implemented**: See TODO.md Phase 0.5 (Process Fix)
+
+---
+
+## Post-Merge Technical Improvements
+
+### Implement User-Specific Timezone Support for Streak Calculations
+
+**Context**: Current streak calculator uses UTC day boundaries, causing off-by-one errors for users logging workouts near midnight in non-UTC timezones.
+
+**Implementation** (Option B - Client-side dayKey):
+
+- Add `localDayKey: string` field to sets schema (format: "YYYY-MM-DD")
+- Client calculates local date when logging set: `new Date().toLocaleDateString('en-CA')`
+- Update streak calculator to use `localDayKey` instead of `performedAt`
+- No timezone library needed, accurate per-user timezone
+- **Files**: `convex/schema.ts`, `convex/sets.ts`, `convex/lib/streak_calculator.ts`, `src/components/**/log-set-form.tsx`
+
+**Effort**: 30-45min | **Priority**: MEDIUM | **Value**: Fixes timezone bugs for international users
+
+---
+
+### Extract Duplicate User Creation Logic in Tests
+
+**Files**: `convex/users.ts` + multiple test files
+**Issue**: User creation boilerplate repeated across test files
+**Fix**: Create shared test helper `createTestUser()` in `convex/_test_helpers/`
+
+**Effort**: 30min | **Priority**: LOW
+
+---
+
+### Optimize getRecentPRs for Large Datasets
+
+**File**: `convex/analytics.ts`
+**Issue**: Full table scan on sets table could be slow at scale (10k+ sets)
+**Fix**: Add pagination or date range limiting
+
+**Effort**: 45min | **Priority**: LOW
+
+---
+
+### Standardize daysAgo Test Helper
+
+**Files**: Multiple test files
+**Issue**: Inconsistent date mocking across test suites
+**Fix**: Create shared utility in `convex/_test_helpers/daysAgo.ts`
+
+**Effort**: 20min | **Priority**: LOW
+
+---
+
+### Future Enhancement: AI Classification via Action-Based Architecture
+
+**Context**: Muscle group classification via OpenAI GPT-5-nano is desirable feature, but was implemented incorrectly (called from mutation instead of action).
+
+**Proper Architecture** (for future restoration):
+
+```typescript
+// Action (can use setTimeout, HTTP calls, external APIs)
+export const createExercise = action({
+  args: { name: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    // 1. Validation
+    const normalizedName = validateExerciseName(args.name);
+
+    // 2. AI Classification (uses setTimeout - allowed in actions)
+    let muscleGroups: string[] = ["Other"];
+    try {
+      muscleGroups = await classifyExercise(normalizedName);
+      console.log(
+        `Classified "${normalizedName}" → ${muscleGroups.join(", ")}`
+      );
+    } catch (error) {
+      console.error(`Classification failed:`, error);
+    }
+
+    // 3. Database write (via internal mutation)
+    const exerciseId = await ctx.runMutation(
+      internal.exercises.createExerciseInternal,
+      {
+        userId: identity.subject,
+        name: normalizedName,
+        muscleGroups,
+      }
+    );
+
+    return exerciseId;
+  },
+});
+
+// Internal Mutation (database operations only, no external calls)
+export const createExerciseInternal = internalMutation({
+  args: {
+    userId: v.string(),
+    name: v.string(),
+    muscleGroups: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Check for duplicates...
+    // Handle soft-delete restore...
+    // Insert new exercise...
+    return exerciseId;
+  },
+});
+```
+
+**Frontend Update Required**:
+
+```typescript
+// Change from:
+const createExercise = useMutation(api.exercises.createExercise);
+
+// To:
+const createExercise = useAction(api.exercises.createExercise);
+```
+
+**Effort**: 4-6h (refactor + tests + frontend updates)
+**Value**: Restores AI muscle group classification feature
+**Priority**: HIGH (if Path B rollback was chosen) or COMPLETE (if Path A was chosen)
+
+---
+
+### Process Improvement: Deployment Workflow Documentation
+
+**Gap Identified**: Uncommitted code deployed to production without review.
+
+**Root Cause**: Unclear deployment process, possibly `convex dev` auto-syncing to production.
+
+**Required Documentation** (see TODO.md Phase 0.5):
+
+- Production deployment checklist
+- Convex deployment model (dev vs prod)
+- Git workflow (never deploy uncommitted code)
+- Pre-deployment validation (typecheck, tests, build)
+
+**Effort**: 2h (documentation + team alignment)
+**Value**: **CRITICAL** - Prevents future production incidents
+**Priority**: **IMMEDIATE**
+
+---
+
+### [INFRA] Vercel Analytics and Observability
+
+## Analytics Dashboard Future Enhancements
+
+_Post-V1 improvements for analytics dashboard identified during redesign planning (2025-10-31)_
+
+---
+
+### User-Customizable Widget Layout
+
+**Effort**: 8-12h | **Value**: MEDIUM | **Priority**: LOW
+
+**Current State**: Fixed, opinionated layout (no user customization)
+
+**Enhancement**: Allow users to:
+
+- Drag-and-drop widgets to reorder
+- Show/hide specific widgets
+- Save layout preferences to user profile
+- Reset to default layout
+
+**Implementation**:
+
+- Use `react-grid-layout` or `dnd-kit` for drag-and-drop
+- Store layout preferences in users table
+- Add "Customize Layout" toggle in header
+
+**Trade-offs**:
+
+- ✅ Power users can optimize for their workflow
+- ✅ Reduces cognitive load (hide unused widgets)
+- ❌ Adds complexity to codebase (layout state management)
+- ❌ Most users won't customize (80/20 rule)
+
+**Decision**: Defer until user feedback requests it. Fixed layout is simpler and works for 90% of users.
+
+---
+
+### AI-Powered Focus Suggestions (V2)
+
+**Effort**: 6-8h | **Value**: HIGH | **Priority**: MEDIUM
+
+**Current State**: Rule-based suggestions (exercises not trained, muscle imbalances)
+
+**Enhancement**: Use AI to generate personalized suggestions based on:
+
+- Training history patterns
+- Progressive overload trends
+- Recovery status across muscle groups
+- Personal goals (if we add goal tracking)
+- Injury history (if we add injury tracking)
+
+**Implementation**:
+
+- Add new OpenAI prompt: "Analyze user's training data and suggest 3-5 focus areas"
+- Include all relevant data (recovery status, progression, frequency)
+- Cache suggestions (generate once per day with daily report)
+- Cost: ~$0.005 per suggestion generation (GPT-5 mini)
+
+**Benefits**: More sophisticated, personalized recommendations than rule-based logic
+
+**Decision**: Implement after V1 ships, once we have real usage data to validate rule-based suggestions work
+
+---
+
+### Exercise Classification by User Tagging
+
+**Effort**: 4-6h | **Value**: MEDIUM | **Priority**: LOW
+
+**Current State**: Predefined muscle group mapping (hardcoded in `muscle-group-mapping.ts`)
+
+**Enhancement**: Allow users to tag exercises with muscle groups:
+
+- "Edit Exercise" → Add muscle group tags
+- Custom muscle group names (beyond predefined 11)
+- Override default mapping for edge cases
+
+**Use Cases**:
+
+- Uncommon exercise variations not in predefined map
+- User has unique exercise names
+- Bodybuilders want granular tracking (upper chest, lower chest, etc.)
+
+**Implementation**:
+
+- Add `muscleGroups: v.array(v.string())` to exercises table
+- Update exercise creation/editing UI to include muscle group selector
+- Fallback to predefined mapping if user hasn't tagged
+
+**Trade-offs**:
+
+- ✅ Handles 100% of exercises (not just common ones)
+- ✅ User control over muscle group categorization
+- ❌ Adds friction to exercise creation (more fields to fill)
+- ❌ Most users won't use it (predefined mapping works for 90%+)
+
+**Decision**: Defer to BACKLOG. Evaluate after V1 ships based on user feedback about unmapped exercises.
+
+---
+
+### Progressive Overload Sparklines (Alternative Visualization)
+
+**Effort**: 2-3h | **Value**: LOW | **Priority**: LOW
+
+**Current State**: Mini Recharts line charts (height: 80px, interactive tooltips)
+
+**Enhancement**: Replace with inline sparklines (React Sparklines library):
+
+- Smaller footprint (30-40px height)
+- Non-interactive (pure visual indicator)
+- Faster rendering (simpler SVG)
+- More widgets visible without scrolling
+
+**Trade-offs**:
+
+- ✅ More compact, cleaner visual design
+- ✅ Faster initial render (lighter library)
+- ❌ Loss of interactivity (no hover tooltips)
+- ❌ Harder to see exact values (need separate number display)
+
+**Decision**: Keep Recharts for V1. Tooltips are valuable for power users. Revisit if performance becomes issue.
+
+---
+
+### Report History Browser
+
+**Effort**: 3-4h | **Value**: MEDIUM | **Priority**: MEDIUM
+
+**Current State**: Only latest report visible on analytics page
+
+**Enhancement**: Add "View Past Reports" link that opens modal/page with:
+
+- Paginated list of all historical reports
+- Filter by report type (daily/weekly/monthly)
+- Compare reports side-by-side
+- Export report as PDF/markdown
+
+**Implementation**:
+
+- Already have `getReportHistory` query in `convex/ai/reports.ts`
+- Create new `ReportHistoryModal` component with pagination
+- Add filter UI for report type
+- Use existing pagination logic (25 per page)
+
+**Value**: Allows users to see progress over time, compare weekly summaries
+
+**Decision**: Implement in next iteration (post-V1). Core value is current report, history is nice-to-have.
+
+---
+
+### Quarterly and Annual Reports
+
+**Effort**: 2-3h | **Value**: MEDIUM | **Priority**: LOW
+
+**Current State**: Daily, weekly, monthly reports only
+
+**Enhancement**: Add quarterly (every 3 months) and annual (end of year) reports:
+
+- Quarterly: Macro trends, quarter-over-quarter comparison
+- Annual: Year in review, personal bests, total volume stats
+
+**Implementation**:
+
+- Add `reportType: "quarterly" | "annual"` to schema
+- Add cron jobs for quarterly (1st day of Q1/Q2/Q3/Q4) and annual (Jan 1)
+- Update AI prompt to generate appropriate content for timeframe
+
+**Trade-offs**:
+
+- ✅ Long-term motivation (seeing annual progress)
+- ✅ Shareable content (year-in-review posts to social media)
+- ❌ Low frequency (users may forget they exist)
+- ❌ Minimal incremental value over monthly reports
+
+**Decision**: Defer to BACKLOG. Focus on daily/weekly/monthly for V1. Add if users request it.
+
+---
+
+### Settings Page for Report Preferences
+
+**Effort**: 6-8h | **Value**: HIGH | **Priority**: HIGH (post-V1)
+
+**Current State**: No UI to toggle daily/weekly/monthly reports (schema supports it, no frontend)
+
+**Enhancement**: Add settings page with report preferences:
+
+- Toggle daily reports on/off (with paywall indicator)
+- Toggle weekly reports on/off
+- Toggle monthly reports on/off
+- Choose report delivery time (e.g., 8am instead of midnight)
+- Opt out of AI reports entirely
+
+**Implementation**:
+
+- Create `src/app/settings/page.tsx`
+- Add form with toggle switches
+- Call `updateUserPreferences` mutation (need to create)
+- Show paywall message for premium features (daily reports)
+
+**Value**: Essential for user control, reduces unwanted notifications
+
+**Decision**: MUST implement before daily reports go live. Daily reports are opt-in, so users need UI to opt in.
+
+**Priority**: HIGH (blocking for daily reports launch)
+
+---
+
+### Muscle Group Volume Trends Chart
+
+**Effort**: 4-6h | **Value**: MEDIUM | **Priority**: LOW
+
+**Current State**: Removed "Volume by Exercise" chart (comparing deadlifts to curls doesn't make sense)
+
+**Enhancement**: Replace with "Volume by Muscle Group" chart:
+
+- Bar chart showing volume per muscle group (last 30 days)
+- Stacked bars for compound lifts (e.g., deadlift = Back + Hamstrings + Glutes)
+- Identify imbalances visually (too much push vs pull)
+- Trend over time (weekly muscle group volume)
+
+**Implementation**:
+
+- Query sets, map to muscle groups using existing mapping
+- Aggregate volume per muscle group
+- Use Recharts BarChart with stacked bars
+- Color code by muscle group family (push = red, pull = blue, legs = green)
+
+**Value**: Better than raw exercise comparison, shows training balance
+
+**Decision**: Good candidate for future iteration. Defer until V1 ships and we validate muscle group mapping works.
 
 ---
 
@@ -17,6 +403,14 @@ _Changes that significantly improve user experience, developer velocity, or syst
 **Total Effort**: ~28h for all high-priority items
 
 ---
+
+- support exercise durations
+  - eg planks don't have reps, they have durations; dead hangs don't have reps, they have durations
+- support cardio?
+  - maybe different than exercise durations
+  - running, swimming, etc
+  - some of these have distance in addition to duration, some fit neatly into duration
+  - maybe it's overcomplicated and we are fine without including distance here, just stick with reps vs duration + weight
 
 ### 8. [Testing] Add Unit Tests for Error Handler Production/Dev Branching
 
@@ -1530,5 +1924,5 @@ Verticals → Requires proven product-market fit
 
 _This backlog is a living document. Update priorities based on real-world usage, user feedback, and measured impact._
 
-**Last Groomed**: 2025-10-12 by 7-perspective parallel audit
-**Next Groom**: Quarterly or when priorities shift significantly
+**Last Groomed**: 2025-10-31 - Analytics dashboard redesign planning
+**Next Groom**: After analytics dashboard ships (PR merge)

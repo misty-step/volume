@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useMutation } from "convex/react";
+import { useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -26,7 +26,7 @@ export function FirstRunExperience({
   const [name, setName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const createExercise = useMutation(api.exercises.createExercise);
+  const createExercise = useAction(api.exercises.createExercise);
 
   // Auto-focus input on mount
   useEffect(() => {

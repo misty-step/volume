@@ -21,7 +21,7 @@ describe("Exercises - Soft Delete Tests", () => {
       // Create exercise
       const exerciseId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Bench Press" });
+        .action(api.exercises.createExercise, { name: "Bench Press" });
 
       // Delete exercise (soft delete)
       await t
@@ -44,7 +44,7 @@ describe("Exercises - Soft Delete Tests", () => {
       // Create exercise and log sets
       const exerciseId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Squats" });
+        .action(api.exercises.createExercise, { name: "Squats" });
 
       await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
@@ -75,7 +75,7 @@ describe("Exercises - Soft Delete Tests", () => {
       // Create and delete exercise
       const originalId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Deadlifts" });
+        .action(api.exercises.createExercise, { name: "Deadlifts" });
 
       await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
@@ -84,7 +84,7 @@ describe("Exercises - Soft Delete Tests", () => {
       // Recreate exercise with same name (should restore)
       const restoredId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Deadlifts" });
+        .action(api.exercises.createExercise, { name: "Deadlifts" });
 
       // Verify same ID returned (restored, not new)
       expect(restoredId).toBe(originalId);
@@ -103,7 +103,7 @@ describe("Exercises - Soft Delete Tests", () => {
       // Create exercise and log sets
       const exerciseId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Pull Ups" });
+        .action(api.exercises.createExercise, { name: "Pull Ups" });
 
       await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
@@ -127,7 +127,7 @@ describe("Exercises - Soft Delete Tests", () => {
       // Recreate (restore)
       const restoredId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Pull Ups" });
+        .action(api.exercises.createExercise, { name: "Pull Ups" });
 
       expect(restoredId).toBe(exerciseId);
 
@@ -137,14 +137,14 @@ describe("Exercises - Soft Delete Tests", () => {
         .query(api.sets.listSets, {});
 
       expect(sets.length).toBe(2);
-      expect(sets.every((s) => s.exerciseId === exerciseId)).toBe(true);
+      expect(sets.every((s: any) => s.exerciseId === exerciseId)).toBe(true);
     });
 
     test("createExercise defensive check: prevents restoring when active duplicate exists", async () => {
       // Create and soft-delete exercise
       const deletedId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Rows" });
+        .action(api.exercises.createExercise, { name: "Rows" });
 
       await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
@@ -156,6 +156,7 @@ describe("Exercises - Soft Delete Tests", () => {
         await ctx.db.insert("exercises", {
           userId: user1Subject,
           name: "Rows",
+          muscleGroups: ["Back", "Biceps"], // Required by schema
           createdAt: Date.now(),
         });
       });
@@ -165,7 +166,7 @@ describe("Exercises - Soft Delete Tests", () => {
       await expect(
         t
           .withIdentity({ subject: user1Subject, name: "User 1" })
-          .mutation(api.exercises.createExercise, { name: "Rows" })
+          .action(api.exercises.createExercise, { name: "Rows" })
       ).rejects.toThrow("Exercise with this name already exists");
     });
 
@@ -173,13 +174,13 @@ describe("Exercises - Soft Delete Tests", () => {
       // Create exercise
       await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Overhead Press" });
+        .action(api.exercises.createExercise, { name: "Overhead Press" });
 
       // Attempt to create duplicate (should fail)
       await expect(
         t
           .withIdentity({ subject: user1Subject, name: "User 1" })
-          .mutation(api.exercises.createExercise, { name: "Overhead Press" })
+          .action(api.exercises.createExercise, { name: "Overhead Press" })
       ).rejects.toThrow("Exercise with this name already exists");
     });
   });
@@ -189,11 +190,11 @@ describe("Exercises - Soft Delete Tests", () => {
       // Create two exercises, delete one
       const exercise1 = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Active Exercise" });
+        .action(api.exercises.createExercise, { name: "Active Exercise" });
 
       const exercise2 = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Deleted Exercise" });
+        .action(api.exercises.createExercise, { name: "Deleted Exercise" });
 
       await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
@@ -213,11 +214,11 @@ describe("Exercises - Soft Delete Tests", () => {
       // Create two exercises, delete one
       const exercise1 = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Active" });
+        .action(api.exercises.createExercise, { name: "Active" });
 
       const exercise2 = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Deleted" });
+        .action(api.exercises.createExercise, { name: "Deleted" });
 
       await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
@@ -229,10 +230,12 @@ describe("Exercises - Soft Delete Tests", () => {
         .query(api.exercises.listExercises, { includeDeleted: true });
 
       expect(allExercises.length).toBe(2);
-      expect(allExercises.some((e) => e._id === exercise1)).toBe(true);
-      expect(allExercises.some((e) => e._id === exercise2)).toBe(true);
+      expect(allExercises.some((e: any) => e._id === exercise1)).toBe(true);
+      expect(allExercises.some((e: any) => e._id === exercise2)).toBe(true);
 
-      const deletedExercise = allExercises.find((e) => e._id === exercise2);
+      const deletedExercise = allExercises.find(
+        (e: any) => e._id === exercise2
+      );
       expect(deletedExercise?.deletedAt).toBeDefined();
     });
 
@@ -240,7 +243,7 @@ describe("Exercises - Soft Delete Tests", () => {
       // Create and delete exercise
       const exerciseId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Test" });
+        .action(api.exercises.createExercise, { name: "Test" });
 
       await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
@@ -260,7 +263,7 @@ describe("Exercises - Soft Delete Tests", () => {
       // Create and delete exercise
       const exerciseId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Original Name" });
+        .action(api.exercises.createExercise, { name: "Original Name" });
 
       await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
@@ -281,7 +284,7 @@ describe("Exercises - Soft Delete Tests", () => {
       // Create exercise
       const exerciseId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Original" });
+        .action(api.exercises.createExercise, { name: "Original" });
 
       // Update (should succeed)
       await t
@@ -304,7 +307,7 @@ describe("Exercises - Soft Delete Tests", () => {
       // Create and delete exercise
       const exerciseId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Restore Test" });
+        .action(api.exercises.createExercise, { name: "Restore Test" });
 
       await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
@@ -329,7 +332,7 @@ describe("Exercises - Soft Delete Tests", () => {
       // Create active exercise
       const exerciseId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Active" });
+        .action(api.exercises.createExercise, { name: "Active" });
 
       // Attempt to restore (should fail - not deleted)
       await expect(
@@ -343,7 +346,7 @@ describe("Exercises - Soft Delete Tests", () => {
       // User 1 creates and deletes exercise
       const exerciseId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "User1 Exercise" });
+        .action(api.exercises.createExercise, { name: "User1 Exercise" });
 
       await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
@@ -363,7 +366,7 @@ describe("Exercises - Soft Delete Tests", () => {
       // User 1 creates exercise
       const exerciseId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "User1 Only" });
+        .action(api.exercises.createExercise, { name: "User1 Only" });
 
       // User 2 attempts to delete (should fail)
       await expect(
@@ -377,7 +380,7 @@ describe("Exercises - Soft Delete Tests", () => {
       // User 1 creates and deletes exercise
       const user1Exercise = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Private" });
+        .action(api.exercises.createExercise, { name: "Private" });
 
       await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
@@ -396,7 +399,7 @@ describe("Exercises - Soft Delete Tests", () => {
     test("should handle deleting already deleted exercise (idempotent)", async () => {
       const exerciseId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Idempotent" });
+        .action(api.exercises.createExercise, { name: "Idempotent" });
 
       // Delete twice
       await t
@@ -419,7 +422,7 @@ describe("Exercises - Soft Delete Tests", () => {
     test("should handle restoring and re-deleting exercise", async () => {
       const exerciseId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "Cycle Test" });
+        .action(api.exercises.createExercise, { name: "Cycle Test" });
 
       // Delete
       await t

@@ -34,6 +34,7 @@ pnpm convex dev
 ```
 
 This will:
+
 - Create a new Convex project (first time only)
 - Generate `.env.local` with your `NEXT_PUBLIC_CONVEX_URL`
 - Start the Convex dev server
@@ -76,6 +77,34 @@ If needed, you can run servers individually:
 pnpm dev:next    # Next.js only (port 3000)
 pnpm dev:convex  # Convex only (cloud)
 ```
+
+## Verifying Deployment Configuration
+
+Verify that Vercel environments are configured correctly:
+
+```bash
+# Check production environment variables
+vercel env ls production | grep CONVEX
+
+# Should show ONLY:
+# CONVEX_DEPLOY_KEY    Encrypted    Production
+
+# Should NOT show:
+# CONVEX_DEPLOYMENT
+# NEXT_PUBLIC_CONVEX_URL
+```
+
+Verify production site connects to correct deployment:
+
+```bash
+# Check which Convex deployment the site uses
+curl -sL https://volume.fitness | grep -o 'https://[^"]*convex.cloud'
+
+# Should output:
+# https://whimsical-marten-631.convex.cloud
+```
+
+See `.env.example` for detailed deployment architecture documentation.
 
 ## Tech Stack
 

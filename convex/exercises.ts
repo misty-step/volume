@@ -1,30 +1,92 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { action, internalMutation, mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import {
   requireAuth,
   requireOwnership,
   validateExerciseName,
 } from "./lib/validate";
+import { classifyExercise } from "./ai/openai";
 
-// Create a new exercise
-export const createExercise = mutation({
+/**
+ * Create a new exercise (action-based)
+ *
+ * Orchestrates AI classification and database operations.
+ * Uses action pattern to allow OpenAI SDK calls (which use setTimeout).
+ *
+ * Flow:
+ * 1. Validate exercise name
+ * 2. Classify muscle groups via OpenAI (fallback to ["Other"] on error)
+ * 3. Call internal mutation for database operations
+ */
+export const createExercise = action({
   args: {
     name: v.string(),
   },
-  handler: async (ctx, args) => {
-    const identity = await requireAuth(ctx);
+  handler: async (ctx, args): Promise<any> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
 
     // Validate and normalize exercise name
     const normalizedName = validateExerciseName(args.name);
 
+    // Classify exercise with GPT-5-nano (fallback to ["Other"] on error)
+    let muscleGroups: string[] = ["Other"];
+    try {
+      muscleGroups = await classifyExercise(normalizedName);
+      console.log(
+        `[Exercise] Classified "${normalizedName}" → ${muscleGroups.join(", ")}`
+      );
+    } catch (error) {
+      console.error(
+        `[Exercise] Classification failed for "${normalizedName}":`,
+        error
+      );
+      // Continue with default ["Other"] - exercise creation never fails due to AI
+    }
+
+    // Call internal mutation for database operations
+    const exerciseId: any = await ctx.runMutation(
+      internal.exercises.createExerciseInternal,
+      {
+        userId: identity.subject,
+        name: normalizedName,
+        muscleGroups,
+      }
+    );
+
+    return exerciseId;
+  },
+});
+
+/**
+ * Internal mutation for database operations only
+ *
+ * Called by createExercise action after AI classification.
+ * Handles duplicate checking, soft-delete restore, and DB insert.
+ *
+ * @param userId - Clerk user ID
+ * @param name - Normalized exercise name
+ * @param muscleGroups - AI-classified muscle groups
+ * @returns Exercise ID
+ */
+export const createExerciseInternal = internalMutation({
+  args: {
+    userId: v.string(),
+    name: v.string(),
+    muscleGroups: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
     // Check for duplicate (including soft-deleted) - case-insensitive
     const allUserExercises = await ctx.db
       .query("exercises")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .collect();
 
     const existing = allUserExercises.find(
-      (e) => e.name.toLowerCase() === normalizedName.toLowerCase()
+      (e) => e.name.toLowerCase() === args.name.toLowerCase()
     );
 
     if (existing) {
@@ -35,7 +97,7 @@ export const createExercise = mutation({
         const activeDuplicate = allUserExercises.find(
           (e) =>
             e._id !== existing._id &&
-            e.name.toLowerCase() === normalizedName.toLowerCase() &&
+            e.name.toLowerCase() === args.name.toLowerCase() &&
             e.deletedAt === undefined
         );
 
@@ -43,7 +105,12 @@ export const createExercise = mutation({
           throw new Error("Exercise with this name already exists");
         }
 
-        await ctx.db.patch(existing._id, { deletedAt: undefined });
+        // Restore with updated muscle groups
+        await ctx.db.patch(existing._id, {
+          deletedAt: undefined,
+          muscleGroups: args.muscleGroups,
+        });
+
         return existing._id; // Return restored exercise ID
       }
 
@@ -53,8 +120,9 @@ export const createExercise = mutation({
 
     // No existing record - create new
     const exerciseId = await ctx.db.insert("exercises", {
-      userId: identity.subject,
-      name: normalizedName,
+      userId: args.userId,
+      name: args.name,
+      muscleGroups: args.muscleGroups,
       createdAt: Date.now(),
     });
 
@@ -196,6 +264,37 @@ export const restoreExercise = mutation({
     // Clear deletedAt timestamp
     await ctx.db.patch(args.id, {
       deletedAt: undefined,
+    });
+  },
+});
+
+/**
+ * Update exercise muscle groups
+ *
+ * Allows users to override AI classification if incorrect.
+ * Useful for custom exercises or when AI misclassifies.
+ */
+export const updateMuscleGroups = mutation({
+  args: {
+    id: v.id("exercises"),
+    muscleGroups: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+
+    const exercise = await ctx.db.get(args.id);
+    if (!exercise) {
+      throw new Error("Exercise not found");
+    }
+    requireOwnership(exercise, identity.subject, "exercise");
+
+    // Prevent editing deleted exercises
+    if (exercise.deletedAt !== undefined) {
+      throw new Error("Cannot update a deleted exercise");
+    }
+
+    await ctx.db.patch(args.id, {
+      muscleGroups: args.muscleGroups,
     });
   },
 });

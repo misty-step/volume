@@ -120,7 +120,7 @@ describe("ExerciseManager", () => {
     it("enters edit mode when edit button clicked", () => {
       render(<ExerciseManager exercises={mockExercises} sets={mockSets} />);
 
-      const editButtons = screen.getAllByRole("button", { name: "Edit" });
+      const editButtons = screen.getAllByRole("button", { name: "Edit name" });
       fireEvent.click(editButtons[0]);
 
       // Input should appear with current name
@@ -131,7 +131,7 @@ describe("ExerciseManager", () => {
     it("saves updated exercise name on blur", async () => {
       render(<ExerciseManager exercises={mockExercises} sets={mockSets} />);
 
-      const editButtons = screen.getAllByRole("button", { name: "Edit" });
+      const editButtons = screen.getAllByRole("button", { name: "Edit name" });
       fireEvent.click(editButtons[0]);
 
       const input = screen.getByDisplayValue("Bench Press");
@@ -150,7 +150,7 @@ describe("ExerciseManager", () => {
     it("saves on Enter key press", async () => {
       render(<ExerciseManager exercises={mockExercises} sets={mockSets} />);
 
-      const editButtons = screen.getAllByRole("button", { name: "Edit" });
+      const editButtons = screen.getAllByRole("button", { name: "Edit name" });
       fireEvent.click(editButtons[0]);
 
       const input = screen.getByDisplayValue("Bench Press");
@@ -168,7 +168,7 @@ describe("ExerciseManager", () => {
     it("cancels edit on Escape key press", () => {
       render(<ExerciseManager exercises={mockExercises} sets={mockSets} />);
 
-      const editButtons = screen.getAllByRole("button", { name: "Edit" });
+      const editButtons = screen.getAllByRole("button", { name: "Edit name" });
       fireEvent.click(editButtons[0]);
 
       const input = screen.getByDisplayValue("Bench Press");
@@ -181,7 +181,7 @@ describe("ExerciseManager", () => {
     it("does not save if name is empty", async () => {
       render(<ExerciseManager exercises={mockExercises} sets={mockSets} />);
 
-      const editButtons = screen.getAllByRole("button", { name: "Edit" });
+      const editButtons = screen.getAllByRole("button", { name: "Edit name" });
       fireEvent.click(editButtons[0]);
 
       const input = screen.getByDisplayValue("Bench Press");
@@ -199,7 +199,7 @@ describe("ExerciseManager", () => {
     it("trims whitespace from exercise name", async () => {
       render(<ExerciseManager exercises={mockExercises} sets={mockSets} />);
 
-      const editButtons = screen.getAllByRole("button", { name: "Edit" });
+      const editButtons = screen.getAllByRole("button", { name: "Edit name" });
       fireEvent.click(editButtons[0]);
 
       const input = screen.getByDisplayValue("Bench Press");
@@ -307,7 +307,7 @@ describe("ExerciseManager", () => {
 
       render(<ExerciseManager exercises={mockExercises} sets={mockSets} />);
 
-      const editButtons = screen.getAllByRole("button", { name: "Edit" });
+      const editButtons = screen.getAllByRole("button", { name: "Edit name" });
       fireEvent.click(editButtons[0]);
 
       const input = screen.getByDisplayValue("Bench Press");

@@ -7,6 +7,7 @@ export interface Exercise {
   _creationTime?: number; // Convex system field (present on fetched documents, not locally created objects)
   userId: string;
   name: string;
+  muscleGroups?: string[]; // AI-classified muscle groups (Chest, Back, Shoulders, etc.)
   createdAt: number;
   deletedAt?: number;
 }
