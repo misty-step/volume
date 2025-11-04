@@ -21,6 +21,24 @@ npx convex export \
   --path "$TEMP_FILE" \
   --include-file-storage
 
+# Validate export before proceeding
+if [ ! -f "$TEMP_FILE" ]; then
+  echo "❌ ERROR: Export file not created at $TEMP_FILE"
+  echo "   Export may have failed. Aborting to protect dev data."
+  exit 1
+fi
+
+# Check file size (should be > 1KB for valid export)
+FILE_SIZE=$(stat -f%z "$TEMP_FILE" 2>/dev/null || stat -c%s "$TEMP_FILE" 2>/dev/null)
+if [ "$FILE_SIZE" -lt 1024 ]; then
+  echo "❌ ERROR: Export file is too small ($FILE_SIZE bytes)"
+  echo "   Expected > 1KB. File may be corrupted. Aborting."
+  rm -f "$TEMP_FILE"
+  exit 1
+fi
+
+echo "✓ Export validated: $(echo "scale=2; $FILE_SIZE / 1024 / 1024" | bc)MB"
+
 # Import to dev (wipes dev data)
 echo ""
 echo "📥 Importing to dev (replacing all data)..."
