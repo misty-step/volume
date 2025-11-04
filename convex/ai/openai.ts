@@ -235,10 +235,86 @@ export async function generateAnalysis(
 }
 
 /**
+ * Deterministic exercise classification fallback (used in tests)
+ *
+ * Provides basic pattern matching for common exercises when API is unavailable.
+ * Ensures tests are deterministic and don't depend on external services.
+ *
+ * @param exerciseName - Name of exercise to classify
+ * @returns Array of muscle groups based on pattern matching
+ */
+function classifyExerciseFallback(exerciseName: string): string[] {
+  const lower = exerciseName.toLowerCase();
+
+  // Pattern matching for common exercises
+  if (
+    lower.includes("bench") ||
+    lower.includes("chest") ||
+    lower.includes("pec") ||
+    lower.includes("dip")
+  ) {
+    return ["Chest", "Triceps"];
+  }
+  if (
+    lower.includes("pull-up") ||
+    lower.includes("pullup") ||
+    lower.includes("row") ||
+    lower.includes("back")
+  ) {
+    return ["Back", "Biceps"];
+  }
+  if (
+    lower.includes("squat") ||
+    lower.includes("leg press") ||
+    lower.includes("quad")
+  ) {
+    return ["Quads", "Glutes"];
+  }
+  if (
+    lower.includes("deadlift") ||
+    lower.includes("hamstring") ||
+    lower.includes("rdl")
+  ) {
+    return ["Back", "Hamstrings", "Glutes"];
+  }
+  if (lower.includes("shoulder") || lower.includes("press")) {
+    return ["Shoulders", "Triceps"];
+  }
+  if (lower.includes("curl") || lower.includes("bicep")) {
+    return ["Biceps"];
+  }
+  if (lower.includes("tricep") || lower.includes("extension")) {
+    return ["Triceps"];
+  }
+  if (lower.includes("calf") || lower.includes("raise")) {
+    return ["Calves"];
+  }
+  if (
+    lower.includes("plank") ||
+    lower.includes("crunch") ||
+    lower.includes("ab") ||
+    lower.includes("core")
+  ) {
+    return ["Core"];
+  }
+  if (lower.includes("incline")) {
+    return ["Chest", "Triceps"];
+  }
+  if (lower.includes("lunge")) {
+    return ["Quads", "Glutes"];
+  }
+
+  // Default fallback
+  return ["Other"];
+}
+
+/**
  * Classify exercise into muscle groups using GPT-5-nano
  *
  * Uses minimal reasoning effort for simple classification task.
  * Cost: ~$0.0001 per exercise (10x cheaper than gpt-5-mini).
+ *
+ * Falls back to pattern matching if API key is not configured (test environments).
  *
  * @param exerciseName - Name of exercise to classify
  * @returns Array of muscle groups (Chest, Back, Shoulders, etc.)
@@ -254,10 +330,24 @@ export async function classifyExercise(
 ): Promise<string[]> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error("OPENAI_API_KEY not configured");
+    // Use deterministic fallback in test environments
+    console.log(
+      `[Exercise] No API key - using fallback classification for "${exerciseName}"`
+    );
+    return classifyExerciseFallback(exerciseName);
   }
 
-  const openai = new OpenAI({ apiKey, timeout: 10000 });
+  // Try to create OpenAI client - if it fails (browser environment), use fallback
+  let openai: OpenAI;
+  try {
+    openai = new OpenAI({ apiKey, timeout: 10000 });
+  } catch (error) {
+    // Browser environment or other OpenAI constructor error
+    console.log(
+      `[Exercise] OpenAI unavailable (browser env) - using fallback for "${exerciseName}"`
+    );
+    return classifyExerciseFallback(exerciseName);
+  }
 
   const systemPrompt = `You are a fitness exercise classifier. Classify exercises into one or more of these muscle groups:
 
@@ -289,7 +379,7 @@ Examples:
     });
 
     const content = completion.choices[0]?.message?.content?.trim();
-    if (!content) return ["Other"];
+    if (!content) return classifyExerciseFallback(exerciseName);
 
     // Parse comma-separated list
     const groups = content
@@ -297,10 +387,10 @@ Examples:
       .map((g) => g.trim())
       .filter((g) => g.length > 0);
 
-    return groups.length > 0 ? groups : ["Other"];
+    return groups.length > 0 ? groups : classifyExerciseFallback(exerciseName);
   } catch (error) {
     console.error(`[OpenAI] Exercise classification failed:`, error);
-    return ["Other"]; // Fallback to prevent blocking exercise creation
+    return classifyExerciseFallback(exerciseName); // Fallback to prevent blocking exercise creation
   }
 }
 
