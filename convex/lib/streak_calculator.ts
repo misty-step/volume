@@ -15,7 +15,11 @@ interface SetData {
  * Calculate current workout streak (consecutive days with sets logged)
  *
  * A streak is broken if there's a gap of more than 1 day between workouts.
- * Uses timezone-aware day boundaries (midnight to midnight in UTC).
+ *
+ * LIMITATION: Uses UTC day boundaries (midnight to midnight UTC).
+ * Users in non-UTC timezones may see off-by-one day errors when logging
+ * workouts near midnight local time. For accurate streaks, consider storing
+ * localDayKey on the client side.
  *
  * @param sets - All sets for the user (any order)
  * @returns Number of consecutive days with workouts (0 if no recent workout)

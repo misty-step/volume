@@ -85,8 +85,8 @@ describe("Focus Suggestions Analytics", () => {
       expect(squatsSuggestion).toBeDefined();
       expect(squatsSuggestion?.type).toBe("exercise");
       expect(squatsSuggestion?.priority).toBe("high");
-      // Should be 9 or 10 depending on timing
-      expect(squatsSuggestion?.reason).toMatch(/[9]|10 days/);
+      // Should be 9 or 10 days depending on exact timing
+      expect(squatsSuggestion?.reason).toMatch(/(9|10) days/);
       expect(squatsSuggestion?.exerciseId).toBe(squats);
     });
 

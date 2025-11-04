@@ -445,9 +445,9 @@ describe("OpenAI Integration", () => {
       const result = await generateAnalysis(sampleMetrics);
 
       // Cost should be very small but non-zero
-      // 10 input tokens: (10 * 0.15) / 1M = 0.0000015
-      // 10 output tokens: (10 * 0.6) / 1M = 0.000006
-      // Total: 0.0000075, rounds to 0.0000
+      // 10 input tokens: (10 * 0.25) / 1M = 0.0000025
+      // 10 output tokens: (10 * 2.0) / 1M = 0.00002
+      // Total: 0.0000225, rounds to 0.0000
       expect(result.tokenUsage.costUSD).toBeGreaterThanOrEqual(0);
       expect(result.tokenUsage.costUSD).toBeLessThan(0.0001);
     });
