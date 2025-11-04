@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "convex/react";
+import { useAction } from "convex/react";
 import { useEffect, useRef, KeyboardEvent } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,7 +36,7 @@ export function InlineExerciseCreator({
   onCancel,
 }: InlineExerciseCreatorProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const createExercise = useMutation(api.exercises.createExercise);
+  const createExercise = useAction(api.exercises.createExercise);
 
   const form = useForm<ExerciseNameFormValues>({
     resolver: zodResolver(exerciseNameSchema),

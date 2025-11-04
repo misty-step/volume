@@ -25,7 +25,7 @@ describe("Focus Suggestions Analytics", () => {
   ): Promise<Id<"exercises">> {
     return await t
       .withIdentity({ subject: userSubject, name: "Test User" })
-      .mutation(api.exercises.createExercise, { name });
+      .action(api.exercises.createExercise, { name });
   }
 
   /**

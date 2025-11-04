@@ -22,7 +22,7 @@ describe("Analytics Queries", () => {
   async function createExercise(name: string): Promise<Id<"exercises">> {
     return await t
       .withIdentity({ subject: user1Subject, name: "User 1" })
-      .mutation(api.exercises.createExercise, { name });
+      .action(api.exercises.createExercise, { name });
   }
 
   /**
@@ -192,7 +192,7 @@ describe("Analytics Queries", () => {
       // User 2 exercise
       const user2Exercise = await t
         .withIdentity({ subject: user2Subject, name: "User 2" })
-        .mutation(api.exercises.createExercise, { name: "Squats" });
+        .action(api.exercises.createExercise, { name: "Squats" });
 
       await t
         .withIdentity({ subject: user2Subject, name: "User 2" })

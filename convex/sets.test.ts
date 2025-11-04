@@ -21,7 +21,7 @@ describe("listSets - Security Tests", () => {
     // Seed database: User 1 creates an exercise and logs sets
     user1ExerciseId = await t
       .withIdentity({ subject: user1Subject, name: "User 1" })
-      .mutation(api.exercises.createExercise, { name: "BENCH PRESS" });
+      .action(api.exercises.createExercise, { name: "BENCH PRESS" });
 
     await t
       .withIdentity({ subject: user1Subject, name: "User 1" })
@@ -44,7 +44,7 @@ describe("listSets - Security Tests", () => {
     // Seed database: User 2 creates a different exercise and logs sets
     user2ExerciseId = await t
       .withIdentity({ subject: user2Subject, name: "User 2" })
-      .mutation(api.exercises.createExercise, { name: "SQUATS" });
+      .action(api.exercises.createExercise, { name: "SQUATS" });
 
     await t
       .withIdentity({ subject: user2Subject, name: "User 2" })
@@ -84,7 +84,7 @@ describe("listSets - Security Tests", () => {
       // Create and immediately soft-delete an exercise (no sets logged)
       const deletedExerciseId = await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.exercises.createExercise, { name: "TEMPORARY" });
+        .action(api.exercises.createExercise, { name: "TEMPORARY" });
 
       await t
         .withIdentity({ subject: user1Subject, name: "User 1" })
@@ -159,7 +159,7 @@ describe("listSets - Security Tests", () => {
       const user3Subject = "user_3_test_subject";
       const user3ExerciseId = await t
         .withIdentity({ subject: user3Subject, name: "User 3" })
-        .mutation(api.exercises.createExercise, { name: "DEADLIFTS" });
+        .action(api.exercises.createExercise, { name: "DEADLIFTS" });
 
       const sets = await t
         .withIdentity({ subject: user3Subject, name: "User 3" })
@@ -210,7 +210,7 @@ describe("logSet - Soft Delete Protection", () => {
     // Create exercise
     const exerciseId = await t
       .withIdentity({ subject: user1Subject, name: "User 1" })
-      .mutation(api.exercises.createExercise, { name: "BENCH PRESS" });
+      .action(api.exercises.createExercise, { name: "BENCH PRESS" });
 
     // Soft delete exercise
     await t
