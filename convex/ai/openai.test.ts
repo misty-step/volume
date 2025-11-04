@@ -352,20 +352,12 @@ describe("OpenAI Integration", () => {
       await generateAnalysis(sampleMetrics);
 
       // Verify createMock was called with correct structure
-      expect(createMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          model: "gpt-5-mini",
-          messages: expect.arrayContaining([
-            expect.objectContaining({ role: "system" }),
-            expect.objectContaining({ role: "user" }),
-          ]),
-          max_completion_tokens: 3000,
-          reasoning_effort: "high",
-        })
-      );
+      const callArgs = createMock.mock.calls[0][0];
+      expect(callArgs.model).toBe("gpt-5-mini");
+      expect(callArgs.max_completion_tokens).toBe(3000);
+      expect(callArgs.reasoning_effort).toBe("medium"); // Lowered from "high" to prevent connection timeouts
 
       // Verify messages array has exactly 2 messages
-      const callArgs = createMock.mock.calls[0][0];
       expect(callArgs.messages).toHaveLength(2);
       expect(callArgs.messages[0].role).toBe("system");
       expect(callArgs.messages[1].role).toBe("user");
@@ -394,11 +386,11 @@ describe("OpenAI Integration", () => {
       const callArgs = createMock.mock.calls[0][0];
       const userPrompt = callArgs.messages[1].content;
 
-      // Verify all sections included
-      expect(userPrompt).toContain("volume"); // Volume section
-      expect(userPrompt).toContain("PR"); // PRs section
-      expect(userPrompt).toContain("streak"); // Streak section
-      expect(userPrompt).toContain("workout"); // Frequency section
+      // Verify all sections included (new XML-based prompt structure)
+      expect(userPrompt).toContain("<training_volume>"); // Volume section
+      expect(userPrompt).toContain("<personal_records>"); // PRs section
+      expect(userPrompt).toContain("<workout_frequency>"); // Frequency section (includes streak data)
+      expect(userPrompt).toContain("training days"); // Workout frequency data
     });
   });
 

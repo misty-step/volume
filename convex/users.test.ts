@@ -28,7 +28,7 @@ describe("User Management", () => {
       expect(user).toBeDefined();
       expect(user?.clerkUserId).toBe(userSubject);
       expect(user?.timezone).toBeUndefined();
-      expect(user?.dailyReportsEnabled).toBe(false);
+      expect(user?.dailyReportsEnabled).toBe(true); // Enabled for all users (paywall later)
       expect(user?.weeklyReportsEnabled).toBe(true);
       expect(user?.monthlyReportsEnabled).toBe(false);
       expect(user?.createdAt).toBeTypeOf("number");
