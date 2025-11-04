@@ -71,6 +71,7 @@ export default defineSchema({
           exerciseName: v.string(),
           prType: v.string(),
           improvement: v.number(),
+          performedAt: v.number(),
         })
       ),
       streak: v.object({

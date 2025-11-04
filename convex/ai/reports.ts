@@ -148,6 +148,7 @@ export const saveReport = internalMutation({
           exerciseName: v.string(),
           prType: v.string(),
           improvement: v.number(),
+          performedAt: v.number(),
         })
       ),
       streak: v.object({
@@ -502,6 +503,7 @@ export const generateReport = internalAction({
             exerciseName: pr.exerciseName,
             prType: pr.prType,
             improvement: pr.improvement,
+            performedAt: pr.performedAt,
           })),
           streak: metrics.streak,
           frequency: metrics.frequency,
