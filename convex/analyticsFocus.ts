@@ -1,7 +1,6 @@
 import { query } from "./_generated/server";
-import { getMuscleGroups } from "./lib/muscle_group_mapping";
-import type { MuscleGroup } from "./lib/muscle_group_mapping";
 import type { Id } from "./_generated/dataModel";
+import type { MuscleGroup } from "./analyticsRecovery";
 
 /**
  * Focus Suggestions Analytics
@@ -114,13 +113,14 @@ export const getFocusSuggestions = query({
       const exercise = exercises.find((ex) => ex._id === set.exerciseId);
       if (!exercise) continue;
 
-      const muscleGroups = getMuscleGroups(exercise.name);
+      // Get muscle groups from exercise record (AI-classified)
+      const muscleGroups = exercise.muscleGroups || ["Other"];
       const volume = set.reps * (set.weight || 0);
 
       for (const group of muscleGroups) {
         if (group === "Other") continue;
-        const current = muscleGroupVolumes.get(group) || 0;
-        muscleGroupVolumes.set(group, current + volume);
+        const current = muscleGroupVolumes.get(group as MuscleGroup) || 0;
+        muscleGroupVolumes.set(group as MuscleGroup, current + volume);
       }
     }
 

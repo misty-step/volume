@@ -100,7 +100,7 @@ export const generateWeeklyReports = internalAction({
         try {
           console.log(`[Cron] Generating report for user: ${userId}`);
 
-          await ctx.runMutation((internal as any).ai.reports.generateReport, {
+          await ctx.runAction((internal as any).ai.reports.generateReport, {
             userId,
             // weekStartDate will default to current week in generateReport
           });
@@ -267,7 +267,7 @@ export const generateDailyReports = internalAction({
 
     for (const userId of eligibleUserIds) {
       try {
-        await ctx.runMutation((internal as any).ai.reports.generateReport, {
+        await ctx.runAction((internal as any).ai.reports.generateReport, {
           userId,
           reportType: "daily",
         });
@@ -363,7 +363,7 @@ export const generateMonthlyReports = internalAction({
 
     for (const userId of users) {
       try {
-        await ctx.runMutation((internal as any).ai.reports.generateReport, {
+        await ctx.runAction((internal as any).ai.reports.generateReport, {
           userId,
           reportType: "monthly",
         });

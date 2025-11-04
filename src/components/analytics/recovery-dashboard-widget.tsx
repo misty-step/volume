@@ -12,6 +12,11 @@ interface RecoveryDashboardWidgetProps {
 
 /**
  * Get color classes for recovery status
+ *
+ * Color semantics:
+ * - Yellow: Recovering (0-2 days) - "Wait"
+ * - Green: Ready (3-7 days) - "Go!"
+ * - Red: Overdue (8+ days) - "Urgent"
  */
 function getStatusColor(
   status: RecoveryData["status"],
@@ -30,12 +35,6 @@ function getStatusColor(
   }
 
   switch (status) {
-    case "fresh":
-      return {
-        bg: "bg-green-500/10 dark:bg-green-500/20",
-        border: "border-green-500/50",
-        text: "text-green-700 dark:text-green-300",
-      };
     case "recovering":
       return {
         bg: "bg-yellow-500/10 dark:bg-yellow-500/20",
@@ -44,15 +43,23 @@ function getStatusColor(
       };
     case "ready":
       return {
-        bg: "bg-orange-500/10 dark:bg-orange-500/20",
-        border: "border-orange-500/50",
-        text: "text-orange-700 dark:text-orange-300",
+        bg: "bg-green-500/10 dark:bg-green-500/20",
+        border: "border-green-500/50",
+        text: "text-green-700 dark:text-green-300",
       };
     case "overdue":
       return {
         bg: "bg-red-500/10 dark:bg-red-500/20",
         border: "border-red-500/50",
         text: "text-red-700 dark:text-red-300",
+      };
+    default:
+      // Defensive fallback for unexpected values
+      console.error(`[Recovery] Unexpected status: ${status}`);
+      return {
+        bg: "bg-muted/50",
+        border: "border-muted",
+        text: "text-muted-foreground",
       };
   }
 }
@@ -75,14 +82,14 @@ function getStatusLabel(
   if (isNeverTrained) return "Never trained";
 
   switch (status) {
-    case "fresh":
-      return "Fresh";
     case "recovering":
       return "Recovering";
     case "ready":
       return "Ready";
     case "overdue":
       return "Overdue";
+    default:
+      return "Unknown";
   }
 }
 
@@ -232,16 +239,12 @@ export function RecoveryDashboardWidget({
         <div className="mt-4 pt-4 border-t">
           <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-green-500/50" />
-              <span>Fresh (0-2d)</span>
-            </div>
-            <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
-              <span>Recovering (3-4d)</span>
+              <span>Recovering (0-2d)</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-orange-500/50" />
-              <span>Ready (5-7d)</span>
+              <div className="w-3 h-3 rounded-full bg-green-500/50" />
+              <span>Ready (3-7d)</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-full bg-red-500/50" />

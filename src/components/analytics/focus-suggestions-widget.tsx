@@ -91,7 +91,7 @@ export function FocusSuggestionsWidget({
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Target className="w-12 h-12 text-green-600 dark:text-green-400 mb-3" />
             <p className="text-sm font-medium mb-1">
-              You&apos;re training everything well! 💪
+              You&apos;re training everything well!
             </p>
             <p className="text-xs text-muted-foreground">
               Keep up the balanced approach

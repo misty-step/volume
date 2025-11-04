@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useRef, useEffect, useState } from "react";
 import ActivityCalendar, { Activity } from "react-activity-calendar";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Calendar } from "lucide-react";
@@ -30,6 +30,14 @@ export function ActivityHeatmap({
   data,
   isLoading = false,
 }: ActivityHeatmapProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [tooltip, setTooltip] = useState<{
+    date: string;
+    count: number;
+    x: number;
+    y: number;
+  } | null>(null);
+
   // Transform data to react-activity-calendar format
   const activityData: Activity[] = useMemo(() => {
     return data.map((item) => ({
@@ -38,6 +46,18 @@ export function ActivityHeatmap({
       level: calculateLevel(item.setCount),
     }));
   }, [data]);
+
+  // Auto-scroll to most recent data on mount
+  useEffect(() => {
+    if (containerRef.current && !isLoading && data.length > 0) {
+      // Scroll to far right (most recent data)
+      requestAnimationFrame(() => {
+        if (containerRef.current) {
+          containerRef.current.scrollLeft = containerRef.current.scrollWidth;
+        }
+      });
+    }
+  }, [isLoading, data]);
 
   // Loading skeleton
   if (isLoading) {
@@ -82,7 +102,7 @@ export function ActivityHeatmap({
       </CardHeader>
       <CardContent>
         {/* Mobile: Allow horizontal scroll */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto relative" ref={containerRef}>
           <ActivityCalendar
             data={activityData}
             labels={{
@@ -108,7 +128,48 @@ export function ActivityHeatmap({
             blockSize={12}
             blockMargin={4}
             fontSize={12}
+            renderBlock={(block, activity) => (
+              <g
+                onMouseEnter={(e) => {
+                  const rect = (
+                    e.currentTarget as SVGGElement
+                  ).getBoundingClientRect();
+                  setTooltip({
+                    date: activity.date,
+                    count: activity.count,
+                    x: rect.left + rect.width / 2,
+                    y: rect.top,
+                  });
+                }}
+                onMouseLeave={() => setTooltip(null)}
+              >
+                {block}
+              </g>
+            )}
           />
+
+          {/* Custom tooltip */}
+          {tooltip && tooltip.count > 0 && (
+            <div
+              className="fixed z-50 px-3 py-2 bg-popover text-popover-foreground rounded-md shadow-lg border text-sm pointer-events-none"
+              style={{
+                left: `${tooltip.x}px`,
+                top: `${tooltip.y - 60}px`,
+                transform: "translateX(-50%)",
+              }}
+            >
+              <p className="font-semibold whitespace-nowrap">
+                {new Date(tooltip.date).toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {tooltip.count} set{tooltip.count !== 1 ? "s" : ""} logged
+              </p>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

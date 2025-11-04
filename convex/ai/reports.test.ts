@@ -80,10 +80,17 @@ describe.skip("AI Report Queries and Mutations", () => {
         generatedAt: generatedAt ?? Date.now(),
         content: "Test report content with analysis",
         metricsSnapshot: {
-          volume: [{ exerciseName: "Bench Press", totalVolume: 4050, sets: 3 }],
+          volume: [
+            {
+              exerciseName: "Bench Press",
+              totalVolume: 4050,
+              sets: 3,
+              isBodyweight: false,
+            },
+          ],
           prs: [],
           streak: { currentStreak: 5, longestStreak: 10, totalWorkouts: 50 },
-          frequency: { workoutDays: 5, avgSetsPerDay: 12 }, // Note: restDays not in schema
+          frequency: { workoutDays: 5, restDays: 2, avgSetsPerDay: 12 },
         },
         model: "gpt-5-mini",
         tokenUsage: { input: 250, output: 150, costUSD: 0.0001 },

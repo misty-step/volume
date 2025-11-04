@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useMutation } from "convex/react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Tag } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { SettingsList } from "@/components/ui/settings-list";
 import { SettingsListItem } from "@/components/ui/settings-list-item";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +23,7 @@ import {
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
 import { Exercise, Set } from "@/types/domain";
+import { EditMuscleGroupsDialog } from "./edit-muscle-groups-dialog";
 
 interface ExerciseManagerProps {
   exercises: Exercise[];
@@ -34,6 +36,8 @@ export function ExerciseManager({ exercises, sets }: ExerciseManagerProps) {
   const [exerciseToDelete, setExerciseToDelete] = useState<Exercise | null>(
     null
   );
+  const [exerciseToEditGroups, setExerciseToEditGroups] =
+    useState<Exercise | null>(null);
   const updateExercise = useMutation(api.exercises.updateExercise);
   const deleteExercise = useMutation(api.exercises.deleteExercise);
 
@@ -127,7 +131,23 @@ export function ExerciseManager({ exercises, sets }: ExerciseManagerProps) {
                     className="h-8 text-sm -my-1"
                   />
                 ) : (
-                  exercise.name
+                  <div className="space-y-2">
+                    <div>{exercise.name}</div>
+                    {exercise.muscleGroups &&
+                      exercise.muscleGroups.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {exercise.muscleGroups.map((group) => (
+                            <Badge
+                              key={group}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {group}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                  </div>
                 )
               }
               subtitle={`${createdDate} • ${setCount} sets`}
@@ -137,17 +157,29 @@ export function ExerciseManager({ exercises, sets }: ExerciseManagerProps) {
                     <Button
                       size="sm"
                       variant="ghost"
+                      onClick={() => setExerciseToEditGroups(exercise)}
+                      className="h-8 w-8 p-0"
+                      title="Edit muscle groups"
+                    >
+                      <Tag className="h-4 w-4" />
+                      <span className="sr-only">Edit muscle groups</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
                       onClick={() => handleStartEdit(exercise)}
                       className="h-8 w-8 p-0"
+                      title="Edit name"
                     >
                       <Pencil className="h-4 w-4" />
-                      <span className="sr-only">Edit</span>
+                      <span className="sr-only">Edit name</span>
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() => handleDeleteClick(exercise)}
                       className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      title="Delete exercise"
                     >
                       <Trash2 className="h-4 w-4" />
                       <span className="sr-only">Delete</span>
@@ -159,6 +191,17 @@ export function ExerciseManager({ exercises, sets }: ExerciseManagerProps) {
           );
         })}
       </SettingsList>
+
+      {/* Edit Muscle Groups Dialog */}
+      {exerciseToEditGroups && (
+        <EditMuscleGroupsDialog
+          open={!!exerciseToEditGroups}
+          onOpenChange={(open) => !open && setExerciseToEditGroups(null)}
+          exerciseId={exerciseToEditGroups._id}
+          exerciseName={exerciseToEditGroups.name}
+          currentMuscleGroups={exerciseToEditGroups.muscleGroups || []}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog

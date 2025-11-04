@@ -61,15 +61,21 @@ export function AIInsightsCard({ report }: AIInsightsCardProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="flex flex-col items-center justify-center py-8 text-center px-4">
             <Sparkles className="w-12 h-12 text-muted-foreground mb-3" />
-            <p className="text-sm font-medium mb-2">
-              Your first AI report will arrive soon
+            <p className="text-sm font-medium mb-2">No reports available yet</p>
+            <p className="text-xs text-muted-foreground max-w-md mb-4">
+              AI reports analyze your workout data to provide technical insights
+              on volume, progress, and recovery patterns.
             </p>
-            <p className="text-xs text-muted-foreground">
-              Weekly reports generate automatically every Sunday
-            </p>
-            {/* TODO: Add countdown timer showing "Next report in X hours" */}
+            <div className="bg-muted/50 rounded-lg p-4 text-left max-w-md">
+              <p className="text-xs font-medium mb-2">Reports generate when:</p>
+              <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                <li>You have logged workout data for the period</li>
+                <li>Automated cron jobs run (daily/weekly/monthly)</li>
+                <li>Or you manually generate a report (coming soon)</li>
+              </ul>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -96,76 +102,79 @@ export function AIInsightsCard({ report }: AIInsightsCardProps) {
             </span>
           )}
         </div>
-        <p className="text-xs text-muted-foreground">
-          Generated {timeAgo} • {report.model}
-        </p>
+        <p className="text-xs text-muted-foreground">Generated {timeAgo}</p>
       </CardHeader>
       <CardContent>
         <div className="prose prose-sm dark:prose-invert max-w-none">
           <ReactMarkdown
             components={{
-              // Style headers
+              // Style headers with better spacing
               h1: ({ children }) => (
-                <h2 className="text-lg font-bold mt-4 mb-2 first:mt-0">
+                <h2 className="text-lg font-bold mt-6 mb-3 first:mt-0 pb-2 border-b border-border">
                   {children}
                 </h2>
               ),
               h2: ({ children }) => (
-                <h3 className="text-base font-semibold mt-3 mb-1">
+                <h3 className="text-base font-semibold mt-5 mb-2">
                   {children}
                 </h3>
               ),
               h3: ({ children }) => (
-                <h4 className="text-sm font-semibold mt-2 mb-1">{children}</h4>
+                <h4 className="text-sm font-semibold mt-3 mb-1.5">
+                  {children}
+                </h4>
               ),
-              // Style paragraphs
+              // Style paragraphs with better readability
               p: ({ children }) => (
-                <p className="text-sm leading-relaxed mb-3">{children}</p>
+                <p className="text-sm leading-relaxed mb-4 text-muted-foreground">
+                  {children}
+                </p>
               ),
-              // Style lists
+              // Style unordered lists
               ul: ({ children }) => (
-                <ul className="list-disc list-inside space-y-1 mb-3">
+                <ul className="list-disc list-outside pl-5 space-y-2 mb-4">
                   {children}
                 </ul>
               ),
+              // Style ordered lists (for numbered recommendations)
               ol: ({ children }) => (
-                <ol className="list-decimal list-inside space-y-1 mb-3">
+                <ol className="list-decimal list-outside pl-5 space-y-2 mb-4">
                   {children}
                 </ol>
               ),
+              // List items with better spacing
               li: ({ children }) => (
-                <li className="text-sm ml-2">{children}</li>
+                <li className="text-sm leading-relaxed pl-1">{children}</li>
               ),
-              // Style strong/emphasis
+              // Style strong text with accent color
               strong: ({ children }) => (
                 <strong className="font-semibold text-foreground">
                   {children}
                 </strong>
               ),
+              // Style emphasis
               em: ({ children }) => (
                 <em className="italic text-muted-foreground">{children}</em>
               ),
-              // Style code
+              // Style inline code
               code: ({ children }) => (
-                <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">
+                <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono text-foreground">
                   {children}
                 </code>
               ),
-              // Style horizontal rules
-              hr: () => <hr className="my-4 border-border" />,
+              // Style horizontal rules as section dividers
+              hr: () => <hr className="my-6 border-border" />,
+              // Style blockquotes (if AI uses them)
+              blockquote: ({ children }) => (
+                <blockquote className="border-l-4 border-purple-500/30 pl-4 my-4 italic text-muted-foreground">
+                  {children}
+                </blockquote>
+              ),
             }}
           >
             {report.content}
           </ReactMarkdown>
         </div>
-
-        {/* Cost transparency (optional, for debugging) */}
-        {process.env.NODE_ENV === "development" && (
-          <div className="mt-4 pt-4 border-t text-xs text-muted-foreground">
-            Cost: ${report.tokenUsage.costUSD.toFixed(4)} (
-            {report.tokenUsage.input}+ {report.tokenUsage.output} tokens)
-          </div>
-        )}
       </CardContent>
     </Card>
   );

@@ -1,12 +1,13 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { PageLayout } from "@/components/layout/page-layout";
 import { ActivityHeatmap } from "@/components/analytics/activity-heatmap";
 import { PRCard } from "@/components/analytics/pr-card";
 import { StreakCard } from "@/components/analytics/streak-card";
-import { AIInsightsCard } from "@/components/analytics/ai-insights-card";
+import { ReportNavigator } from "@/components/analytics/report-navigator";
 import { ProgressiveOverloadWidget } from "@/components/analytics/progressive-overload-widget";
 import { RecoveryDashboardWidget } from "@/components/analytics/recovery-dashboard-widget";
 import { FocusSuggestionsWidget } from "@/components/analytics/focus-suggestions-widget";
@@ -19,9 +20,13 @@ export default function AnalyticsPage() {
   });
   const streakStats = useQuery(api.analytics.getStreakStats, {});
   const recentPRs = useQuery(api.analytics.getRecentPRs, { days: 30 });
+  const firstWorkoutDate = useQuery(api.users.getFirstWorkoutDate, {});
 
-  // Fetch AI report data
-  const latestReport = useQuery((api as any).ai.reports.getLatestReport, {});
+  // Filter heatmap data to start at first workout date (not Jan 1st)
+  const filteredFrequencyData = useMemo(() => {
+    if (!frequencyData || !firstWorkoutDate) return frequencyData;
+    return frequencyData.filter((day: any) => day.date >= firstWorkoutDate);
+  }, [frequencyData, firstWorkoutDate]);
 
   // Determine loading state (any query undefined = still loading)
   const isLoading =
@@ -106,12 +111,20 @@ export default function AnalyticsPage() {
 
       {/* Dashboard Grid - 12-column responsive layout */}
       <div className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-4 lg:gap-6">
-        {/* AI Insights: 12 cols full width */}
+        {/* Row 1: AI Insights with Report Navigation - 12 cols full width */}
         <div className="md:col-span-6 lg:col-span-12">
-          <AIInsightsCard report={latestReport} />
+          <ReportNavigator />
         </div>
 
-        {/* Focus Suggestions: 4 cols, Progressive Overload: 8 cols */}
+        {/* Row 2: Activity Heatmap - 12 cols full width (moved up from Row 3) */}
+        <div className="md:col-span-6 lg:col-span-12">
+          <ActivityHeatmap
+            data={filteredFrequencyData || []}
+            isLoading={isLoading}
+          />
+        </div>
+
+        {/* Row 3: Focus Suggestions (4) | Progressive Overload (8) */}
         <div className="md:col-span-3 lg:col-span-4">
           <FocusSuggestionsWidget isLoading={isLoading} />
         </div>
@@ -119,24 +132,17 @@ export default function AnalyticsPage() {
           <ProgressiveOverloadWidget isLoading={isLoading} />
         </div>
 
-        {/* Recovery Dashboard: 6 cols, Activity Heatmap: 6 cols */}
+        {/* Row 4: Recovery Dashboard (6) | Streak + PRs stacked (6) */}
         <div className="md:col-span-3 lg:col-span-6">
           <RecoveryDashboardWidget isLoading={isLoading} />
         </div>
-        <div className="md:col-span-3 lg:col-span-6">
-          <ActivityHeatmap data={frequencyData || []} isLoading={isLoading} />
-        </div>
-
-        {/* Streak Card: 4 cols, PR Card: 8 cols */}
-        <div className="md:col-span-2 lg:col-span-4">
+        <div className="md:col-span-3 lg:col-span-6 space-y-4">
           <StreakCard
             currentStreak={streakStats?.currentStreak || 0}
             longestStreak={streakStats?.longestStreak || 0}
             totalWorkouts={streakStats?.totalWorkouts || 0}
             isLoading={isLoading}
           />
-        </div>
-        <div className="md:col-span-4 lg:col-span-8">
           <PRCard prs={recentPRs || []} isLoading={isLoading} />
         </div>
       </div>

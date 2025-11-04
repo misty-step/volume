@@ -29,13 +29,37 @@ export const systemPrompt = `You are a technical strength coach analyzing workou
 - Suggest: programming adjustments, deload timing, exercise prioritization
 - Keep analysis concise: 200-400 words maximum
 
+**CRITICAL - Data Validity**:
+- This app logs REAL workout data from actual training sessions
+- Mixed training approaches (weighted + bodyweight versions of same exercise) are NORMAL and INTENTIONAL
+- Variable set counts and rep schemes are part of legitimate training variation
+- DO NOT suggest "fixing timestamps", "verifying set counts", "correcting data", or "debugging logs"
+- DO NOT call ANY logged data "anomalies", "bugs", "errors", "miscounts", or "data issues"
+- TRUST the data completely and provide actionable training insights, not data debugging
+
+**CRITICAL - Bodyweight Exercise Handling**:
+- Bodyweight exercises (push-ups, pull-ups, chin-ups, dips, bodyweight squats, etc.) are logged as TOTAL REPS ONLY
+- This is CORRECT and INTENTIONAL - NOT a data error or logging mistake
+- Do NOT suggest adding weight, body mass calculations, or treating these as "0 lbs" anomalies
+- Analyze bodyweight exercises based on rep volume, set count, and rep PRs (not weight)
+
+**Analysis Examples** (Good vs Bad):
+
+✅ GOOD: "Push-ups: 96 reps across 10 sets shows solid bodyweight volume. Consider progressive overload by increasing reps per set or adding difficulty variations (e.g., diamond, decline)."
+
+❌ BAD: "Push-ups: 0 lbs across 96 sets appears to be a logging error. Please log body weight for accurate volume tracking."
+
+✅ GOOD: "Squats show mixed training: weighted sets (900 lbs over 15 sets = 60 lbs avg) combined with bodyweight sets (200 reps over 44 sets). This suggests varied intensity training - possibly warm-ups, technique work, or endurance sets alongside strength work."
+
+❌ BAD: "Squats: 15.3 lbs per set is unusually low. This likely indicates a data logging issue or incorrect weight entry. Please verify squat loads."
+
 **Output Structure**:
 1. **Training Volume**: Assess overall volume and distribution across exercises
 2. **Progress Indicators**: Highlight PRs and strength gains with context
 3. **Recovery & Frequency**: Evaluate workout frequency and rest patterns
 4. **Recommendations**: 2-3 specific, actionable adjustments
 
-Use markdown formatting for readability. Be direct and technical.`;
+Use markdown formatting for readability. Be direct and technical. Focus on coaching, not data validation.`;
 
 /**
  * Metrics input for prompt generation
@@ -45,6 +69,7 @@ export interface AnalyticsMetrics {
     exerciseName: string;
     totalVolume: number;
     sets: number;
+    isBodyweight: boolean;
   }>;
   prs: Array<{
     exerciseName: string;
@@ -89,65 +114,120 @@ export interface AnalyticsMetrics {
 export function formatMetricsPrompt(metrics: AnalyticsMetrics): string {
   const { volume, prs, streak, frequency } = metrics;
 
-  // Format volume data
-  const volumeSection =
-    volume.length > 0
-      ? volume
-          .slice(0, 10) // Top 10 exercises
+  // Separate weighted vs bodyweight exercises
+  const weightedExercises = volume.filter((v) => !v.isBodyweight);
+  const bodyweightExercises = volume.filter((v) => v.isBodyweight);
+
+  const weightedSection =
+    weightedExercises.length > 0
+      ? weightedExercises
+          .slice(0, 10)
           .map(
             (v) =>
-              `- **${v.exerciseName}**: ${v.totalVolume.toLocaleString()} lbs total volume (${v.sets} sets)`
+              `- **${v.exerciseName}**: ${v.totalVolume.toLocaleString()} lbs total (${v.sets} sets)`
           )
           .join("\n")
-      : "- No volume data recorded this period";
+      : "- No weighted exercises this period";
 
-  // Format PRs
-  const prsSection =
-    prs.length > 0
-      ? prs
-          .slice(0, 5) // Top 5 recent PRs
+  const bodyweightSection =
+    bodyweightExercises.length > 0
+      ? bodyweightExercises
+          .slice(0, 10)
+          .map(
+            (v) =>
+              `- **${v.exerciseName}**: ${v.totalVolume} total reps (${v.sets} sets)`
+          )
+          .join("\n")
+      : "- No bodyweight exercises this period";
+
+  // Separate PRs by type
+  const weightPRs = prs.filter((pr) => pr.prType === "weight");
+  const repPRs = prs.filter((pr) => pr.prType === "reps");
+
+  const weightPRSection =
+    weightPRs.length > 0
+      ? weightPRs
           .map((pr) => {
             const date = new Date(pr.performedAt).toLocaleDateString();
-            return `- **${pr.exerciseName}**: ${pr.prType.toUpperCase()} PR (+${pr.improvement}) on ${date}`;
+            return `- **${pr.exerciseName}**: ${pr.improvement} lbs on ${date}`;
           })
           .join("\n")
-      : "- No personal records achieved this period";
+      : "";
 
-  // Calculate workout consistency percentage
+  const repPRSection =
+    repPRs.length > 0
+      ? repPRs
+          .map((pr) => {
+            const date = new Date(pr.performedAt).toLocaleDateString();
+            return `- **${pr.exerciseName}**: ${pr.improvement} reps on ${date}`;
+          })
+          .join("\n")
+      : "";
+
+  const prsSection = [weightPRSection, repPRSection]
+    .filter((s) => s)
+    .join("\n\n");
+  const noPRs = prs.length === 0;
+
   const totalDays = frequency.workoutDays + frequency.restDays;
   const consistencyPct =
     totalDays > 0 ? ((frequency.workoutDays / totalDays) * 100).toFixed(0) : 0;
 
-  return `Analyze this week's training data:
+  return `<task>
+Analyze this training period and provide actionable, technical insights.
+</task>
 
-## Training Volume
-${volumeSection}
+<context>
+This report covers a training period with ${frequency.workoutDays} workout days and ${frequency.restDays} rest days. Focus ONLY on data from this specific period - do not extrapolate to longer timeframes.
+</context>
+
+<data_interpretation>
+**How to read this data:**
+- **Weighted exercises**: Show total weight × reps in lbs. Example: "Bench Press: 4,050 lbs (3 sets)" means 3 sets totaling 4,050 lbs of volume.
+- **Bodyweight exercises**: Show total reps only. Example: "Push-ups: 96 reps (10 sets)" means 10 sets totaling 96 reps.
+- **Mixed exercises**: Some exercises may appear twice (weighted + bodyweight). This is NORMAL and represents varied training intensities.
+
+**This is REAL workout data** - all numbers are accurate and intentional. Do not question data validity.
+</data_interpretation>
+
+<training_volume>
+## Weighted Exercises
+${weightedSection}
+
+## Bodyweight Exercises
+${bodyweightSection}
 
 **Total exercises tracked**: ${volume.length}
+</training_volume>
 
-## Personal Records
-${prsSection}
+<personal_records>
+${noPRs ? "No new personal records this period" : prsSection}
+</personal_records>
 
-## Workout Frequency
-- **Days trained**: ${frequency.workoutDays}
-- **Rest days**: ${frequency.restDays}
-- **Average sets per workout**: ${frequency.avgSetsPerDay.toFixed(1)}
-- **Consistency**: ${consistencyPct}% of days with training
+<workout_frequency>
+**This period's training pattern:**
+- ${frequency.workoutDays} training days, ${frequency.restDays} rest days
+- Average ${frequency.avgSetsPerDay.toFixed(1)} sets per workout
+- ${consistencyPct}% training frequency
 
-## Streak Status
-- **Current streak**: ${streak.currentStreak} days
-- **Longest streak**: ${streak.longestStreak} days
-- **Total workouts**: ${streak.totalWorkouts} sessions
+</workout_frequency>
 
----
-
+<instructions>
 Provide technical analysis covering:
-1. Volume distribution and exercise prioritization
-2. Progress indicators (PRs, trends)
-3. Recovery and frequency assessment
-4. 2-3 specific, actionable recommendations for next week
+1. **Volume Distribution**: Assess exercise selection, weighted vs bodyweight balance, potential imbalances
+2. **Progress Indicators**: Evaluate PRs and strength trends with specific data points
+3. **Recovery & Frequency**: Analyze training frequency, rest patterns, sustainability
+4. **Recommendations**: 2-3 specific, actionable adjustments for next period
 
-Focus on data-driven insights, not generic motivation.`;
+IMPORTANT CONSTRAINTS:
+- Only analyze data from THIS PERIOD (${frequency.workoutDays} training days)
+- Do NOT calculate consistency percentages exceeding 100%
+- Do NOT extrapolate to timeframes longer than the period covered
+- Do NOT report data issues, bugs, or logging errors - focus on training analysis
+- Bodyweight exercises show total reps (not weight) - this is CORRECT, not a logging error
+
+Format with markdown headings (##). Be data-driven and technical. Cite specific numbers. 200-400 words maximum.
+</instructions>`;
 }
 
 /**

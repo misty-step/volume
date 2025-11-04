@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -30,7 +30,7 @@ export const getOrCreateUser = mutation({
     const userId = await ctx.db.insert("users", {
       clerkUserId: identity.subject,
       timezone: args.timezone,
-      dailyReportsEnabled: false, // Opt-in (future paywall)
+      dailyReportsEnabled: true, // Enabled for all users (paywall later)
       weeklyReportsEnabled: true, // Default on
       monthlyReportsEnabled: false, // Opt-in
       createdAt: Date.now(),
@@ -65,7 +65,7 @@ export const updateUserTimezone = mutation({
       await ctx.db.insert("users", {
         clerkUserId: identity.subject,
         timezone: args.timezone,
-        dailyReportsEnabled: false,
+        dailyReportsEnabled: true, // Enabled for all users
         weeklyReportsEnabled: true,
         monthlyReportsEnabled: false,
         createdAt: Date.now(),
@@ -78,5 +78,83 @@ export const updateUserTimezone = mutation({
       timezone: args.timezone,
       updatedAt: Date.now(),
     });
+  },
+});
+
+/**
+ * Get current authenticated user
+ *
+ * Returns the full user record for the currently authenticated user.
+ * Useful for debugging and displaying user information in the UI.
+ *
+ * @returns User record or null if not authenticated/found
+ */
+export const getCurrentUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkUserId", identity.subject))
+      .first();
+
+    return user || null;
+  },
+});
+
+/**
+ * Get user creation date
+ *
+ * Returns the ISO date string (YYYY-MM-DD) when the user account was created.
+ * Used for filtering analytics data (e.g., heatmap start date).
+ *
+ * @returns ISO date string or null if user not found
+ */
+export const getUserCreationDate = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkUserId", identity.subject))
+      .first();
+
+    if (!user) return null;
+
+    // Return ISO date string (YYYY-MM-DD)
+    return new Date(user.createdAt).toISOString().split("T")[0];
+  },
+});
+
+/**
+ * Get first workout date
+ *
+ * Returns the ISO date string (YYYY-MM-DD) of the user's first logged workout.
+ * Used for filtering analytics data (e.g., heatmap start date) to show only
+ * dates with potential workout data, even after syncing data between deployments.
+ *
+ * @returns ISO date string of first workout, or null if no workouts exist
+ */
+export const getFirstWorkoutDate = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    // Find the earliest set for this user
+    const earliestSet = await ctx.db
+      .query("sets")
+      .withIndex("by_user_performed", (q) => q.eq("userId", identity.subject))
+      .order("asc") // Oldest first
+      .first();
+
+    if (!earliestSet) return null;
+
+    // Return ISO date string (YYYY-MM-DD)
+    return new Date(earliestSet.performedAt).toISOString().split("T")[0];
   },
 });

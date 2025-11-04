@@ -25,8 +25,18 @@ describe("OpenAI Integration", () => {
   // Sample metrics for testing
   const sampleMetrics: AnalyticsMetrics = {
     volume: [
-      { exerciseName: "Bench Press", totalVolume: 4050, sets: 3 },
-      { exerciseName: "Squats", totalVolume: 5400, sets: 4 },
+      {
+        exerciseName: "Bench Press",
+        totalVolume: 4050,
+        sets: 3,
+        isBodyweight: false,
+      },
+      {
+        exerciseName: "Squats",
+        totalVolume: 5400,
+        sets: 4,
+        isBodyweight: false,
+      },
     ],
     prs: [
       {
@@ -349,9 +359,8 @@ describe("OpenAI Integration", () => {
             expect.objectContaining({ role: "system" }),
             expect.objectContaining({ role: "user" }),
           ]),
-          temperature: 0.7,
-          max_tokens: 1000,
-          reasoning_effort: "medium",
+          max_completion_tokens: 3000,
+          reasoning_effort: "high",
         })
       );
 

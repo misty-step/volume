@@ -126,12 +126,12 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Trophy className="w-5 h-5 text-yellow-600 dark:text-yellow-500" />
-          <CardTitle className="text-lg">Recent PRs 🏆</CardTitle>
+          <CardTitle className="text-lg">Recent PRs</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {prs.map((pr, idx) => (
+          {prs.slice(0, 5).map((pr, idx) => (
             <div
               key={idx}
               className="flex justify-between items-start gap-3 pb-3 border-b last:border-b-0 last:pb-0"
@@ -166,10 +166,17 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
         </div>
 
         {/* Show count of PRs */}
-        {prs.length > 0 && (
+        {prs.length > 5 ? (
           <p className="text-xs text-muted-foreground mt-4 text-center">
-            {prs.length} personal record{prs.length !== 1 ? "s" : ""} achieved!
+            Showing 5 of {prs.length} recent PRs
           </p>
+        ) : (
+          prs.length > 0 && (
+            <p className="text-xs text-muted-foreground mt-4 text-center">
+              {prs.length} personal record{prs.length !== 1 ? "s" : ""}{" "}
+              achieved!
+            </p>
+          )
         )}
       </CardContent>
     </Card>

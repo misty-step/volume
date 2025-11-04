@@ -1,9 +1,18 @@
 import { query } from "./_generated/server";
-import {
-  getMuscleGroups,
-  getAllMuscleGroups,
-} from "./lib/muscle_group_mapping";
-import type { MuscleGroup } from "./lib/muscle_group_mapping";
+
+// Muscle group type definition (no longer using mapping file)
+export type MuscleGroup =
+  | "Chest"
+  | "Back"
+  | "Shoulders"
+  | "Biceps"
+  | "Triceps"
+  | "Quads"
+  | "Hamstrings"
+  | "Glutes"
+  | "Calves"
+  | "Core"
+  | "Other";
 
 /**
  * Recovery Analytics
@@ -14,7 +23,7 @@ import type { MuscleGroup } from "./lib/muscle_group_mapping";
  * - Recovery status classification
  */
 
-export type RecoveryStatus = "fresh" | "recovering" | "ready" | "overdue";
+export type RecoveryStatus = "recovering" | "ready" | "overdue";
 
 export interface RecoveryData {
   muscleGroup: MuscleGroup;
@@ -28,14 +37,18 @@ export interface RecoveryData {
 /**
  * Calculate recovery status based on days since last training
  *
+ * User-friendly terminology:
+ * - "Recovering" (0-2 days): Still sore, give it time
+ * - "Ready" (3-7 days): Optimal training window
+ * - "Overdue" (8+ days): Neglected, losing gains
+ *
  * @param daysSince - Days since muscle group was last trained
  * @returns Recovery status classification
  */
 function calculateRecoveryStatus(daysSince: number): RecoveryStatus {
-  if (daysSince <= 2) return "fresh"; // Recently trained (0-2 days)
-  if (daysSince <= 4) return "recovering"; // Optimal recovery window (3-4 days)
-  if (daysSince <= 7) return "ready"; // Ready to train (5-7 days)
-  return "overdue"; // Needs attention (8+ days)
+  if (daysSince <= 2) return "recovering"; // Just trained, still recovering
+  if (daysSince <= 7) return "ready"; // Optimal training window (3-7 days)
+  return "overdue"; // Neglected (8+ days)
 }
 
 /**
@@ -84,16 +97,27 @@ export const getRecoveryStatus = query({
 
     if (allSets.length === 0) {
       // No training data - return all muscle groups as never trained
-      return getAllMuscleGroups()
-        .filter((group) => group !== "Other") // Exclude "Other" from dashboard
-        .map((group) => ({
-          muscleGroup: group,
-          lastTrainedDate: null,
-          daysSince: 999, // Sentinel value for never trained
-          volumeLast7Days: 0,
-          frequencyLast7Days: 0,
-          status: "overdue" as RecoveryStatus,
-        }));
+      const allGroups: MuscleGroup[] = [
+        "Chest",
+        "Back",
+        "Shoulders",
+        "Biceps",
+        "Triceps",
+        "Quads",
+        "Hamstrings",
+        "Glutes",
+        "Calves",
+        "Core",
+      ];
+
+      return allGroups.map((group) => ({
+        muscleGroup: group,
+        lastTrainedDate: null,
+        daysSince: 999, // Sentinel value for never trained
+        volumeLast7Days: 0,
+        frequencyLast7Days: 0,
+        status: "overdue" as RecoveryStatus,
+      }));
     }
 
     // Calculate date boundaries
@@ -111,28 +135,39 @@ export const getRecoveryStatus = query({
     >();
 
     // Initialize all muscle groups (except "Other")
-    for (const group of getAllMuscleGroups()) {
-      if (group !== "Other") {
-        muscleGroupMetrics.set(group, {
-          lastTrainedTimestamp: 0,
-          volumeLast7Days: 0,
-          workoutDatesLast7Days: new Set(),
-        });
-      }
+    const allGroups: MuscleGroup[] = [
+      "Chest",
+      "Back",
+      "Shoulders",
+      "Biceps",
+      "Triceps",
+      "Quads",
+      "Hamstrings",
+      "Glutes",
+      "Calves",
+      "Core",
+    ];
+
+    for (const group of allGroups) {
+      muscleGroupMetrics.set(group, {
+        lastTrainedTimestamp: 0,
+        volumeLast7Days: 0,
+        workoutDatesLast7Days: new Set(),
+      });
     }
 
     // Process each set
     for (const set of allSets) {
-      const exerciseName = exerciseMap.get(set.exerciseId);
-      if (!exerciseName) continue; // Skip if exercise not found
+      const exercise = exercises.find((ex) => ex._id === set.exerciseId);
+      if (!exercise) continue; // Skip if exercise not found
 
-      // Map exercise to muscle groups
-      const muscleGroups = getMuscleGroups(exerciseName);
+      // Get muscle groups from exercise record (AI-classified)
+      const muscleGroups = exercise.muscleGroups || ["Other"];
 
       for (const group of muscleGroups) {
         if (group === "Other") continue; // Skip "Other" category
 
-        const metrics = muscleGroupMetrics.get(group);
+        const metrics = muscleGroupMetrics.get(group as MuscleGroup);
         if (!metrics) continue;
 
         // Update last trained timestamp

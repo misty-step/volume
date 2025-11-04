@@ -10,24 +10,12 @@ interface StreakCardProps {
   isLoading?: boolean;
 }
 
-/**
- * Detect milestone achievements
- */
-function getMilestone(streak: number): string | null {
-  if (streak >= 100) return "Century Club! 💯";
-  if (streak >= 30) return "Month Strong! 🌟";
-  if (streak >= 7) return "Week Warrior! ⚡";
-  return null;
-}
-
 export function StreakCard({
   currentStreak,
   longestStreak,
   totalWorkouts,
   isLoading = false,
 }: StreakCardProps) {
-  const milestone = getMilestone(currentStreak);
-
   // Loading skeleton
   if (isLoading) {
     return (
@@ -92,7 +80,6 @@ export function StreakCard({
           <div className="text-center p-4 bg-muted/50 rounded-lg">
             <div className="flex items-center justify-center gap-2 mb-1">
               <span className="text-4xl font-bold tabular-nums">
-                {currentStreak > 0 ? "🔥 " : ""}
                 {currentStreak}
               </span>
               <span className="text-lg text-muted-foreground">
@@ -100,13 +87,6 @@ export function StreakCard({
               </span>
             </div>
             <p className="text-sm font-medium">Current Streak</p>
-            {milestone && (
-              <div className="mt-2">
-                <span className="inline-block px-3 py-1 text-xs font-semibold bg-primary/10 text-primary rounded-full">
-                  {milestone}
-                </span>
-              </div>
-            )}
           </div>
 
           {/* Secondary Stats */}
@@ -138,7 +118,7 @@ export function StreakCard({
           )}
           {currentStreak > 0 && currentStreak === longestStreak && (
             <p className="text-xs text-center text-muted-foreground">
-              You&apos;re on your longest streak ever! 🎉
+              You&apos;re on your longest streak ever!
             </p>
           )}
         </div>

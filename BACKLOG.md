@@ -2,13 +2,120 @@
 
 _A comprehensive map of opportunities to improve product, codebase, and development experience._
 
-**Last Groomed:** 2025-10-12
-**Status:** Post-MVP - Clean codebase, IDOR vulnerability FIXED (2025-10-07)
+**Last Groomed:** 2025-11-03
+**Status:** Production Hotfix Complete - Deployment Process Improved
 **Audit Method:** 7-perspective analysis (complexity, architecture, security, performance, maintainability, UX, product-vision)
 
-**Summary**: Analyzed 89 findings across 7 specialized perspectives. Overall grade: **B+ (Very Good for MVP)**. Strong foundations with tactical debt accumulation. Recent PR #8 fixed 3 CRITICAL issues (IDOR, type duplication, O(n²) lookups).
+**Summary**: Analyzed 89 findings across 7 specialized perspectives. Overall grade: **B+ (Very Good for MVP)**. Strong foundations with tactical debt accumulation. Recent PR #8 fixed 3 CRITICAL issues (IDOR, type duplication, O(n²) lookups). **Nov 3, 2025**: Resolved production exercise creation failure, documented deployment process.
 
 ---
+
+## 🔴 Production Incident Learnings (Nov 3, 2025)
+
+**Incident**: Exercise creation broken in production due to `setTimeout` constraint violation in Convex mutations.
+
+**Root Cause**: `createExercise` mutation called `classifyExercise()` (OpenAI SDK), which uses `setTimeout` for HTTP timeouts/retries. Convex platform forbids `setTimeout` in mutations/queries.
+
+**Resolution**: Path chosen after investigation → [to be documented after hotfix complete]
+
+**Process Improvements Implemented**: See TODO.md Phase 0.5 (Process Fix)
+
+---
+
+### Future Enhancement: AI Classification via Action-Based Architecture
+
+**Context**: Muscle group classification via OpenAI GPT-5-nano is desirable feature, but was implemented incorrectly (called from mutation instead of action).
+
+**Proper Architecture** (for future restoration):
+
+```typescript
+// Action (can use setTimeout, HTTP calls, external APIs)
+export const createExercise = action({
+  args: { name: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    // 1. Validation
+    const normalizedName = validateExerciseName(args.name);
+
+    // 2. AI Classification (uses setTimeout - allowed in actions)
+    let muscleGroups: string[] = ["Other"];
+    try {
+      muscleGroups = await classifyExercise(normalizedName);
+      console.log(
+        `Classified "${normalizedName}" → ${muscleGroups.join(", ")}`
+      );
+    } catch (error) {
+      console.error(`Classification failed:`, error);
+    }
+
+    // 3. Database write (via internal mutation)
+    const exerciseId = await ctx.runMutation(
+      internal.exercises.createExerciseInternal,
+      {
+        userId: identity.subject,
+        name: normalizedName,
+        muscleGroups,
+      }
+    );
+
+    return exerciseId;
+  },
+});
+
+// Internal Mutation (database operations only, no external calls)
+export const createExerciseInternal = internalMutation({
+  args: {
+    userId: v.string(),
+    name: v.string(),
+    muscleGroups: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Check for duplicates...
+    // Handle soft-delete restore...
+    // Insert new exercise...
+    return exerciseId;
+  },
+});
+```
+
+**Frontend Update Required**:
+
+```typescript
+// Change from:
+const createExercise = useMutation(api.exercises.createExercise);
+
+// To:
+const createExercise = useAction(api.exercises.createExercise);
+```
+
+**Effort**: 4-6h (refactor + tests + frontend updates)
+**Value**: Restores AI muscle group classification feature
+**Priority**: HIGH (if Path B rollback was chosen) or COMPLETE (if Path A was chosen)
+
+---
+
+### Process Improvement: Deployment Workflow Documentation
+
+**Gap Identified**: Uncommitted code deployed to production without review.
+
+**Root Cause**: Unclear deployment process, possibly `convex dev` auto-syncing to production.
+
+**Required Documentation** (see TODO.md Phase 0.5):
+
+- Production deployment checklist
+- Convex deployment model (dev vs prod)
+- Git workflow (never deploy uncommitted code)
+- Pre-deployment validation (typecheck, tests, build)
+
+**Effort**: 2h (documentation + team alignment)
+**Value**: **CRITICAL** - Prevents future production incidents
+**Priority**: **IMMEDIATE**
+
+---
+
+### [INFRA] Vercel Analytics and Observability
 
 ## Analytics Dashboard Future Enhancements
 

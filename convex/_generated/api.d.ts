@@ -22,10 +22,10 @@ import type * as analyticsProgressiveOverload from "../analyticsProgressiveOverl
 import type * as analyticsRecovery from "../analyticsRecovery.js";
 import type * as crons from "../crons.js";
 import type * as exercises from "../exercises.js";
-import type * as lib_muscle_group_mapping from "../lib/muscle_group_mapping.js";
 import type * as lib_pr_detection from "../lib/pr_detection.js";
 import type * as lib_streak_calculator from "../lib/streak_calculator.js";
 import type * as lib_validate from "../lib/validate.js";
+import type * as migrations_backfillMuscleGroups from "../migrations/backfillMuscleGroups.js";
 import type * as sets from "../sets.js";
 import type * as users from "../users.js";
 
@@ -47,10 +47,10 @@ declare const fullApi: ApiFromModules<{
   analyticsRecovery: typeof analyticsRecovery;
   crons: typeof crons;
   exercises: typeof exercises;
-  "lib/muscle_group_mapping": typeof lib_muscle_group_mapping;
   "lib/pr_detection": typeof lib_pr_detection;
   "lib/streak_calculator": typeof lib_streak_calculator;
   "lib/validate": typeof lib_validate;
+  "migrations/backfillMuscleGroups": typeof migrations_backfillMuscleGroups;
   sets: typeof sets;
   users: typeof users;
 }>;
