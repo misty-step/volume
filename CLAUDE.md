@@ -175,7 +175,24 @@ CLERK_SECRET_KEY=sk_test_...
 
 # Clerk JWT (for Convex integration)
 CLERK_JWT_ISSUER_DOMAIN=your-clerk-domain.clerk.accounts.dev
+
+# OpenAI API (for AI features - set in Convex environment)
+OPENAI_API_KEY=sk-proj-...
 ```
+
+**Setting OpenAI API Key:**
+
+The OPENAI_API_KEY is used by Convex backend functions (not Next.js) and must be set in Convex's environment:
+
+```bash
+# For local development
+npx convex env set OPENAI_API_KEY "sk-proj-..."
+
+# For production
+npx convex env set OPENAI_API_KEY "sk-proj-..." --prod
+```
+
+Note: Do NOT set this in Vercel or GitHub secrets - only Convex backend uses it.
 
 ## First-Time Setup
 
@@ -183,6 +200,90 @@ CLERK_JWT_ISSUER_DOMAIN=your-clerk-domain.clerk.accounts.dev
 2. Start Convex dev server: `pnpm convex dev` (creates project + generates `.env.local`)
 3. Set up Clerk application at dashboard.clerk.com and add keys to `.env.local`
 4. Start Next.js dev server: `pnpm dev`
+
+## Production Deployment Process
+
+### Convex Deployments
+
+This project uses **separate Convex deployments** for dev and production:
+
+- **Dev**: `dev:curious-salamander-943` (https://curious-salamander-943.convex.cloud)
+- **Prod**: `prod:whimsical-marten-631` (https://whimsical-marten-631.convex.cloud)
+
+**Development**: `pnpm convex dev` automatically syncs to the dev deployment only.
+
+**Production**: Requires explicit deployment using the production deployment key.
+
+### Deploying to Production
+
+**CRITICAL**: Never deploy uncommitted code to production.
+
+**Proper workflow**:
+
+```bash
+# 1. Ensure all changes are committed
+git status  # Should show clean working directory
+
+# 2. Run quality checks
+pnpm typecheck  # Must pass
+pnpm test --run # Must pass
+pnpm build      # Must succeed
+
+# 3. Deploy Convex functions to production
+CONVEX_DEPLOYMENT=prod:whimsical-marten-631 pnpm convex deploy -y
+
+# 4. Deploy Next.js to Vercel (if needed)
+# Usually automatic via GitHub integration
+```
+
+### Pre-Deployment Checklist
+
+Before deploying to production, verify:
+
+- [ ] `git status` shows clean working directory (all changes committed)
+- [ ] `pnpm typecheck` passes without errors
+- [ ] `pnpm test --run` passes all tests
+- [ ] `pnpm build` succeeds
+- [ ] Deploy from `master` branch only (or approved PR branch)
+- [ ] Review `git log` to understand what's being deployed
+
+### Deployment Commands
+
+**Dev deployment** (automatic during development):
+
+```bash
+pnpm convex dev  # Syncs to dev:curious-salamander-943
+```
+
+**Production deployment** (manual, from committed code):
+
+```bash
+CONVEX_DEPLOYMENT=prod:whimsical-marten-631 pnpm convex deploy -y
+```
+
+**View production logs**:
+
+```bash
+CONVEX_DEPLOYMENT=prod:whimsical-marten-631 pnpm convex logs --history 50
+```
+
+### Why Separate Deployments?
+
+Separate dev and prod deployments provide:
+
+1. **Safety**: Test changes in dev before affecting production users
+2. **Isolation**: Dev experiments don't risk production data integrity
+3. **Rollback**: Easy to revert production without affecting dev work
+
+### Common Mistakes to Avoid
+
+❌ **DO NOT**: Run `pnpm convex deploy` with uncommitted changes
+❌ **DO NOT**: Skip typecheck/tests before production deployment
+❌ **DO NOT**: Deploy directly from feature branches without review
+
+✅ **DO**: Commit all changes before deploying to production
+✅ **DO**: Run full test suite before deploying
+✅ **DO**: Deploy from `master` branch or approved PR branches only
 
 ## Development Notes
 
