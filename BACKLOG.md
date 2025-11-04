@@ -22,6 +22,54 @@ _A comprehensive map of opportunities to improve product, codebase, and developm
 
 ---
 
+## Post-Merge Technical Improvements
+
+### Implement User-Specific Timezone Support for Streak Calculations
+
+**Context**: Current streak calculator uses UTC day boundaries, causing off-by-one errors for users logging workouts near midnight in non-UTC timezones.
+
+**Implementation** (Option B - Client-side dayKey):
+
+- Add `localDayKey: string` field to sets schema (format: "YYYY-MM-DD")
+- Client calculates local date when logging set: `new Date().toLocaleDateString('en-CA')`
+- Update streak calculator to use `localDayKey` instead of `performedAt`
+- No timezone library needed, accurate per-user timezone
+- **Files**: `convex/schema.ts`, `convex/sets.ts`, `convex/lib/streak_calculator.ts`, `src/components/**/log-set-form.tsx`
+
+**Effort**: 30-45min | **Priority**: MEDIUM | **Value**: Fixes timezone bugs for international users
+
+---
+
+### Extract Duplicate User Creation Logic in Tests
+
+**Files**: `convex/users.ts` + multiple test files
+**Issue**: User creation boilerplate repeated across test files
+**Fix**: Create shared test helper `createTestUser()` in `convex/_test_helpers/`
+
+**Effort**: 30min | **Priority**: LOW
+
+---
+
+### Optimize getRecentPRs for Large Datasets
+
+**File**: `convex/analytics.ts`
+**Issue**: Full table scan on sets table could be slow at scale (10k+ sets)
+**Fix**: Add pagination or date range limiting
+
+**Effort**: 45min | **Priority**: LOW
+
+---
+
+### Standardize daysAgo Test Helper
+
+**Files**: Multiple test files
+**Issue**: Inconsistent date mocking across test suites
+**Fix**: Create shared utility in `convex/_test_helpers/daysAgo.ts`
+
+**Effort**: 20min | **Priority**: LOW
+
+---
+
 ### Future Enhancement: AI Classification via Action-Based Architecture
 
 **Context**: Muscle group classification via OpenAI GPT-5-nano is desirable feature, but was implemented incorrectly (called from mutation instead of action).
