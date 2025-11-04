@@ -1,8 +1,8 @@
 # TODO: Analytics "War Room" Dashboard
 
 **Branch**: `feature/analytics-ai-insights`
-**Status**: Phase 9 - Final Integration & Testing
-**Progress**: 27/45 tasks complete (60%)
+**Status**: 🔴 PRODUCTION HOTFIX IN PROGRESS
+**Progress**: Phase 0 blocking Phase 9
 
 ## 📊 Current Status
 
@@ -19,6 +19,273 @@ All core features implemented and working:
 - ✅ Streak tracking and PR cards
 
 **Remaining**: Manual testing, type safety verification, build checks
+
+---
+
+## 🔴 Phase 0: PRODUCTION HOTFIX - Exercise Creation Failure
+
+**Critical Issue**: Exercise creation broken in production since ~4:03 PM (Nov 3, 2025)
+
+**Root Cause**: `createExercise` mutation calls `classifyExercise()` (OpenAI SDK), which uses `setTimeout` for HTTP timeouts and retries. Convex mutations/queries **forbid** `setTimeout` (platform constraint).
+
+**Error**: `Can't use setTimeout in queries and mutations. Please consider using an action.`
+
+**Impact**: Users cannot create new exercises in production. Core app functionality broken.
+
+**Deeper Issue**: 28 modified files + 4 new files uncommitted, yet production is running this code. Deployment process needs investigation and fix.
+
+---
+
+### 0.1 Investigation Phase (Understand Before Acting)
+
+**Goal**: Measure scope and understand deployment model before choosing fix approach.
+
+- [x] **Verify Convex deployment configuration**
+
+  ```
+  Investigation Results:
+  - `.env.local` shows CONVEX_DEPLOYMENT=dev:curious-salamander-943
+  - NEXT_PUBLIC_CONVEX_URL=https://curious-salamander-943.convex.cloud
+  - Production deployment: prod:whimsical-marten-631
+  - Dev deployment: dev:curious-salamander-943
+
+  Conclusion: Dev and prod are SEPARATE deployments.
+  - `pnpm convex dev` syncs to dev deployment ONLY
+  - Production errors (whimsical-marten-631) came from explicit prod deployment
+  - This means `pnpm convex deploy --prod` was run manually with uncommitted code
+  ```
+
+  - **Success criteria**: ✅ Confirmed separate deployments exist
+
+- [x] **Audit uncommitted changes deployment path**
+
+  ```
+  Root Cause Identified:
+  - `pnpm convex dev` deploys to dev:curious-salamander-943 ONLY
+  - Production (prod:whimsical-marten-631) must be deployed via `pnpm convex deploy --prod`
+  - Uncommitted code reached production because manual `pnpm convex deploy --prod` was run
+
+  Process Gap:
+  - No pre-deployment checks (git status clean, typecheck, tests)
+  - No documentation of proper production deployment workflow
+  - No CI/CD pipeline enforcing deployment from committed code
+
+  Proper Workflow (should be):
+  1. Commit all changes to git
+  2. Push to GitHub
+  3. Deploy to production from CI/CD OR manually from master branch
+  4. Use `pnpm convex deploy --prod` ONLY from clean committed state
+  ```
+
+  - **Success criteria**: ✅ Process gap identified and documented
+
+- [x] **Measure refactoring scope for action-based approach**
+
+  ```
+  Scope Analysis:
+
+  Frontend Call Sites (2 files):
+  - src/components/dashboard/inline-exercise-creator.tsx:39
+  - src/components/dashboard/first-run-experience.tsx:29
+
+  Backend Definition:
+  - convex/exercises.ts:11 (mutation definition)
+
+  Test Files (extensive but will auto-update):
+  - convex/exercises.test.ts (26 calls)
+  - convex/sets.test.ts (5 calls)
+  - convex/analytics.test.ts (29 calls)
+  - convex/analyticsRecovery.test.ts (27 calls)
+  - convex/analyticsFocus.test.ts (28 calls)
+  - convex/analyticsProgressiveOverload.test.ts (29 calls)
+
+  DECISION: **2 frontend call sites = Path A (Simple Refactor)**
+
+  Affected Files for Refactor:
+  1. convex/exercises.ts - Convert mutation → action, add internal mutation
+  2. src/components/dashboard/inline-exercise-creator.tsx - useMutation → useAction
+  3. src/components/dashboard/first-run-experience.tsx - useMutation → useAction
+  4. convex/exercises.test.ts - Update tests for action-based flow
+  ```
+
+  - **Success criteria**: ✅ Confirmed <10 call sites → proceed with Path A
+
+- [x] **Review Convex actions documentation**
+
+  ```
+  Key Learnings from Convex Actions:
+
+  Actions CAN:
+  - Use setTimeout, setInterval (timers)
+  - Make HTTP/HTTPS requests (fetch, axios, OpenAI SDK)
+  - Call external APIs
+  - Use any Node.js APIs
+  - Run for up to 10 minutes
+
+  Actions CANNOT:
+  - Directly read from database (must use ctx.runQuery)
+  - Directly write to database (must use ctx.runMutation)
+  - Access ctx.db directly
+
+  Action → Mutation Pattern:
+  1. Action orchestrates external calls (AI classification)
+  2. Action calls internal mutation for DB writes
+  3. Internal mutations are not exposed to client (secure)
+
+  Perfect for our use case:
+  - createExercise action → calls OpenAI (setTimeout allowed)
+  - createExercise action → calls createExerciseInternal mutation (DB write)
+  ```
+
+  - **Success criteria**: ✅ Understand action pattern for exercise creation
+
+---
+
+### 0.2 Decision Point (Choose Path Based on Evidence)
+
+**IF call sites < 10**: Proceed with **Path A - Action Refactor** (do it right once)
+
+**IF call sites >= 10**: Proceed with **Path B - Rollback + Staged Fix** (ship rollback, then proper fix)
+
+---
+
+### 0.3 Path A: Action-Based Exercise Creation (Simple Refactor)
+
+**Only execute if Investigation Phase shows <10 call sites**
+
+- [ ] **Create internal mutation for database operations**
+  - File: `convex/exercises.ts`
+  - Add `createExerciseInternal` as `internalMutation`
+  - Move DB insert logic from `createExercise` mutation
+  - Parameters: `{ userId: string, name: string, muscleGroups: string[] }`
+  - Returns: `exerciseId`
+  - **Success criteria**: Internal mutation handles all DB writes, no external API calls
+
+- [ ] **Convert createExercise to action**
+  - File: `convex/exercises.ts`
+  - Change `export const createExercise = mutation({` to `action({`
+  - Keep validation logic (`requireAuth`, `validateExerciseName`)
+  - Call `classifyExercise()` for muscle groups (AI classification)
+  - Call `ctx.runMutation(internal.exercises.createExerciseInternal, ...)` for DB write
+  - Handle soft-delete restore logic via separate internal mutation call
+  - **Success criteria**: Action orchestrates validation → AI → DB, no setTimeout errors
+
+- [ ] **Add error handling for AI classification failures**
+  - Wrap `classifyExercise()` in try-catch
+  - On error: log to console, default to `muscleGroups: ["Other"]`
+  - Ensure exercise creation succeeds even if AI fails
+  - **Success criteria**: Exercise creation never fails due to OpenAI API issues
+
+- [ ] **Update frontend to use action instead of mutation**
+  - Search: `useMutation(api.exercises.createExercise)` → replace with `useAction(api.exercises.createExercise)`
+  - Import: `import { useAction } from "convex/react"`
+  - Test: Call action with same parameters, verify response handling
+  - **Success criteria**: All call sites use `useAction`, UI behavior unchanged
+
+- [ ] **Update exercise creation tests**
+  - File: `convex/exercises.test.ts`
+  - Convert mutation tests to action tests (use `ctx.runAction` instead of `ctx.runMutation`)
+  - Mock `classifyExercise` return value for deterministic tests
+  - Add test case: "creates exercise with fallback muscle groups when AI fails"
+  - **Success criteria**: All exercise creation tests pass with action-based implementation
+
+- [ ] **Test locally end-to-end**
+  - Create exercise via UI → verify muscle groups populate via AI
+  - Check dev logs for AI classification success
+  - Test with duplicate name → verify proper error handling
+  - Test with soft-deleted exercise restore → verify muscle groups preserved/added
+  - **Success criteria**: Exercise creation works in dev without setTimeout errors
+
+---
+
+### 0.4 Path B: Rollback + Staged Fix (Large Scope)
+
+**Only execute if Investigation Phase shows >=10 call sites**
+
+- [ ] **Immediate rollback: Remove AI classification from mutation**
+  - File: `convex/exercises.ts`
+  - Remove `import { classifyExercise } from "./ai/openai"` (line 8)
+  - Remove `classifyExercise()` call at line 81-90 (new exercise creation)
+  - Remove `classifyExercise()` call at line 50-65 (soft-delete restore)
+  - Set `muscleGroups: []` as default for all exercise creation
+  - **Success criteria**: Exercise creation works in production, no AI classification temporarily
+
+- [ ] **Verify rollback in production**
+  - Deploy: `pnpm convex deploy --prod`
+  - Test: Create exercise in production → should succeed with empty muscle groups
+  - Check logs: `pnpm convex logs --prod --history 10` → verify no setTimeout errors
+  - **Success criteria**: Exercise creation functional in production within 15 minutes
+
+- [ ] **Document rollback in migration notes**
+  - File: `convex/migrations/README.md` (create if doesn't exist)
+  - Document: "2025-11-03: Temporarily disabled AI muscle group classification due to setTimeout constraint"
+  - Note: "Will restore via action-based architecture in follow-up PR"
+  - **Success criteria**: Future developers understand why muscle groups are empty
+
+- [ ] **Create follow-up task for action-based refactor**
+  - Create issue/ticket: "Restore AI muscle group classification via action-based architecture"
+  - Reference: This TODO section (Path A tasks)
+  - Priority: High (P1)
+  - **Success criteria**: Work tracked, not forgotten
+
+---
+
+### 0.5 Process Fix (Prevent Future Occurrences)
+
+**Execute regardless of path chosen**
+
+- [ ] **Document production deployment workflow**
+  - File: `CLAUDE.md` (project instructions)
+  - Add section: "## Production Deployment Process"
+  - Document: Proper command sequence (commit → push → CI/CD or manual `pnpm convex deploy --prod`)
+  - Document: Never deploy uncommitted code to production
+  - **Success criteria**: Clear deployment instructions in project docs
+
+- [ ] **Add pre-deployment checklist**
+  - File: `.github/DEPLOYMENT_CHECKLIST.md` (create)
+  - Checklist items:
+    - `git status` shows clean working directory (or all changes committed)
+    - `pnpm typecheck` passes
+    - `pnpm test --run` passes
+    - `pnpm build` succeeds
+    - Deploy from `master` branch only
+  - **Success criteria**: Runbook exists for safe production deployments
+
+- [ ] **Review Convex deployment model**
+  - Understand: Does `convex dev` auto-deploy to production or separate deployment?
+  - If separate: Good, continue using dev for testing
+  - If shared: Configure separate dev deployment immediately
+  - **Success criteria**: Dev and prod deployments are isolated
+
+- [ ] **Add Convex deployment notes to README**
+  - File: `README.md` or `CLAUDE.md`
+  - Section: "Convex Deployments"
+  - Note: Dev deployment URL, prod deployment URL
+  - Note: How to switch between deployments
+  - Command: `pnpm convex deploy --prod` for production
+  - **Success criteria**: Team knows how to safely deploy Convex functions
+
+---
+
+### 0.6 Verification & Cleanup
+
+- [ ] **Verify production exercise creation**
+  - Test in production: Create 3 new exercises with different names
+  - Verify: No setTimeout errors in logs (`pnpm convex logs --prod`)
+  - Verify: Exercises save correctly with muscle groups (Path A) or empty array (Path B)
+  - **Success criteria**: Exercise creation works reliably in production
+
+- [ ] **Commit all working changes**
+  - Review: `git status` - understand all 28 modified files
+  - Stage: `git add convex/exercises.ts convex/ai/openai.ts` (hotfix files)
+  - Commit: `git commit -m "fix(exercises): resolve setTimeout constraint in createExercise"`
+  - Note: Hold off on committing other analytics changes until Phase 9 complete
+  - **Success criteria**: Hotfix committed to feature branch, production stable
+
+- [ ] **Update TODO.md progress**
+  - Mark Phase 0 as COMPLETE
+  - Update status to "Phase 9 - Final Integration & Testing"
+  - **Success criteria**: TODO.md reflects current state
 
 ---
 
