@@ -24,15 +24,20 @@ export function ReportNavigator() {
   const { userId } = useAuth();
   const currentUser = useQuery(api.users.getCurrentUser);
 
-  // Log once when both values are available
-  if (userId && currentUser) {
-    console.log("[Report Navigator Debug] User Info:", {
-      clerkUserId: userId,
-      convexUserId: currentUser._id,
-      timezone: currentUser.timezone,
-      createdAt: new Date(currentUser.createdAt).toISOString(),
-    });
-  }
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") {
+      return;
+    }
+
+    if (userId && currentUser) {
+      console.log("[Report Navigator Debug] User Info:", {
+        clerkUserId: userId,
+        convexUserId: currentUser._id,
+        timezone: currentUser.timezone,
+        createdAt: new Date(currentUser.createdAt).toISOString(),
+      });
+    }
+  }, [userId, currentUser]);
 
   // Fetch ALL reports for navigation
   const allReports = useQuery((api as any).ai.reports.getReportHistory, {
