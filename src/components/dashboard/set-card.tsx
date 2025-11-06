@@ -33,6 +33,13 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
   // Use the unit stored with the set, fallback to user preference for legacy sets
   const displayUnit = set.unit || preferredUnit;
 
+  // Format duration in seconds to mm:ss
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
   const handleDeleteClick = () => {
     setShowDeleteDialog(true);
   };
@@ -63,7 +70,13 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
             {exercise?.name || "Unknown exercise"}
           </h4>
           <div className="mt-1 flex items-center gap-3 text-gray-600 dark:text-gray-300">
-            <span className="font-medium">{set.reps} reps</span>
+            {set.duration !== undefined ? (
+              <span className="font-medium">
+                {formatDuration(set.duration)}
+              </span>
+            ) : (
+              <span className="font-medium">{set.reps} reps</span>
+            )}
             {set.weight && (
               <>
                 <span className="text-gray-400 dark:text-gray-500">•</span>

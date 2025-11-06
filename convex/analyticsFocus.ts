@@ -115,7 +115,8 @@ export const getFocusSuggestions = query({
 
       // Get muscle groups from exercise record (AI-classified)
       const muscleGroups = exercise.muscleGroups || ["Other"];
-      const volume = set.reps * (set.weight || 0);
+      // Only count volume for rep-based exercises
+      const volume = set.reps !== undefined ? set.reps * (set.weight || 0) : 0;
 
       for (const group of muscleGroups) {
         if (group === "Other") continue;

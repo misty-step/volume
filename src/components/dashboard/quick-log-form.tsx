@@ -65,8 +65,10 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
   function QuickLogForm({ exercises, onSetLogged }, ref) {
     const [showInlineCreator, setShowInlineCreator] = useState(false);
     const [comboboxOpen, setComboboxOpen] = useState(false);
+    const [isDurationMode, setIsDurationMode] = useState(false);
     const repsInputRef = useRef<HTMLInputElement>(null);
     const weightInputRef = useRef<HTMLInputElement>(null);
+    const durationInputRef = useRef<HTMLInputElement>(null);
 
     const { unit } = useWeightUnit();
 
@@ -75,9 +77,24 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
       exercises,
       onSetLogged,
       onSuccess: () => {
-        focusElement(repsInputRef);
+        // Focus appropriate input based on mode
+        focusElement(isDurationMode ? durationInputRef : repsInputRef);
       },
     });
+
+    // Watch for changes in form values to clear opposing fields
+    useEffect(() => {
+      const subscription = form.watch((value, { name }) => {
+        if (name === "reps" && value.reps !== undefined) {
+          form.setValue("duration", undefined);
+          setIsDurationMode(false);
+        } else if (name === "duration" && value.duration !== undefined) {
+          form.setValue("reps", undefined);
+          setIsDurationMode(true);
+        }
+      });
+      return () => subscription.unsubscribe();
+    }, [form]);
 
     /*
      * Autofocus Flow:
@@ -133,10 +150,18 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
     useImperativeHandle(ref, () => ({
       repeatSet: (set: Set) => {
         form.setValue("exerciseId", set.exerciseId);
-        form.setValue("reps", set.reps);
+        if (set.duration !== undefined) {
+          form.setValue("duration", set.duration);
+          form.setValue("reps", undefined);
+          setIsDurationMode(true);
+          focusElement(durationInputRef);
+        } else {
+          form.setValue("reps", set.reps);
+          form.setValue("duration", undefined);
+          setIsDurationMode(false);
+          focusElement(repsInputRef);
+        }
         form.setValue("weight", set.weight ?? undefined);
-        // Auto-focus reps input for quick edit
-        focusElement(repsInputRef);
       },
     }));
 
@@ -158,6 +183,25 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
       }
     };
 
+    // Handle Enter key in duration input - focus weight or submit
+    const handleDurationKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (weightInputRef.current) {
+          weightInputRef.current.focus();
+        } else {
+          form.handleSubmit(onSubmit)();
+        }
+      }
+    };
+
+    // Format duration in seconds to mm:ss
+    const formatDuration = (seconds: number): string => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}:${secs.toString().padStart(2, "0")}`;
+    };
+
     return (
       <Card className="shadow-md">
         <CardHeader>
@@ -172,7 +216,10 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                   <p className="text-sm text-muted-foreground">
                     <span className="font-medium">Last:</span>{" "}
                     {exercises.find((e) => e._id === selectedExerciseId)?.name}{" "}
-                    • {lastSet.reps} reps
+                    •{" "}
+                    {lastSet.duration !== undefined
+                      ? `${formatDuration(lastSet.duration)}`
+                      : `${lastSet.reps} reps`}
                     {lastSet.weight &&
                       ` @ ${lastSet.weight} ${lastSet.unit || unit}`}{" "}
                     • {formatTimeAgo(lastSet.performedAt)}
@@ -182,9 +229,18 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      form.setValue("reps", lastSet.reps);
+                      if (lastSet.duration !== undefined) {
+                        form.setValue("duration", lastSet.duration);
+                        form.setValue("reps", undefined);
+                        setIsDurationMode(true);
+                        focusElement(durationInputRef);
+                      } else {
+                        form.setValue("reps", lastSet.reps);
+                        form.setValue("duration", undefined);
+                        setIsDurationMode(false);
+                        focusElement(repsInputRef);
+                      }
                       form.setValue("weight", lastSet.weight ?? undefined);
-                      focusElement(repsInputRef);
                     }}
                     className="sm:ml-2"
                   >
@@ -192,6 +248,34 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                   </Button>
                 </div>
               )}
+
+              {/* Mode Toggle */}
+              <div className="mb-4 flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant={!isDurationMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setIsDurationMode(false);
+                    form.setValue("duration", undefined);
+                    focusElement(repsInputRef);
+                  }}
+                >
+                  Reps
+                </Button>
+                <Button
+                  type="button"
+                  variant={isDurationMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setIsDurationMode(true);
+                    form.setValue("reps", undefined);
+                    focusElement(durationInputRef);
+                  }}
+                >
+                  Duration
+                </Button>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-2 md:items-end">
                 {/* Exercise Selector - Combobox with search */}
@@ -286,38 +370,72 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                   }}
                 />
 
-                {/* Reps Input */}
-                <FormField
-                  control={form.control}
-                  name="reps"
-                  render={({ field }) => (
-                    <FormItem className="md:w-32">
-                      <FormLabel>Reps *</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          ref={repsInputRef}
-                          type="number"
-                          inputMode="numeric"
-                          min="1"
-                          onKeyDown={handleRepsKeyDown}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value
-                                ? parseFloat(e.target.value)
-                                : undefined
-                            )
-                          }
-                          value={field.value ?? ""}
-                          placeholder="How many?"
-                          className="w-full h-[46px] tabular-nums"
-                          disabled={form.formState.isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Reps or Duration Input - conditionally rendered */}
+                {!isDurationMode ? (
+                  <FormField
+                    control={form.control}
+                    name="reps"
+                    render={({ field }) => (
+                      <FormItem className="md:w-32">
+                        <FormLabel>Reps *</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            ref={repsInputRef}
+                            type="number"
+                            inputMode="numeric"
+                            min="1"
+                            onKeyDown={handleRepsKeyDown}
+                            onChange={(e) =>
+                              field.onChange(
+                                e.target.value
+                                  ? parseFloat(e.target.value)
+                                  : undefined
+                              )
+                            }
+                            value={field.value ?? ""}
+                            placeholder="How many?"
+                            className="w-full h-[46px] tabular-nums"
+                            disabled={form.formState.isSubmitting}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  <FormField
+                    control={form.control}
+                    name="duration"
+                    render={({ field }) => (
+                      <FormItem className="md:w-32">
+                        <FormLabel>Duration (s) *</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            ref={durationInputRef}
+                            type="number"
+                            inputMode="numeric"
+                            min="1"
+                            onKeyDown={handleDurationKeyDown}
+                            onChange={(e) =>
+                              field.onChange(
+                                e.target.value
+                                  ? parseFloat(e.target.value)
+                                  : undefined
+                              )
+                            }
+                            value={field.value ?? ""}
+                            placeholder="Seconds"
+                            className="w-full h-[46px] tabular-nums"
+                            disabled={form.formState.isSubmitting}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 {/* Weight Input */}
                 <FormField

@@ -27,9 +27,10 @@ export default defineSchema({
   sets: defineTable({
     userId: v.string(),
     exerciseId: v.id("exercises"),
-    reps: v.number(),
+    reps: v.optional(v.number()), // Required for rep-based exercises, optional for duration-based
     weight: v.optional(v.number()),
     unit: v.optional(v.string()), // "lbs" or "kg" - stored with each set for data integrity
+    duration: v.optional(v.number()), // Duration in seconds for time-based exercises
     performedAt: v.number(), // Unix timestamp
   })
     .index("by_user", ["userId"])

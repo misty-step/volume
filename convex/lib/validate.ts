@@ -56,6 +56,31 @@ export function validateUnit(
 }
 
 /**
+ * Validate duration input.
+ * Returns undefined if not provided.
+ * Rejects non-positive values or values over 86400 (24 hours).
+ * Rounds to nearest second.
+ *
+ * @param duration - Duration in seconds (optional)
+ * @returns Rounded duration or undefined
+ * @throws Error if validation fails
+ */
+export function validateDuration(
+  duration: number | undefined
+): number | undefined {
+  if (duration === undefined) {
+    return undefined;
+  }
+
+  if (!isFinite(duration) || duration <= 0 || duration > 86400) {
+    throw new Error("Duration must be between 1 and 86400 seconds (24 hours)");
+  }
+
+  // Round to nearest second
+  return Math.round(duration);
+}
+
+/**
  * Validate and normalize exercise name.
  * Trims whitespace and preserves original casing.
  * Rejects names shorter than 2 or longer than 100 characters.

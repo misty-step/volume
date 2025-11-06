@@ -45,18 +45,22 @@ export function groupSetsByExercise(
 
     const group = groupsMap.get(set.exerciseId)!;
     group.sets.push(set);
-    group.totalReps += set.reps;
+
+    // Only count reps and volume for rep-based exercises
+    if (set.reps !== undefined) {
+      group.totalReps += set.reps;
+
+      // Calculate volume with unit conversion (only for rep-based sets with weight)
+      if (set.weight) {
+        const setUnit = normalizeWeightUnit(set.unit);
+        const convertedWeight = convertWeight(set.weight, setUnit, targetUnit);
+        group.totalVolume += set.reps * convertedWeight;
+      }
+    }
 
     // Track most recent set time for sorting
     if (set.performedAt > group.mostRecentSetTime) {
       group.mostRecentSetTime = set.performedAt;
-    }
-
-    // Calculate volume with unit conversion
-    if (set.weight) {
-      const setUnit = normalizeWeightUnit(set.unit);
-      const convertedWeight = convertWeight(set.weight, setUnit, targetUnit);
-      group.totalVolume += set.reps * convertedWeight;
     }
   });
 

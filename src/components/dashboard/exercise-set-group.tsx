@@ -45,6 +45,13 @@ export function ExerciseSetGroup({
   const [deletingId, setDeletingId] = useState<Id<"sets"> | null>(null);
   const [setToDelete, setSetToDelete] = useState<Set | null>(null);
 
+  // Format duration in seconds to mm:ss
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
   const handleDeleteClick = (set: Set) => {
     setSetToDelete(set);
   };
@@ -104,14 +111,29 @@ export function ExerciseSetGroup({
                   key={set._id}
                   className="px-4 py-3 space-y-2 hover:bg-muted/30 transition-colors"
                 >
-                  {/* Row 1: Reps + Weight (Primary Data) - Grid for alignment */}
+                  {/* Row 1: Reps/Duration + Weight (Primary Data) - Grid for alignment */}
                   <div className="grid grid-cols-[auto_1fr] gap-x-6 text-base">
-                    {/* Reps column */}
+                    {/* Reps or Duration column */}
                     <div className="flex items-center gap-2">
-                      <span className="font-bold tabular-nums">{set.reps}</span>
-                      <span className="text-muted-foreground text-sm">
-                        reps
-                      </span>
+                      {set.duration !== undefined ? (
+                        <>
+                          <span className="font-bold tabular-nums">
+                            {formatDuration(set.duration)}
+                          </span>
+                          <span className="text-muted-foreground text-sm">
+                            time
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-bold tabular-nums">
+                            {set.reps}
+                          </span>
+                          <span className="text-muted-foreground text-sm">
+                            reps
+                          </span>
+                        </>
+                      )}
                     </div>
 
                     {/* Weight column */}

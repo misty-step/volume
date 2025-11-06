@@ -42,9 +42,9 @@ export function calculateDailyStats(
 
   return {
     totalSets: todaySets.length,
-    totalReps: todaySets.reduce((sum, set) => sum + set.reps, 0),
+    totalReps: todaySets.reduce((sum, set) => sum + (set.reps || 0), 0),
     totalVolume: todaySets.reduce((sum, set) => {
-      if (!set.weight) return sum;
+      if (!set.weight || set.reps === undefined) return sum;
       // Convert weight to target unit before calculating volume
       const setUnit = normalizeWeightUnit(set.unit);
       const convertedWeight = convertWeight(set.weight, setUnit, targetUnit);
@@ -100,13 +100,17 @@ export function calculateDailyStatsByExercise(
 
     const stats = statsMap.get(set.exerciseId)!;
     stats.sets += 1;
-    stats.reps += set.reps;
 
-    // Convert weight to target unit before calculating volume
-    if (set.weight) {
-      const setUnit = normalizeWeightUnit(set.unit);
-      const convertedWeight = convertWeight(set.weight, setUnit, targetUnit);
-      stats.volume += set.reps * convertedWeight;
+    // Only count reps and volume for rep-based exercises
+    if (set.reps !== undefined) {
+      stats.reps += set.reps;
+
+      // Convert weight to target unit before calculating volume
+      if (set.weight) {
+        const setUnit = normalizeWeightUnit(set.unit);
+        const convertedWeight = convertWeight(set.weight, setUnit, targetUnit);
+        stats.volume += set.reps * convertedWeight;
+      }
     }
   });
 
