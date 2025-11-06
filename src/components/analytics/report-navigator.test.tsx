@@ -25,28 +25,33 @@ const baseReports = [
   {
     _id: "report_weekly_1",
     reportType: "weekly",
+    generatedAt: Date.now(),
+    content: "Test report content",
+    model: "gpt-4",
+    tokenUsage: {
+      input: 100,
+      output: 200,
+      costUSD: 0.01,
+    },
   },
 ];
-
-const originalNodeEnv = process.env.NODE_ENV;
 
 describe("ReportNavigator security logging", () => {
   afterEach(() => {
     mockUseAuth.mockReset();
     mockUseQuery.mockReset();
     vi.restoreAllMocks();
-    process.env.NODE_ENV = originalNodeEnv;
+    vi.unstubAllEnvs();
   });
 
   it("does not log user info in production builds", async () => {
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
 
     mockUseAuth.mockReturnValue({ userId: "user_123" });
-    mockUseQuery.mockImplementation((queryKey) => {
-      if (queryKey === api.users.getCurrentUser) {
-        return baseUser;
-      }
-      return baseReports;
+    mockUseQuery.mockImplementation((queryKey, ...args) => {
+      // Check if this is getCurrentUser (no args) vs getReportHistory (has args)
+      const isGetCurrentUser = args.length === 0;
+      return isGetCurrentUser ? baseUser : baseReports;
     });
 
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
@@ -59,17 +64,17 @@ describe("ReportNavigator security logging", () => {
   });
 
   it("logs user info when not in production", async () => {
-    process.env.NODE_ENV = "development";
+    vi.stubEnv("NODE_ENV", "development");
 
     mockUseAuth.mockReturnValue({ userId: "user_123" });
-    mockUseQuery.mockImplementation((queryKey) => {
-      if (queryKey === api.users.getCurrentUser) {
-        return baseUser;
-      }
-      return baseReports;
-    });
 
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    mockUseQuery.mockImplementation((queryKey, ...args) => {
+      // Check if this is getCurrentUser (no args) vs getReportHistory (has args)
+      const isGetCurrentUser = args.length === 0;
+      return isGetCurrentUser ? baseUser : baseReports;
+    });
 
     render(<ReportNavigator />);
 
