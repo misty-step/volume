@@ -170,11 +170,11 @@ Required `.env.local` variables:
 NEXT_PUBLIC_CONVEX_URL=https://...convex.cloud
 
 # Clerk (from dashboard.clerk.com)
+# Development: pk_test_* / sk_test_* / https://*.clerk.accounts.dev
+# Production:  pk_live_* / sk_live_* / https://clerk.volume.fitness
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
-
-# Clerk JWT (for Convex integration)
-CLERK_JWT_ISSUER_DOMAIN=your-clerk-domain.clerk.accounts.dev
+CLERK_JWT_ISSUER_DOMAIN=https://your-clerk-domain.clerk.accounts.dev
 
 # OpenAI API (for AI features - set in Convex environment)
 OPENAI_API_KEY=sk-proj-...

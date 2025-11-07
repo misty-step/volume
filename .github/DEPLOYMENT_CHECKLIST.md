@@ -76,9 +76,9 @@ Ensure production environment variables are set correctly:
 ### Vercel Environment (set via Vercel dashboard)
 
 - [ ] `NEXT_PUBLIC_CONVEX_URL` - Production Convex URL
-- [ ] `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Clerk publishable key
-- [ ] `CLERK_SECRET_KEY` - Clerk secret key
-- [ ] `CLERK_JWT_ISSUER_DOMAIN` - Clerk JWT issuer domain
+- [ ] `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Clerk publishable key (pk*live*\*)
+- [ ] `CLERK_SECRET_KEY` - Clerk secret key (sk*live*\*)
+- [ ] `CLERK_JWT_ISSUER_DOMAIN` - Clerk JWT issuer domain (https://clerk.volume.fitness)
 
 ## Common Deployment Mistakes to Avoid
 
@@ -101,5 +101,6 @@ Ensure production environment variables are set correctly:
 
 Document major deployments here:
 
+- **2025-11-06**: Clerk production migration - updated from test keys to live keys (pk*live*/sk*live*), updated JWT issuer to https://clerk.volume.fitness, updated CSP headers for production domain
 - **2025-11-04**: Production hotfix - converted createExercise to action-based architecture (commit `132268d`)
 - **2025-11-04**: Added deployment documentation and checklist (commit `b353480`)
