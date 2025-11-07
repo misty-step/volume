@@ -61,6 +61,235 @@ Analyzed by: 8 specialized perspectives
 **Approach**: Introduce shared `Tabs` and `Badge` components backed by Tailwind tokens (`--primary`, `--info`), document usage, and migrate analytics surfaces.
 **Effort**: 0.5d | **Impact**: Consistent theming and faster future feature delivery.
 
+### [Infrastructure] Production Safety & Pre-Deployment Validation
+
+**Scope**: Multi-layered strategy to prevent production failures from configuration mismatches, untested changes, and environment inconsistencies.
+**Perspectives**: security-sentinel, architecture-guardian, user-experience-advocate, maintainability-maven
+**Why**: 2025-11-06 production outage (CSP blocking Clerk auth) revealed gaps in our deployment validation. Custom domain `clerk.volume.fitness` wasn't covered by CSP wildcards (`*.clerk.com`), causing complete auth failure. Need systematic safeguards to make production surprises impossible.
+
+**Root Cause Analysis**: Configuration changes (CSP headers, environment variables, custom domains) can silently break production without early detection. Preview environments don't validate production-specific configs like custom domains, live API keys, or production service integrations.
+
+**Multi-Strategy Approach**:
+
+#### Phase 1: Quick Wins (Sprint-Ready, 1-2 weeks)
+
+**1. Automated CSP Testing**
+
+- **Files**: `src/tests/security/csp.test.ts` (new)
+- **Implementation**: Vitest tests that parse CSP from `next.config.ts` and `src/middleware.ts`, validate all required domains present:
+
+  ```typescript
+  describe("CSP Configuration", () => {
+    it("allows all Clerk domains", () => {
+      const csp = parseCSPFromConfig();
+      expect(csp.scriptSrc).toContain("https://*.clerk.com");
+      expect(csp.scriptSrc).toContain("https://clerk.volume.fitness");
+      expect(csp.scriptSrc).toContain("https://*.clerk.accounts.dev");
+    });
+
+    it("CSP consistency between next.config and middleware", () => {
+      const staticCSP = parseCSPFromNextConfig();
+      const dynamicCSP = parseCSPFromMiddleware();
+      expect(staticCSP.scriptSrc).toEqual(dynamicCSP.scriptSrc);
+    });
+  });
+  ```
+
+- **Effort**: 3h | **Value**: Catches CSP misconfigurations in CI before merge
+
+**2. Configuration as Code**
+
+- **Files**: `src/config/security.ts` (new), `next.config.ts`, `src/middleware.ts`
+- **Implementation**: Single source of truth for CSP directives:
+
+  ```typescript
+  // src/config/security.ts
+  export const CSP_DOMAINS = {
+    clerk: [
+      "https://*.clerk.com",
+      "https://clerk.volume.fitness",
+      "https://*.clerk.accounts.dev",
+    ],
+    convex: ["https://*.convex.cloud", "wss://*.convex.cloud"],
+    // ... other domains
+  } as const;
+
+  export function buildCSP(): CSPDirectives {
+    return {
+      scriptSrc: ["self", "unsafe-inline", ...CSP_DOMAINS.clerk],
+      connectSrc: ["self", ...CSP_DOMAINS.clerk, ...CSP_DOMAINS.convex],
+      // ... other directives
+    };
+  }
+  ```
+
+- Import and use in both `next.config.ts` and `src/middleware.ts`
+- **Effort**: 4h | **Value**: Eliminates config drift between middleware and next.config
+
+**3. Pre-Deployment Checklist Automation**
+
+- **Files**: `.github/workflows/pre-deploy.yml` (new), `.github/DEPLOYMENT_CHECKLIST.md`
+- **Implementation**: GitHub Actions workflow that runs before production deploy:
+
+  ```yaml
+  name: Pre-Deploy Gate
+  on:
+    pull_request:
+      branches: [master]
+
+  jobs:
+    validate:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Type Check
+          run: pnpm typecheck
+        - name: Run Tests
+          run: pnpm test --run
+        - name: Security Tests
+          run: pnpm test:security
+        - name: Build Check
+          run: pnpm build
+        - name: CSP Validation
+          run: pnpm test:csp
+  ```
+
+- Make PR merges require passing gate
+- **Effort**: 2h | **Value**: Codifies deployment checklist, prevents human error
+
+**Phase 1 Total**: 9h (1.1 days) | **Cost**: $0
+
+#### Phase 2: Staging Environment (This Quarter, 2-3 weeks)
+
+**4. Dedicated Staging Environment**
+
+- **Why Not Preview = Production?** Security risk. Sharing production credentials (live API keys, production database access, production OpenAI quota) with every PR branch creates attack surface. A malicious PR could exfiltrate secrets, corrupt production data, or exhaust paid quotas.
+- **Why Staging?** Isolated environment with production-like config but separate credentials/data. Validates production configs (custom domains, CSP headers, live integrations) without security risks.
+- **Setup**:
+  - Vercel: Create new project for staging (`volume-staging`)
+  - Convex: Create staging deployment (`staging:volume-tracker`)
+  - Clerk: Use production domain (`clerk.volume.fitness`) with test-mode keys
+  - DNS: Add staging subdomain (`staging.volume.fitness`)
+- **Workflow**:
+  1. Merge to `master` auto-deploys to staging
+  2. Run automated smoke tests against staging
+  3. Manual QA in staging
+  4. Promote to production via manual trigger
+- **Environment Variables**: Mirror production structure but with staging-specific values:
+  ```bash
+  # Staging uses production domain patterns but separate data
+  CLERK_JWT_ISSUER_DOMAIN=https://clerk.volume.fitness
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_staging_key
+  CONVEX_DEPLOY_KEY=staging:volume-tracker|<secret>
+  ```
+- **Effort**: 1.5d | **Cost**: ~$20/month (Vercel Pro for staging slot)
+
+**5. Automated Smoke Tests in Staging**
+
+- **Files**: `tests/e2e/production-smoke.spec.ts` (new)
+- **Implementation**: Playwright tests for critical flows, run against staging before production:
+
+  ```typescript
+  test("Clerk authentication loads with custom domain", async ({ page }) => {
+    await page.goto(process.env.STAGING_URL);
+    await expect(page.locator("[data-clerk-auth]")).toBeVisible();
+
+    // Verify no CSP violations
+    const cspErrors = [];
+    page.on("console", (msg) => {
+      if (msg.text().includes("Content Security Policy")) {
+        cspErrors.push(msg.text());
+      }
+    });
+    await page.waitForTimeout(2000);
+    expect(cspErrors).toHaveLength(0);
+  });
+
+  test("Exercise creation with AI classification", async ({ page }) => {
+    await signIn(page);
+    await page.fill('[data-testid="exercise-name"]', "Bench Press");
+    await page.click('[data-testid="create-exercise"]');
+    await expect(page.locator('[data-testid="muscle-group"]')).toContainText(
+      "Chest"
+    );
+  });
+  ```
+
+- **Trigger**: GitHub Actions on merge to master, before production deploy
+- **Effort**: 2d | **Value**: Catches production-specific issues (custom domains, live integrations, CSP) before users see them
+
+**Phase 2 Total**: 3.5d | **Cost**: ~$20/month
+
+#### Phase 3: Continuous Monitoring (Next Quarter)
+
+**6. Real-Time CSP Monitoring**
+
+- **Files**: `src/middleware.ts`, `convex/monitoring/cspViolations.ts` (new)
+- **Implementation**: Report-Uri endpoint that logs CSP violations to Convex:
+
+  ```typescript
+  // Add to CSP header
+  report - uri / api / csp - report;
+
+  // API route logs to Convex
+  export async function POST(request: Request) {
+    const violation = await request.json();
+    await ctx.db.insert("cspViolations", {
+      blockedUri: violation["blocked-uri"],
+      violatedDirective: violation["violated-directive"],
+      timestamp: Date.now(),
+      userAgent: request.headers.get("user-agent"),
+    });
+  }
+  ```
+
+- Set up alerts when violations exceed threshold
+- **Effort**: 1d | **Value**: Real-time production monitoring, catches issues immediately
+
+**7. Configuration Drift Detection**
+
+- **Files**: `.github/workflows/config-audit.yml` (new)
+- **Implementation**: Weekly scheduled job that compares staging vs production configs:
+
+  ```yaml
+  - name: Compare Environment Configs
+    run: |
+      # Fetch both environments
+      vercel env ls production > prod.txt
+      vercel env ls staging > staging.txt
+
+      # Check that critical vars match structure
+      diff <(grep CLERK prod.txt) <(grep CLERK staging.txt) || \
+        echo "::warning::Clerk config drift detected"
+  ```
+
+- **Effort**: 0.5d | **Value**: Prevents configuration drift over time
+
+**Phase 3 Total**: 1.5d
+
+#### Implementation Roadmap
+
+**Sprint 1 (Now)**:
+
+- Automated CSP testing (3h)
+- Configuration as code (4h)
+- Pre-deployment checklist automation (2h)
+- **Total**: 9h | **ROI**: Immediate CI validation
+
+**Sprint 2-3 (This Quarter)**:
+
+- Staging environment setup (1.5d)
+- Automated smoke tests (2d)
+- **Total**: 3.5d | **ROI**: Pre-production validation gate
+
+**Sprint 4-5 (Next Quarter)**:
+
+- CSP monitoring (1d)
+- Config drift detection (0.5d)
+- **Total**: 1.5d | **ROI**: Continuous production safety
+
+**Total Investment**: 6 days | **Cost**: $20/month
+**Effort**: 6d | **Impact**: Eliminates production configuration surprises, validates environment-specific configs before deploy, provides real-time monitoring
+
 ---
 
 ## Soon (Exploring, 3-6 months)
@@ -84,5 +313,6 @@ Analyzed by: 8 specialized perspectives
 ## Learnings
 
 - The AI reporting seam spans performance, reliability, and UX; future changes need cross-functional review to avoid regressions.
-- Client dashboards must stay server-driven—pulling full tables erases Convex’s real-time advantages as soon as volume grows.
+- Client dashboards must stay server-driven—pulling full tables erases Convex's real-time advantages as soon as volume grows.
 - Debug tooling must be gated; leaving console leaks behind becomes a security liability once analytics surfaces ship.
+- **[2025-11-06] CSP Production Outage**: Custom domain configuration (`clerk.volume.fitness`) failed in production because CSP wildcards (`*.clerk.com`, `*.clerk.accounts.dev`) don't match custom subdomain structures. Preview environments can't catch production-specific configs (custom domains, live API integrations) without explicit staging infrastructure. Need automated CSP validation tests and dedicated staging environment with production-like config to validate before deploy.

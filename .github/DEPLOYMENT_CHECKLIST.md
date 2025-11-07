@@ -101,6 +101,8 @@ Ensure production environment variables are set correctly:
 
 Document major deployments here:
 
+- **2025-11-07**: Production safety strategy - documented multi-layered approach (automated CSP testing, staging environment, smoke tests) to prevent configuration failures after 2025-11-06 CSP outage
+- **2025-11-06**: Emergency CSP fix - added explicit `clerk.volume.fitness` to CSP headers after production auth outage (wildcard `*.clerk.com` didn't match custom domain)
 - **2025-11-06**: Clerk production migration - updated from test keys to live keys (pk*live*/sk*live*), updated JWT issuer to https://clerk.volume.fitness, updated CSP headers for production domain
 - **2025-11-04**: Production hotfix - converted createExercise to action-based architecture (commit `132268d`)
 - **2025-11-04**: Added deployment documentation and checklist (commit `b353480`)
