@@ -39,7 +39,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
 
 ### Configuration Factory (Deep Module Pattern)
 
-- [ ] Create `src/lib/environment.ts` - deployment environment detection
+- [x] Create `src/lib/environment.ts` - deployment environment detection
   - **Context**: Single source of truth for prod/preview/dev detection across all observability tools
   - **Acceptance**: Exports `getDeploymentEnvironment()` returning 'production' | 'preview' | 'development'
   - **Implementation**: Check `VERCEL_ENV`, `NODE_ENV` with explicit fallbacks
@@ -197,12 +197,14 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
 - [ ] Update `src/app/layout.tsx` - add analytics components before closing </body>
   - **Context**: Analytics must be inside body, after main content for performance
   - **Add imports**:
+
   ```typescript
   import { SpeedInsights } from "@vercel/speed-insights/next";
   import { AnalyticsWrapper } from "@/components/analytics-wrapper";
   ```
 
   - **Add before `</body>`** (after Toaster):
+
   ```tsx
   <AnalyticsWrapper />
   <SpeedInsights />
@@ -384,6 +386,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
 
 - [ ] Add barrel exports at bottom of analytics.ts
   - **Exports**:
+
   ```typescript
   export {
     trackEvent,
@@ -488,6 +491,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
   - **Context**: Show pattern for handling Convex query errors
   - **Find existing useQuery call**: e.g., `const exercises = useQuery(api.exercises.listExercises);`
   - **Wrap page content in try-catch pattern**:
+
   ```typescript
   if (exercises === undefined) return <LoadingSpinner />; // Loading state
   if (!exercises) throw new Error('Failed to load exercises'); // Trigger boundary
@@ -555,6 +559,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
 - [ ] Update `.env.local` - add your actual Sentry values (NOT committed to git)
   - **Get from**: https://sentry.io/settings/projects/
   - **Add**:
+
   ```bash
   NEXT_PUBLIC_SENTRY_DSN=your_actual_dsn_here
   SENTRY_AUTH_TOKEN=your_actual_token_here
