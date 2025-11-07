@@ -31,13 +31,13 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   // Security grade: B+/A- (perfectly acceptable for this app)
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-inline' https://*.clerk.com https://*.clerk.accounts.dev https://challenges.cloudflare.com https://vercel.live;
-    style-src 'self' 'unsafe-inline' https://*.clerk.com https://*.clerk.accounts.dev;
+    script-src 'self' 'unsafe-inline' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://challenges.cloudflare.com https://vercel.live;
+    style-src 'self' 'unsafe-inline' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev;
     img-src 'self' https: data: blob:;
     font-src 'self' data:;
     worker-src 'self' blob:;
-    connect-src 'self' https://*.clerk.com https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud;
-    frame-src 'self' https://*.clerk.com https://*.clerk.accounts.dev https://challenges.cloudflare.com https://vercel.live;
+    connect-src 'self' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud;
+    frame-src 'self' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://challenges.cloudflare.com https://vercel.live;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
