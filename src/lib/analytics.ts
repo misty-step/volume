@@ -316,3 +316,44 @@ export function trackEvent<Name extends AnalyticsEventName>(
       if (isDev) console.warn("Analytics server track failed:", error);
     });
 }
+
+/**
+ * Report error to Sentry with automatic PII sanitization.
+ *
+ * Wraps Sentry.captureException with context sanitization to prevent
+ * accidental PII exposure in error reports.
+ *
+ * @param error - Error to report
+ * @param context - Additional context (will be sanitized)
+ *
+ * @example
+ * try {
+ *   await dangerousOperation();
+ * } catch (error) {
+ *   reportError(error, {
+ *     operation: "dangerousOperation",
+ *     userId: user.id
+ *   });
+ * }
+ */
+export function reportError(
+  error: Error,
+  context?: Record<string, unknown>
+): void {
+  if (!isSentryEnabled()) return;
+
+  try {
+    const sanitizedContext = context
+      ? sanitizeEventProperties(context)
+      : undefined;
+
+    Sentry.captureException(error, {
+      extra: sanitizedContext,
+    });
+  } catch (sentryError) {
+    // Never break user flow due to Sentry errors
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Sentry reportError failed:", sentryError);
+    }
+  }
+}
