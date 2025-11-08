@@ -161,6 +161,53 @@ export interface AnalyticsEventDefinitions {
 }
 ```
 
+### Convex Error Tracking
+
+Convex functions automatically report errors to Sentry via Convex Dashboard integration.
+
+**Setup (Pro plan required):**
+
+1. Go to [Convex Dashboard](https://dashboard.convex.dev)
+2. Select your deployment (dev or prod)
+3. Navigate to Settings → Integrations
+4. Click "Sentry" card
+5. Enter Sentry DSN: `SENTRY_DSN` value from .env.local
+6. Save configuration
+
+**What Gets Tracked:**
+
+- Exceptions thrown from queries, mutations, actions
+- Automatic tags: func, func_type, func_runtime, request_id
+- User context from Clerk auth (if set with setUserContext)
+
+**Client-Side Error Handling:**
+
+Errors from Convex queries/mutations propagate to client and trigger Error Boundaries:
+
+```typescript
+const exercises = useQuery(api.exercises.listExercises);
+
+// If query throws, Error Boundary catches and reports to Sentry
+// No manual error checking needed - see src/app/history/page.tsx
+```
+
+**Manual Error Enrichment:**
+
+For critical paths, enrich with Convex-specific context:
+
+```typescript
+const logSet = useMutation(api.sets.logSet);
+
+try {
+  await logSet({ exerciseId, reps, weight });
+} catch (error) {
+  reportError(error, {
+    convexFunction: "sets.logSet",
+    convexArgs: { exerciseId, reps, weight },
+  });
+}
+```
+
 ## Architecture Overview
 
 ### Authentication Flow
