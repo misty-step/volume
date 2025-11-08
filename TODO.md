@@ -819,77 +819,58 @@ export type AnalyticsEventProperties<Name extends AnalyticsEventName> = Partial<
 
 ---
 
-## Phase 7: Deployment Checklist
+## Phase 7: Deployment Configuration (95% Automated via CLI)
 
-### Vercel Environment Variables
+### Automated Configuration (Script)
 
-- [ ] Add NEXT_PUBLIC_SENTRY_DSN to Vercel project settings
-  - **Location**: Project Settings → Environment Variables
-  - **Value**: Client-side DSN from Sentry project
-  - **Environments**: Production, Preview, Development (same value for all)
-  - **Why**: Public variable, exposed in browser bundle
+- [ ] Run `./scripts/deploy-observability.sh`
+  - **Purpose**: Automates all Vercel environment variable configuration
+  - **Prompts for**: Sentry DSN, auth token, org slug, project slug
+  - **Configures automatically**:
+    - `NEXT_PUBLIC_SENTRY_DSN` (production, preview, development)
+    - `SENTRY_AUTH_TOKEN` (production, sensitive)
+    - `SENTRY_ORG` (production)
+    - `SENTRY_PROJECT` (production)
+  - **Prerequisites**: `vercel` CLI installed and authenticated
+  - **Duration**: ~2 minutes
+  - **Acceptance**: Script completes without errors, prints success message
 
-- [ ] Add SENTRY_AUTH_TOKEN to Vercel project settings
-  - **Value**: Auth token from Sentry (User Settings → Auth Tokens)
-  - **Environments**: Production only (source maps for prod builds)
-  - **Mark as**: Secret (sensitive, don't expose)
-  - **Why**: Enables source map upload during Vercel builds
+### Manual Configuration (1 Step)
 
-- [ ] Add SENTRY_ORG to Vercel project settings
-  - **Value**: Organization slug from Sentry URL
-  - **Environments**: Production
-  - **Why**: Required for CLI source map upload
-
-- [ ] Add SENTRY_PROJECT to Vercel project settings
-  - **Value**: Project slug (probably "volume")
-  - **Environments**: Production
-  - **Why**: Required for CLI source map upload
-
-### Convex Dashboard Configuration
-
-- [ ] Configure Sentry integration in Convex Dashboard
+- [ ] Configure Convex Sentry Integration in Dashboard
+  - **Why manual**: Convex doesn't expose integration config via CLI
   - **Go to**: https://dashboard.convex.dev → Select deployment
   - **Navigate**: Settings → Integrations → Sentry
-  - **Enter DSN**: Same as NEXT_PUBLIC_SENTRY_DSN
-  - **Environments**: Configure for both dev and prod deployments separately
+  - **Enter DSN**: Use same DSN from script output
+  - **Duration**: ~1 minute
   - **Acceptance**: Integration shows "Connected" status
-  - **Why**: Backend errors from Convex functions need tracking too
 
-### Vercel Analytics Activation
+### Vercel Analytics (Auto-Enabled)
 
-- [ ] Enable Vercel Analytics in Vercel project dashboard
-  - **Go to**: Project → Analytics tab
-  - **Click**: "Enable Analytics" if not already enabled
-  - **Verify**: Shows "Active" status
-  - **Acceptance**: Dashboard shows analytics are collecting
-  - **Note**: May take 24 hours for data to appear
+- [ ] Verify Vercel Analytics after first deploy
+  - **No action required**: Analytics auto-activates on Vercel deployments
+  - **Already integrated**: `@vercel/analytics` package installed in code
+  - **Check**: Vercel Dashboard → Analytics tab shows "Active"
+  - **Note**: Data may take 5-10 minutes to appear after first deploy
 
-- [ ] Enable Speed Insights in Vercel project dashboard
-  - **Go to**: Project → Speed Insights tab
-  - **Click**: "Enable Speed Insights" if not already enabled
-  - **Verify**: Shows "Active" status
-  - **Acceptance**: Dashboard shows Web Vitals data
-  - **Note**: Data appears faster than Analytics (usually within minutes)
-
-### First Deploy & Smoke Test
+### Deploy & Test
 
 - [ ] Deploy to Vercel: `git push origin feature/observability-stack`
-  - **Trigger**: Create PR, Vercel auto-deploys preview
-  - **Check build logs**: Sentry source maps uploaded successfully
-  - **Expected**: "Sentry source maps uploaded: X files"
+  - **Or**: Create PR (Vercel auto-deploys preview)
+  - **Check build logs**: "Sentry source maps uploaded: X files"
   - **Acceptance**: Deploy succeeds, no build errors
 
-- [ ] Test Sentry error reporting on preview deployment
-  - **Visit**: Preview URL + /test-error (if left in, or trigger real error)
-  - **Verify**: Error appears in Sentry with correct environment tag (preview)
-  - **Check**: Source maps work (stack trace shows original code, not minified)
-  - **Acceptance**: Errors tracked, stack traces readable
+- [ ] Test Sentry error reporting on preview
+  - **Visit**: Preview URL (trigger test error via /test-error page)
+  - **Verify**: Error appears in Sentry with correct environment (preview)
+  - **Check**: Stack traces show original code (source maps working)
+  - **Acceptance**: Errors tracked, PII redacted
 
-- [ ] Test Vercel Analytics on preview deployment
+- [ ] Test analytics on preview
   - **Visit**: Multiple pages on preview deployment
-  - **Wait**: 5-10 minutes for data to process
+  - **Wait**: 5-10 minutes for data processing
   - **Check**: Vercel Analytics dashboard shows page views
-  - **Acceptance**: Events appear with correct path data
+  - **Acceptance**: Events tracked with correct paths
 
 ---
 
