@@ -110,7 +110,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
 
 ### Build Configuration
 
-- [ ] Update `next.config.ts` - wrap with `withSentryConfig` for source map upload
+- [x] Update `next.config.ts` - wrap with `withSentryConfig` for source map upload
   - **Context**: Source maps enable readable stack traces in production (crucial for debugging)
   - **Current state**: Plain config with headers() and bundleAnalyzer
   - **Implementation**:
@@ -138,7 +138,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
   - **Acceptance**: Config exports withSentryConfig wrapper, preserves bundleAnalyzer
   - **Verification**: `pnpm build` succeeds, no Sentry upload errors (expected without token)
 
-- [ ] Update CSP headers in `next.config.ts` - allow Sentry domains
+- [x] Update CSP headers in `next.config.ts` - allow Sentry domains
   - **Context**: Current CSP will block Sentry error reporting
   - **Add to script-src**: `https://browser.sentry-cdn.com`
   - **Add to connect-src**: `https://*.ingest.sentry.io`
