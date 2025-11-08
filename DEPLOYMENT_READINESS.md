@@ -110,66 +110,85 @@ clearUserContext(); // Clear user context on logout
 
 ---
 
-## Next Steps: Phase 7 Deployment Configuration
+## Next Steps: Phase 7 Deployment Configuration (95% Automated)
 
-### Manual Configuration Required
+### Automated Configuration via CLI Script
 
-Phase 7 consists of external dashboard configuration that must be done manually:
+Phase 7 is now **95% automated** via the `scripts/deploy-observability.sh` script.
 
-#### 1. Vercel Environment Variables
+#### Step 1: Run Automated Configuration (2 minutes)
 
-Add to Vercel project settings (Project Settings → Environment Variables):
+```bash
+./scripts/deploy-observability.sh
+```
 
-| Variable                 | Value                     | Environments | Type   |
-| ------------------------ | ------------------------- | ------------ | ------ |
-| `NEXT_PUBLIC_SENTRY_DSN` | From Sentry project       | All          | Public |
-| `SENTRY_AUTH_TOKEN`      | From Sentry user settings | Production   | Secret |
-| `SENTRY_ORG`             | Organization slug         | Production   | Public |
-| `SENTRY_PROJECT`         | Project slug              | Production   | Public |
+**What it does**:
 
-**Steps**:
+- Verifies prerequisites (Vercel CLI installed and authenticated)
+- Prompts for Sentry credentials securely
+- Configures all 4 Vercel environment variables automatically:
+  - `NEXT_PUBLIC_SENTRY_DSN` (production, preview, development)
+  - `SENTRY_AUTH_TOKEN` (production, sensitive)
+  - `SENTRY_ORG` (production)
+  - `SENTRY_PROJECT` (production)
+- Provides instructions for manual step
 
-1. Log in to [Sentry dashboard](https://sentry.io)
-2. Go to Project Settings → Client Keys → Copy DSN
-3. Go to User Settings → Auth Tokens → Create new token (scopes: `project:read`, `project:releases`, `org:read`)
-4. Add all variables to Vercel project settings
+**Credentials needed** (get from https://sentry.io):
 
-#### 2. Convex Dashboard Configuration
+- Sentry DSN (Project Settings → Client Keys)
+- Auth token (User Settings → Auth Tokens - scopes: `project:read`, `project:releases`, `org:read`)
+- Organization slug (from Sentry URL)
+- Project slug (likely "volume")
 
-Configure Sentry integration in Convex Dashboard:
+#### Step 2: Convex Dashboard Configuration (1 minute)
 
-**Steps**:
+**The only manual step** - Convex doesn't expose integration config via CLI:
 
 1. Go to [Convex Dashboard](https://dashboard.convex.dev)
 2. Select your deployment
-3. Navigate to Settings → Integrations → Sentry
-4. Enter Sentry DSN
-5. Configure error sampling (recommended: 1.0 for 100%)
-6. Enable integration
+3. Navigate: Settings → Integrations → Sentry
+4. Enter DSN (printed by script)
+5. Click "Enable Integration"
 
-#### 3. Vercel Analytics
+#### Step 3: Verify Vercel Analytics (Auto-Enabled)
 
-Vercel Analytics is automatically enabled on Vercel deployments. No configuration needed.
+Vercel Analytics automatically activates on Vercel deployments. No action required.
 
-#### 4. First Deploy & Smoke Test
+- Already integrated: `@vercel/analytics` package in code
+- Will activate on first deploy
+- Check: Vercel Dashboard → Analytics tab (data appears in 5-10 min)
 
-After configuration:
+#### Step 4: Deploy & Test
 
-1. Delete test pages:
-   ```bash
-   rm -rf src/app/test-error src/app/api/test-error src/app/test-analytics
-   rm src/lib/analytics.test-d.ts
-   ```
-2. Commit cleanup:
-   ```bash
-   git add -A
-   git commit -m "chore: remove test pages before production"
-   ```
-3. Merge to master and deploy
-4. Trigger a test error in production (e.g., via browser console)
-5. Verify error appears in Sentry dashboard
-6. Verify PII is redacted
-7. Check Vercel Analytics for page views
+Delete test pages before production:
+
+```bash
+rm -rf src/app/test-error src/app/api/test-error src/app/test-analytics
+rm src/lib/analytics.test-d.ts
+git add -A
+git commit -m "chore: remove test pages before production"
+```
+
+Deploy:
+
+```bash
+git push origin feature/observability-stack
+# Or create PR for review
+```
+
+Smoke test after deploy:
+
+1. Trigger test error in production
+2. Verify error in Sentry dashboard
+3. Verify PII redacted
+4. Check Vercel Analytics shows page views
+
+### Automation Summary
+
+**Before automation**: 10 manual steps across 3 dashboards
+**After automation**: 1 script + 1 dashboard click
+**Time saved**: ~10 minutes → ~3 minutes
+**Repeatability**: Script ensures consistent configuration across environments
 
 ---
 
