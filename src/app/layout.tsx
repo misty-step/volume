@@ -9,6 +9,8 @@ import { Footer } from "@/components/layout/footer";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { WeightUnitProvider } from "@/contexts/WeightUnitContext";
 import { Toaster } from "sonner";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { AnalyticsWrapper } from "@/components/analytics-wrapper";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -63,6 +65,8 @@ export default function RootLayout({
             </WeightUnitProvider>
           </ThemeProvider>
           <Toaster position="bottom-right" />
+          <AnalyticsWrapper />
+          <SpeedInsights />
         </body>
       </html>
     </ClerkProvider>

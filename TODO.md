@@ -194,7 +194,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
   - **Acceptance**: Component exports, beforeSend filters URLs correctly
   - **Test**: Mock event with webhook URL, verify returns null
 
-- [ ] Update `src/app/layout.tsx` - add analytics components before closing </body>
+- [x] Update `src/app/layout.tsx` - add analytics components before closing </body>
   - **Context**: Analytics must be inside body, after main content for performance
   - **Add imports**:
 
