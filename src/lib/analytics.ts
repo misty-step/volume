@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { shouldEnableSentry } from "./sentry";
 
 /**
@@ -178,4 +179,90 @@ function loadServerTrack() {
   }
 
   return serverTrackPromise;
+}
+
+/**
+ * Current user context enriching all analytics events.
+ *
+ * Set via setUserContext() on login, cleared via clearUserContext() on logout.
+ */
+let currentUserContext: {
+  userId: string;
+  metadata: Record<string, string>;
+} | null = null;
+
+/**
+ * Set user context for analytics and error tracking.
+ *
+ * All subsequent trackEvent() calls automatically include userId.
+ * Also syncs user info to Sentry for error correlation.
+ *
+ * @param userId - User identifier (will be sanitized for PII)
+ * @param metadata - Optional metadata (e.g., plan: "pro")
+ *
+ * @example
+ * setUserContext(user.id, { plan: "free" })
+ */
+export function setUserContext(
+  userId: string,
+  metadata: Record<string, string> = {}
+): void {
+  // Sanitize user data before storing
+  const sanitizedUserId = sanitizeString(userId);
+  const sanitizedMetadata = Object.fromEntries(
+    Object.entries(metadata).map(([k, v]) => [k, sanitizeString(v)])
+  );
+
+  // Store in module state
+  currentUserContext = {
+    userId: sanitizedUserId,
+    metadata: sanitizedMetadata,
+  };
+
+  // Sync to Sentry for error correlation
+  Sentry.setUser({
+    id: sanitizedUserId,
+    ...sanitizedMetadata,
+  });
+}
+
+/**
+ * Clear user context on logout.
+ *
+ * Removes userId from future analytics events and Sentry error reports.
+ */
+export function clearUserContext(): void {
+  currentUserContext = null;
+  Sentry.setUser(null);
+}
+
+/**
+ * Merge user context into event properties.
+ *
+ * Automatically adds userId and metadata to events without overwriting
+ * explicitly provided properties.
+ *
+ * @param properties - Event properties (may already include userId)
+ * @returns Properties enriched with user context
+ */
+function withUserContext(
+  properties: Record<string, string | number | boolean>
+): Record<string, string | number | boolean> {
+  if (!currentUserContext) return properties;
+
+  const enriched = { ...properties };
+
+  // Add userId if not already present
+  if (!("userId" in enriched)) {
+    enriched.userId = currentUserContext.userId;
+  }
+
+  // Add metadata if not present (no prefix - typed events prevent conflicts)
+  for (const [key, value] of Object.entries(currentUserContext.metadata)) {
+    if (!(key in enriched)) {
+      enriched[key] = value;
+    }
+  }
+
+  return enriched;
 }
