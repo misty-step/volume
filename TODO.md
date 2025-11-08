@@ -219,48 +219,49 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
 
 ### Type-Safe Event System
 
-- [ ] Create `src/lib/analytics.ts` - define event type system
-  - **Context**: Type safety prevents tracking bugs, serves as event catalog
-  - **Start with core events**:
+- [x] Create `src/lib/analytics.ts` - define event type system
+- **Context**: Type safety prevents tracking bugs, serves as event catalog
+- **Start with core events**:
 
-  ```typescript
-  export interface AnalyticsEventDefinitions {
-    "Exercise Created": {
-      exerciseId: string;
-      userId?: string;
-      source?: "manual" | "ai" | "import";
-    };
-    "Set Logged": {
-      setId: string;
-      exerciseId: string;
-      userId?: string;
-      reps: number;
-      weight?: number;
-    };
-    "Workout Session Started": {
-      sessionId: string;
-      userId?: string;
-    };
-    "Workout Session Completed": {
-      sessionId: string;
-      userId?: string;
-      durationMs: number;
-      setCount: number;
-    };
-  }
+```typescript
+export interface AnalyticsEventDefinitions {
+  "Exercise Created": {
+    exerciseId: string;
+    userId?: string;
+    source?: "manual" | "ai" | "import";
+  };
+  "Set Logged": {
+    setId: string;
+    exerciseId: string;
+    userId?: string;
+    reps: number;
+    weight?: number;
+  };
+  "Workout Session Started": {
+    sessionId: string;
+    userId?: string;
+  };
+  "Workout Session Completed": {
+    sessionId: string;
+    userId?: string;
+    durationMs: number;
+    setCount: number;
+  };
+}
 
-  export type AnalyticsEventName = keyof AnalyticsEventDefinitions;
-  export type AnalyticsEventProperties<Name extends AnalyticsEventName> =
-    Partial<AnalyticsEventDefinitions[Name]> &
-      Record<string, string | number | boolean>;
-  ```
+export type AnalyticsEventName = keyof AnalyticsEventDefinitions;
+export type AnalyticsEventProperties<Name extends AnalyticsEventName> = Partial<
+  AnalyticsEventDefinitions[Name]
+> &
+  Record<string, string | number | boolean>;
+```
 
-  - **Acceptance**: Types compile, event names are string literals
-  - **Why**: Typo in event name = silent failure. TypeScript prevents this.
+- **Acceptance**: Types compile, event names are string literals
+- **Why**: Typo in event name = silent failure. TypeScript prevents this.
 
 ### PII Sanitization
 
-- [ ] Add email redaction helper to analytics.ts
+- [x] Add email redaction helper to analytics.ts
   - **Pattern**: `/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g`
   - **Replacement**: `[EMAIL_REDACTED]`
   - **Function**: `sanitizeString(value: string): string`
@@ -268,7 +269,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
   - **Test**: "user@example.com sent message" → "user@[EMAIL_REDACTED] sent message"
   - **Note**: Some emails might be double-redacted, that's fine (defensive)
 
-- [ ] Add recursive property sanitizer to analytics.ts
+- [x] Add recursive property sanitizer to analytics.ts
   - **Function**: `sanitizeEventProperties(properties: Record<string, unknown>): Record<string, string | number | boolean>`
   - **Logic**:
     - String → sanitizeString(value)
@@ -281,7 +282,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
 
 ### Environment Detection
 
-- [ ] Add environment helpers to analytics.ts
+- [x] Add environment helpers to analytics.ts
   - **Function**: `isAnalyticsEnabled(): boolean`
   - **Logic**:
     - Check NEXT_PUBLIC_DISABLE_ANALYTICS === 'true' → false
@@ -292,14 +293,14 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
   - **Acceptance**: Respects all flags, auto-disables in dev
   - **Why**: Don't pollute analytics with dev traffic
 
-- [ ] Add Sentry-specific check: `isSentryEnabled(): boolean`
+- [x] Add Sentry-specific check: `isSentryEnabled(): boolean`
   - **Logic**: Call `shouldEnableSentry(process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN)`
   - **Acceptance**: Uses existing helper from lib/sentry.ts
   - **Why**: Sentry has more complex enable logic (DSN required, test env blocked)
 
 ### Server-Side Track Function Loader
 
-- [ ] Add dynamic server track loader to analytics.ts
+- [x] Add dynamic server track loader to analytics.ts
   - **Context**: @vercel/analytics/server only works on server, can't import on client
   - **Implementation**:
 
@@ -324,7 +325,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
 
 ### User Context Management
 
-- [ ] Add user context state to analytics.ts
+- [x] Add user context state to analytics.ts
   - **State**: `let currentUserContext: { userId: string; metadata: Record<string, string> } | null = null;`
   - **Function**: `setUserContext(userId: string, metadata?: Record<string, string>): void`
   - **Logic**:
@@ -334,14 +335,14 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
   - **Acceptance**: State persists across calls, syncs with Sentry
   - **Why**: Enrich all events with user context automatically
 
-- [ ] Add user context clearer: `clearUserContext(): void`
+- [x] Add user context clearer: `clearUserContext(): void`
   - **Logic**:
     - Set `currentUserContext = null`
     - Call `Sentry.setUser(null)`
   - **Acceptance**: State cleared, Sentry user cleared
   - **When to call**: User logs out, session expires
 
-- [ ] Add context merger helper: `withUserContext(properties: Record<string, any>): Record<string, any>`
+- [x] Add context merger helper: `withUserContext(properties: Record<string, any>): Record<string, any>`
   - **Logic**:
     - If no currentUserContext, return properties unchanged
     - If userId in context but not in properties, add it
@@ -351,7 +352,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
 
 ### Core Tracking Function
 
-- [ ] Implement `trackEvent<Name extends AnalyticsEventName>(name: Name, properties?: AnalyticsEventProperties<Name>): void`
+- [x] Implement `trackEvent<Name extends AnalyticsEventName>(name: Name, properties?: AnalyticsEventProperties<Name>): void`
   - **Context**: The main API - everything flows through here
   - **Logic**:
     1. Check `isAnalyticsEnabled()`, return early if disabled
@@ -371,7 +372,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
 
 ### Error Reporting Function
 
-- [ ] Implement `reportError(error: Error, context?: Record<string, unknown>): void`
+- [x] Implement `reportError(error: Error, context?: Record<string, unknown>): void`
   - **Context**: Wrapper around Sentry.captureException with sanitization
   - **Logic**:
     1. Check `isSentryEnabled()`, return early if disabled
@@ -384,7 +385,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
 
 ### Export Public API
 
-- [ ] Add barrel exports at bottom of analytics.ts
+- [x] Add barrel exports at bottom of analytics.ts
   - **Exports**:
 
   ```typescript
@@ -409,7 +410,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
 
 ### Route Segment Error Boundary
 
-- [ ] Create `src/app/error.tsx` - catch errors in app routes
+- [x] Create `src/app/error.tsx` - catch errors in app routes
   - **Must be 'use client'**: Error boundaries use React lifecycle
   - **Implementation**:
 
@@ -446,7 +447,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
 
 ### Global Error Boundary
 
-- [ ] Create `src/app/global-error.tsx` - catch errors in root layout
+- [x] Create `src/app/global-error.tsx` - catch errors in root layout
   - **Context**: Last resort boundary - renders in place of entire layout
   - **Must include html/body tags**: Replaces root layout
   - **Implementation**:
