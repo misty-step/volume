@@ -56,3 +56,48 @@ function sanitizeString(value: string): string {
   const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
   return value.replace(emailPattern, "[EMAIL_REDACTED]");
 }
+
+/**
+ * Sanitize event properties to remove PII.
+ *
+ * Type system enforces flat objects with primitives only, so no recursion needed.
+ *
+ * - Strings: Email redaction via sanitizeString()
+ * - Numbers/booleans: Pass through unchanged
+ * - null/undefined: Skip
+ * - Other types: Convert to string and sanitize
+ *
+ * @param properties - Raw event properties that may contain PII
+ * @returns Sanitized properties safe for analytics transmission
+ *
+ * @example
+ * sanitizeEventProperties({
+ *   userId: "user@example.com",
+ *   count: 42,
+ *   isActive: true
+ * })
+ * // => { userId: "[EMAIL_REDACTED]", count: 42, isActive: true }
+ */
+function sanitizeEventProperties(
+  properties: Record<string, unknown>
+): Record<string, string | number | boolean> {
+  const result: Record<string, string | number | boolean> = {};
+
+  for (const [key, value] of Object.entries(properties)) {
+    // Skip null/undefined
+    if (value == null) {
+      continue;
+    }
+
+    // Pass through primitives
+    if (typeof value === "number" || typeof value === "boolean") {
+      result[key] = value;
+      continue;
+    }
+
+    // Everything else becomes a sanitized string
+    result[key] = sanitizeString(String(value));
+  }
+
+  return result;
+}
