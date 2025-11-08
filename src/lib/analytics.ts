@@ -1,3 +1,5 @@
+import { shouldEnableSentry } from "./sentry";
+
 /**
  * Type-safe analytics event catalog.
  *
@@ -100,4 +102,49 @@ function sanitizeEventProperties(
   }
 
   return result;
+}
+
+/**
+ * Check if analytics should be enabled.
+ *
+ * Respects explicit enable/disable flags and auto-disables in dev/test
+ * environments to avoid polluting production analytics.
+ *
+ * @returns true if analytics should track events
+ */
+function isAnalyticsEnabled(): boolean {
+  // Explicit disable flag
+  if (process.env.NEXT_PUBLIC_DISABLE_ANALYTICS === "true") {
+    return false;
+  }
+
+  // Explicit enable flag (overrides environment checks)
+  if (process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true") {
+    return true;
+  }
+
+  // Auto-disable in test environment
+  if (process.env.NODE_ENV === "test") {
+    return false;
+  }
+
+  // Auto-disable in development
+  if (process.env.NODE_ENV === "development") {
+    return false;
+  }
+
+  // Default: enabled (production)
+  return true;
+}
+
+/**
+ * Check if Sentry error tracking should be enabled.
+ *
+ * Delegates to existing shouldEnableSentry helper from lib/sentry.ts.
+ *
+ * @returns true if Sentry should report errors
+ */
+function isSentryEnabled(): boolean {
+  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN;
+  return shouldEnableSentry(dsn);
 }
