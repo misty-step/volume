@@ -357,3 +357,28 @@ export function reportError(
     }
   }
 }
+
+/**
+ * PUBLIC API EXPORTS
+ *
+ * Deep module design: Simple interface, complex implementation.
+ *
+ * Exported functions:
+ * - trackEvent() - Type-safe analytics tracking (client + server)
+ * - reportError() - PII-safe error reporting to Sentry
+ * - setUserContext() - Enrich events with user identity
+ * - clearUserContext() - Remove user identity on logout
+ *
+ * Exported types:
+ * - AnalyticsEventDefinitions - Event catalog with typed properties
+ * - AnalyticsEventName - Union of valid event names
+ * - AnalyticsEventProperties<Name> - Type-safe properties for event
+ *
+ * Internal (not exported):
+ * - sanitizeString() - Email redaction helper
+ * - sanitizeEventProperties() - Recursive PII sanitization
+ * - isAnalyticsEnabled() - Environment detection
+ * - isSentryEnabled() - Sentry-specific enable check
+ * - loadServerTrack() - Dynamic server track loader
+ * - withUserContext() - User context merger
+ */
