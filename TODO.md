@@ -153,19 +153,19 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
 
 ### Package Installation
 
-- [ ] Install Vercel Analytics: `pnpm add @vercel/analytics@latest`
+- [x] Install Vercel Analytics: `pnpm add @vercel/analytics@latest`
   - **Context**: Tracks page views, custom events, user demographics
   - **Bundle impact**: ~2KB gzipped, loads async after page interactive
   - **Acceptance**: Package in dependencies, version >=1.0.0
 
-- [ ] Install Vercel Speed Insights: `pnpm add @vercel/speed-insights@latest`
+- [x] Install Vercel Speed Insights: `pnpm add @vercel/speed-insights@latest`
   - **Context**: Tracks Core Web Vitals, Real Experience Score
   - **Bundle impact**: ~1.5KB gzipped, non-blocking
   - **Acceptance**: Package in dependencies, version >=1.0.0
 
 ### Analytics Wrapper Component
 
-- [ ] Create `src/components/analytics-wrapper.tsx` - client component with URL filtering
+- [x] Create `src/components/analytics-wrapper.tsx` - client component with URL filtering
   - **Context**: Filter sensitive URLs from analytics (webhooks, auth tokens in query params)
   - **Must be 'use client'**: Vercel Analytics uses browser APIs
   - **Implementation**:
