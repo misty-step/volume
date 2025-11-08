@@ -76,6 +76,91 @@ pnpm test --run        # Run once without watch mode
 - Test **business logic**, not **third-party libraries**
 - Test **what matters**, not **everything possible**
 
+## Observability Stack
+
+Volume uses Vercel Analytics for product metrics and Sentry for error tracking.
+
+### Architecture
+
+- **lib/analytics.ts**: Centralized API for all tracking (client + server)
+- **lib/sentry.ts**: Configuration factory with PII scrubbing
+- **components/analytics-wrapper.tsx**: Client-side analytics with URL filtering
+
+### Key Features
+
+- Type-safe event tracking (TypeScript prevents typos)
+- Automatic PII redaction (emails, sensitive headers)
+- User context enrichment (automatic userId attachment)
+- Unified client/server API (same code works everywhere)
+- Environment-aware (auto-disables in dev/test)
+
+### Usage Examples
+
+**Tracking Events:**
+
+```typescript
+import { trackEvent } from "@/lib/analytics";
+
+// Type-safe - wrong properties won't compile
+trackEvent("Set Logged", {
+  setId: set._id,
+  exerciseId: exercise._id,
+  reps: 10,
+  weight: 135,
+});
+```
+
+**Reporting Errors:**
+
+```typescript
+import { reportError } from "@/lib/analytics";
+
+try {
+  await dangerousOperation();
+} catch (error) {
+  reportError(error, {
+    operation: "dangerousOperation",
+    userId: user.id,
+  });
+}
+```
+
+**User Context:**
+
+```typescript
+import { setUserContext, clearUserContext } from "@/lib/analytics";
+
+// On login - all future events automatically include userId
+setUserContext(user.id, { plan: "pro" });
+
+// On logout
+clearUserContext();
+```
+
+### Privacy Guarantees
+
+- All emails automatically redacted: `user@example.com` → `[EMAIL_REDACTED]`
+- Sensitive headers removed: Authorization, Cookie, API keys
+- User IP addresses never sent to Sentry
+- Workout data only tracked in aggregate (counts, not values)
+
+### Adding New Events
+
+1. Add to `AnalyticsEventDefinitions` in lib/analytics.ts
+2. Define required/optional properties
+3. Use TypeScript to enforce at call sites
+
+Example:
+
+```typescript
+export interface AnalyticsEventDefinitions {
+  "New Feature Used": {
+    featureName: string;
+    userId?: string;
+  };
+}
+```
+
 ## Architecture Overview
 
 ### Authentication Flow
