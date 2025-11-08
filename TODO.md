@@ -58,7 +58,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
   }
   ```
 
-- [ ] Create `src/lib/sentry.ts` - centralized Sentry configuration factory
+- [x] Create `src/lib/sentry.ts` - centralized Sentry configuration factory
   - **Context**: Hide all complexity of PII scrubbing, environment detection, sampling rates behind clean interface
   - **Interface**: `createSentryOptions(target: 'client' | 'server' | 'edge'): SentryInitOptions`
   - **Must implement**:
@@ -73,7 +73,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
   - **Test**: Pass mock event with email through beforeSend, verify redaction
   - **Why**: Every Sentry event is a potential PII leak - centralize protection logic once
 
-- [ ] Export `shouldEnableSentry(dsn?: string): boolean` helper in sentry.ts
+- [x] Export `shouldEnableSentry(dsn?: string): boolean` helper in sentry.ts
   - **Context**: Respect explicit disable flags, auto-disable in test env
   - **Logic**: Return false if no DSN, NODE_ENV === 'test', or NEXT_PUBLIC_DISABLE_SENTRY === 'true'
   - **Acceptance**: Returns boolean, respects all disable conditions
