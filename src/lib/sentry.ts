@@ -1,4 +1,9 @@
-import type { Breadcrumb, Event, EventHint } from "@sentry/nextjs";
+import type {
+  Breadcrumb,
+  BrowserOptions,
+  Event,
+  EventHint,
+} from "@sentry/nextjs";
 
 import { getDeploymentEnvironment } from "./environment";
 
@@ -26,19 +31,6 @@ const DEFAULT_REPLAYS_SESSION_SAMPLE_RATE = 0.05;
 const DEFAULT_REPLAYS_ON_ERROR_SAMPLE_RATE = 1.0;
 
 export type SentryTarget = "client" | "server" | "edge";
-
-export interface SentryInitOptions {
-  dsn?: string;
-  enabled: boolean;
-  environment?: string;
-  release?: string;
-  tracesSampleRate: number;
-  replaysSessionSampleRate?: number;
-  replaysOnErrorSampleRate?: number;
-  sendDefaultPii: boolean;
-  beforeSend?: (event: Event, hint?: EventHint) => Event | null;
-  beforeBreadcrumb?: (breadcrumb: Breadcrumb) => Breadcrumb | null;
-}
 
 /**
  * Parse sample rate from environment variable with validation.
@@ -152,7 +144,7 @@ function sanitizeValue<T>(value: T, seen: WeakSet<object>): T {
  * @param event - Sentry event object
  * @returns Sanitized event (may return null to drop event)
  */
-export function sanitizeEvent(event: Event, _hint?: EventHint): Event {
+export function sanitizeEvent(event: Event, _hint?: EventHint): Event | null {
   const seen = new WeakSet<object>();
 
   // Scrub user identifiable information
@@ -307,7 +299,7 @@ function resolveRelease(): string | undefined {
  * Sentry.init(options);
  * ```
  */
-export function createSentryOptions(target: SentryTarget): SentryInitOptions {
+export function createSentryOptions(target: SentryTarget): BrowserOptions {
   const dsn = resolveDsn(target);
   const enabled = shouldEnableSentry(dsn);
   const tracesSampleRate = parseSampleRate(
@@ -315,16 +307,15 @@ export function createSentryOptions(target: SentryTarget): SentryInitOptions {
     DEFAULT_TRACES_SAMPLE_RATE
   );
 
-  const options: SentryInitOptions = {
+  const options: BrowserOptions = {
     dsn,
     enabled,
     environment: resolveEnvironment(),
     release: resolveRelease(),
     tracesSampleRate,
     sendDefaultPii: false,
-    beforeSend: (event: Event, hint?: EventHint) => sanitizeEvent(event, hint),
-    beforeBreadcrumb: (breadcrumb: Breadcrumb) =>
-      sanitizeBreadcrumb(breadcrumb),
+    beforeSend: sanitizeEvent as BrowserOptions["beforeSend"],
+    beforeBreadcrumb: sanitizeBreadcrumb,
   };
 
   // Client-specific: Session Replay configuration

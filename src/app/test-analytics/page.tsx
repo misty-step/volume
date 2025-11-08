@@ -70,8 +70,7 @@ export default function TestAnalyticsPage() {
 
       <Button
         onClick={() =>
-          setUserContext({
-            userId: "user-test-123",
+          setUserContext("user-test-123", {
             email: "test@example.com",
             username: "testuser",
           })

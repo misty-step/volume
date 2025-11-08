@@ -1,18 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
-import dynamic from "next/dynamic";
-import { UnauthenticatedLanding } from "@/components/landing/UnauthenticatedLanding";
-
-// Lazy load dashboard (large bundle: Convex hooks, forms, charts)
-// Only downloaded by authenticated users
-const Dashboard = dynamic(() =>
-  import("@/components/dashboard/Dashboard").then((mod) => ({
-    default: mod.Dashboard,
-  }))
-);
+import { HomeContent } from "@/components/home/HomeContent";
 
 export default async function Home() {
   const { userId } = await auth();
 
-  // Server-side render decision - no client-side flash
-  return userId ? <Dashboard /> : <UnauthenticatedLanding />;
+  return <HomeContent initialSignedIn={Boolean(userId)} />;
 }
