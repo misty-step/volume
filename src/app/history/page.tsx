@@ -22,6 +22,8 @@ export default function HistoryPage() {
   );
 
   // Fetch exercises for names (include deleted to show accurate history)
+  // Note: Query errors automatically throw and bubble to app/error.tsx
+  // Error boundary then reports to Sentry via reportError()
   const exercises = useQuery(api.exercises.listExercises, {
     includeDeleted: true,
   });
