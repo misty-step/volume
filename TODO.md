@@ -488,7 +488,7 @@ export type AnalyticsEventProperties<Name extends AnalyticsEventName> = Partial<
 
 ### Convex Query Error Handling Example
 
-- [ ] Add error boundary example to src/app/exercises/page.tsx (or similar)
+- [x] Add error boundary example to src/app/exercises/page.tsx (or similar)
   - **Context**: Show pattern for handling Convex query errors
   - **Find existing useQuery call**: e.g., `const exercises = useQuery(api.exercises.listExercises);`
   - **Wrap page content in try-catch pattern**:
