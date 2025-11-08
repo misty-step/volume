@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { track as trackClient } from "@vercel/analytics";
 import { shouldEnableSentry } from "./sentry";
 
 /**
@@ -265,4 +266,53 @@ function withUserContext(
   }
 
   return enriched;
+}
+
+/**
+ * Track analytics event with type safety and automatic PII sanitization.
+ *
+ * Main public API for analytics tracking. Works on both client and server.
+ * Automatically enriches events with user context if set via setUserContext().
+ *
+ * @param name - Event name (type-safe from AnalyticsEventDefinitions)
+ * @param properties - Event properties (type-checked against event definition)
+ *
+ * @example
+ * trackEvent("Set Logged", {
+ *   setId: set._id,
+ *   exerciseId: exercise._id,
+ *   reps: 10,
+ *   weight: 135
+ * })
+ */
+export function trackEvent<Name extends AnalyticsEventName>(
+  name: Name,
+  properties?: AnalyticsEventProperties<Name>
+): void {
+  if (!isAnalyticsEnabled()) return;
+
+  const isDev = process.env.NODE_ENV === "development";
+
+  // Sanitize and enrich properties
+  const sanitized = sanitizeEventProperties(properties || {});
+  const enriched = withUserContext(sanitized);
+
+  // Client-side tracking
+  if (typeof window !== "undefined") {
+    try {
+      trackClient(name, enriched);
+    } catch (error) {
+      if (isDev) console.warn("Analytics trackEvent failed:", error);
+    }
+    return;
+  }
+
+  // Server-side tracking (fire-and-forget)
+  loadServerTrack()
+    .then((track) => {
+      if (track) track(name, enriched);
+    })
+    .catch((error) => {
+      if (isDev) console.warn("Analytics server track failed:", error);
+    });
 }
