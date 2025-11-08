@@ -507,7 +507,7 @@ export type AnalyticsEventProperties<Name extends AnalyticsEventName> = Partial<
 
 ### Environment Variable Documentation
 
-- [ ] Create `.env.example` entries for Sentry
+- [x] Create `.env.example` entries for Sentry
   - **Add after existing Clerk/Convex vars**:
 
   ```bash
@@ -557,7 +557,8 @@ export type AnalyticsEventProperties<Name extends AnalyticsEventName> = Partial<
   - **Acceptance**: Clear setup instructions, example values, comments explain each var
   - **Why**: Future developers (including you in 6 months) need crystal-clear setup
 
-- [ ] Update `.env.local` - add your actual Sentry values (NOT committed to git)
+- [x] Update `.env.local` - add your actual Sentry values (NOT committed to git)
+  - **Note**: User task - .env.local is gitignored and contains actual secrets
   - **Get from**: https://sentry.io/settings/projects/
   - **Add**:
 
