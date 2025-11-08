@@ -1,11 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 
-Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+import { createSentryOptions } from "./src/lib/sentry";
 
-  // Adjust this value in production, or use tracesSampleRate for greater control
-  tracesSampleRate: 1,
+const options = createSentryOptions("client");
 
-  // Setting this option to true will print useful information to the console while you're setting up Sentry.
-  debug: false,
-});
+Sentry.init(options);

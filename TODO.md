@@ -81,7 +81,7 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
 
 ### Runtime Configuration Files
 
-- [ ] Update `sentry.client.config.ts` to use factory pattern
+- [x] Update `sentry.client.config.ts` to use factory pattern
   - **Context**: Client runtime runs in browser, needs Session Replay config
   - **Replace generated content with**:
 
@@ -96,13 +96,13 @@ Volume handles sensitive fitness data (workout logs, body metrics, user behavior
   - **Acceptance**: File imports factory, calls init with returned options
   - **Verification**: No TypeScript errors, builds successfully
 
-- [ ] Update `sentry.server.config.ts` to use factory pattern
+- [x] Update `sentry.server.config.ts` to use factory pattern
   - **Context**: Server runtime for API routes, Server Components, Server Actions
   - **Implementation**: Same as client but target="server"
   - **Acceptance**: Imports factory, calls Sentry.init
   - **Note**: Server has access to server-only env vars (SENTRY_DSN)
 
-- [ ] Update `sentry.edge.config.ts` to use factory pattern
+- [x] Update `sentry.edge.config.ts` to use factory pattern
   - **Context**: Edge runtime for middleware (authentication checks)
   - **Implementation**: Same pattern but target="edge"
   - **Acceptance**: Edge runtime compatible code only (no Node.js APIs)
