@@ -14,6 +14,7 @@ import {
   FormField,
   FormItem,
   FormControl,
+  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { toast } from "sonner";
@@ -55,6 +56,7 @@ export function InlineExerciseCreator({
     try {
       const exerciseId = await createExercise({ name: values.name.trim() });
       toast.success("Exercise created");
+      form.reset({ name: "" });
       onCreated(exerciseId);
     } catch (error) {
       handleMutationError(error, "Create Exercise");
@@ -63,10 +65,6 @@ export function InlineExerciseCreator({
 
   // Handle keyboard shortcuts
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      form.handleSubmit(onSubmit)();
-    }
     if (e.key === "Escape") {
       e.preventDefault();
       onCancel();
@@ -74,37 +72,52 @@ export function InlineExerciseCreator({
   };
 
   return (
-    <div className="p-3 bg-muted border rounded-md">
-      <p className="text-sm font-medium mb-2">Create New Exercise</p>
+    <div className="rounded-md border bg-muted/80 p-4">
+      <p className="mb-2 text-sm font-medium text-muted-foreground">
+        Create New Exercise
+      </p>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <div className="flex gap-2">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormControl>
-                    <Input
-                      {...field}
-                      ref={inputRef}
-                      type="text"
-                      onKeyDown={handleKeyDown}
-                      placeholder="Exercise name..."
-                      disabled={form.formState.isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? "..." : "Create"}
-            </Button>
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-          </div>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-end"
+        >
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>New Exercise *</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    ref={inputRef}
+                    type="text"
+                    onKeyDown={handleKeyDown}
+                    placeholder="e.g. Planks"
+                    className="h-[46px]"
+                    disabled={form.formState.isSubmitting}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button
+            type="submit"
+            className="h-[46px]"
+            disabled={form.formState.isSubmitting}
+          >
+            {form.formState.isSubmitting ? "Creating..." : "Create"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            className="h-[46px]"
+            disabled={form.formState.isSubmitting}
+          >
+            Cancel
+          </Button>
         </form>
       </Form>
     </div>

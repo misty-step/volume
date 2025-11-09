@@ -207,7 +207,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
         <CardHeader>
           <CardTitle className="text-xl">Log Set</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
               {/* Last Set Indicator */}
@@ -495,21 +495,23 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                   </Button>
                 </div>
               </div>
-
-              {/* Inline Exercise Creator (conditional) */}
-              {showInlineCreator && (
-                <div className="mt-4">
-                  <InlineExerciseCreator
-                    onCreated={(exerciseId) => {
-                      form.setValue("exerciseId", exerciseId);
-                      setShowInlineCreator(false);
-                    }}
-                    onCancel={() => setShowInlineCreator(false)}
-                  />
-                </div>
-              )}
             </form>
           </Form>
+
+          {/* Inline Exercise Creator (rendered outside the log form to avoid nested forms) */}
+          {showInlineCreator && (
+            <InlineExerciseCreator
+              onCreated={(exerciseId) => {
+                form.setValue("exerciseId", exerciseId);
+                setShowInlineCreator(false);
+                focusElement(isDurationMode ? durationInputRef : repsInputRef);
+              }}
+              onCancel={() => {
+                setShowInlineCreator(false);
+                focusElement(isDurationMode ? durationInputRef : repsInputRef);
+              }}
+            />
+          )}
         </CardContent>
       </Card>
     );
