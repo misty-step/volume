@@ -169,8 +169,16 @@ export function sanitizeEvent(event: Event, _hint?: EventHint): Event | null {
         ? sanitizeString(event.request.query_string)
         : event.request.query_string;
 
-    if (typeof event.request.data === "string") {
-      event.request.data = sanitizeString(event.request.data);
+    if (event.request.data) {
+      event.request.data = sanitizeValue(event.request.data, seen);
+    }
+
+    // Sanitize cookies (may contain session tokens and PII)
+    if (event.request.cookies) {
+      event.request.cookies = sanitizeValue(
+        event.request.cookies,
+        seen
+      ) as Record<string, string>;
     }
 
     // Sanitize request URL (may contain tokens/emails in query params)

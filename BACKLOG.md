@@ -363,3 +363,31 @@ Analyzed by: 8 specialized perspectives
 **Why**: Error handling comments document Convex query error propagation pattern. Applying consistently across all query-using pages would help maintainability.
 **Approach**: Add similar JSDoc comments to all pages using `useQuery` (exercises, log, etc.) explaining Error Boundary integration
 **Effort**: 1h | **Impact**: LOW (documentation consistency)
+
+---
+
+## Follow-Up Items from PR #27 Review Round 2 (2025-11-09)
+
+### [Documentation] Add code fence languages to DEPLOYMENT_ERROR_SCENARIOS.md
+
+**File**: scripts/DEPLOYMENT_ERROR_SCENARIOS.md
+**Source**: markdownlint-cli2 warnings (Nov 9 review)
+**Why**: 10 code blocks missing language specifiers reduce syntax highlighting and markdown parser compatibility
+**Approach**: Add language tags (`text`, `bash`, etc.) to fenced code blocks at lines 32, 56, 79, 100, 125, 147, 168, 190, 212, 269
+**Effort**: 0.25h | **Impact**: LOW (documentation quality)
+
+### [Documentation] Wrap bare URLs in DEPLOYMENT_ERROR_SCENARIOS.md
+
+**File**: scripts/DEPLOYMENT_ERROR_SCENARIOS.md
+**Source**: markdownlint-cli2 warnings (Nov 9 review)
+**Why**: 4 bare URLs (lines 46, 47, 139, 203) should be wrapped for better markdown parser compatibility
+**Approach**: Wrap in angle brackets `<url>` or link syntax `[text](url)`
+**Effort**: 0.1h | **Impact**: LOW (documentation quality)
+
+### [Infrastructure] Add shellcheck directive to deploy script
+
+**File**: scripts/deploy-observability.sh:18
+**Source**: CodeRabbit PR review comment (Nov 9)
+**Why**: SC1090 warning about non-constant source is expected for dynamic secret loading but should be documented
+**Approach**: Add `# shellcheck source=/dev/null` directive before `source ~/.secrets` to document intentional pattern
+**Effort**: 0.05h | **Impact**: LOW (code documentation)
