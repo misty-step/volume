@@ -316,3 +316,50 @@ Analyzed by: 8 specialized perspectives
 - Client dashboards must stay server-driven—pulling full tables erases Convex's real-time advantages as soon as volume grows.
 - Debug tooling must be gated; leaving console leaks behind becomes a security liability once analytics surfaces ship.
 - **[2025-11-06] CSP Production Outage**: Custom domain configuration (`clerk.volume.fitness`) failed in production because CSP wildcards (`*.clerk.com`, `*.clerk.accounts.dev`) don't match custom subdomain structures. Preview environments can't catch production-specific configs (custom domains, live API integrations) without explicit staging infrastructure. Need automated CSP validation tests and dedicated staging environment with production-like config to validate before deploy.
+
+---
+
+## Follow-Up Items from PR #27 Review (2025-11-08)
+
+### [UX] Case-insensitive URL filtering in analytics
+
+**File**: src/components/analytics-wrapper.tsx:30
+**Source**: CodeRabbit PR review comment
+**Why**: Current filtering uses case-sensitive `includes()` which could miss variations like `TOKEN=`, `Key=`, or URL-encoded parameters (`%20token%3D`). Since this is a privacy-first implementation, case-insensitive matching provides better coverage.
+**Approach**: Convert URL to lowercase before checking: `const url = (event.url || "").toLowerCase()`
+**Effort**: 0.5h | **Impact**: LOW (nice-to-have privacy enhancement)
+
+### [Documentation] Generalize README deployment names
+
+**File**: README.md:54-71
+**Source**: CodeRabbit PR review comment
+**Why**: Hardcoded deployment names (`curious-salamander-943`, `whimsical-marten-631`) are project-specific. Makes README harder to use as template for contributors or forks.
+**Approach**: Replace with placeholders `<your-dev-deployment>`, `<your-prod-deployment>` and add note: "To find your deployment names, run: `pnpm convex deployments`"
+**Effort**: 0.25h | **Impact**: LOW (documentation improvement)
+
+### [Cleanup] Remove TASK.md temporary file
+
+**File**: TASK.md:1
+**Source**: CodeRabbit PR review comment
+**Why**: Temporary task note that has been completed (PR implements observability stack). Should be removed before merge.
+**Approach**: Delete file in cleanup commit before merging PR #27
+**Effort**: 1 min | **Impact**: LOW (housekeeping)
+
+### [Documentation] Fix markdown linting issues
+
+**Files**: TODO.md, DEPLOYMENT_READINESS.md
+**Source**: markdownlint-cli2 warnings (bare URLs, missing code block languages)
+**Why**: Bare URLs and unspecified code fence languages reduce readability and break some markdown parsers.
+**Approach**:
+
+- Wrap bare URLs in angle brackets or links
+- Add language specifiers to code fences (bash, typescript, etc.)
+  **Effort**: 0.5h | **Impact**: LOW (documentation quality)
+
+### [Documentation] Consistent error handling pattern comments
+
+**File**: src/app/history/page.tsx:25-26
+**Source**: CodeRabbit PR review comment
+**Why**: Error handling comments document Convex query error propagation pattern. Applying consistently across all query-using pages would help maintainability.
+**Approach**: Add similar JSDoc comments to all pages using `useQuery` (exercises, log, etc.) explaining Error Boundary integration
+**Effort**: 1h | **Impact**: LOW (documentation consistency)

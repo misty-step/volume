@@ -14,6 +14,10 @@ export interface AnalyticsEventDefinitions {
     userId?: string;
     source?: "manual" | "ai" | "import";
   };
+  "Exercise Deleted": {
+    exerciseId: string;
+    userId?: string;
+  };
   "Set Logged": {
     setId: string;
     exerciseId: string;
@@ -38,13 +42,11 @@ export type AnalyticsEventName = keyof AnalyticsEventDefinitions;
 /**
  * Event-specific property helper.
  *
- * Consumers can pass the strongly typed properties while the helper
- * still allows additional metadata fields (string/number/boolean).
+ * Consumers must pass all required properties from event definition
+ * while the helper still allows additional metadata fields (string/number/boolean).
  */
-export type AnalyticsEventProperties<Name extends AnalyticsEventName> = Partial<
-  AnalyticsEventDefinitions[Name]
-> &
-  Record<string, string | number | boolean>;
+export type AnalyticsEventProperties<Name extends AnalyticsEventName> =
+  AnalyticsEventDefinitions[Name] & Record<string, string | number | boolean>;
 
 /**
  * Redact email addresses from strings to protect PII.
@@ -64,12 +66,12 @@ function sanitizeString(value: string): string {
 /**
  * Sanitize event properties to remove PII.
  *
- * Type system enforces flat objects with primitives only, so no recursion needed.
- *
+ * Handles nested objects, arrays, and circular references safely:
  * - Strings: Email redaction via sanitizeString()
  * - Numbers/booleans: Pass through unchanged
  * - null/undefined: Skip
- * - Other types: Convert to string and sanitize
+ * - Objects/Arrays: JSON.stringify then sanitize (preserves structure)
+ * - Circular references: Marked as "[Circular]"
  *
  * @param properties - Raw event properties that may contain PII
  * @returns Sanitized properties safe for analytics transmission
@@ -78,14 +80,21 @@ function sanitizeString(value: string): string {
  * sanitizeEventProperties({
  *   userId: "user@example.com",
  *   count: 42,
- *   isActive: true
+ *   isActive: true,
+ *   metadata: { email: "test@example.com", plan: "pro" }
  * })
- * // => { userId: "[EMAIL_REDACTED]", count: 42, isActive: true }
+ * // => {
+ * //   userId: "[EMAIL_REDACTED]",
+ * //   count: 42,
+ * //   isActive: true,
+ * //   metadata: '{"email":"[EMAIL_REDACTED]","plan":"pro"}'
+ * // }
  */
 function sanitizeEventProperties(
   properties: Record<string, unknown>
 ): Record<string, string | number | boolean> {
   const result: Record<string, string | number | boolean> = {};
+  const seen = new WeakSet();
 
   for (const [key, value] of Object.entries(properties)) {
     // Skip null/undefined
@@ -96,6 +105,25 @@ function sanitizeEventProperties(
     // Pass through primitives
     if (typeof value === "number" || typeof value === "boolean") {
       result[key] = value;
+      continue;
+    }
+
+    // Handle nested objects/arrays
+    if (typeof value === "object") {
+      // Detect circular references
+      if (seen.has(value)) {
+        result[key] = "[Circular]";
+        continue;
+      }
+      seen.add(value);
+
+      // JSON.stringify then sanitize to preserve structure
+      try {
+        result[key] = sanitizeString(JSON.stringify(value));
+      } catch (error) {
+        // Fallback for unstringifiable objects (e.g., functions, symbols)
+        result[key] = "[Unstringifiable Object]";
+      }
       continue;
     }
 
@@ -198,16 +226,32 @@ let currentUserContext: {
  * All subsequent trackEvent() calls automatically include userId.
  * Also syncs user info to Sentry for error correlation.
  *
+ * **IMPORTANT**: Must only be called client-side to prevent user context
+ * leakage between HTTP requests in Next.js server environments.
+ *
  * @param userId - User identifier (will be sanitized for PII)
  * @param metadata - Optional metadata (e.g., plan: "pro")
  *
+ * @throws {Error} If called server-side (typeof window === "undefined")
+ *
  * @example
+ * // Client-side only (e.g., in useEffect, event handler)
  * setUserContext(user.id, { plan: "free" })
  */
 export function setUserContext(
   userId: string,
   metadata: Record<string, string> = {}
 ): void {
+  // Runtime guard: prevent server-side usage to avoid context leakage
+  if (typeof window === "undefined") {
+    throw new Error(
+      "setUserContext must only be called client-side. " +
+        "Module-level state persists across HTTP requests in Next.js server environments, " +
+        "causing user context to leak between users. " +
+        "Call this function from useEffect, event handlers, or client components only."
+    );
+  }
+
   // Sanitize user data before storing
   const sanitizedUserId = sanitizeString(userId);
   const sanitizedMetadata = Object.fromEntries(
@@ -231,8 +275,23 @@ export function setUserContext(
  * Clear user context on logout.
  *
  * Removes userId from future analytics events and Sentry error reports.
+ *
+ * **IMPORTANT**: Must only be called client-side to prevent user context
+ * leakage between HTTP requests in Next.js server environments.
+ *
+ * @throws {Error} If called server-side (typeof window === "undefined")
  */
 export function clearUserContext(): void {
+  // Runtime guard: prevent server-side usage to avoid context leakage
+  if (typeof window === "undefined") {
+    throw new Error(
+      "clearUserContext must only be called client-side. " +
+        "Module-level state persists across HTTP requests in Next.js server environments, " +
+        "causing user context to leak between users. " +
+        "Call this function from useEffect, event handlers, or client components only."
+    );
+  }
+
   currentUserContext = null;
   Sentry.setUser(null);
 }
@@ -243,12 +302,20 @@ export function clearUserContext(): void {
  * Automatically adds userId and metadata to events without overwriting
  * explicitly provided properties.
  *
+ * **Defense in depth**: Never uses module-level context server-side to
+ * prevent potential user context leakage between HTTP requests.
+ *
  * @param properties - Event properties (may already include userId)
  * @returns Properties enriched with user context
  */
 function withUserContext(
   properties: Record<string, string | number | boolean>
 ): Record<string, string | number | boolean> {
+  // Defense in depth: never use module-level context server-side
+  // Even though setUserContext() blocks server-side calls, this ensures
+  // no context leakage if the guard is somehow bypassed
+  if (typeof window === "undefined") return properties;
+
   if (!currentUserContext) return properties;
 
   const enriched = { ...properties };
@@ -274,27 +341,39 @@ function withUserContext(
  * Main public API for analytics tracking. Works on both client and server.
  * Automatically enriches events with user context if set via setUserContext().
  *
+ * TypeScript enforces required properties: events with required fields MUST
+ * receive a properties object, events without required fields may omit it.
+ *
  * @param name - Event name (type-safe from AnalyticsEventDefinitions)
- * @param properties - Event properties (type-checked against event definition)
+ * @param args - Conditional: required if event has required properties, optional otherwise
  *
  * @example
+ * // Required properties enforced
  * trackEvent("Set Logged", {
  *   setId: set._id,
  *   exerciseId: exercise._id,
  *   reps: 10,
  *   weight: 135
  * })
+ *
+ * // Optional properties can be omitted
+ * trackEvent("Exercise Deleted", {})
  */
 export function trackEvent<Name extends AnalyticsEventName>(
   name: Name,
-  properties?: AnalyticsEventProperties<Name>
+  ...args: {} extends AnalyticsEventDefinitions[Name]
+    ? [properties?: AnalyticsEventProperties<Name>]
+    : [properties: AnalyticsEventProperties<Name>]
 ): void {
   if (!isAnalyticsEnabled()) return;
 
   const isDev = process.env.NODE_ENV === "development";
 
+  // Extract properties from args (undefined if not provided)
+  const properties = args[0] || {};
+
   // Sanitize and enrich properties
-  const sanitized = sanitizeEventProperties(properties || {});
+  const sanitized = sanitizeEventProperties(properties);
   const enriched = withUserContext(sanitized);
 
   // Client-side tracking

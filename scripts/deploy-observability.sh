@@ -24,31 +24,128 @@ echo
 # Auto-discover Sentry configuration via API
 echo "==> Discovering Sentry configuration..."
 
-# Get organizations from API
-ORGS_JSON=$(curl -s "https://sentry.io/api/0/organizations/" \
-  -H "Authorization: Bearer $SENTRY_MASTER_TOKEN")
+# Step 1: Resolve organization slug
+if [[ -n "${SENTRY_ORG_SLUG:-}" ]]; then
+  # Honor explicit override
+  SENTRY_ORG="$SENTRY_ORG_SLUG"
+  echo "  Organization: $SENTRY_ORG (from SENTRY_ORG_SLUG)"
+else
+  # Auto-discover from API
+  ORGS_JSON=$(curl -s "https://sentry.io/api/0/organizations/" \
+    -H "Authorization: Bearer $SENTRY_MASTER_TOKEN")
 
-SENTRY_ORG=$(echo "$ORGS_JSON" | python3 -c "import json, sys; print(json.load(sys.stdin)[0]['slug'])")
-echo "  Organization: $SENTRY_ORG"
-
-# Get projects for this org
-PROJECTS_JSON=$(curl -s "https://sentry.io/api/0/organizations/$SENTRY_ORG/projects/" \
-  -H "Authorization: Bearer $SENTRY_MASTER_TOKEN")
-
-# Find 'volume' project or use first project
-SENTRY_PROJECT=$(echo "$PROJECTS_JSON" | python3 -c "
+  SENTRY_ORG=$(echo "$ORGS_JSON" | python3 -c "
 import json, sys
-projects = json.load(sys.stdin)
-volume = next((p['slug'] for p in projects if p['slug'] == 'volume'), None)
-print(volume if volume else projects[0]['slug'])
-")
-echo "  Project: $SENTRY_PROJECT"
+try:
+    orgs = json.load(sys.stdin)
+    if not orgs or len(orgs) == 0:
+        print('__EMPTY__', file=sys.stderr)
+        sys.exit(1)
+    print(orgs[0]['slug'])
+except (KeyError, IndexError) as e:
+    print('__ERROR__', file=sys.stderr)
+    sys.exit(1)
+" 2>&1)
 
-# Get DSN from project keys
+  if [[ "$SENTRY_ORG" == "__EMPTY__" ]]; then
+    echo "Error: No Sentry organizations available for the provided token" >&2
+    echo "Hint: Set SENTRY_ORG_SLUG environment variable to specify explicitly" >&2
+    echo "      export SENTRY_ORG_SLUG='your-org-slug'" >&2
+    exit 1
+  elif [[ "$SENTRY_ORG" == "__ERROR__" ]]; then
+    echo "Error: Failed to parse Sentry organizations API response" >&2
+    echo "Hint: Verify SENTRY_MASTER_TOKEN has correct permissions" >&2
+    exit 1
+  fi
+
+  echo "  Organization: $SENTRY_ORG (auto-discovered)"
+fi
+
+# Validate org slug resolved
+[[ -n "$SENTRY_ORG" ]] || {
+  echo "Error: SENTRY_ORG could not be resolved" >&2
+  exit 1
+}
+
+# Step 2: Resolve project slug
+if [[ -n "${SENTRY_PROJECT_SLUG:-}" ]]; then
+  # Honor explicit override
+  SENTRY_PROJECT="$SENTRY_PROJECT_SLUG"
+  echo "  Project: $SENTRY_PROJECT (from SENTRY_PROJECT_SLUG)"
+else
+  # Auto-discover from API
+  PROJECTS_JSON=$(curl -s "https://sentry.io/api/0/organizations/$SENTRY_ORG/projects/" \
+    -H "Authorization: Bearer $SENTRY_MASTER_TOKEN")
+
+  SENTRY_PROJECT=$(echo "$PROJECTS_JSON" | python3 -c "
+import json, sys
+try:
+    projects = json.load(sys.stdin)
+    if not projects or len(projects) == 0:
+        print('__EMPTY__', file=sys.stderr)
+        sys.exit(1)
+    # Prefer 'volume' project if exists, otherwise first project
+    volume = next((p['slug'] for p in projects if p['slug'] == 'volume'), None)
+    print(volume if volume else projects[0]['slug'])
+except (KeyError, IndexError) as e:
+    print('__ERROR__', file=sys.stderr)
+    sys.exit(1)
+" 2>&1)
+
+  if [[ "$SENTRY_PROJECT" == "__EMPTY__" ]]; then
+    echo "Error: No Sentry projects found in organization '$SENTRY_ORG'" >&2
+    echo "Hint: Create a project first at https://sentry.io/organizations/$SENTRY_ORG/projects/new/" >&2
+    echo "      Or set SENTRY_PROJECT_SLUG environment variable explicitly" >&2
+    echo "      export SENTRY_PROJECT_SLUG='your-project-slug'" >&2
+    exit 1
+  elif [[ "$SENTRY_PROJECT" == "__ERROR__" ]]; then
+    echo "Error: Failed to parse Sentry projects API response" >&2
+    echo "Hint: Verify organization slug '$SENTRY_ORG' is correct" >&2
+    exit 1
+  fi
+
+  echo "  Project: $SENTRY_PROJECT (auto-discovered)"
+fi
+
+# Validate project slug resolved
+[[ -n "$SENTRY_PROJECT" ]] || {
+  echo "Error: SENTRY_PROJECT could not be resolved" >&2
+  exit 1
+}
+
+# Step 3: Get DSN from project keys
 DSN_JSON=$(curl -s "https://sentry.io/api/0/projects/$SENTRY_ORG/$SENTRY_PROJECT/keys/" \
   -H "Authorization: Bearer $SENTRY_MASTER_TOKEN")
 
-SENTRY_DSN=$(echo "$DSN_JSON" | python3 -c "import json, sys; print(json.load(sys.stdin)[0]['dsn']['public'])")
+SENTRY_DSN=$(echo "$DSN_JSON" | python3 -c "
+import json, sys
+try:
+    keys = json.load(sys.stdin)
+    if not keys or len(keys) == 0:
+        print('__EMPTY__', file=sys.stderr)
+        sys.exit(1)
+    print(keys[0]['dsn']['public'])
+except (KeyError, IndexError) as e:
+    print('__ERROR__', file=sys.stderr)
+    sys.exit(1)
+" 2>&1)
+
+if [[ "$SENTRY_DSN" == "__EMPTY__" ]]; then
+  echo "Error: No DSN keys found for project '$SENTRY_PROJECT'" >&2
+  echo "Hint: Create a client key at https://sentry.io/settings/$SENTRY_ORG/projects/$SENTRY_PROJECT/keys/" >&2
+  exit 1
+elif [[ "$SENTRY_DSN" == "__ERROR__" ]]; then
+  echo "Error: Failed to parse Sentry project keys API response" >&2
+  echo "Hint: Verify project slug '$SENTRY_PROJECT' exists in org '$SENTRY_ORG'" >&2
+  exit 1
+fi
+
+# Validate DSN format (basic check)
+[[ "$SENTRY_DSN" =~ ^https:// ]] || {
+  echo "Error: Invalid DSN format: $SENTRY_DSN" >&2
+  exit 1
+}
+
 echo "  DSN: ${SENTRY_DSN:0:50}..."
 echo
 

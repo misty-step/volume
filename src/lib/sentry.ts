@@ -140,6 +140,7 @@ function sanitizeValue<T>(value: T, seen: WeakSet<object>): T {
  * - User email and IP address
  * - Request headers and data
  * - Context, extra, and tags
+ * - Primary display strings (message, exception values, URLs)
  *
  * @param event - Sentry event object
  * @returns Sanitized event (may return null to drop event)
@@ -170,6 +171,39 @@ export function sanitizeEvent(event: Event, _hint?: EventHint): Event | null {
 
     if (typeof event.request.data === "string") {
       event.request.data = sanitizeString(event.request.data);
+    }
+
+    // Sanitize request URL (may contain tokens/emails in query params)
+    if (typeof event.request.url === "string") {
+      event.request.url = sanitizeString(event.request.url);
+    }
+  }
+
+  // Scrub primary display strings
+  if (typeof event.message === "string") {
+    event.message = sanitizeString(event.message);
+  }
+
+  if (event.logentry?.message && typeof event.logentry.message === "string") {
+    event.logentry.message = sanitizeString(event.logentry.message);
+  }
+
+  // Scrub exception values and stack traces
+  if (event.exception?.values) {
+    for (const exception of event.exception.values) {
+      if (typeof exception.value === "string") {
+        exception.value = sanitizeString(exception.value);
+      }
+
+      // Sanitize stack trace frames (may contain PII in locals/args)
+      if (exception.stacktrace?.frames) {
+        for (const frame of exception.stacktrace.frames) {
+          // Sanitize frame locals and vars
+          if (frame.vars) {
+            frame.vars = sanitizeValue(frame.vars, seen);
+          }
+        }
+      }
     }
   }
 
