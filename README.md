@@ -51,7 +51,25 @@ Press Ctrl+C to stop, then use `pnpm dev` for ongoing development.
   CLERK_SECRET_KEY=sk_test_...
   ```
 
-### 3. Start Development
+### 3. Sync Convex auth issuer
+
+Clerk tokens are rejected unless Convex knows which issuer signed them. Set the
+matching domain per deployment:
+
+```bash
+# Local dev & Vercel preview (uses *.clerk.accounts.dev)
+pnpm convex env set CLERK_JWT_ISSUER_DOMAIN "https://<your-dev>.clerk.accounts.dev" \
+  --deployment-name curious-salamander-943
+
+# Production (uses custom domain clerk.volume.fitness)
+pnpm convex env set CLERK_JWT_ISSUER_DOMAIN "https://clerk.volume.fitness" \
+  --deployment-name whimsical-marten-631
+```
+
+If you ever rotate Clerk instances, rerun the command for the affected
+deployment(s) and restart `pnpm dev`.
+
+### 4. Start Development
 
 ```bash
 pnpm dev  # Runs BOTH Next.js and Convex
