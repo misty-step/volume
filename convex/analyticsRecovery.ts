@@ -177,7 +177,9 @@ export const getRecoveryStatus = query({
 
         // Update volume and frequency for last 7 days
         if (set.performedAt >= sevenDaysAgo) {
-          const volume = set.reps * (set.weight || 0);
+          // Only count volume for rep-based exercises
+          const volume =
+            set.reps !== undefined ? set.reps * (set.weight || 0) : 0;
           metrics.volumeLast7Days += volume;
 
           // Track distinct workout dates for frequency

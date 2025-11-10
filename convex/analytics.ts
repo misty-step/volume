@@ -105,7 +105,8 @@ export const getVolumeByExercise = query({
       };
 
       // Calculate volume: reps × weight (bodyweight exercises have weight=0 or undefined)
-      const volume = set.reps * (set.weight || 0);
+      // Only count volume for rep-based exercises
+      const volume = set.reps !== undefined ? set.reps * (set.weight || 0) : 0;
 
       volumeByExercise.set(exerciseId, {
         exerciseName: current.exerciseName,
@@ -187,7 +188,8 @@ export const getWorkoutFrequency = query({
       const dayKey = setDate.toISOString().split("T")[0]; // YYYY-MM-DD
 
       const current = dailyData.get(dayKey) || { setCount: 0, totalVolume: 0 };
-      const volume = set.reps * (set.weight || 0);
+      // Only count volume for rep-based exercises
+      const volume = set.reps !== undefined ? set.reps * (set.weight || 0) : 0;
 
       dailyData.set(dayKey, {
         setCount: current.setCount + 1,
@@ -352,6 +354,9 @@ export const getRecentPRs = query({
       if (prResult) {
         const exerciseName = exerciseMap.get(currentSet.exerciseId);
         if (!exerciseName) continue; // Skip if exercise not found
+
+        // checkForPR only returns non-null for rep-based exercises
+        if (currentSet.reps === undefined) continue;
 
         prs.push({
           setId: currentSet._id,

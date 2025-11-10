@@ -17,8 +17,9 @@ export interface Set {
   _creationTime?: number; // Convex system field (present on fetched documents, not locally created objects)
   userId?: string; // Optional - present in schema but not always accessed in frontend
   exerciseId: Id<"exercises">;
-  reps: number;
+  reps?: number; // Optional - required for rep-based exercises
   weight?: number;
   unit?: string; // "lbs" or "kg" - stored with set for data integrity
+  duration?: number; // Optional - duration in seconds for time-based exercises
   performedAt: number;
 }

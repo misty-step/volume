@@ -7,21 +7,44 @@ import {
   validateReps,
   validateWeight,
   validateUnit,
+  validateDuration,
 } from "./lib/validate";
 
 // Log a new set
 export const logSet = mutation({
   args: {
     exerciseId: v.id("exercises"),
-    reps: v.number(),
+    reps: v.optional(v.number()),
     weight: v.optional(v.number()),
     unit: v.optional(v.string()), // "lbs" or "kg" - required when weight is provided
+    duration: v.optional(v.number()), // Duration in seconds for time-based exercises
   },
   handler: async (ctx, args) => {
     const identity = await requireAuth(ctx);
 
-    // Validate inputs
-    validateReps(args.reps);
+    // Require either reps OR duration (not both, not neither)
+    if (
+      (args.reps === undefined && args.duration === undefined) ||
+      (args.reps !== undefined && args.duration !== undefined)
+    ) {
+      throw new Error("Must provide either reps or duration (not both)");
+    }
+
+    // Validate inputs based on exercise type
+    let reps: number | undefined;
+    let duration: number | undefined;
+
+    if (args.reps !== undefined) {
+      // Rep-based exercise
+      validateReps(args.reps);
+      reps = args.reps;
+    }
+
+    if (args.duration !== undefined) {
+      // Duration-based exercise
+      duration = validateDuration(args.duration);
+    }
+
     const weight = validateWeight(args.weight);
     validateUnit(args.unit, weight);
 
@@ -40,9 +63,10 @@ export const logSet = mutation({
     const setId = await ctx.db.insert("sets", {
       userId: identity.subject,
       exerciseId: args.exerciseId,
-      reps: args.reps,
+      reps,
       weight, // Use validated/rounded weight
       unit: args.unit, // Store the unit with the set for data integrity
+      duration, // Store duration in seconds for time-based exercises
       performedAt: Date.now(),
     });
 

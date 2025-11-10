@@ -3,6 +3,7 @@ import {
   validateReps,
   validateWeight,
   validateUnit,
+  validateDuration,
   validateExerciseName,
 } from "./validate";
 
@@ -73,6 +74,57 @@ describe("validateUnit", () => {
 
   it("allows no unit when no weight", () => {
     expect(() => validateUnit(undefined, undefined)).not.toThrow();
+  });
+});
+
+describe("validateDuration", () => {
+  it("returns undefined for undefined input", () => {
+    expect(validateDuration(undefined)).toBeUndefined();
+  });
+
+  it("rounds to nearest second", () => {
+    expect(validateDuration(45.4)).toBe(45);
+    expect(validateDuration(45.6)).toBe(46);
+    expect(validateDuration(60.5)).toBe(61);
+  });
+
+  it("accepts valid durations", () => {
+    expect(validateDuration(1)).toBe(1);
+    expect(validateDuration(60)).toBe(60);
+    expect(validateDuration(3600)).toBe(3600);
+    expect(validateDuration(86400)).toBe(86400); // 24 hours
+  });
+
+  it("rejects zero or negative values", () => {
+    expect(() => validateDuration(0)).toThrow(
+      "Duration must be between 1 and 86400 seconds"
+    );
+    expect(() => validateDuration(-10)).toThrow(
+      "Duration must be between 1 and 86400 seconds"
+    );
+  });
+
+  it("rejects values over 24 hours", () => {
+    expect(() => validateDuration(86401)).toThrow(
+      "Duration must be between 1 and 86400 seconds"
+    );
+    expect(() => validateDuration(100000)).toThrow(
+      "Duration must be between 1 and 86400 seconds"
+    );
+  });
+
+  it("rejects non-finite values", () => {
+    expect(() => validateDuration(NaN)).toThrow();
+    expect(() => validateDuration(Infinity)).toThrow();
+  });
+
+  it("rejects values below 0.5 seconds", () => {
+    expect(() => validateDuration(0.49)).toThrow(
+      "Duration must be between 1 and 86400 seconds"
+    );
+    expect(() => validateDuration(0.1)).toThrow(
+      "Duration must be between 1 and 86400 seconds"
+    );
   });
 });
 

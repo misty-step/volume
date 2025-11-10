@@ -56,6 +56,13 @@ export function ChronologicalSetHistory({
   const [setToDelete, setSetToDelete] = useState<Set | null>(null);
   const { unit: preferredUnit } = useWeightUnit();
 
+  // Format duration in seconds to mm:ss
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
   const handleDeleteClick = (set: Set) => {
     setSetToDelete(set);
   };
@@ -132,8 +139,12 @@ export function ChronologicalSetHistory({
                         {/* EXERCISE */}
                         <TableCell>{exercise?.name || "Unknown"}</TableCell>
 
-                        {/* REPS */}
-                        <TableCell className="font-bold">{set.reps}</TableCell>
+                        {/* REPS or DURATION */}
+                        <TableCell className="font-bold">
+                          {set.duration !== undefined
+                            ? formatDuration(set.duration)
+                            : set.reps}
+                        </TableCell>
 
                         {/* WEIGHT */}
                         <TableCell className="font-bold">

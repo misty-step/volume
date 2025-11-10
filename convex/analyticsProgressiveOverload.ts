@@ -142,10 +142,13 @@ export const getProgressiveOverloadData = query({
       >();
 
       for (const set of sets) {
-        const date = new Date(set.performedAt).toISOString().split("T")[0];
-        const workout = workoutsByDate.get(date) || [];
-        workout.push({ reps: set.reps, weight: set.weight });
-        workoutsByDate.set(date, workout);
+        // Only include rep-based sets in progressive overload tracking
+        if (set.reps !== undefined) {
+          const date = new Date(set.performedAt).toISOString().split("T")[0];
+          const workout = workoutsByDate.get(date) || [];
+          workout.push({ reps: set.reps, weight: set.weight });
+          workoutsByDate.set(date, workout);
+        }
       }
 
       // Extract last 10 distinct workout dates

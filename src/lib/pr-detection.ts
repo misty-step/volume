@@ -46,6 +46,11 @@ export function checkForPR(
   currentSet: Set,
   previousSets: Set[]
 ): PRResult | null {
+  // PR detection only works for rep-based exercises currently
+  if (currentSet.reps === undefined) {
+    return null;
+  }
+
   // No previous sets = first set for this exercise = always a PR
   if (previousSets.length === 0) {
     const currentVolume = (currentSet.weight || 0) * currentSet.reps;
@@ -79,11 +84,27 @@ export function checkForPR(
   const currentReps = currentSet.reps;
   const currentVolume = currentWeight * currentReps;
 
-  // Find max values from previous sets
-  const maxPreviousWeight = Math.max(...previousSets.map((s) => s.weight || 0));
-  const maxPreviousReps = Math.max(...previousSets.map((s) => s.reps));
+  // Find max values from previous sets (only rep-based sets)
+  const repBasedSets = previousSets.filter((s) => s.reps !== undefined);
+  if (repBasedSets.length === 0) {
+    // Treat as first rep-based set if no previous rep-based sets exist
+    const currentVolume = currentWeight * currentReps;
+    if (currentWeight > 0) {
+      return { type: "weight", currentValue: currentWeight, previousValue: 0 };
+    }
+    if (currentReps > 0) {
+      return { type: "reps", currentValue: currentReps, previousValue: 0 };
+    }
+    if (currentVolume > 0) {
+      return { type: "volume", currentValue: currentVolume, previousValue: 0 };
+    }
+    return null;
+  }
+
+  const maxPreviousWeight = Math.max(...repBasedSets.map((s) => s.weight || 0));
+  const maxPreviousReps = Math.max(...repBasedSets.map((s) => s.reps!));
   const maxPreviousVolume = Math.max(
-    ...previousSets.map((s) => (s.weight || 0) * s.reps)
+    ...repBasedSets.map((s) => (s.weight || 0) * s.reps!)
   );
 
   // Check for PRs (prioritize: weight > volume > reps)

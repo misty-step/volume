@@ -296,9 +296,30 @@ Analyzed by: 8 specialized perspectives
 
 - **[Product] Routine templates & scheduling** – reuse Convex actions so new users can pre-build workouts; critical onboarding unlock.
 - **[UX] Offline-first quick log** – Service Worker cache + optimistic queue so gym logging succeeds without cell service.
-- **[UX] Distinguish loading vs empty state for AI reports** – show skeleton while `getReportHistory` loads to prevent the misleading “No reports yet” flash.
+- **[UX] Distinguish loading vs empty state for AI reports** – show skeleton while `getReportHistory` loads to prevent the misleading "No reports yet" flash.
 - **[Architecture] Domain service for PR detection** – move shared logic out of hooks into a pure module for reuse and deterministic tests.
 - **[Performance] Snapshot weekly metrics** – background job persists aggregates, keeping historical charts fast.
+
+### Code Quality Improvements from PR#26 Review
+
+**Source**: CodeRabbit feedback on duration-based exercises PR (PR#26)
+**Date**: 2025-11-09
+
+#### [Refactoring] Extract `formatDuration` to shared utility
+
+**Impact**: DRY violation - helper duplicated across 4 dashboard components
+**Files**: `chronological-set-history.tsx`, `exercise-set-group.tsx`, `set-card.tsx`, `quick-log-form.tsx`
+**Fix**: Create `src/lib/time-utils.ts` with `formatDuration(seconds: number): string` and update all imports
+**Effort**: 0.5h | **Risk**: LOW
+**Rationale**: Non-critical code quality improvement; eliminates ~20 lines of duplication and ensures consistent time formatting
+
+#### [UX Polish] Add max attribute to duration HTML inputs
+
+**Impact**: Browser-level validation missing for duration inputs
+**File**: `src/components/dashboard/quick-log-form.tsx:407-437`, `src/components/dashboard/duration-input.tsx`
+**Fix**: Add `max="86400"` attribute to `<Input type="number">` elements
+**Effort**: 0.25h | **Risk**: LOW
+**Rationale**: Complements existing Zod validation with native browser feedback; improves UX when JS validation fails
 
 ---
 

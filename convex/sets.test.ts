@@ -230,3 +230,121 @@ describe("logSet - Soft Delete Protection", () => {
     ).rejects.toThrow("Cannot log sets for a deleted exercise");
   });
 });
+
+describe("logSet - Duration-based Exercises", () => {
+  let t: TestConvex<typeof schema>;
+  const user1Subject = "user_1_test_subject";
+  let exerciseId: Id<"exercises">;
+
+  beforeEach(async () => {
+    // @ts-expect-error - import.meta.glob is a Vite feature, types not available in test env
+    t = convexTest(schema, import.meta.glob("./**/*.ts"));
+
+    // Create an exercise for duration-based testing
+    exerciseId = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .action(api.exercises.createExercise, { name: "PLANK" });
+  });
+
+  test("should allow logging duration-based sets", async () => {
+    const setId = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .mutation(api.sets.logSet, {
+        exerciseId,
+        duration: 60, // 60 seconds
+      });
+
+    expect(setId).toBeDefined();
+
+    // Verify the set was logged correctly
+    const sets = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .query(api.sets.listSets, { exerciseId });
+
+    expect(sets.length).toBe(1);
+    expect(sets[0].duration).toBe(60);
+    expect(sets[0].reps).toBeUndefined();
+  });
+
+  test("should allow duration-based sets with weight (weighted vests, etc)", async () => {
+    const setId = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .mutation(api.sets.logSet, {
+        exerciseId,
+        duration: 45,
+        weight: 20,
+        unit: "lbs",
+      });
+
+    expect(setId).toBeDefined();
+
+    const sets = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .query(api.sets.listSets, { exerciseId });
+
+    expect(sets[0].duration).toBe(45);
+    expect(sets[0].weight).toBe(20);
+    expect(sets[0].unit).toBe("lbs");
+  });
+
+  test("should reject sets with both reps and duration", async () => {
+    await expect(
+      t
+        .withIdentity({ subject: user1Subject, name: "User 1" })
+        .mutation(api.sets.logSet, {
+          exerciseId,
+          reps: 10,
+          duration: 60,
+        })
+    ).rejects.toThrow("Must provide either reps or duration (not both)");
+  });
+
+  test("should reject sets with neither reps nor duration", async () => {
+    await expect(
+      t
+        .withIdentity({ subject: user1Subject, name: "User 1" })
+        .mutation(api.sets.logSet, {
+          exerciseId,
+          weight: 20,
+          unit: "lbs",
+        })
+    ).rejects.toThrow("Must provide either reps or duration (not both)");
+  });
+
+  test("should validate duration is positive", async () => {
+    await expect(
+      t
+        .withIdentity({ subject: user1Subject, name: "User 1" })
+        .mutation(api.sets.logSet, {
+          exerciseId,
+          duration: 0,
+        })
+    ).rejects.toThrow("Duration must be between 1 and 86400 seconds");
+  });
+
+  test("should validate duration does not exceed 24 hours", async () => {
+    await expect(
+      t
+        .withIdentity({ subject: user1Subject, name: "User 1" })
+        .mutation(api.sets.logSet, {
+          exerciseId,
+          duration: 90000, // More than 24 hours
+        })
+    ).rejects.toThrow("Duration must be between 1 and 86400 seconds");
+  });
+
+  test("should round duration to nearest second", async () => {
+    await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .mutation(api.sets.logSet, {
+        exerciseId,
+        duration: 45.7, // Should round to 46
+      });
+
+    const sets = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .query(api.sets.listSets, { exerciseId });
+
+    expect(sets[0].duration).toBe(46);
+  });
+});
