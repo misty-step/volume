@@ -1,7 +1,6 @@
 "use client";
 
 import { SignUp } from "@clerk/nextjs";
-import { Github } from "lucide-react";
 
 export function UnauthenticatedLanding() {
   return (
@@ -37,15 +36,9 @@ export function UnauthenticatedLanding() {
 
       {/* Footer - full width */}
       <footer className="border-t py-4 px-8 lg:px-16 animate-in fade-in duration-700 delay-300">
-        <a
-          href="https://github.com/phrazzld/volume"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Github className="w-4 h-4" />
-          GitHub
-        </a>
+        <p className="text-sm text-muted-foreground">
+          © {new Date().getFullYear()} Volume
+        </p>
       </footer>
     </div>
   );
