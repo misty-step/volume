@@ -35,6 +35,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { InlineExerciseCreator } from "./inline-exercise-creator";
+import { DurationInput } from "./duration-input";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { Exercise, Set } from "@/types/domain";
 import { useQuickLogForm, QuickLogFormValues } from "@/hooks/useQuickLogForm";
@@ -183,18 +184,6 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
       }
     };
 
-    // Handle Enter key in duration input - focus weight or submit
-    const handleDurationKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        if (weightInputRef.current) {
-          weightInputRef.current.focus();
-        } else {
-          form.handleSubmit(onSubmit)();
-        }
-      }
-    };
-
     // Format duration in seconds to mm:ss
     const formatDuration = (seconds: number): string => {
       const mins = Math.floor(seconds / 60);
@@ -277,223 +266,219 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                 </Button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-2 md:items-end">
-                {/* Exercise Selector - Combobox with search */}
-                <FormField
-                  control={form.control}
-                  name="exerciseId"
-                  render={({ field }) => {
-                    const selectedExercise = exercises.find(
-                      (ex) => ex._id === field.value
-                    );
-
-                    return (
-                      <FormItem>
-                        <FormLabel>Exercise *</FormLabel>
-                        <Popover
-                          open={comboboxOpen}
-                          onOpenChange={(open) => {
-                            setComboboxOpen(open);
-                            // When combobox closes and exercise is selected, focus reps input
-                            if (!open && field.value) {
-                              focusElement(repsInputRef);
-                            }
-                          }}
-                        >
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={comboboxOpen}
-                                className={cn(
-                                  "w-full h-[46px] justify-between font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                                disabled={form.formState.isSubmitting}
-                              >
-                                {selectedExercise?.name || "Select..."}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                            <Command>
-                              <CommandInput placeholder="Type to search..." />
-                              <CommandList>
-                                <CommandEmpty>No exercises found.</CommandEmpty>
-                                <CommandGroup>
-                                  {exercises.map((exercise) => (
-                                    <CommandItem
-                                      key={exercise._id}
-                                      value={exercise.name}
-                                      onSelect={() => {
-                                        field.onChange(exercise._id);
-                                        setComboboxOpen(false);
-                                        // Focus reps input after popover closes
-                                        setTimeout(
-                                          () => focusElement(repsInputRef),
-                                          FOCUS_DELAY_MS
-                                        );
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          field.value === exercise._id
-                                            ? "opacity-100"
-                                            : "opacity-0"
-                                        )}
-                                      />
-                                      {exercise.name}
-                                    </CommandItem>
-                                  ))}
-                                  <CommandItem
-                                    value="CREATE_NEW"
-                                    onSelect={() => {
-                                      setShowInlineCreator(true);
-                                      setComboboxOpen(false);
-                                      field.onChange("");
-                                    }}
-                                    className="border-t"
-                                  >
-                                    + Create New
-                                  </CommandItem>
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
-                />
-
-                {/* Reps or Duration Input - conditionally rendered */}
-                {!isDurationMode ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end">
+                  {/* Exercise Selector - Combobox with search */}
                   <FormField
                     control={form.control}
-                    name="reps"
-                    render={({ field }) => (
-                      <FormItem className="md:w-32">
-                        <FormLabel>Reps *</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            ref={repsInputRef}
-                            type="number"
-                            inputMode="numeric"
-                            min="1"
-                            onKeyDown={handleRepsKeyDown}
-                            onChange={(e) =>
-                              field.onChange(
-                                e.target.value
-                                  ? parseFloat(e.target.value)
-                                  : undefined
-                              )
-                            }
-                            value={field.value ?? ""}
-                            placeholder="How many?"
-                            className="w-full h-[46px] tabular-nums"
-                            disabled={form.formState.isSubmitting}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                ) : (
-                  <FormField
-                    control={form.control}
-                    name="duration"
-                    render={({ field }) => (
-                      <FormItem className="md:w-32">
-                        <FormLabel>Duration (s) *</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            ref={durationInputRef}
-                            type="number"
-                            inputMode="numeric"
-                            min="1"
-                            onKeyDown={handleDurationKeyDown}
-                            onChange={(e) =>
-                              field.onChange(
-                                e.target.value
-                                  ? parseFloat(e.target.value)
-                                  : undefined
-                              )
-                            }
-                            value={field.value ?? ""}
-                            placeholder="Seconds"
-                            className="w-full h-[46px] tabular-nums"
-                            disabled={form.formState.isSubmitting}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                    name="exerciseId"
+                    render={({ field }) => {
+                      const selectedExercise = exercises.find(
+                        (ex) => ex._id === field.value
+                      );
 
-                {/* Weight Input */}
-                <FormField
-                  control={form.control}
-                  name="weight"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Weight ({unit})</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          ref={weightInputRef}
-                          type="number"
-                          inputMode="decimal"
-                          step="0.5"
-                          min="0"
-                          onKeyDown={handleWeightKeyDown}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value
-                                ? parseFloat(e.target.value)
-                                : undefined
-                            )
+                      return (
+                        <FormItem
+                          className={
+                            isDurationMode ? "md:col-span-5" : "md:col-span-6"
                           }
-                          value={field.value ?? ""}
-                          placeholder="Optional"
-                          className="w-full md:w-32 h-[46px] tabular-nums"
-                          disabled={form.formState.isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        >
+                          <FormLabel>Exercise *</FormLabel>
+                          <Popover
+                            open={comboboxOpen}
+                            onOpenChange={(open) => {
+                              setComboboxOpen(open);
+                              // When combobox closes and exercise is selected, focus reps input
+                              if (!open && field.value) {
+                                focusElement(repsInputRef);
+                              }
+                            }}
+                          >
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={comboboxOpen}
+                                  className={cn(
+                                    "w-full h-[46px] justify-between font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                  disabled={form.formState.isSubmitting}
+                                >
+                                  {selectedExercise?.name || "Select..."}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                              <Command>
+                                <CommandInput placeholder="Type to search..." />
+                                <CommandList>
+                                  <CommandEmpty>
+                                    No exercises found.
+                                  </CommandEmpty>
+                                  <CommandGroup>
+                                    {exercises.map((exercise) => (
+                                      <CommandItem
+                                        key={exercise._id}
+                                        value={exercise.name}
+                                        onSelect={() => {
+                                          field.onChange(exercise._id);
+                                          setComboboxOpen(false);
+                                          // Focus reps input after popover closes
+                                          setTimeout(
+                                            () => focusElement(repsInputRef),
+                                            FOCUS_DELAY_MS
+                                          );
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            field.value === exercise._id
+                                              ? "opacity-100"
+                                              : "opacity-0"
+                                          )}
+                                        />
+                                        {exercise.name}
+                                      </CommandItem>
+                                    ))}
+                                    <CommandItem
+                                      value="CREATE_NEW"
+                                      onSelect={() => {
+                                        setShowInlineCreator(true);
+                                        setComboboxOpen(false);
+                                        field.onChange("");
+                                      }}
+                                      className="border-t"
+                                    >
+                                      + Create New
+                                    </CommandItem>
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
 
-                {/* Submit Button */}
-                <div>
-                  <label
-                    className="block text-xs mb-1 opacity-0 pointer-events-none"
-                    aria-hidden="true"
-                  >
-                    Submit
-                  </label>
-                  <Button
-                    type="submit"
-                    className="w-full h-[46px]"
-                    disabled={form.formState.isSubmitting}
-                  >
-                    {form.formState.isSubmitting ? (
-                      <>
-                        <Loader2 className="animate-spin" />
-                        Logging...
-                      </>
-                    ) : (
-                      "Log Set"
+                  {/* Reps or Duration input based on mode */}
+                  {!isDurationMode ? (
+                    <FormField
+                      control={form.control}
+                      name="reps"
+                      render={({ field }) => (
+                        <FormItem className="md:col-span-3">
+                          <FormLabel>Reps *</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              ref={repsInputRef}
+                              type="number"
+                              inputMode="numeric"
+                              min="1"
+                              onKeyDown={handleRepsKeyDown}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value
+                                    ? parseFloat(e.target.value)
+                                    : undefined
+                                )
+                              }
+                              value={field.value ?? ""}
+                              placeholder="How many?"
+                              className="w-full h-[46px] tabular-nums"
+                              disabled={form.formState.isSubmitting}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name="duration"
+                      render={({ field }) => (
+                        <FormItem className="md:col-span-4">
+                          <FormLabel>Duration *</FormLabel>
+                          <FormControl>
+                            <DurationInput
+                              ref={durationInputRef}
+                              value={field.value}
+                              onChange={field.onChange}
+                              disabled={form.formState.isSubmitting}
+                              onEnter={() => {
+                                if (weightInputRef.current) {
+                                  weightInputRef.current.focus();
+                                } else {
+                                  form.handleSubmit(onSubmit)();
+                                }
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {/* Weight Input */}
+                  <FormField
+                    control={form.control}
+                    name="weight"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-3">
+                        <FormLabel>Weight ({unit})</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            ref={weightInputRef}
+                            type="number"
+                            inputMode="decimal"
+                            step="0.5"
+                            min="0"
+                            onKeyDown={handleWeightKeyDown}
+                            onChange={(e) =>
+                              field.onChange(
+                                e.target.value
+                                  ? parseFloat(e.target.value)
+                                  : undefined
+                              )
+                            }
+                            value={field.value ?? ""}
+                            placeholder="Optional"
+                            className="w-full h-[46px] tabular-nums"
+                            disabled={form.formState.isSubmitting}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                  </Button>
+                  />
                 </div>
+              </div>
+
+              {/* Submit button anchored below entire form */}
+              <div className="pt-6 md:flex md:justify-end">
+                <Button
+                  type="submit"
+                  className="w-full h-[46px] md:w-48"
+                  disabled={form.formState.isSubmitting}
+                >
+                  {form.formState.isSubmitting ? (
+                    <>
+                      <Loader2 className="animate-spin" />
+                      Logging...
+                    </>
+                  ) : (
+                    "Log Set"
+                  )}
+                </Button>
               </div>
             </form>
           </Form>
