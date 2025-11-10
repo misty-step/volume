@@ -117,6 +117,15 @@ describe("validateDuration", () => {
     expect(() => validateDuration(NaN)).toThrow();
     expect(() => validateDuration(Infinity)).toThrow();
   });
+
+  it("rejects values below 0.5 seconds", () => {
+    expect(() => validateDuration(0.49)).toThrow(
+      "Duration must be between 1 and 86400 seconds"
+    );
+    expect(() => validateDuration(0.1)).toThrow(
+      "Duration must be between 1 and 86400 seconds"
+    );
+  });
 });
 
 describe("validateExerciseName", () => {

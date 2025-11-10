@@ -21,6 +21,7 @@ const quickLogSchema = z
     duration: z
       .number()
       .min(1, "Duration must be at least 1 second")
+      .max(86400, "Duration must be 24 hours or less")
       .optional(),
   })
   .refine((data) => data.reps !== undefined || data.duration !== undefined, {
@@ -93,7 +94,8 @@ export function useQuickLogForm({
         };
 
         // Exclude the just-logged set from PR comparison
-        const setsForComparison = previousSets?.slice(1) || [];
+        const setsForComparison =
+          previousSets?.filter((set) => set._id !== setId) ?? [];
         const prResult = checkForPR(currentSet, setsForComparison);
 
         if (prResult) {

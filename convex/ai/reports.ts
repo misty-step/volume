@@ -389,6 +389,9 @@ export const generateReport = internalAction({
       const exerciseName = exerciseMap.get(set.exerciseId);
       if (!exerciseName) continue;
 
+      // Skip duration-only sets (no reps means it's a duration-based exercise)
+      if (set.reps === undefined) continue;
+
       // Determine if THIS SET is weighted or bodyweight
       const isBodyweight = !set.weight || set.weight === 0;
       const exerciseIdStr = String(set.exerciseId);
@@ -428,6 +431,8 @@ export const generateReport = internalAction({
       .filter(
         (set: any) => set.performedAt >= startDate && set.performedAt < endDate
       )
+      // Filter out duration-only sets (no reps means it's a duration-based exercise)
+      .filter((set: any) => set.reps !== undefined)
       .map((set: any) => {
         // Determine if THIS SET is weighted or bodyweight
         const isBodyweight = !set.weight || set.weight === 0;

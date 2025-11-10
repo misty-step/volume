@@ -76,8 +76,12 @@ export function validateDuration(
     throw new Error("Duration must be between 1 and 86400 seconds (24 hours)");
   }
 
-  // Round to nearest second
-  return Math.round(duration);
+  // Round to nearest second and ensure it stays within bounds
+  const rounded = Math.round(duration);
+  if (rounded < 1) {
+    throw new Error("Duration must be between 1 and 86400 seconds (24 hours)");
+  }
+  return rounded;
 }
 
 /**

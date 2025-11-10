@@ -288,9 +288,13 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                             open={comboboxOpen}
                             onOpenChange={(open) => {
                               setComboboxOpen(open);
-                              // When combobox closes and exercise is selected, focus reps input
+                              // When combobox closes and exercise is selected, focus appropriate input based on mode
                               if (!open && field.value) {
-                                focusElement(repsInputRef);
+                                focusElement(
+                                  isDurationMode
+                                    ? durationInputRef
+                                    : repsInputRef
+                                );
                               }
                             }}
                           >
@@ -326,9 +330,14 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                                         onSelect={() => {
                                           field.onChange(exercise._id);
                                           setComboboxOpen(false);
-                                          // Focus reps input after popover closes
+                                          // Focus appropriate input based on mode after popover closes
                                           setTimeout(
-                                            () => focusElement(repsInputRef),
+                                            () =>
+                                              focusElement(
+                                                isDurationMode
+                                                  ? durationInputRef
+                                                  : repsInputRef
+                                              ),
                                             FOCUS_DELAY_MS
                                           );
                                         }}
