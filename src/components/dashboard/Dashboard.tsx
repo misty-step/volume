@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useAuth } from "@clerk/nextjs";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -23,6 +24,8 @@ import { getTodayRange } from "@/lib/date-utils";
 import type { Exercise, Set } from "@/types/domain";
 
 export function Dashboard() {
+  const { isLoaded: isClerkLoaded, userId } = useAuth();
+  const { isLoading: isConvexAuthLoading, isAuthenticated } = useConvexAuth();
   const [undoToastVisible, setUndoToastVisible] = useState(false);
   const [lastLoggedSetId, setLastLoggedSetId] = useState<Id<"sets"> | null>(
     null
@@ -38,16 +41,26 @@ export function Dashboard() {
     includeDeleted: true,
   });
 
+  // Treat data as trustworthy only once Clerk + Convex both agree the user is authenticated
+  const authReady =
+    isClerkLoaded && Boolean(userId) && !isConvexAuthLoading && isAuthenticated;
+
   // Hydration guard - ensure data is stable before showing content
   // Waits for one full render cycle after queries resolve to prevent flashing empty states
+
   useEffect(() => {
-    if (allSets !== undefined && exercises !== undefined && !isHydrated) {
+    if (
+      authReady &&
+      allSets !== undefined &&
+      exercises !== undefined &&
+      !isHydrated
+    ) {
       // Use RAF to ensure React completes render cycle with stable data
       requestAnimationFrame(() => {
         setIsHydrated(true);
       });
     }
-  }, [allSets, exercises, isHydrated]);
+  }, [authReady, allSets, exercises, isHydrated]);
 
   // Delete set mutation
   const deleteSet = useMutation(api.sets.deleteSet);

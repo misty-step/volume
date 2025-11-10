@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 import { ExerciseManager } from "@/components/dashboard/exercise-manager";
 import { InlineExerciseCreator } from "@/components/dashboard/inline-exercise-creator";
 import { SettingsSection } from "@/components/ui/settings-section";

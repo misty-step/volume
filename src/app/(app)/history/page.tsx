@@ -3,12 +3,12 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { usePaginatedQuery, useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 import { ChronologicalGroupedSetHistory } from "@/components/dashboard/chronological-grouped-set-history";
 import { groupSetsByDay } from "@/lib/date-formatters";
 import { PageLayout } from "@/components/layout/page-layout";
 import { Button } from "@/components/ui/button";
-import { Id } from "../../../convex/_generated/dataModel";
+import { Id } from "../../../../convex/_generated/dataModel";
 import type { Exercise } from "@/types/domain";
 
 const PAGINATION_PAGE_SIZE = 25;
@@ -78,7 +78,7 @@ export default function HistoryPage() {
           <p className="text-sm mb-1">Start your journey! 🚀</p>
           <p className="text-muted-foreground text-xs mt-2">
             Log your first set on the{" "}
-            <Link href="/" className="hover:underline">
+            <Link href="/today" className="hover:underline">
               Dashboard
             </Link>
           </p>
