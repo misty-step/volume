@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { forwardRef, type HTMLAttributes } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { trackEvent } from "@/lib/analytics";
@@ -17,6 +18,8 @@ export const Hero = forwardRef<HTMLElement, HeroProps>(function Hero(
   { className, ...props },
   ref
 ) {
+  const shouldReduceMotion = useReducedMotion();
+
   const handleCtaClick = (label: string) => {
     trackEvent("Marketing CTA Click", {
       placement: "hero",
@@ -106,57 +109,48 @@ export const Hero = forwardRef<HTMLElement, HeroProps>(function Hero(
             ))}
           </motion.ul>
         </motion.div>
-
-        <MockDevicePreview />
+        <HeroDevice animate={!shouldReduceMotion} />
       </div>
       <div className="pointer-events-none absolute inset-x-0 -bottom-40 h-80 bg-gradient-to-t from-background" />
     </section>
   );
 });
 
-function MockDevicePreview() {
+function HeroDevice({ animate }: { animate: boolean }) {
+  const floatProps = animate
+    ? {
+        animate: { y: [0, -8, 0] },
+        transition: { duration: 8, ease: "easeInOut", repeat: Infinity },
+      }
+    : {};
+
   return (
     <motion.div
       variants={slideIn("right")}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.3 }}
-      className="relative mx-auto w-full max-w-[420px]"
+      className="relative mx-auto w-full max-w-[440px]"
     >
       <div
-        className="absolute -inset-8 rounded-[32px] bg-primary/30 blur-3xl"
+        className="absolute -inset-10 rounded-[40px] bg-primary/20 blur-3xl"
         aria-hidden
       />
-      <div className="relative rounded-[32px] border border-white/15 bg-gradient-to-b from-slate-900 to-slate-950 p-6 shadow-2xl">
-        <div className="space-y-6">
-          <div>
-            <p className="text-sm font-medium text-white/70">Today</p>
-            <p className="text-3xl font-semibold text-white">
-              Bench + Pull Day
-            </p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase text-white/60">Next set</p>
-            <p className="text-2xl font-semibold text-white">4 × 8 @ 135 lbs</p>
-            <p className="text-sm text-white/60">Rest: 90 sec</p>
-          </div>
-          <div className="space-y-3 text-white/80">
-            <div className="flex items-center justify-between text-sm">
-              <span>Heatmap</span>
-              <span className="text-white">🔥 92%</span>
-            </div>
-            <div className="relative h-2 rounded-full bg-white/10">
-              <span className="absolute inset-y-0 left-0 w-5/6 rounded-full bg-primary" />
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-xs text-white/70">
-              AI insight · “Volume is trending up 7% vs last week. Keep
-              Wednesday lighter for recovery.”
-            </div>
-          </div>
-        </div>
-      </div>
+      <motion.div
+        className="relative overflow-hidden rounded-[40px] border border-white/15 bg-gradient-to-b from-slate-900 to-slate-950 shadow-2xl"
+        {...floatProps}
+      >
+        <Image
+          src="/images/device-mock-today.svg"
+          alt="Preview of the Volume Today screen"
+          width={375}
+          height={812}
+          priority
+          className="w-full object-cover"
+        />
+      </motion.div>
       <div
-        className="absolute inset-x-8 -bottom-4 h-12 rounded-full bg-black/70 blur-2xl"
+        className="absolute inset-x-10 -bottom-6 h-16 rounded-full bg-black/70 blur-2xl"
         aria-hidden
       />
     </motion.div>

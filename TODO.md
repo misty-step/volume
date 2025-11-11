@@ -117,7 +117,7 @@ Last updated: 2025-11-10
   Time: 1.5h
   ```
 
-- [ ] Create device mock & integrate hero visual
+- [x] Create device mock & integrate hero visual
 
   ```
   Files:
