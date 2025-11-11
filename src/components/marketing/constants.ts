@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  ListChecks,
   ShieldCheck,
   Smartphone,
   Sparkles,
@@ -106,3 +107,68 @@ export const SOCIAL_PROOF_BRANDS = [
   "Volume Collective",
   "Neighborhood Garage Gyms",
 ] as const;
+
+export interface HowItWorksStep {
+  title: string;
+  description: string;
+  detail: string;
+}
+
+export const HOW_IT_WORKS_STEPS: HowItWorksStep[] = [
+  {
+    title: "Start logging",
+    description:
+      "Pick an exercise or add one inline, then log a set in under five seconds.",
+    detail:
+      "Volume remembers your last load, rest timer, and unit preference so you stay present between sets.",
+  },
+  {
+    title: "Train as usual",
+    description:
+      "Volume tracks every PR, streak, and intensity shift quietly in the background.",
+    detail:
+      "Heatmaps, progressive overload guards, and recovery cues stay synced across devices via Convex.",
+  },
+  {
+    title: "Review weekly",
+    description:
+      "A short AI recap lands once a week to highlight trends you should actually care about.",
+    detail:
+      "Keep or dismiss nudges, export data anytime, and share the recap with your crew if you want feedback.",
+  },
+];
+
+export interface ScreenCarouselSlide {
+  title: string;
+  description: string;
+  statLabel: string;
+  statValue: string;
+  callout: string;
+}
+
+export const SCREEN_SLIDES: ScreenCarouselSlide[] = [
+  {
+    title: "Today view",
+    description:
+      "Inline exercise search, quick log form, undo, and streak card keep you moving.",
+    statLabel: "Avg. log time",
+    statValue: "4.8s",
+    callout: "Tap once to repeat your last set, no templates required.",
+  },
+  {
+    title: "Analytics",
+    description:
+      "Heatmaps, PR tiles, and progressive overload widgets highlight real progress.",
+    statLabel: "Weekly volume",
+    statValue: "+7%",
+    callout: "Hover to see muscle group bias and recovery guidance.",
+  },
+  {
+    title: "AI recap",
+    description:
+      "Coach-style summary with one primary win, one friction point, and next focus.",
+    statLabel: "Report length",
+    statValue: "90 sec",
+    callout: "No chat window—just signal delivered every Sunday morning.",
+  },
+];

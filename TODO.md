@@ -63,7 +63,7 @@ Last updated: 2025-11-10
   Time: 1.5h
   ```
 
-- [ ] Implement How It Works & Screens Carousel
+- [x] Implement How It Works & Screens Carousel
 
   ```
   Files:
