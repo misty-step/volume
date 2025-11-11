@@ -35,6 +35,21 @@ export interface AnalyticsEventDefinitions {
     durationMs: number;
     setCount: number;
   };
+  "Marketing Page View": {
+    path: string;
+  };
+  "Marketing CTA Click": {
+    placement: "hero" | "final" | "navbar" | "footer";
+    label: string;
+  };
+  "Marketing FAQ Toggle": {
+    question: string;
+    isOpen: boolean;
+  };
+  "Marketing Nav Click": {
+    target: string;
+    device: "desktop" | "mobile";
+  };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventDefinitions;

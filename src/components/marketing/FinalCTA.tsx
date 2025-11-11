@@ -5,6 +5,7 @@ import { forwardRef, type HTMLAttributes } from "react";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
+import { trackEvent } from "@/lib/analytics";
 import { fadeInUp, scaleIn } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +15,13 @@ export interface FinalCTAProps extends HTMLAttributes<HTMLElement> {}
 
 export const FinalCTA = forwardRef<HTMLElement, FinalCTAProps>(
   function FinalCTA({ className, ...props }, ref) {
+    const handleCtaClick = (label: string) => {
+      trackEvent("Marketing CTA Click", {
+        placement: "final",
+        label,
+      });
+    };
+
     return (
       <section
         ref={ref}
@@ -53,12 +61,22 @@ export const FinalCTA = forwardRef<HTMLElement, FinalCTAProps>(
             className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center"
           >
             <Button asChild size="comfortable">
-              <Link href={FINAL_CTA_CONTENT.primaryCta.href}>
+              <Link
+                href={FINAL_CTA_CONTENT.primaryCta.href}
+                onClick={() =>
+                  handleCtaClick(FINAL_CTA_CONTENT.primaryCta.label)
+                }
+              >
                 {FINAL_CTA_CONTENT.primaryCta.label}
               </Link>
             </Button>
             <Button variant="secondary" asChild size="comfortable">
-              <Link href={FINAL_CTA_CONTENT.secondaryCta.href}>
+              <Link
+                href={FINAL_CTA_CONTENT.secondaryCta.href}
+                onClick={() =>
+                  handleCtaClick(FINAL_CTA_CONTENT.secondaryCta.label)
+                }
+              >
                 {FINAL_CTA_CONTENT.secondaryCta.label}
               </Link>
             </Button>

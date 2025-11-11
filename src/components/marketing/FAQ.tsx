@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { forwardRef, useState, type HTMLAttributes } from "react";
 
+import { trackEvent } from "@/lib/analytics";
 import { fadeInUp, staggerContainer } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +19,14 @@ export const FAQ = forwardRef<HTMLElement, FAQProps>(function FAQ(
   const [openItem, setOpenItem] = useState(0);
 
   const toggleItem = (index: number) => {
-    setOpenItem((current) => (current === index ? -1 : index));
+    setOpenItem((current) => {
+      const nextIsOpen = current !== index;
+      trackEvent("Marketing FAQ Toggle", {
+        question: FAQ_ITEMS[index].question,
+        isOpen: nextIsOpen,
+      });
+      return nextIsOpen ? index : -1;
+    });
   };
 
   return (

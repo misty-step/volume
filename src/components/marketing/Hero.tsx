@@ -5,6 +5,7 @@ import { forwardRef, type HTMLAttributes } from "react";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
+import { trackEvent } from "@/lib/analytics";
 import { fadeInUp, scaleIn, slideIn, staggerContainer } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,13 @@ export const Hero = forwardRef<HTMLElement, HeroProps>(function Hero(
   { className, ...props },
   ref
 ) {
+  const handleCtaClick = (label: string) => {
+    trackEvent("Marketing CTA Click", {
+      placement: "hero",
+      label,
+    });
+  };
+
   return (
     <section
       id="why-volume"
@@ -57,10 +65,20 @@ export const Hero = forwardRef<HTMLElement, HeroProps>(function Hero(
             className="flex flex-col gap-4 sm:flex-row"
           >
             <Button asChild size="comfortable">
-              <Link href="/sign-up">Get Started — free</Link>
+              <Link
+                href="/sign-up"
+                onClick={() => handleCtaClick("Get Started — free")}
+              >
+                Get Started — free
+              </Link>
             </Button>
             <Button variant="secondary" asChild size="comfortable">
-              <Link href="#how-it-works">See how it works</Link>
+              <Link
+                href="#how-it-works"
+                onClick={() => handleCtaClick("See how it works")}
+              >
+                See how it works
+              </Link>
             </Button>
           </motion.div>
           <motion.p variants={fadeInUp} className="text-sm text-white/60">

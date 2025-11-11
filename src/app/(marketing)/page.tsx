@@ -6,6 +6,7 @@ import {
   Hero,
   HowItWorks,
   Navbar,
+  PageAnalyticsTracker,
   ScreensCarousel,
   SocialProof,
 } from "@/components/marketing";
@@ -15,6 +16,7 @@ export default function MarketingHome() {
     <div className="bg-background text-foreground">
       <Navbar />
       <main>
+        <PageAnalyticsTracker />
         <Hero />
         <SocialProof />
         <Benefits />

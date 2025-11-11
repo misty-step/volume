@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { trackEvent } from "@/lib/analytics";
 import { fadeInUp, slideIn, staggerContainer } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +20,21 @@ export const Navbar = forwardRef<HTMLElement, NavbarProps>(function Navbar(
 ) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const handleNavClick = () => setIsMenuOpen(false);
+  const closeMenu = () => setIsMenuOpen(false);
+
+  const logNavClick = (link: NavLink, device: "desktop" | "mobile") => {
+    trackEvent("Marketing Nav Click", {
+      target: link.href,
+      device,
+    });
+  };
+
+  const logCtaClick = (label: string) => {
+    trackEvent("Marketing CTA Click", {
+      placement: "navbar",
+      label,
+    });
+  };
 
   return (
     <motion.nav
@@ -51,16 +66,31 @@ export const Navbar = forwardRef<HTMLElement, NavbarProps>(function Navbar(
           initial="visible"
         >
           {NAV_LINKS.map((link) => (
-            <NavLinkItem key={link.href} href={link.href} label={link.label} />
+            <NavLinkItem
+              key={link.href}
+              href={link.href}
+              label={link.label}
+              onClick={() => logNavClick(link, "desktop")}
+            />
           ))}
         </motion.div>
 
         <div className="hidden items-center gap-3 lg:flex">
           <Button variant="ghost" asChild>
-            <Link href="#how-it-works">See how it works</Link>
+            <Link
+              href="#how-it-works"
+              onClick={() => logCtaClick("See how it works")}
+            >
+              See how it works
+            </Link>
           </Button>
           <Button asChild>
-            <Link href="/sign-up">Get Started — free</Link>
+            <Link
+              href="/sign-up"
+              onClick={() => logCtaClick("Get Started — free")}
+            >
+              Get Started — free
+            </Link>
           </Button>
         </div>
 
@@ -97,7 +127,10 @@ export const Navbar = forwardRef<HTMLElement, NavbarProps>(function Navbar(
                 <Link
                   key={link.href}
                   href={link.href}
-                  onClick={handleNavClick}
+                  onClick={() => {
+                    logNavClick(link, "mobile");
+                    closeMenu();
+                  }}
                   className="text-muted-foreground transition hover:text-foreground"
                 >
                   {link.label}
@@ -105,11 +138,21 @@ export const Navbar = forwardRef<HTMLElement, NavbarProps>(function Navbar(
               ))}
             </div>
             <div className="mt-6 flex flex-col gap-3">
-              <Button variant="outline" asChild onClick={handleNavClick}>
-                <Link href="#how-it-works">See how it works</Link>
+              <Button variant="outline" asChild onClick={closeMenu}>
+                <Link
+                  href="#how-it-works"
+                  onClick={() => logCtaClick("See how it works")}
+                >
+                  See how it works
+                </Link>
               </Button>
-              <Button asChild onClick={handleNavClick}>
-                <Link href="/sign-up">Get Started — free</Link>
+              <Button asChild onClick={closeMenu}>
+                <Link
+                  href="/sign-up"
+                  onClick={() => logCtaClick("Get Started — free")}
+                >
+                  Get Started — free
+                </Link>
               </Button>
             </div>
           </motion.div>
@@ -119,10 +162,15 @@ export const Navbar = forwardRef<HTMLElement, NavbarProps>(function Navbar(
   );
 });
 
-function NavLinkItem({ href, label }: NavLink) {
+function NavLinkItem({
+  href,
+  label,
+  onClick,
+}: NavLink & { onClick?: () => void }) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       className="text-muted-foreground transition hover:text-foreground"
     >
       {label}

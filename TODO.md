@@ -104,7 +104,7 @@ Last updated: 2025-11-10
 
 ## Phase 2: Polish & Analytics (4-5h)
 
-- [ ] Add analytics event tracking to marketing components
+- [x] Add analytics event tracking to marketing components
 
   ```
   Files:
