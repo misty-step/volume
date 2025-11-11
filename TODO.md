@@ -12,7 +12,7 @@ Last updated: 2025-11-10
 
 ## Phase 1: Foundation & Structure (6-8h)
 
-- [~] Install Framer Motion & create motion system
+- [x] Install Framer Motion & create motion system
 
   ```
   Files: package.json, src/lib/motion.ts (new)
@@ -21,9 +21,20 @@ Last updated: 2025-11-10
   Success: fadeInUp, staggerContainer, slideIn, scaleIn exported; motion respects user preferences
   Test: Import motion primitives, verify reduced-motion detection
   Time: 1h
+
+  Work Log:
+  - Installed framer-motion@12.23.24
+  - Created motion.ts with 4 core variants (fadeInUp, slideIn, scaleIn, staggerContainer)
+  - Applied code-simplicity-reviewer recommendations:
+    * Removed withReducedMotion() helper (Framer handles automatically)
+    * Consolidated slideInLeft/Right into slideIn(direction) factory
+    * Removed staggerContainer opacity side effects
+    * 50% LOC reduction (178→70 lines)
+  - Created comprehensive test suite (7 tests, all passing)
+  - All tests pass, TypeScript clean
   ```
 
-- [ ] Create marketing component foundation (Navbar, Footer, Hero)
+- [x] Create marketing component foundation (Navbar, Footer, Hero)
 
   ```
   Files:
