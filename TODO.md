@@ -91,7 +91,7 @@ Last updated: 2025-11-10
   Time: 1.5h
   ```
 
-- [ ] Integrate all sections in marketing page
+- [x] Integrate all sections in marketing page
   ```
   Files: src/app/(marketing)/page.tsx
   Pattern: Replace UnauthenticatedLanding with section composition
