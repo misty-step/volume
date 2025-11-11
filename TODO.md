@@ -12,7 +12,7 @@ Last updated: 2025-11-10
 
 ## Phase 1: Foundation & Structure (6-8h)
 
-- [ ] Install Framer Motion & create motion system
+- [~] Install Framer Motion & create motion system
 
   ```
   Files: package.json, src/lib/motion.ts (new)
