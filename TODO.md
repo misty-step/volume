@@ -130,7 +130,7 @@ Last updated: 2025-11-10
   Time: 2h
   ```
 
-- [ ] Build testimonials section
+- [x] Build testimonials section
   ```
   Files: src/components/marketing/Testimonials.tsx (new)
   Pattern: 3-card grid or carousel with cross-fade transitions

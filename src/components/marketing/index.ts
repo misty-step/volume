@@ -7,5 +7,6 @@ export * from "./HowItWorks";
 export * from "./ScreensCarousel";
 export * from "./FAQ";
 export * from "./FinalCTA";
+export * from "./Testimonials";
 export * from "./PageAnalyticsTracker";
 export * from "./constants";

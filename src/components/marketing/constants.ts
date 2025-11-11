@@ -173,6 +173,37 @@ export const SCREEN_SLIDES: ScreenCarouselSlide[] = [
   },
 ];
 
+export interface Testimonial {
+  quote: string;
+  name: string;
+  role: string;
+  metric: string;
+}
+
+export const TESTIMONIALS: Testimonial[] = [
+  {
+    quote:
+      "Volume took me from chaotic Google Sheets to a 12-week streak. Logging is so fast I can finally stay present between sets.",
+    name: "Riya Patel",
+    role: "Strength coach, Oakland",
+    metric: "+14% weekly volume",
+  },
+  {
+    quote:
+      "Heatmap + AI recap is the accountability combo I didn’t know I needed. Sunday summaries keep my crew aligned.",
+    name: "Marcus Lin",
+    role: "Powerlifter, Toronto",
+    metric: "8 teammates synced",
+  },
+  {
+    quote:
+      "I log during rest timers with one thumb. Seeing real trends instead of cluttered charts keeps me consistent.",
+    name: "Selene Ortiz",
+    role: "Product lead, NYC garage gym",
+    metric: "26 workouts in 45 days",
+  },
+];
+
 export interface FAQItem {
   question: string;
   answer: string;
