@@ -39,7 +39,7 @@ export interface AnalyticsEventDefinitions {
     path: string;
   };
   "Marketing CTA Click": {
-    placement: "hero" | "final" | "navbar" | "footer";
+    placement: "hero" | "final" | "navbar" | "footer" | "pricing";
     label: string;
   };
   "Marketing FAQ Toggle": {

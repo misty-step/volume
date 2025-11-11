@@ -9,6 +9,7 @@ import {
   PageAnalyticsTracker,
   ScreensCarousel,
   Testimonials,
+  Pricing,
   SocialProof,
 } from "@/components/marketing";
 
@@ -24,6 +25,7 @@ export default function MarketingHome() {
         <HowItWorks />
         <ScreensCarousel />
         <Testimonials />
+        <Pricing />
         <FAQ />
         <FinalCTA />
       </main>

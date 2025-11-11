@@ -143,7 +143,7 @@ Last updated: 2025-11-10
 
 ## Phase 3: SEO & Metadata (2-3h)
 
-- [ ] Implement Pricing/Pro waitlist section
+- [x] Implement Pricing/Pro waitlist section
 
   ```
   Files: src/components/marketing/Pricing.tsx (new)

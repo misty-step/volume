@@ -8,5 +8,6 @@ export * from "./ScreensCarousel";
 export * from "./FAQ";
 export * from "./FinalCTA";
 export * from "./Testimonials";
+export * from "./Pricing";
 export * from "./PageAnalyticsTracker";
 export * from "./constants";

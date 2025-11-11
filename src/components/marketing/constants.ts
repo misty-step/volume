@@ -204,6 +204,51 @@ export const TESTIMONIALS: Testimonial[] = [
   },
 ];
 
+export interface PricingTier {
+  name: string;
+  price: string;
+  description: string;
+  features: string[];
+  ctaLabel: string;
+  ctaHref: string;
+  isPopular?: boolean;
+  headline?: string;
+}
+
+export const PRICING_TIERS: PricingTier[] = [
+  {
+    name: "Free",
+    price: "$0",
+    headline: "Unlimited set logging, analytics, and AI recap",
+    description:
+      "For solo lifters and small crews getting started. Includes everything in the product today.",
+    features: [
+      "Unlimited exercises + workouts",
+      "Heatmap, PR tiles, and streaks",
+      "Weekly AI recap (standard depth)",
+      "Clerk + Convex secure sync",
+    ],
+    ctaLabel: "Get started",
+    ctaHref: "/sign-up",
+  },
+  {
+    name: "Pro",
+    price: "Waitlist",
+    headline: "Advanced analytics, custom templates, priority AI",
+    description:
+      "Built for coaches and high-volume crews who need deeper insights, exports, and team workflows.",
+    features: [
+      "Custom templates + routines",
+      "Priority AI summaries with tags",
+      "Automated exports + API access",
+      "Coach dashboards and crew controls",
+    ],
+    ctaLabel: "Join waitlist",
+    ctaHref: "mailto:hello@volume.fitness",
+    isPopular: true,
+  },
+];
+
 export interface FAQItem {
   question: string;
   answer: string;
