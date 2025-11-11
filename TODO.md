@@ -49,7 +49,7 @@ Last updated: 2025-11-10
   Time: 2h
   ```
 
-- [ ] Build Benefits & Social Proof sections
+- [x] Build Benefits & Social Proof sections
 
   ```
   Files:

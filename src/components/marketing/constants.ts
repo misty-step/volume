@@ -1,3 +1,12 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  ShieldCheck,
+  Smartphone,
+  Sparkles,
+  TimerReset,
+  TrendingUp,
+} from "lucide-react";
+
 export const NAV_LINKS = [
   { label: "Why Volume", href: "#why-volume" },
   { label: "Features", href: "#features" },
@@ -44,3 +53,56 @@ export const HERO_STATS = [
 ] as const;
 
 export type HeroStat = (typeof HERO_STATS)[number];
+
+export interface BenefitDefinition {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+}
+
+export const BENEFITS: BenefitDefinition[] = [
+  {
+    title: "Faster than your rest timer",
+    description:
+      "Log sets with one tap, undo mistakes instantly, and keep momentum between sets.",
+    icon: TimerReset,
+  },
+  {
+    title: "Progress you can feel",
+    description:
+      "Heatmap, PR snapshots, and weekly deltas make trends obvious in seconds.",
+    icon: TrendingUp,
+  },
+  {
+    title: "AI that shuts up",
+    description:
+      "One short recap lands every week. No chat windows, no noise, just signal.",
+    icon: Sparkles,
+  },
+  {
+    title: "Data stays yours",
+    description:
+      "Private by default with effortless exports. Zero ads, zero weird sharing.",
+    icon: ShieldCheck,
+  },
+  {
+    title: "Built for real gyms",
+    description:
+      "Reps, weight, and duration in kg/lb with dark mode that respects tired eyes.",
+    icon: Smartphone,
+  },
+];
+
+export const SOCIAL_PROOF_AVATARS = [
+  { initials: "TK", name: "Talia K.", role: "Strength coach" },
+  { initials: "MJ", name: "Marco J.", role: "Powerlifter" },
+  { initials: "AE", name: "Anika E.", role: "Product designer" },
+  { initials: "RS", name: "Ravi S.", role: "High-volume trainer" },
+] as const;
+
+export const SOCIAL_PROOF_BRANDS = [
+  "Lift Lab",
+  "North Loop Strength",
+  "Volume Collective",
+  "Neighborhood Garage Gyms",
+] as const;
