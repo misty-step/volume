@@ -172,3 +172,50 @@ export const SCREEN_SLIDES: ScreenCarouselSlide[] = [
     callout: "No chat window—just signal delivered every Sunday morning.",
   },
 ];
+
+export interface FAQItem {
+  question: string;
+  answer: string;
+}
+
+export const FAQ_ITEMS: FAQItem[] = [
+  {
+    question: "Does Volume work offline?",
+    answer:
+      "Queued logging is on our roadmap. Today you’ll need connectivity to sync sets, but the UI stays responsive even on low signal.",
+  },
+  {
+    question: "Do I need templates before I can log?",
+    answer:
+      "Nope. Start logging immediately and layer structure later. We remember your last weights and rest timers automatically.",
+  },
+  {
+    question: "How is this different from other trackers?",
+    answer:
+      "Volume optimizes for speed and clarity: one-tap logging, calm analytics, and weekly AI recaps instead of cluttered charts or chats.",
+  },
+  {
+    question: "What about data privacy?",
+    answer:
+      "Your workouts stay yours. We don’t run ads, sell data, or track personal identifiers in analytics. Export anytime or delete with one request.",
+  },
+  {
+    question: "Will AI spam me?",
+    answer:
+      "Never. You get one concise recap per week with tangible wins and focus points, plus the option to mute future summaries.",
+  },
+  {
+    question: "Can my crew or coach use it with me?",
+    answer:
+      "Yes. Share the AI recap or invite training partners—Volume syncs instantly via Convex so everyone sees the same truth.",
+  },
+];
+
+export const FINAL_CTA_CONTENT = {
+  eyebrow: "Ready when you are",
+  headline: "Train with clarity. Get started free today.",
+  subheadline:
+    "Log a set in seconds, keep streaks alive, and actually understand your progress—all without fighting your tools.",
+  primaryCta: { label: "Get Started — free", href: "/sign-up" },
+  secondaryCta: { label: "See how it works", href: "#how-it-works" },
+} as const;

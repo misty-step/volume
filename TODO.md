@@ -77,7 +77,7 @@ Last updated: 2025-11-10
   Time: 2h
   ```
 
-- [ ] Create FAQ & Final CTA sections
+- [x] Create FAQ & Final CTA sections
 
   ```
   Files:

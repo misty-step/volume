@@ -5,4 +5,6 @@ export * from "./Benefits";
 export * from "./SocialProof";
 export * from "./HowItWorks";
 export * from "./ScreensCarousel";
+export * from "./FAQ";
+export * from "./FinalCTA";
 export * from "./constants";
