@@ -16,8 +16,9 @@ import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { handleMutationError } from "@/lib/error-handler";
 import { PageLayout } from "@/components/layout/page-layout";
 import { LAYOUT } from "@/lib/layout-constants";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { BrutalistCard } from "@/components/brutalist";
+import { motion } from "framer-motion";
+import { brutalistMotion } from "@/lib/brutalist-motion";
 import { groupSetsByExercise } from "@/lib/exercise-grouping";
 import { sortExercisesByRecency } from "@/lib/exercise-sorting";
 import { getTodayRange } from "@/lib/date-utils";
@@ -150,48 +151,40 @@ export function Dashboard() {
   if (!isHydrated) {
     return (
       <PageLayout title="Dashboard">
-        {/* Stats skeleton */}
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-4 w-32" />
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div
+          className={LAYOUT.section.spacing}
+          variants={brutalistMotion.staggerContainer}
+          initial="initial"
+          animate="animate"
+        >
+          {/* Form skeleton */}
+          <motion.div variants={brutalistMotion.weightDrop}>
+            <BrutalistCard className="p-6">
+              <div className="space-y-4">
+                <div className="h-8 w-32 bg-concrete-gray animate-pulse" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="h-12 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
+                  <div className="h-12 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
+                  <div className="h-12 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
+                  <div className="h-12 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
+                </div>
+              </div>
+            </BrutalistCard>
+          </motion.div>
 
-        {/* Form skeleton */}
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-4 w-24" />
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Skeleton className="h-10" />
-              <Skeleton className="h-10" />
-              <Skeleton className="h-10" />
-              <Skeleton className="h-10" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* History skeleton */}
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-4 w-32" />
-          </CardHeader>
-          <CardContent>
-            <div className={LAYOUT.section.spacing}>
-              <Skeleton className="h-20" />
-              <Skeleton className="h-20" />
-            </div>
-          </CardContent>
-        </Card>
+          {/* History skeleton */}
+          <motion.div variants={brutalistMotion.weightDrop}>
+            <BrutalistCard className="p-6">
+              <div className="space-y-4">
+                <div className="h-8 w-48 bg-concrete-gray animate-pulse font-mono" />
+                <div className="space-y-3">
+                  <div className="h-24 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
+                  <div className="h-24 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
+                </div>
+              </div>
+            </BrutalistCard>
+          </motion.div>
+        </motion.div>
       </PageLayout>
     );
   }
@@ -223,24 +216,33 @@ export function Dashboard() {
           /* First Run Experience - Show when no exercises exist */
           <FirstRunExperience onExerciseCreated={handleFirstExerciseCreated} />
         ) : (
-          <>
+          <motion.div
+            className={LAYOUT.section.spacing}
+            variants={brutalistMotion.staggerContainer}
+            initial="initial"
+            animate="animate"
+          >
             {/* Quick Log Form - PRIME POSITION */}
-            <QuickLogForm
-              ref={formRef}
-              exercises={activeExercisesByRecency}
-              onSetLogged={handleSetLogged}
-            />
+            <motion.div variants={brutalistMotion.weightDrop}>
+              <QuickLogForm
+                ref={formRef}
+                exercises={activeExercisesByRecency}
+                onSetLogged={handleSetLogged}
+              />
+            </motion.div>
 
             {/* Today's Set History - Aggregated stats with drill-down */}
-            <GroupedSetHistory
-              ref={historyRef}
-              exerciseGroups={exerciseGroups}
-              exerciseMap={exerciseMap}
-              onRepeat={handleRepeatSet}
-              onDelete={handleDeleteSet}
-              isLoading={!isHydrated}
-            />
-          </>
+            <motion.div variants={brutalistMotion.weightDrop}>
+              <GroupedSetHistory
+                ref={historyRef}
+                exerciseGroups={exerciseGroups}
+                exerciseMap={exerciseMap}
+                onRepeat={handleRepeatSet}
+                onDelete={handleDeleteSet}
+                isLoading={!isHydrated}
+              />
+            </motion.div>
+          </motion.div>
         )}
       </PageLayout>
 

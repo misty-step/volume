@@ -50,16 +50,10 @@ export async function GET() {
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: 32, fontSize: 24 }}>
-          <div>
-            <p style={{ opacity: 0.6 }}>Workouts logged last month</p>
-            <p style={{ fontSize: 42, fontWeight: 600 }}>1.2K+</p>
-          </div>
-          <div>
-            <p style={{ opacity: 0.6 }}>Avg. setup time</p>
-            <p style={{ fontSize: 42, fontWeight: 600 }}>&lt;5 sec</p>
-          </div>
-        </div>
+        <p style={{ fontSize: 24, opacity: 0.7 }}>
+          Real testimonials, metrics, and logos will appear once the community
+          signs off on sharing them.
+        </p>
       </div>
     ),
     {

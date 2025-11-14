@@ -123,15 +123,15 @@ export const getProgressiveOverloadData = query({
       }
     }
 
-    // Sort exercises by most recent activity and take top N
-    const topExercises = Array.from(exerciseActivity.entries())
-      .sort(([, a], [, b]) => b.lastWorkout - a.lastWorkout)
-      .slice(0, exerciseCount);
+    // Sort exercises by most recent activity
+    const sortedExercises = Array.from(exerciseActivity.entries()).sort(
+      ([, a], [, b]) => b.lastWorkout - a.lastWorkout
+    );
 
     // Process each exercise to extract progression data
     const result: ProgressiveOverloadData[] = [];
 
-    for (const [exerciseId, { sets }] of topExercises) {
+    for (const [exerciseId, { sets }] of sortedExercises) {
       const exerciseName = exerciseMap.get(exerciseId);
       if (!exerciseName) continue; // Skip if exercise not found
 
@@ -182,6 +182,11 @@ export const getProgressiveOverloadData = query({
         };
       });
 
+      // Skip exercises that only have duration-based sets (no rep workouts)
+      if (dataPoints.length === 0) {
+        continue;
+      }
+
       // Calculate trend based on volume progression
       const trend = calculateTrend(dataPoints);
 
@@ -191,6 +196,10 @@ export const getProgressiveOverloadData = query({
         dataPoints,
         trend,
       });
+
+      if (result.length === exerciseCount) {
+        break;
+      }
     }
 
     return result;

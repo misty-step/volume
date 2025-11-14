@@ -4,78 +4,90 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    /* Brutalist color palette - Light Mode */
+    --background: 0 0% 96%; /* Concrete white */
+    --foreground: 0 0% 0%; /* Concrete black */
 
-    /* Primary: Action & Energy (vibrant blue) */
-    --primary: 210 100% 50%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+
+    /* Primary: Danger Red */
+    --primary: 349 78% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --secondary: 0 0% 50%; /* Concrete gray */
+    --secondary-foreground: 0 0% 0%;
 
-    /* Accent: Attention (amber/orange) */
-    --accent: 38 92% 50%;
-    --accent-foreground: 0 0% 100%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 50%;
 
-    /* Success: Achievement (bright green) */
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 100%;
+    /* Accent: Neon Green */
+    --accent: 123 100% 60%;
+    --accent-foreground: 0 0% 0%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 210 100% 50%;
-    --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    /* Success: Neon Green */
+    --success: 123 100% 60%;
+    --success-foreground: 0 0% 0%;
+
+    --destructive: 349 78% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 0%; /* Black borders */
+    --input: 0 0% 0%;
+    --ring: 349 78% 45%; /* Red focus rings */
+
+    --radius: 0.125rem; /* 2px sharp corners */
+
+    --chart-1: 349 78% 45%;
+    --chart-2: 0 0% 50%;
+    --chart-3: 123 100% 60%;
+    --chart-4: 0 0% 0%;
+    --chart-5: 210 10% 85%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    /* Brutalist color palette - Dark Mode */
+    --background: 0 0% 0%; /* Concrete black */
+    --foreground: 0 0% 96%; /* Concrete white */
 
-    /* Primary: Action & Energy (vibrant blue, slightly adjusted for dark mode) */
-    --primary: 210 100% 55%;
-    --primary-foreground: 0 0% 100%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 96%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 96%;
 
-    /* Accent: Attention (amber/orange, slightly adjusted for dark mode) */
-    --accent: 38 92% 55%;
-    --accent-foreground: 0 0% 100%;
+    /* Primary: Brighter red for dark mode */
+    --primary: 349 78% 50%;
+    --primary-foreground: 0 0% 0%;
 
-    /* Success: Achievement (bright green, slightly adjusted for dark mode) */
-    --success: 142 76% 40%;
-    --success-foreground: 0 0% 100%;
+    --secondary: 0 0% 50%;
+    --secondary-foreground: 0 0% 96%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 210 100% 55%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 50%;
+
+    /* Accent: Neon Green (same in dark) */
+    --accent: 123 100% 60%;
+    --accent-foreground: 0 0% 0%;
+
+    --success: 123 100% 60%;
+    --success-foreground: 0 0% 0%;
+
+    --destructive: 349 78% 50%;
+    --destructive-foreground: 0 0% 96%;
+
+    --border: 0 0% 96%; /* White borders in dark mode */
+    --input: 0 0% 96%;
+    --ring: 349 78% 50%;
+
+    --chart-1: 349 78% 50%;
+    --chart-2: 0 0% 60%;
+    --chart-3: 123 100% 60%;
+    --chart-4: 0 0% 96%;
+    --chart-5: 210 10% 85%;
   }
 }
 
@@ -83,8 +95,32 @@
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    /* Add subtle concrete texture */
+    background-image: radial-gradient(
+        circle at 20% 50%,
+        rgba(128, 128, 128, 0.03) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 80% 80%,
+        rgba(128, 128, 128, 0.03) 0%,
+        transparent 50%
+      );
+  }
+
+  /* Monospace numbers everywhere */
+  input[type="number"],
+  .tabular-nums {
+    @apply font-mono;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Heavy focus states */
+  *:focus-visible {
+    @apply outline-none ring ring-danger-red;
   }
 }
 
@@ -104,5 +140,35 @@
 
   .pr-safe {
     padding-right: env(safe-area-inset-right);
+  }
+
+  /* Brutalist utilities */
+  /* Concrete texture overlay */
+  .concrete-texture {
+    position: relative;
+  }
+
+  .concrete-texture::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.05' /%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .concrete-texture > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Industrial button press */
+  .btn-press {
+    @apply active:scale-95 active:shadow-inner transition-transform duration-75;
+  }
+
+  /* Mechanical animation preset */
+  .mechanical-enter {
+    animation: mechanical-slide 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }

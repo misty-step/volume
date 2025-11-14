@@ -110,6 +110,35 @@ export function ProgressiveOverloadWidget({
     );
   }
 
+  const repProgressionData = progressionData.filter(
+    (exercise) => exercise.dataPoints.length > 0
+  );
+
+  if (repProgressionData.length === 0) {
+    return (
+      <Card className="shadow-sm">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <CardTitle className="text-lg">Progressive Overload</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-center text-sm text-muted-foreground gap-2">
+            <TrendingUp className="w-10 h-10 text-muted-foreground/70" />
+            <p>
+              Log at least one rep-based workout to unlock progression trends.
+            </p>
+            <p className="text-xs">
+              Duration-only exercises (timed holds, cardio, etc.) aren&apos;t
+              charted yet.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="shadow-sm">
       <CardHeader>
@@ -120,12 +149,12 @@ export function ProgressiveOverloadWidget({
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {progressionData.map((exercise: ProgressiveOverloadData) => {
+          {repProgressionData.map((exercise: ProgressiveOverloadData) => {
             // Transform data for Recharts (format dates, handle nulls)
             const chartData = exercise.dataPoints.map(
               (point: ProgressiveOverloadData["dataPoints"][0]) => ({
                 date: formatDate(point.date),
-                weight: point.maxWeight || 0,
+                weight: point.maxWeight ?? 0,
                 reps: point.maxReps,
                 volume: point.volume,
               })
@@ -136,6 +165,14 @@ export function ProgressiveOverloadWidget({
               (point: ProgressiveOverloadData["dataPoints"][0]) =>
                 point.maxWeight !== null && point.maxWeight > 0
             );
+
+            const latestPoint =
+              exercise.dataPoints[exercise.dataPoints.length - 1];
+            if (!latestPoint) {
+              return null;
+            }
+            const canShowLatestWeight =
+              hasWeight && latestPoint.maxWeight !== null;
 
             return (
               <div
@@ -245,19 +282,13 @@ export function ProgressiveOverloadWidget({
                 <div className="flex gap-3 text-xs text-muted-foreground">
                   <span>
                     Latest:{" "}
-                    {hasWeight && (
+                    {canShowLatestWeight && (
                       <span className="font-medium text-foreground">
-                        {exercise.dataPoints[exercise.dataPoints.length - 1]
-                          .maxWeight || 0}{" "}
-                        lbs ×{" "}
+                        {latestPoint.maxWeight} lbs ×{" "}
                       </span>
                     )}
                     <span className="font-medium text-foreground">
-                      {
-                        exercise.dataPoints[exercise.dataPoints.length - 1]
-                          .maxReps
-                      }{" "}
-                      reps
+                      {latestPoint.maxReps} reps
                     </span>
                   </span>
                 </div>
@@ -267,9 +298,9 @@ export function ProgressiveOverloadWidget({
         </div>
 
         {/* Footer message */}
-        {progressionData.length > 0 && (
+        {repProgressionData.length > 0 && (
           <p className="text-xs text-muted-foreground mt-4 text-center">
-            Showing top {progressionData.length} exercises by recent activity
+            Showing top {repProgressionData.length} exercises by recent activity
           </p>
         )}
       </CardContent>

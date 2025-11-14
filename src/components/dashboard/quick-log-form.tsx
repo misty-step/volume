@@ -9,9 +9,11 @@ import {
   KeyboardEvent,
 } from "react";
 import { Id } from "../../../convex/_generated/dataModel";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  BrutalistCard,
+  BrutalistButton,
+  BrutalistInput,
+} from "@/components/brutalist";
 import {
   Popover,
   PopoverContent,
@@ -192,28 +194,28 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
     };
 
     return (
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle className="text-xl">Log Set</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <BrutalistCard className="p-6">
+        <h2 className="font-display text-2xl uppercase tracking-wide mb-6">
+          Log Set
+        </h2>
+        <div className="space-y-4">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
               {/* Last Set Indicator */}
               {lastSet && (
-                <div className="mb-4 p-3 bg-muted border rounded-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <p className="text-sm text-muted-foreground">
-                    <span className="font-medium">Last:</span>{" "}
+                <div className="mb-4 p-4 border-3 border-concrete-gray dark:border-concrete-gray bg-background flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <p className="font-mono text-sm uppercase tracking-wide">
+                    <span className="text-neon-green">LAST:</span>{" "}
                     {exercises.find((e) => e._id === selectedExerciseId)?.name}{" "}
                     •{" "}
                     {lastSet.duration !== undefined
                       ? `${formatDuration(lastSet.duration)}`
-                      : `${lastSet.reps} reps`}
+                      : `${lastSet.reps} REPS`}
                     {lastSet.weight &&
                       ` @ ${lastSet.weight} ${lastSet.unit || unit}`}{" "}
-                    • {formatTimeAgo(lastSet.performedAt)}
+                    • {formatTimeAgo(lastSet.performedAt).toUpperCase()}
                   </p>
-                  <Button
+                  <BrutalistButton
                     type="button"
                     variant="outline"
                     size="sm"
@@ -231,18 +233,18 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                       }
                       form.setValue("weight", lastSet.weight ?? undefined);
                     }}
-                    className="sm:ml-2"
+                    className="sm:ml-2 shrink-0"
                   >
                     Use
-                  </Button>
+                  </BrutalistButton>
                 </div>
               )}
 
               {/* Mode Toggle */}
-              <div className="mb-4 flex items-center gap-2">
-                <Button
+              <div className="mb-4 flex items-center gap-3">
+                <BrutalistButton
                   type="button"
-                  variant={!isDurationMode ? "default" : "outline"}
+                  variant={!isDurationMode ? "danger" : "outline"}
                   size="sm"
                   onClick={() => {
                     setIsDurationMode(false);
@@ -251,10 +253,10 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                   }}
                 >
                   Reps
-                </Button>
-                <Button
+                </BrutalistButton>
+                <BrutalistButton
                   type="button"
-                  variant={isDurationMode ? "default" : "outline"}
+                  variant={isDurationMode ? "danger" : "outline"}
                   size="sm"
                   onClick={() => {
                     setIsDurationMode(true);
@@ -263,7 +265,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                   }}
                 >
                   Duration
-                </Button>
+                </BrutalistButton>
               </div>
 
               <div className="space-y-4">
@@ -283,7 +285,9 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                             isDurationMode ? "md:col-span-5" : "md:col-span-6"
                           }
                         >
-                          <FormLabel>Exercise *</FormLabel>
+                          <FormLabel className="font-mono text-xs uppercase tracking-wider">
+                            Exercise *
+                          </FormLabel>
                           <Popover
                             open={comboboxOpen}
                             onOpenChange={(open) => {
@@ -300,19 +304,19 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                           >
                             <PopoverTrigger asChild>
                               <FormControl>
-                                <Button
+                                <BrutalistButton
                                   variant="outline"
                                   role="combobox"
                                   aria-expanded={comboboxOpen}
                                   className={cn(
-                                    "w-full h-[46px] justify-between font-normal",
+                                    "w-full h-12 justify-between font-mono normal-case",
                                     !field.value && "text-muted-foreground"
                                   )}
                                   disabled={form.formState.isSubmitting}
                                 >
-                                  {selectedExercise?.name || "Select..."}
+                                  {selectedExercise?.name || "SELECT..."}
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
+                                </BrutalistButton>
                               </FormControl>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
@@ -382,9 +386,11 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                       name="reps"
                       render={({ field }) => (
                         <FormItem className="md:col-span-3">
-                          <FormLabel>Reps *</FormLabel>
+                          <FormLabel className="font-mono text-xs uppercase tracking-wider">
+                            Reps *
+                          </FormLabel>
                           <FormControl>
-                            <Input
+                            <BrutalistInput
                               {...field}
                               ref={repsInputRef}
                               type="number"
@@ -399,8 +405,8 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                                 )
                               }
                               value={field.value ?? ""}
-                              placeholder="How many?"
-                              className="w-full h-[46px] tabular-nums"
+                              placeholder="0"
+                              className="w-full"
                               disabled={form.formState.isSubmitting}
                             />
                           </FormControl>
@@ -414,7 +420,9 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                       name="duration"
                       render={({ field }) => (
                         <FormItem className="md:col-span-4">
-                          <FormLabel>Duration *</FormLabel>
+                          <FormLabel className="font-mono text-xs uppercase tracking-wider">
+                            Duration *
+                          </FormLabel>
                           <FormControl>
                             <DurationInput
                               ref={durationInputRef}
@@ -442,9 +450,11 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                     name="weight"
                     render={({ field }) => (
                       <FormItem className="md:col-span-3">
-                        <FormLabel>Weight ({unit})</FormLabel>
+                        <FormLabel className="font-mono text-xs uppercase tracking-wider">
+                          Weight ({unit})
+                        </FormLabel>
                         <FormControl>
-                          <Input
+                          <BrutalistInput
                             {...field}
                             ref={weightInputRef}
                             type="number"
@@ -460,8 +470,8 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                               )
                             }
                             value={field.value ?? ""}
-                            placeholder="Optional"
-                            className="w-full h-[46px] tabular-nums"
+                            placeholder="0"
+                            className="w-full"
                             disabled={form.formState.isSubmitting}
                           />
                         </FormControl>
@@ -474,9 +484,11 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
 
               {/* Submit button anchored below entire form */}
               <div className="pt-6 md:flex md:justify-end">
-                <Button
+                <BrutalistButton
                   type="submit"
-                  className="w-full h-[46px] md:w-48"
+                  variant="danger"
+                  size="lg"
+                  className="w-full md:w-64"
                   disabled={form.formState.isSubmitting}
                 >
                   {form.formState.isSubmitting ? (
@@ -487,7 +499,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                   ) : (
                     "Log Set"
                   )}
-                </Button>
+                </BrutalistButton>
               </div>
             </form>
           </Form>
@@ -506,8 +518,8 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
               }}
             />
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </BrutalistCard>
     );
   }
 );

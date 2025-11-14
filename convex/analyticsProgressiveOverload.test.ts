@@ -58,6 +58,31 @@ describe("Progressive Overload Analytics", () => {
   }
 
   /**
+   * Helper: Log duration-based set for exercise
+   */
+  async function logDurationSet(
+    exerciseId: Id<"exercises">,
+    duration: number,
+    performedAt?: number,
+    userSubject = user1Subject
+  ): Promise<Id<"sets">> {
+    const setId = await t
+      .withIdentity({ subject: userSubject, name: "Test User" })
+      .mutation(api.sets.logSet, {
+        exerciseId,
+        duration,
+      });
+
+    if (performedAt !== undefined) {
+      await t.run(async (ctx) => {
+        await ctx.db.patch(setId, { performedAt });
+      });
+    }
+
+    return setId;
+  }
+
+  /**
    * Helper: Get date timestamp for N days ago
    */
   function daysAgo(days: number): number {
@@ -103,6 +128,32 @@ describe("Progressive Overload Analytics", () => {
       expect(result[2].exerciseName).toBe("Exercise 3");
       expect(result[3].exerciseName).toBe("Exercise 4");
       expect(result[4].exerciseName).toBe("Exercise 5");
+    });
+
+    test("skips duration-only exercises but still fills requested count", async () => {
+      const plank = await createExercise("Plank");
+      const bench = await createExercise("Bench Press");
+      const squats = await createExercise("Squats");
+
+      await logDurationSet(plank, 60, daysAgo(0));
+      await logSet(bench, 8, 135, daysAgo(1));
+      await logSet(squats, 10, 185, daysAgo(2));
+
+      const result = await t
+        .withIdentity({ subject: user1Subject, name: "Test User" })
+        .query(api.analyticsProgressiveOverload.getProgressiveOverloadData, {
+          exerciseCount: 2,
+        });
+
+      expect(result).toHaveLength(2);
+      expect(result[0].exerciseName).toBe("Bench Press");
+      expect(result[1].exerciseName).toBe("Squats");
+      expect(result.find((exercise) => exercise.exerciseName === "Plank")).toBe(
+        undefined
+      );
+      expect(result.every((exercise) => exercise.dataPoints.length > 0)).toBe(
+        true
+      );
     });
 
     test("respects custom exerciseCount parameter", async () => {
