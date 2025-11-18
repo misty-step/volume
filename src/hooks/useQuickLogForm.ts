@@ -39,6 +39,7 @@ export interface UseQuickLogFormOptions {
   unit: "lbs" | "kg";
   exercises: Exercise[];
   onSetLogged?: (setId: Id<"sets">) => void;
+  onUndo?: (setId: Id<"sets">) => void;
   onSuccess?: () => void;
 }
 
@@ -46,6 +47,7 @@ export function useQuickLogForm({
   unit,
   exercises,
   onSetLogged,
+  onUndo,
   onSuccess,
 }: UseQuickLogFormOptions) {
   const logSet = useMutation(api.sets.logSet);
@@ -83,6 +85,7 @@ export function useQuickLogForm({
       });
 
       // Check for PR before showing success toast (only for rep-based exercises)
+      let isPR = false;
       if (values.reps !== undefined) {
         const currentSet = {
           _id: setId, // Use the newly created set ID
@@ -99,18 +102,25 @@ export function useQuickLogForm({
         const prResult = checkForPR(currentSet, setsForComparison);
 
         if (prResult) {
+          isPR = true;
           // Find exercise name for celebration message
           const exercise = exercises.find((e) => e._id === values.exerciseId);
           if (exercise) {
             showPRCelebration(exercise.name, prResult, unit);
           }
-        } else {
-          // Regular success toast if not a PR
-          toast.success("Set logged!");
         }
-      } else {
-        // Duration-based exercise - no PR detection yet
-        toast.success("Set logged!");
+      }
+
+      // Show success toast with undo action (skip if PR celebration shown)
+      if (!isPR) {
+        toast.success("Set logged!", {
+          action: onUndo
+            ? {
+                label: "Undo",
+                onClick: () => onUndo(setId),
+              }
+            : undefined,
+        });
       }
 
       // Keep exercise selected, clear reps/weight/duration

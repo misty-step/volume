@@ -10,7 +10,6 @@ import {
   QuickLogFormHandle,
 } from "@/components/dashboard/quick-log-form";
 import { GroupedSetHistory } from "@/components/dashboard/grouped-set-history";
-import { UndoToast } from "@/components/dashboard/undo-toast";
 import { FirstRunExperience } from "@/components/dashboard/first-run-experience";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { handleMutationError } from "@/lib/error-handler";
@@ -27,10 +26,6 @@ import type { Exercise, Set as WorkoutSet } from "@/types/domain";
 export function Dashboard() {
   const { isLoaded: isClerkLoaded, userId } = useAuth();
   const { isLoading: isConvexAuthLoading, isAuthenticated } = useConvexAuth();
-  const [undoToastVisible, setUndoToastVisible] = useState(false);
-  const [lastLoggedSetId, setLastLoggedSetId] = useState<Id<"sets"> | null>(
-    null
-  );
   const [isHydrated, setIsHydrated] = useState(false);
   const formRef = useRef<QuickLogFormHandle>(null);
   const historyRef = useRef<HTMLDivElement>(null);
@@ -113,11 +108,8 @@ export function Dashboard() {
     formRef.current?.repeatSet(set);
   };
 
-  // Handle set logged - show undo toast and scroll to history
-  const handleSetLogged = (setId: Id<"sets">) => {
-    setLastLoggedSetId(setId);
-    setUndoToastVisible(true);
-
+  // Handle set logged - scroll to history
+  const handleSetLogged = () => {
     // 100ms delay ensures React finishes rendering the newly logged set
     // in the history section before scrolling to it
     setTimeout(() => {
@@ -128,23 +120,13 @@ export function Dashboard() {
     }, 100);
   };
 
-  // Handle undo - delete the last logged set
-  const handleUndo = async () => {
-    if (lastLoggedSetId) {
-      try {
-        await deleteSet({ id: lastLoggedSetId });
-        setUndoToastVisible(false);
-        setLastLoggedSetId(null);
-      } catch (error) {
-        handleMutationError(error, "Undo Set");
-      }
+  // Handle undo - delete the set (called from toast action)
+  const handleUndo = async (setId: Id<"sets">) => {
+    try {
+      await deleteSet({ id: setId });
+    } catch (error) {
+      handleMutationError(error, "Undo Set");
     }
-  };
-
-  // Handle dismiss toast
-  const handleDismissToast = () => {
-    setUndoToastVisible(false);
-    setLastLoggedSetId(null);
   };
 
   // Loading state - show skeleton until data is stable
@@ -228,6 +210,7 @@ export function Dashboard() {
                 ref={formRef}
                 exercises={activeExercisesByRecency}
                 onSetLogged={handleSetLogged}
+                onUndo={handleUndo}
               />
             </motion.div>
 
@@ -245,13 +228,6 @@ export function Dashboard() {
           </motion.div>
         )}
       </PageLayout>
-
-      {/* Undo Toast - Fixed position overlay, not affected by spacing */}
-      <UndoToast
-        visible={undoToastVisible}
-        onUndo={handleUndo}
-        onDismiss={handleDismissToast}
-      />
     </>
   );
 }

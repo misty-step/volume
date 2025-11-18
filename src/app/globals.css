@@ -46,6 +46,10 @@
     --chart-3: 23 100% 50%;
     --chart-4: 0 0% 0%;
     --chart-5: 210 10% 85%;
+
+    /* Focus ring system */
+    --ring-width: 3px;
+    --ring-width-subtle: 1px;
   }
 
   .dark {
@@ -118,9 +122,25 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Heavy focus states */
+  /* Context-aware focus system */
   *:focus-visible {
-    @apply outline-none ring ring-danger-red;
+    @apply outline-none ring-danger-red;
+    --tw-ring-offset-width: 0px;
+    --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(var(--ring-width) + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow, 0 0 #0000);
+  }
+
+  /* Subtle focus for nested/inline contexts (dropdowns, modals) */
+  .focus-subtle:focus-visible,
+  .focus-subtle *:focus-visible {
+    --ring-width: var(--ring-width-subtle);
+  }
+
+  /* Border-only focus (no ring) */
+  .focus-border-only:focus-visible {
+    --tw-ring-shadow: none;
+    box-shadow: var(--tw-shadow, 0 0 #0000);
+    @apply border-danger-red;
   }
 }
 

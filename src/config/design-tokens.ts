@@ -105,6 +105,7 @@ export const BRUTALIST_SHADOWS = {
 
 export const BRUTALIST_FOCUS = {
   ring: "ring-3 ring-danger-red ring-offset-0",
+  ringSubtle: "ring-[1px] ring-danger-red ring-offset-0",
   border: "border-danger-red border-3",
   outline: "outline-none ring-3 ring-danger-red",
 } as const;

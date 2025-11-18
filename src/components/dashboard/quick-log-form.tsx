@@ -48,6 +48,7 @@ import { cn } from "@/lib/utils";
 interface QuickLogFormProps {
   exercises: Exercise[];
   onSetLogged?: (setId: Id<"sets">) => void;
+  onUndo?: (setId: Id<"sets">) => void;
 }
 
 export interface QuickLogFormHandle {
@@ -65,7 +66,7 @@ export interface QuickLogFormHandle {
 const FOCUS_DELAY_MS = 50;
 
 const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
-  function QuickLogForm({ exercises, onSetLogged }, ref) {
+  function QuickLogForm({ exercises, onSetLogged, onUndo }, ref) {
     const [showInlineCreator, setShowInlineCreator] = useState(false);
     const [comboboxOpen, setComboboxOpen] = useState(false);
     const [isDurationMode, setIsDurationMode] = useState(false);
@@ -79,6 +80,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
       unit,
       exercises,
       onSetLogged,
+      onUndo,
       onSuccess: () => {
         // Focus appropriate input based on mode
         focusElement(isDurationMode ? durationInputRef : repsInputRef);

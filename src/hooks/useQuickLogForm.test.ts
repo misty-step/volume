@@ -165,7 +165,9 @@ describe("useQuickLogForm", () => {
       });
       expect(mockOnSetLogged).toHaveBeenCalledWith("set123");
       expect(mockOnSuccess).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith("Set logged!");
+      expect(toast.success).toHaveBeenCalledWith("Set logged!", {
+        action: undefined,
+      });
     });
   });
 
@@ -195,7 +197,9 @@ describe("useQuickLogForm", () => {
         unit: undefined, // No unit when no weight
       });
       expect(mockOnSetLogged).toHaveBeenCalledWith("set456");
-      expect(toast.success).toHaveBeenCalledWith("Set logged!");
+      expect(toast.success).toHaveBeenCalledWith("Set logged!", {
+        action: undefined,
+      });
     });
   });
 
