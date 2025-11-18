@@ -22,7 +22,7 @@ import { brutalistMotion } from "@/lib/brutalist-motion";
 import { groupSetsByExercise } from "@/lib/exercise-grouping";
 import { sortExercisesByRecency } from "@/lib/exercise-sorting";
 import { getTodayRange } from "@/lib/date-utils";
-import type { Exercise, Set } from "@/types/domain";
+import type { Exercise, Set as WorkoutSet } from "@/types/domain";
 
 export function Dashboard() {
   const { isLoaded: isClerkLoaded, userId } = useAuth();
@@ -109,7 +109,7 @@ export function Dashboard() {
   };
 
   // Handle repeat set
-  const handleRepeatSet = (set: Set) => {
+  const handleRepeatSet = (set: WorkoutSet) => {
     formRef.current?.repeatSet(set);
   };
 

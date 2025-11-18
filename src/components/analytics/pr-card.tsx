@@ -142,7 +142,7 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
                     {pr.exerciseName}
                   </p>
                   <span
-                    className={`text-xs px-2 py-0.5 font-mono uppercase tracking-wide border-2 uppercase font-medium ${getPRTypeColor(pr.prType)}`}
+                    className={`text-xs px-2 py-0.5 font-mono uppercase tracking-wide border-2 font-medium ${getPRTypeColor(pr.prType)}`}
                   >
                     {pr.prType}
                   </span>

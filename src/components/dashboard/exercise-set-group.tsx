@@ -64,6 +64,7 @@ export function ExerciseSetGroup({
       await onDelete(setToDelete._id);
       toast.success("Set deleted");
       setSetToDelete(null);
+      setDeletingId(null);
     } catch (error) {
       handleMutationError(error, "Delete Set");
       setDeletingId(null);
@@ -138,7 +139,7 @@ export function ExerciseSetGroup({
 
                     {/* Weight column */}
                     <div className="flex items-center gap-2">
-                      {set.weight ? (
+                      {set.weight != null ? (
                         <>
                           <span className="font-bold tabular-nums">
                             {set.weight}

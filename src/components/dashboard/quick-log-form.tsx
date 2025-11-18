@@ -211,7 +211,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                     {lastSet.duration !== undefined
                       ? `${formatDuration(lastSet.duration)}`
                       : `${lastSet.reps} REPS`}
-                    {lastSet.weight &&
+                    {lastSet.weight != null &&
                       ` @ ${lastSet.weight} ${lastSet.unit || unit}`}{" "}
                     • {formatTimeAgo(lastSet.performedAt).toUpperCase()}
                   </p>
@@ -305,6 +305,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                             <PopoverTrigger asChild>
                               <FormControl>
                                 <BrutalistButton
+                                  type="button"
                                   variant="outline"
                                   role="combobox"
                                   aria-expanded={comboboxOpen}

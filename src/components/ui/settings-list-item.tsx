@@ -47,7 +47,7 @@ interface SettingsListItemProps {
  * Follows iOS Human Interface Guidelines for list rows:
  * - 16px horizontal padding
  * - 12px vertical padding
- * - Title uses medium font weight
+ * - Title uses bold font weight with uppercase and wide tracking
  * - Subtitle uses small text with muted color
  *
  * @example
