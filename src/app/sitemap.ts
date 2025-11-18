@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const marketingRoutes = ["/", "/sign-in", "/sign-up", "/pricing"];
+const marketingRoutes = ["/", "/sign-in", "/sign-up"];
 const appRoutes = ["/today", "/analytics", "/history", "/settings"];
 
 export default function sitemap(): MetadataRoute.Sitemap {

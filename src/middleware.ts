@@ -2,7 +2,17 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const isPublicRoute = createRouteMatcher(["/", "/sign-in(.*)", "/sign-up(.*)"]);
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  // Next.js metadata routes (must be accessible to crawlers/bots)
+  "/opengraph-image",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/icon",
+  "/apple-icon",
+]);
 
 const cspHeader = `
   default-src 'self';
