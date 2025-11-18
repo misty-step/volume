@@ -205,7 +205,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
               {lastSet && (
                 <div className="mb-4 p-4 border-3 border-concrete-gray dark:border-concrete-gray bg-background flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <p className="font-mono text-sm uppercase tracking-wide">
-                    <span className="text-neon-green">LAST:</span>{" "}
+                    <span className="text-safety-orange">LAST:</span>{" "}
                     {exercises.find((e) => e._id === selectedExerciseId)?.name}{" "}
                     •{" "}
                     {lastSet.duration !== undefined

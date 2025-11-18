@@ -36,10 +36,10 @@ function getTrendIndicator(
  */
 function getTrendColor(trend: "improving" | "plateau" | "declining"): string {
   if (trend === "improving")
-    return "text-green-600 dark:text-green-400 bg-green-500/10";
+    return "text-safety-orange bg-safety-orange/10 border-safety-orange/50";
   if (trend === "declining")
-    return "text-red-600 dark:text-red-400 bg-red-500/10";
-  return "text-yellow-600 dark:text-yellow-400 bg-yellow-500/10";
+    return "text-danger-red bg-danger-red/10 border-danger-red/50";
+  return "text-foreground bg-concrete-gray/10 border-concrete-gray/50";
 }
 
 /**
@@ -64,18 +64,18 @@ export function ProgressiveOverloadWidget({
   // Loading skeleton
   if (isLoading) {
     return (
-      <Card className="shadow-sm">
+      <Card className="">
         <CardHeader>
           <div className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5" />
-            <CardTitle className="text-lg">Progressive Overload</CardTitle>
+            <CardTitle className="">Progressive Overload</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-6">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="space-y-2">
-                <div className="h-4 bg-muted w-32 rounded" />
+                <div className="h-4 bg-muted w-32" />
                 <div className="h-20 bg-muted rounded" />
               </div>
             ))}
@@ -88,11 +88,11 @@ export function ProgressiveOverloadWidget({
   // Empty state
   if (!progressionData || progressionData.length === 0) {
     return (
-      <Card className="shadow-sm">
+      <Card className="">
         <CardHeader>
           <div className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5" />
-            <CardTitle className="text-lg">Progressive Overload</CardTitle>
+            <CardTitle className="">Progressive Overload</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -116,11 +116,11 @@ export function ProgressiveOverloadWidget({
 
   if (repProgressionData.length === 0) {
     return (
-      <Card className="shadow-sm">
+      <Card className="">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <CardTitle className="text-lg">Progressive Overload</CardTitle>
+            <TrendingUp className="w-5 h-5 text-safety-orange" />
+            <CardTitle className="">Progressive Overload</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -140,11 +140,11 @@ export function ProgressiveOverloadWidget({
   }
 
   return (
-    <Card className="shadow-sm">
+    <Card className="">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          <CardTitle className="text-lg">Progressive Overload</CardTitle>
+          <TrendingUp className="w-5 h-5 text-safety-orange" />
+          <CardTitle className="">Progressive Overload</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
@@ -185,7 +185,7 @@ export function ProgressiveOverloadWidget({
                     {exercise.exerciseName}
                   </h3>
                   <span
-                    className={`text-xs px-2 py-1 rounded-full font-medium ${getTrendColor(exercise.trend)}`}
+                    className={`text-xs px-2 py-1 font-mono uppercase tracking-wide border-2 font-medium ${getTrendColor(exercise.trend)}`}
                   >
                     {getTrendIndicator(exercise.trend)} {exercise.trend}
                   </span>

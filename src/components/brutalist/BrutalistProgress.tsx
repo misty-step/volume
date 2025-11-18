@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 interface BrutalistProgressProps {
   value: number; // 0-100
   max?: number;
-  variant?: "default" | "danger" | "success";
+  variant?: "default" | "danger" | "accent";
   segmented?: boolean;
   className?: string;
 }
@@ -23,7 +23,7 @@ export function BrutalistProgress({
   const variantColors = {
     default: "bg-concrete-gray",
     danger: "bg-danger-red",
-    success: "bg-neon-green",
+    accent: "bg-safety-orange",
   };
 
   if (segmented) {

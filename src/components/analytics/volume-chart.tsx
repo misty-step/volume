@@ -25,9 +25,9 @@ export function VolumeChart({ data, isLoading = false }: VolumeChartProps) {
   // Loading skeleton
   if (isLoading) {
     return (
-      <Card className="shadow-sm">
+      <Card className="">
         <CardHeader>
-          <CardTitle className="text-lg">Volume by Exercise</CardTitle>
+          <CardTitle className="">Volume by Exercise</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-3">
@@ -41,9 +41,9 @@ export function VolumeChart({ data, isLoading = false }: VolumeChartProps) {
   // Empty state
   if (!data || data.length === 0) {
     return (
-      <Card className="shadow-sm">
+      <Card className="">
         <CardHeader>
-          <CardTitle className="text-lg">Volume by Exercise</CardTitle>
+          <CardTitle className="">Volume by Exercise</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -66,9 +66,9 @@ export function VolumeChart({ data, isLoading = false }: VolumeChartProps) {
   }));
 
   return (
-    <Card className="shadow-sm">
+    <Card className="">
       <CardHeader>
-        <CardTitle className="text-lg">Volume by Exercise</CardTitle>
+        <CardTitle className="">Volume by Exercise</CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>

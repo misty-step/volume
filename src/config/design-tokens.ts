@@ -11,7 +11,7 @@ export const BRUTALIST_COLORS = {
 
   // Accent colors
   dangerRed: "#C41E3A", // Emergency button red
-  neonGreen: "#39FF14", // PR celebration green
+  safetyOrange: "#FF6B00", // Industrial/construction orange
   metalEdge: "#D1D5DB", // Chrome highlight
 
   // HSL for CSS variables
@@ -20,7 +20,7 @@ export const BRUTALIST_COLORS = {
     concreteWhite: "0 0% 96%",
     concreteGray: "0 0% 50%",
     dangerRed: "349 78% 45%",
-    neonGreen: "123 100% 60%",
+    safetyOrange: "23 100% 50%",
     metalEdge: "210 10% 85%",
   },
 } as const;
@@ -92,5 +92,32 @@ export const BRUTALIST_BORDERS = {
     none: "0px",
     sm: "2px",
     md: "4px",
+  },
+} as const;
+
+export const BRUTALIST_SHADOWS = {
+  none: "none",
+  press: "inset 0 4px 8px rgba(0,0,0,0.3)",
+  lift: "4px 4px 0 0 rgba(0,0,0,1)",
+  heavy: "8px 8px 0 0 rgba(0,0,0,0.3)",
+  dialog: "8px 8px 0 0 rgba(0,0,0,0.3)",
+} as const;
+
+export const BRUTALIST_FOCUS = {
+  ring: "ring-3 ring-danger-red ring-offset-0",
+  border: "border-danger-red border-3",
+  outline: "outline-none ring-3 ring-danger-red",
+} as const;
+
+export const BRUTALIST_INTERACTIVE = {
+  hover: {
+    light: "hover:bg-concrete-black/5",
+    medium: "hover:bg-concrete-black/10",
+    lightDark: "dark:hover:bg-concrete-white/5",
+    mediumDark: "dark:hover:bg-concrete-white/10",
+  },
+  active: {
+    press: "active:scale-95 active:shadow-inner",
+    shadow: "active:shadow-[inset_0_4px_8px_rgba(0,0,0,0.3)]",
   },
 } as const;

@@ -14,9 +14,9 @@ interface RecoveryDashboardWidgetProps {
  * Get color classes for recovery status
  *
  * Color semantics:
- * - Yellow: Recovering (0-2 days) - "Wait"
- * - Green: Ready (3-7 days) - "Go!"
- * - Red: Overdue (8+ days) - "Urgent"
+ * - Concrete Gray: Recovering (0-2 days) - "Wait"
+ * - Safety Orange: Ready (3-7 days) - "Go!"
+ * - Danger Red: Overdue (8+ days) - "Urgent"
  */
 function getStatusColor(
   status: RecoveryData["status"],
@@ -37,21 +37,21 @@ function getStatusColor(
   switch (status) {
     case "recovering":
       return {
-        bg: "bg-yellow-500/10 dark:bg-yellow-500/20",
-        border: "border-yellow-500/50",
-        text: "text-yellow-700 dark:text-yellow-300",
+        bg: "bg-concrete-gray/10",
+        border: "border-concrete-gray/50",
+        text: "text-foreground",
       };
     case "ready":
       return {
-        bg: "bg-green-500/10 dark:bg-green-500/20",
-        border: "border-green-500/50",
-        text: "text-green-700 dark:text-green-300",
+        bg: "bg-safety-orange/10",
+        border: "border-safety-orange/50",
+        text: "text-safety-orange",
       };
     case "overdue":
       return {
-        bg: "bg-red-500/10 dark:bg-red-500/20",
-        border: "border-red-500/50",
-        text: "text-red-700 dark:text-red-300",
+        bg: "bg-danger-red/10",
+        border: "border-danger-red/50",
+        text: "text-danger-red",
       };
     default:
       // Defensive fallback for unexpected values
@@ -104,11 +104,11 @@ export function RecoveryDashboardWidget({
   // Loading skeleton
   if (isLoading) {
     return (
-      <Card className="shadow-sm">
+      <Card className="">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Heart className="w-5 h-5" />
-            <CardTitle className="text-lg">Recovery Status</CardTitle>
+            <CardTitle className="">Recovery Status</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -116,7 +116,7 @@ export function RecoveryDashboardWidget({
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
                 key={i}
-                className="animate-pulse p-4 border rounded-lg space-y-2"
+                className="animate-pulse p-4 border border-2 border-border space-y-2"
               >
                 <div className="h-4 bg-muted w-20 rounded" />
                 <div className="h-8 bg-muted w-12 rounded" />
@@ -132,11 +132,11 @@ export function RecoveryDashboardWidget({
   // Empty state
   if (!recoveryData || recoveryData.length === 0) {
     return (
-      <Card className="shadow-sm">
+      <Card className="">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Heart className="w-5 h-5" />
-            <CardTitle className="text-lg">Recovery Status</CardTitle>
+            <CardTitle className="">Recovery Status</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -155,11 +155,11 @@ export function RecoveryDashboardWidget({
   }
 
   return (
-    <Card className="shadow-sm">
+    <Card className="">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Heart className="w-5 h-5 text-pink-600 dark:text-pink-400" />
-          <CardTitle className="text-lg">Recovery Status</CardTitle>
+          <Heart className="w-5 h-5 text-danger-red" />
+          <CardTitle className="">Recovery Status</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
@@ -172,13 +172,13 @@ export function RecoveryDashboardWidget({
             return (
               <div
                 key={data.muscleGroup}
-                className={`p-4 border-2 rounded-lg transition-colors ${colors.bg} ${colors.border}`}
+                className={`p-4 border-2 border-2 border-border transition-colors ${colors.bg} ${colors.border}`}
               >
                 {/* Muscle group name and status */}
-                <div className="flex items-center justify-between mb-2">
+                <div className="mb-2 space-y-1">
                   <h3 className="font-semibold text-sm">{data.muscleGroup}</h3>
                   <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${colors.bg} ${colors.text} font-medium`}
+                    className={`inline-block text-xs px-2 py-0.5 font-mono uppercase tracking-wide border-2 ${colors.bg} ${colors.text} font-medium`}
                   >
                     {statusLabel}
                   </span>
@@ -236,18 +236,18 @@ export function RecoveryDashboardWidget({
         </div>
 
         {/* Footer legend */}
-        <div className="mt-4 pt-4 border-t">
+        <div className="mt-4 pt-4 border-t border-border">
           <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
+              <div className="w-3 h-3 font-mono uppercase tracking-wide border-2 border-concrete-gray bg-concrete-gray/50" />
               <span>Recovering (0-2d)</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-green-500/50" />
+              <div className="w-3 h-3 font-mono uppercase tracking-wide border-2 border-safety-orange bg-safety-orange/50" />
               <span>Ready (3-7d)</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-red-500/50" />
+              <div className="w-3 h-3 font-mono uppercase tracking-wide border-2 border-danger-red bg-danger-red/50" />
               <span>Overdue (8+d)</span>
             </div>
           </div>

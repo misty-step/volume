@@ -88,12 +88,12 @@ export function ReportNavigator() {
               key={tab.type}
               onClick={() => setSelectedType(tab.type)}
               className={`
-                px-4 py-2 text-sm font-medium transition-colors
-                border-b-2 -mb-px
+                px-4 py-2 text-sm font-medium font-mono uppercase tracking-wide transition-colors
+                border-b-3 -mb-px
                 ${
                   isActive
-                    ? "border-purple-600 text-purple-600 dark:border-purple-400 dark:text-purple-400"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300"
+                    ? "border-safety-orange text-safety-orange"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-concrete-gray/50"
                 }
               `}
             >
@@ -108,7 +108,7 @@ export function ReportNavigator() {
 
       {/* Navigation Controls */}
       {reportsForType.length > 1 && (
-        <div className="flex items-center justify-between px-4 py-2 bg-muted/30 rounded-lg">
+        <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-2 border-border">
           <button
             onClick={() => setReportIndex(reportIndex + 1)}
             disabled={!hasNext}

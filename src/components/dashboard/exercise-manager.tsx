@@ -10,6 +10,7 @@ import { SettingsListItem } from "@/components/ui/settings-list-item";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BrutalistButton } from "@/components/brutalist";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -140,7 +141,7 @@ export function ExerciseManager({ exercises, sets }: ExerciseManagerProps) {
                             <Badge
                               key={group}
                               variant="secondary"
-                              className="text-xs"
+                              className="text-xs font-mono uppercase tracking-wide border-2 px-2 py-0.5"
                             >
                               {group}
                             </Badge>

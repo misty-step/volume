@@ -12,8 +12,8 @@ const brutalistButtonVariants = cva(
       variant: {
         danger:
           "bg-danger-red text-white border-concrete-black hover:bg-danger-red/90 active:shadow-[inset_0_4px_8px_rgba(0,0,0,0.3)]",
-        success:
-          "bg-neon-green text-concrete-black border-concrete-black hover:bg-neon-green/90 active:shadow-[inset_0_4px_8px_rgba(0,0,0,0.3)]",
+        accent:
+          "bg-safety-orange text-white border-concrete-black hover:bg-safety-orange/90 active:shadow-[inset_0_4px_8px_rgba(0,0,0,0.3)]",
         outline:
           "bg-transparent border-concrete-black dark:border-concrete-white hover:bg-concrete-black/10 dark:hover:bg-concrete-white/10",
         ghost:

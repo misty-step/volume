@@ -26,18 +26,18 @@ interface AIInsightsCardProps {
 }
 
 /**
- * Get color classes for report type badge
+ * Get color classes for report type badge (Brutalist palette)
  */
 function getReportTypeBadgeColor(
   reportType: "daily" | "weekly" | "monthly"
 ): string {
   switch (reportType) {
     case "daily":
-      return "bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300";
+      return "bg-danger-red text-white border-2 border-concrete-black dark:border-concrete-white";
     case "weekly":
-      return "bg-purple-500/10 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300";
+      return "bg-safety-orange text-white border-2 border-concrete-black dark:border-concrete-white";
     case "monthly":
-      return "bg-green-500/10 dark:bg-green-500/20 text-green-700 dark:text-green-300";
+      return "bg-concrete-gray text-white border-2 border-concrete-black dark:border-concrete-white";
   }
 }
 
@@ -53,22 +53,22 @@ export function AIInsightsCard({ report }: AIInsightsCardProps) {
   // Empty state: No report yet (waiting for automated generation)
   if (!report) {
     return (
-      <Card className="shadow-sm">
+      <Card className="">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            <CardTitle className="text-lg">AI Coach Insights</CardTitle>
+            <Sparkles className="w-5 h-5 text-safety-orange" />
+            <CardTitle className="">AI Coach Insights</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-8 text-center px-4">
-            <Sparkles className="w-12 h-12 text-muted-foreground mb-3" />
+            <Sparkles className="w-12 h-12 text-safety-orange mb-3" />
             <p className="text-sm font-medium mb-2">No reports available yet</p>
             <p className="text-xs text-muted-foreground max-w-md mb-4">
               AI reports analyze your workout data to provide technical insights
               on volume, progress, and recovery patterns.
             </p>
-            <div className="bg-muted/50 rounded-lg p-4 text-left max-w-md">
+            <div className="bg-muted/50 border-2 border-border p-4 text-left max-w-md">
               <p className="text-xs font-medium mb-2">Reports generate when:</p>
               <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
                 <li>You have logged workout data for the period</li>
@@ -89,16 +89,16 @@ export function AIInsightsCard({ report }: AIInsightsCardProps) {
   });
 
   return (
-    <Card className="shadow-sm">
+    <Card className="">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-          <CardTitle className="text-lg">AI Coach Insights</CardTitle>
+          <Sparkles className="w-5 h-5 text-safety-orange" />
+          <CardTitle className="">AI Coach Insights</CardTitle>
           {report.reportType && (
             <span
-              className={`text-xs px-2 py-0.5 rounded-full font-medium ${getReportTypeBadgeColor(report.reportType)}`}
+              className={`text-xs px-2 py-0.5 font-bold font-mono uppercase tracking-wide ${getReportTypeBadgeColor(report.reportType)}`}
             >
-              {report.reportType.toUpperCase()}
+              {report.reportType}
             </span>
           )}
         </div>

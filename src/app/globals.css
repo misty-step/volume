@@ -24,13 +24,13 @@
     --muted: 0 0% 96%;
     --muted-foreground: 0 0% 50%;
 
-    /* Accent: Neon Green */
-    --accent: 123 100% 60%;
-    --accent-foreground: 0 0% 0%;
+    /* Accent: Safety Orange */
+    --accent: 23 100% 50%;
+    --accent-foreground: 0 0% 100%;
 
-    /* Success: Neon Green */
-    --success: 123 100% 60%;
-    --success-foreground: 0 0% 0%;
+    /* Success: Safety Orange */
+    --success: 23 100% 50%;
+    --success-foreground: 0 0% 100%;
 
     --destructive: 349 78% 45%;
     --destructive-foreground: 0 0% 100%;
@@ -43,7 +43,7 @@
 
     --chart-1: 349 78% 45%;
     --chart-2: 0 0% 50%;
-    --chart-3: 123 100% 60%;
+    --chart-3: 23 100% 50%;
     --chart-4: 0 0% 0%;
     --chart-5: 210 10% 85%;
   }
@@ -69,11 +69,11 @@
     --muted: 0 0% 10%;
     --muted-foreground: 0 0% 50%;
 
-    /* Accent: Neon Green (same in dark) */
-    --accent: 123 100% 60%;
+    /* Accent: Safety Orange (same in dark) */
+    --accent: 23 100% 50%;
     --accent-foreground: 0 0% 0%;
 
-    --success: 123 100% 60%;
+    --success: 23 100% 50%;
     --success-foreground: 0 0% 0%;
 
     --destructive: 349 78% 50%;
@@ -85,7 +85,7 @@
 
     --chart-1: 349 78% 50%;
     --chart-2: 0 0% 60%;
-    --chart-3: 123 100% 60%;
+    --chart-3: 23 100% 50%;
     --chart-4: 0 0% 96%;
     --chart-5: 210 10% 85%;
   }

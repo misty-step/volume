@@ -48,17 +48,17 @@ export default function HistoryPage() {
     await deleteSetMutation({ id: setId });
   };
 
-  // Loading state (first page)
+  // Loading state (first page) - Brutalist skeleton
   if (status === "LoadingFirstPage") {
     return (
       <PageLayout title="Workout History">
-        <div className="animate-pulse space-y-3">
+        <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="border rounded-md p-4">
-              <div className="h-6 bg-muted w-1/3 mb-3 rounded" />
+            <div key={i} className="border-3 border-border p-4 animate-pulse">
+              <div className="h-6 bg-concrete-gray/20 w-1/3 mb-3" />
               <div className="space-y-2">
-                <div className="h-4 bg-muted w-full rounded" />
-                <div className="h-4 bg-muted w-5/6 rounded" />
+                <div className="h-4 bg-concrete-gray/20 w-full" />
+                <div className="h-4 bg-concrete-gray/20 w-5/6" />
               </div>
             </div>
           ))}
@@ -71,14 +71,14 @@ export default function HistoryPage() {
   if (results.length === 0) {
     return (
       <PageLayout title="Workout History">
-        <div className="border rounded-md p-12 text-center">
-          <p className="text-muted-foreground text-sm mb-2">
+        <div className="border-3 border-border p-12 text-center">
+          <p className="text-muted-foreground text-sm mb-2 font-mono uppercase tracking-wide">
             No workout history yet
           </p>
-          <p className="text-sm mb-1">Start your journey! 🚀</p>
+          <p className="text-sm mb-1 font-bold">Start your journey!</p>
           <p className="text-muted-foreground text-xs mt-2">
             Log your first set on the{" "}
-            <Link href="/today" className="hover:underline">
+            <Link href="/today" className="hover:underline font-bold">
               Dashboard
             </Link>
           </p>
@@ -114,7 +114,7 @@ export default function HistoryPage() {
       {status === "LoadingMore" && (
         <div className="flex justify-center">
           <div className="animate-pulse">
-            <div className="px-6 py-2 bg-muted text-muted-foreground rounded-md text-sm border">
+            <div className="px-6 py-2 bg-muted text-muted-foreground text-sm border-2 border-border font-mono uppercase">
               Loading...
             </div>
           </div>

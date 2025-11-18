@@ -117,7 +117,7 @@ export function ExerciseSetGroup({
                     <div className="flex items-center gap-2">
                       {set.duration !== undefined ? (
                         <>
-                          <span className="font-bold tabular-nums text-neon-green">
+                          <span className="font-bold tabular-nums text-safety-orange">
                             {formatDuration(set.duration)}
                           </span>
                           <span className="text-concrete-gray text-xs uppercase tracking-wider">
@@ -126,7 +126,7 @@ export function ExerciseSetGroup({
                         </>
                       ) : (
                         <>
-                          <span className="font-bold tabular-nums text-neon-green">
+                          <span className="font-bold tabular-nums text-safety-orange">
                             {set.reps}
                           </span>
                           <span className="text-concrete-gray text-xs uppercase tracking-wider">

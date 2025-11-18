@@ -79,7 +79,7 @@ describe("QuickLogForm", () => {
 
     expect(screen.getByLabelText(/exercise/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/reps/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/optional/i)).toBeInTheDocument(); // Weight input
+    expect(screen.getByLabelText(/weight/i)).toBeInTheDocument(); // Weight input
     expect(
       screen.getByRole("button", { name: /LOG SET/i })
     ).toBeInTheDocument();
@@ -90,9 +90,7 @@ describe("QuickLogForm", () => {
 
     // Form should initialize with useQuickLogForm defaults
     const repsInput = screen.getByLabelText(/reps/i) as HTMLInputElement;
-    const weightInput = screen.getByPlaceholderText(
-      /optional/i
-    ) as HTMLInputElement;
+    const weightInput = screen.getByLabelText(/weight/i) as HTMLInputElement;
 
     // Empty form on initial render
     expect(repsInput.value).toBe("");

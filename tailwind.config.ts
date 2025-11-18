@@ -54,7 +54,7 @@ export default {
         "concrete-white": BRUTALIST_COLORS.concreteWhite,
         "concrete-gray": BRUTALIST_COLORS.concreteGray,
         "danger-red": BRUTALIST_COLORS.dangerRed,
-        "neon-green": BRUTALIST_COLORS.neonGreen,
+        "safety-orange": BRUTALIST_COLORS.safetyOrange,
         "metal-edge": BRUTALIST_COLORS.metalEdge,
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",

@@ -63,4 +63,44 @@ export const brutalistMotion = {
       },
     },
   } as Variants,
+
+  // Exercise list stagger (for settings page)
+  exerciseListStagger: {
+    initial: {},
+    animate: {
+      transition: {
+        staggerChildren: 0.05,
+        delayChildren: 0.1,
+      },
+    },
+  } as Variants,
+
+  // Exercise item slide (individual list entries)
+  exerciseItemSlide: {
+    initial: { x: -20, opacity: 0 },
+    animate: {
+      x: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.2,
+        ease: [0.4, 0.0, 0.2, 1],
+      },
+    },
+  } as Variants,
+
+  // Button press (click interaction)
+  buttonPress: {
+    tap: {
+      scale: 0.95,
+      transition: { duration: 0.075 },
+    },
+  } as Variants,
+
+  // Focus expand (sharp focus state)
+  focusExpand: {
+    focus: {
+      scale: 1.02,
+      transition: { duration: 0.1, ease: [0.4, 0.0, 0.2, 1] },
+    },
+  } as Variants,
 };

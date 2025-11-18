@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { motion, HTMLMotionProps } from "framer-motion";
 
 interface BrutalistCardProps extends HTMLMotionProps<"div"> {
-  variant?: "default" | "danger" | "success";
+  variant?: "default" | "danger" | "accent";
   textured?: boolean;
 }
 
@@ -18,7 +18,7 @@ export function BrutalistCard({
   const variantStyles = {
     default: "border-concrete-black dark:border-concrete-white",
     danger: "border-danger-red",
-    success: "border-neon-green",
+    accent: "border-safety-orange",
   };
 
   return (

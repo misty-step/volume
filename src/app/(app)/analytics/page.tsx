@@ -65,13 +65,13 @@ export default function AnalyticsPage() {
               Every champion started somewhere. Keep going!
             </p>
             {workoutDaysCount > 0 && (
-              <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-                <p className="text-sm font-medium">
+              <div className="mt-6 p-4 bg-muted/50 border-2 border-border">
+                <p className="text-sm font-medium font-mono uppercase">
                   Progress: {workoutDaysCount} / 7 days
                 </p>
-                <div className="mt-2 w-48 h-2 bg-muted rounded-full overflow-hidden">
+                <div className="mt-2 w-48 h-2 bg-muted border-2 border-border overflow-hidden">
                   <div
-                    className="h-full bg-primary transition-all"
+                    className="h-full bg-safety-orange transition-all"
                     style={{
                       width: `${(workoutDaysCount / 7) * 100}%`,
                     }}
