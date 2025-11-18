@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 import { ExerciseManager } from "@/components/dashboard/exercise-manager";
 import { InlineExerciseCreator } from "@/components/dashboard/inline-exercise-creator";
 import { SettingsSection } from "@/components/ui/settings-section";
@@ -25,17 +25,17 @@ export default function SettingsPage() {
   // Weight unit preference
   const { unit, setUnit } = useWeightUnit();
 
-  // Loading state
+  // Loading state - Brutalist skeleton
   if (exercises === undefined || sets === undefined) {
     return (
       <PageLayout title="Settings">
-        <div className="animate-pulse space-y-8">
+        <div className="space-y-8">
           {[1, 2].map((i) => (
             <div key={i} className="space-y-4">
-              <div className="h-4 bg-muted w-32 rounded" />
-              <div className="border rounded-xl p-4 space-y-3">
-                <div className="h-10 bg-muted rounded" />
-                <div className="h-10 bg-muted rounded" />
+              <div className="h-4 bg-concrete-gray w-32 animate-pulse font-mono" />
+              <div className="border-3 border-border p-4 space-y-3">
+                <div className="h-10 bg-concrete-gray/20 animate-pulse" />
+                <div className="h-10 bg-concrete-gray/20 animate-pulse" />
               </div>
             </div>
           ))}

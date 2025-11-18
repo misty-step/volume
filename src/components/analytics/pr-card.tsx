@@ -60,23 +60,23 @@ function formatImprovement(
  */
 function getPRTypeColor(prType: PRType): string {
   if (prType === "weight")
-    return "bg-blue-500/10 text-blue-700 dark:text-blue-300";
+    return "bg-danger-red/10 text-danger-red border-danger-red/50";
   if (prType === "reps")
-    return "bg-green-500/10 text-green-700 dark:text-green-300";
+    return "bg-safety-orange/10 text-safety-orange border-safety-orange/50";
   if (prType === "volume")
-    return "bg-purple-500/10 text-purple-700 dark:text-purple-300";
-  return "bg-muted text-muted-foreground";
+    return "bg-concrete-gray/10 text-foreground border-concrete-gray/50";
+  return "bg-muted text-muted-foreground border-border";
 }
 
 export function PRCard({ prs, isLoading = false }: PRCardProps) {
   // Loading skeleton
   if (isLoading) {
     return (
-      <Card className="shadow-sm">
+      <Card className="">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5" />
-            <CardTitle className="text-lg">Recent PRs</CardTitle>
+            <CardTitle className="">Recent PRs</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -84,7 +84,7 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex justify-between items-center">
                 <div className="space-y-2">
-                  <div className="h-4 bg-muted w-32 rounded" />
+                  <div className="h-4 bg-muted w-32" />
                   <div className="h-3 bg-muted w-24 rounded" />
                 </div>
                 <div className="h-6 bg-muted w-16 rounded" />
@@ -99,11 +99,11 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
   // Empty state
   if (!prs || prs.length === 0) {
     return (
-      <Card className="shadow-sm">
+      <Card className="">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5" />
-            <CardTitle className="text-lg">Recent PRs</CardTitle>
+            <CardTitle className="">Recent PRs</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -122,11 +122,11 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
   }
 
   return (
-    <Card className="shadow-sm">
+    <Card className="">
       <CardHeader>
         <div className="flex items-center gap-2">
           <Trophy className="w-5 h-5 text-yellow-600 dark:text-yellow-500" />
-          <CardTitle className="text-lg">Recent PRs</CardTitle>
+          <CardTitle className="">Recent PRs</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
@@ -142,7 +142,7 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
                     {pr.exerciseName}
                   </p>
                   <span
-                    className={`text-xs px-2 py-0.5 rounded-full uppercase font-medium ${getPRTypeColor(pr.prType)}`}
+                    className={`text-xs px-2 py-0.5 font-mono uppercase tracking-wide border-2 font-medium ${getPRTypeColor(pr.prType)}`}
                   >
                     {pr.prType}
                   </span>

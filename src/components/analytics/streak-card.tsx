@@ -19,19 +19,19 @@ export function StreakCard({
   // Loading skeleton
   if (isLoading) {
     return (
-      <Card className="shadow-sm">
+      <Card className="">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Flame className="w-5 h-5" />
-            <CardTitle className="text-lg">Workout Streak</CardTitle>
+            <CardTitle>Workout Streak</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-4">
-            <div className="h-16 bg-muted rounded-lg" />
+            <div className="h-16 bg-concrete-gray/20" />
             <div className="grid grid-cols-2 gap-4">
-              <div className="h-12 bg-muted rounded" />
-              <div className="h-12 bg-muted rounded" />
+              <div className="h-12 bg-concrete-gray/20" />
+              <div className="h-12 bg-concrete-gray/20" />
             </div>
           </div>
         </CardContent>
@@ -42,11 +42,11 @@ export function StreakCard({
   // Empty state
   if (currentStreak === 0 && longestStreak === 0 && totalWorkouts === 0) {
     return (
-      <Card className="shadow-sm">
+      <Card className="">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Flame className="w-5 h-5" />
-            <CardTitle className="text-lg">Workout Streak</CardTitle>
+            <CardTitle>Workout Streak</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -65,19 +65,19 @@ export function StreakCard({
   }
 
   return (
-    <Card className="shadow-sm">
+    <Card className="">
       <CardHeader>
         <div className="flex items-center gap-2">
           <Flame
             className={`w-5 h-5 ${currentStreak > 0 ? "text-orange-500 dark:text-orange-400" : ""}`}
           />
-          <CardTitle className="text-lg">Workout Streak</CardTitle>
+          <CardTitle className="">Workout Streak</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {/* Current Streak - Prominent Display */}
-          <div className="text-center p-4 bg-muted/50 rounded-lg">
+          <div className="text-center p-4 bg-muted/50 border-2 border-border">
             <div className="flex items-center justify-center gap-2 mb-1">
               <span className="text-4xl font-bold tabular-nums">
                 {currentStreak}
@@ -92,7 +92,7 @@ export function StreakCard({
           {/* Secondary Stats */}
           <div className="grid grid-cols-2 gap-3">
             {/* Longest Streak */}
-            <div className="text-center p-3 border rounded-lg">
+            <div className="text-center p-3 border-2 border-border">
               <div className="text-2xl font-bold tabular-nums mb-1">
                 {longestStreak}
               </div>
@@ -101,7 +101,7 @@ export function StreakCard({
             </div>
 
             {/* Total Workouts */}
-            <div className="text-center p-3 border rounded-lg">
+            <div className="text-center p-3 border-2 border-border">
               <div className="text-2xl font-bold tabular-nums mb-1">
                 {totalWorkouts}
               </div>

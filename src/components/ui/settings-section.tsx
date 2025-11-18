@@ -58,19 +58,21 @@ export function SettingsSection({
     <section className={cn("space-y-0", className)}>
       {/* Section Header */}
       {title && (
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-4 pt-3 pb-4">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-foreground font-mono px-4 pt-3 pb-4">
           {title}
         </h2>
       )}
 
-      {/* Content Container */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
+      {/* Content Container - Brutalist sharp corners, heavy border */}
+      <div className="bg-card border-3 border-border overflow-hidden">
         {children}
       </div>
 
       {/* Footer Help Text */}
       {footer && (
-        <p className="text-xs text-muted-foreground px-4 pt-2">{footer}</p>
+        <p className="text-xs text-muted-foreground px-4 pt-2 font-mono uppercase tracking-wide">
+          {footer}
+        </p>
       )}
     </section>
   );

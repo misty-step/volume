@@ -62,13 +62,13 @@ export function ActivityHeatmap({
   // Loading skeleton
   if (isLoading) {
     return (
-      <Card className="shadow-sm">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Workout Frequency</CardTitle>
+          <CardTitle>Workout Frequency</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-3">
-            <div className="h-32 bg-muted rounded" />
+            <div className="h-32 bg-concrete-gray/20" />
           </div>
         </CardContent>
       </Card>
@@ -78,14 +78,16 @@ export function ActivityHeatmap({
   // Empty state
   if (!data || data.length === 0) {
     return (
-      <Card className="shadow-sm">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Workout Frequency</CardTitle>
+          <CardTitle>Workout Frequency</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Calendar className="w-12 h-12 text-muted-foreground mb-3" />
-            <p className="text-sm text-muted-foreground">No workout data</p>
+            <p className="text-sm text-muted-foreground font-mono uppercase">
+              No workout data
+            </p>
             <p className="text-xs text-muted-foreground mt-1">
               Your activity will appear here as you log sets
             </p>
@@ -96,9 +98,9 @@ export function ActivityHeatmap({
   }
 
   return (
-    <Card className="shadow-sm">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Workout Frequency</CardTitle>
+        <CardTitle>Workout Frequency</CardTitle>
       </CardHeader>
       <CardContent>
         {/* Mobile: Allow horizontal scroll */}
@@ -151,7 +153,7 @@ export function ActivityHeatmap({
           {/* Custom tooltip */}
           {tooltip && tooltip.count > 0 && (
             <div
-              className="fixed z-50 px-3 py-2 bg-popover text-popover-foreground rounded-md shadow-lg border text-sm pointer-events-none"
+              className="fixed z-50 px-3 py-2 bg-popover text-popover-foreground border-2 border-border shadow-[4px_4px_0_0_rgba(0,0,0,0.3)] text-sm pointer-events-none"
               style={{
                 left: `${tooltip.x}px`,
                 top: `${tooltip.y - 60}px`,

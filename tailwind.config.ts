@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import { BRUTALIST_COLORS } from "./src/config/design-tokens";
 
 export default {
   darkMode: ["class"],
@@ -10,7 +11,17 @@ export default {
   ],
   theme: {
     extend: {
+      // Brutalist typography
+      fontFamily: {
+        display: ['"Bebas Neue"', '"Arial Black"', "sans-serif"],
+        heading: ['"Inter Tight"', '"Arial Narrow"', "sans-serif"],
+        mono: ['"JetBrains Mono"', '"Courier New"', "monospace"],
+        sans: ["system-ui", "-apple-system", "sans-serif"],
+      },
       fontSize: {
+        // Brutalist typography scale
+        hero: "clamp(3rem, 12vw, 8rem)",
+        display: "clamp(2rem, 6vw, 4rem)",
         // Semantic marketing typography with responsive sizing
         "display-lg": [
           "clamp(3rem, 8vw, 5rem)",
@@ -27,7 +38,24 @@ export default {
         "body-base": ["1rem", { lineHeight: "1.6", fontWeight: "400" }], // 16px
         "body-sm": ["0.875rem", { lineHeight: "1.5", fontWeight: "400" }], // 14px
       },
+      // Brutalist spacing
+      spacing: {
+        gutter: "24px",
+        section: "64px",
+      },
+      // Sharp borders
+      borderWidth: {
+        "3": "3px",
+        "4": "4px",
+      },
       colors: {
+        // Brutalist color palette
+        "concrete-black": BRUTALIST_COLORS.concreteBlack,
+        "concrete-white": BRUTALIST_COLORS.concreteWhite,
+        "concrete-gray": BRUTALIST_COLORS.concreteGray,
+        "danger-red": BRUTALIST_COLORS.dangerRed,
+        "safety-orange": BRUTALIST_COLORS.safetyOrange,
+        "metal-edge": BRUTALIST_COLORS.metalEdge,
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
@@ -77,6 +105,8 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        brutalist: "2px",
+        "brutalist-md": "4px",
       },
       keyframes: {
         "accordion-down": {
@@ -95,10 +125,28 @@ export default {
             height: "0",
           },
         },
+        // Industrial animations
+        "weight-drop": {
+          "0%": { transform: "translateY(-20px)", opacity: "0" },
+          "50%": { transform: "translateY(2px)" },
+          "100%": { transform: "translateY(0)", opacity: "1" },
+        },
+        "mechanical-slide": {
+          "0%": { transform: "translateX(-100%)", opacity: "0" },
+          "100%": { transform: "translateX(0)", opacity: "1" },
+        },
+        "concrete-fill": {
+          "0%": { width: "0%" },
+          "100%": { width: "100%" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "weight-drop": "weight-drop 0.4s cubic-bezier(0.9, 0.1, 0.3, 0.9)",
+        "mechanical-slide":
+          "mechanical-slide 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)",
+        "concrete-fill": "concrete-fill 1s cubic-bezier(0.4, 0.0, 0.2, 1)",
       },
     },
   },

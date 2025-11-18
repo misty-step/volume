@@ -47,7 +47,7 @@ interface SettingsListItemProps {
  * Follows iOS Human Interface Guidelines for list rows:
  * - 16px horizontal padding
  * - 12px vertical padding
- * - Title uses medium font weight
+ * - Title uses bold font weight with uppercase and wide tracking
  * - Subtitle uses small text with muted color
  *
  * @example
@@ -91,9 +91,10 @@ export function SettingsListItem({
       type={hasClick ? "button" : undefined}
       className={cn(
         "w-full flex items-center gap-3 px-4 py-3 min-h-[44px]",
-        "transition-colors",
+        "border-b-2 border-border last:border-b-0",
+        "transition-all duration-75",
         hasClick &&
-          "hover:bg-muted/50 active:bg-muted cursor-pointer text-left",
+          "hover:bg-concrete-black/5 dark:hover:bg-concrete-white/5 active:bg-concrete-black/10 dark:active:bg-concrete-white/10 active:shadow-inner cursor-pointer text-left",
         className
       )}
     >
@@ -104,9 +105,11 @@ export function SettingsListItem({
 
       {/* Content (title + subtitle) */}
       <div className="flex-1 min-w-0">
-        <div className="font-medium text-sm leading-tight">{title}</div>
+        <div className="font-bold text-sm leading-tight uppercase tracking-wide">
+          {title}
+        </div>
         {subtitle && (
-          <div className="text-xs text-muted-foreground mt-0.5 leading-tight">
+          <div className="text-xs text-muted-foreground mt-0.5 leading-tight font-mono">
             {subtitle}
           </div>
         )}

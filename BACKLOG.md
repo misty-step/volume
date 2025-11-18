@@ -412,3 +412,71 @@ Analyzed by: 8 specialized perspectives
 **Why**: SC1090 warning about non-constant source is expected for dynamic secret loading but should be documented
 **Approach**: Add `# shellcheck source=/dev/null` directive before `source ~/.secrets` to document intentional pattern
 **Effort**: 0.05h | **Impact**: LOW (code documentation)
+
+---
+
+## PR #30 Review Follow-ups (Nov 18)
+
+### [Accessibility] Review CSS uppercase transform accessibility
+
+**File**: src/components/ui/settings-list-item.tsx:108-110
+**Source**: CodeRabbit PR review (Nov 18)
+**Why**: CSS `text-transform: uppercase` may affect screen reader pronunciation; copy-paste behavior differs from visual
+**Approach**: Evaluate if semantic uppercase in content is better; document design decision if keeping CSS transform
+**Effort**: 1h | **Impact**: LOW (a11y edge case, design system tradeoff)
+
+### [Performance] Optimize transition-all to specific properties
+
+**File**: src/components/ui/settings-list-item.tsx:94-95
+**Source**: CodeRabbit PR review (Nov 18)
+**Why**: `transition-all` applies to every CSS property; only bg-color and box-shadow actually change
+**Approach**: Change to `transition-[background-color,box-shadow]` for reduced calculations
+**Effort**: 0.25h | **Impact**: LOW (micro-optimization)
+
+### [Design System] Review focus ring color semantics
+
+**File**: src/components/ui/input.tsx:12-14
+**Source**: CodeRabbit PR review (Nov 18)
+**Why**: Using `danger-red` for focus states may be semantically confusing (typically indicates errors)
+**Approach**: Discuss whether accent color is better for focus, reserve danger-red for error states
+**Effort**: 1h | **Impact**: LOW (design system consistency)
+
+### [Accessibility] Add aria-invalid to BrutalistInput
+
+**File**: src/components/brutalist/BrutalistInput.tsx:6-31
+**Source**: CodeRabbit PR review (Nov 18)
+**Why**: `error` prop should set `aria-invalid` for screen readers and testing tools
+**Approach**: Add `aria-invalid={error}` to input element when error prop is true
+**Effort**: 0.25h | **Impact**: LOW (accessibility improvement)
+
+### [Testing] Add transition assertions to motion tests
+
+**File**: src/lib/motion.test.ts:5-63
+**Source**: CodeRabbit PR review (Nov 18)
+**Why**: Tests verify hidden/visible states but not transition properties (duration, ease)
+**Approach**: Assert transition objects using MOTION_CONFIG values for stronger regression detection
+**Effort**: 0.5h | **Impact**: LOW (test enhancement)
+
+### [Code Quality] Rename buttonPress variant to whileTap
+
+**File**: src/lib/brutalist-motion.ts:91-97
+**Source**: CodeRabbit PR review (Nov 18)
+**Why**: Uses `tap` key but `whileTap` is more common Framer Motion convention
+**Approach**: Rename for consistency with Framer Motion patterns
+**Effort**: 0.25h | **Impact**: LOW (naming consistency)
+
+### [Architecture] Centralize sitemap route definitions
+
+**File**: src/app/sitemap.ts:3-12
+**Source**: CodeRabbit PR review (Nov 18)
+**Why**: Hard-coded route lists can drift out of sync with actual routes over time
+**Approach**: Create shared `ROUTES` constant used by both navigation and sitemap
+**Effort**: 1h | **Impact**: LOW (maintainability)
+
+### [Code Quality] Clean up duplicated border utilities
+
+**Files**: Multiple analytics widgets, focus-suggestions-widget.tsx, recovery-dashboard-widget.tsx
+**Source**: CodeRabbit PR review (Nov 18)
+**Why**: Several classNames have redundant border utilities like `border border-2` or `border-2 border-2`
+**Approach**: Grep for patterns and simplify to single border declaration
+**Effort**: 0.5h | **Impact**: LOW (code cleanliness)

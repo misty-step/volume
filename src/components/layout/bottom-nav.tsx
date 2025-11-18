@@ -5,27 +5,32 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, BarChart3, History, Settings } from "lucide-react";
 
+type BottomNavProps = {
+  initialUserId?: string | null;
+};
+
 const navItems = [
-  { href: "/", label: "Today", icon: Home },
+  { href: "/today", label: "Today", icon: Home },
   { href: "/analytics", label: "Stats", icon: BarChart3 },
   { href: "/history", label: "History", icon: History },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function BottomNav() {
+export function BottomNav({ initialUserId }: BottomNavProps = {}) {
   const { userId } = useAuth();
   const pathname = usePathname();
+  const effectiveUserId = userId ?? initialUserId;
 
   // Determine if a nav item is active
   const isActive = (href: string) => {
-    if (href === "/") {
-      return pathname === "/";
+    if (href === "/today") {
+      return pathname === "/today";
     }
-    return pathname.startsWith(href);
+    return pathname === href || pathname.startsWith(`${href}/`);
   };
 
   // Hide bottom nav for unauthenticated users
-  if (!userId) {
+  if (!effectiveUserId) {
     return null;
   }
 

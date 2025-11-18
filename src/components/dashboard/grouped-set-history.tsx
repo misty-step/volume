@@ -2,7 +2,7 @@
 
 import { forwardRef } from "react";
 import { Id } from "../../../convex/_generated/dataModel";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { BrutalistCard } from "@/components/brutalist";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { Exercise, Set } from "@/types/domain";
 import { ExerciseSetGroup } from "./exercise-set-group";
@@ -35,41 +35,39 @@ export const GroupedSetHistory = forwardRef<
   // Loading state - show skeleton while data is fetching
   if (isLoading) {
     return (
-      <Card ref={ref} className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">Today</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="border rounded-lg p-4">
-              <div className="h-6 w-32 bg-muted animate-pulse rounded" />
-            </div>
-            <div className="border rounded-lg p-4">
-              <div className="h-6 w-40 bg-muted animate-pulse rounded" />
-            </div>
+      <BrutalistCard ref={ref} className="p-6">
+        <h2 className="font-display text-2xl uppercase tracking-wide mb-6">
+          Today
+        </h2>
+        <div className="space-y-3">
+          <div className="border-3 border-concrete-black dark:border-concrete-white p-4">
+            <div className="h-6 w-32 bg-concrete-gray animate-pulse" />
           </div>
-        </CardContent>
-      </Card>
+          <div className="border-3 border-concrete-black dark:border-concrete-white p-4">
+            <div className="h-6 w-40 bg-concrete-gray animate-pulse" />
+          </div>
+        </div>
+      </BrutalistCard>
     );
   }
 
   // Empty state - user has no sets logged today
   if (exerciseGroups.length === 0) {
     return (
-      <Card ref={ref} className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">Today</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="py-12 text-center">
-            <Dumbbell className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground text-sm mb-2">
-              No sets logged yet
-            </p>
-            <p className="text-lg font-medium">{"Start logging above! 💪"}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <BrutalistCard ref={ref} className="p-6">
+        <h2 className="font-display text-2xl uppercase tracking-wide mb-6">
+          Today
+        </h2>
+        <div className="py-12 text-center">
+          <Dumbbell className="w-16 h-16 mx-auto text-concrete-gray mb-6" />
+          <p className="font-mono text-sm uppercase tracking-wide text-concrete-gray mb-2">
+            No sets logged yet
+          </p>
+          <p className="font-display text-xl uppercase tracking-wide">
+            Start logging above
+          </p>
+        </div>
+      </BrutalistCard>
     );
   }
 
@@ -79,35 +77,34 @@ export const GroupedSetHistory = forwardRef<
   );
 
   return (
-    <Card ref={ref} className="shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-base text-muted-foreground font-normal">
-          Today ({exerciseGroups.length} exercise
-          {exerciseGroups.length === 1 ? "" : "s"}, {totalSets} set
-          {totalSets === 1 ? "" : "s"})
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {exerciseGroups.map((group) => {
-            const exercise = exerciseMap.get(group.exerciseId);
-            if (!exercise) return null;
+    <BrutalistCard ref={ref} className="p-6">
+      <h2 className="font-display text-2xl uppercase tracking-wide mb-2">
+        Today
+      </h2>
+      <p className="font-mono text-xs uppercase tracking-wider text-concrete-gray mb-6">
+        {exerciseGroups.length} EXERCISE{exerciseGroups.length === 1 ? "" : "S"}
+        {" • "}
+        {totalSets} SET{totalSets === 1 ? "" : "S"}
+      </p>
+      <div className="space-y-3">
+        {exerciseGroups.map((group) => {
+          const exercise = exerciseMap.get(group.exerciseId);
+          if (!exercise) return null;
 
-            return (
-              <ExerciseSetGroup
-                key={group.exerciseId}
-                exercise={exercise}
-                sets={group.sets}
-                totalVolume={group.totalVolume}
-                totalReps={group.totalReps}
-                preferredUnit={preferredUnit}
-                onRepeat={onRepeat}
-                onDelete={onDelete}
-              />
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
+          return (
+            <ExerciseSetGroup
+              key={group.exerciseId}
+              exercise={exercise}
+              sets={group.sets}
+              totalVolume={group.totalVolume}
+              totalReps={group.totalReps}
+              preferredUnit={preferredUnit}
+              onRepeat={onRepeat}
+              onDelete={onDelete}
+            />
+          );
+        })}
+      </div>
+    </BrutalistCard>
   );
 });

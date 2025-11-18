@@ -4,29 +4,33 @@ import { useAuth, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "./theme-toggle";
-import { Button } from "@/components/ui/button";
+
+type NavProps = {
+  initialUserId?: string | null;
+};
 
 const navLinks = [
-  { href: "/", label: "Today" },
+  { href: "/today", label: "Today" },
   { href: "/history", label: "History" },
   { href: "/analytics", label: "Analytics" },
   { href: "/settings", label: "Settings" },
 ];
 
-export function Nav() {
+export function Nav({ initialUserId }: NavProps = {}) {
   const { userId } = useAuth();
   const pathname = usePathname();
+  const effectiveUserId = userId ?? initialUserId;
 
   // Determine if a nav link is active
   const isActive = (href: string) => {
-    if (href === "/") {
-      return pathname === "/";
+    if (href === "/today") {
+      return pathname === "/today";
     }
-    return pathname.startsWith(href);
+    return pathname === href || pathname.startsWith(`${href}/`);
   };
 
   // Hide nav entirely when unauthenticated
-  if (!userId) {
+  if (!effectiveUserId) {
     return null;
   }
 
@@ -36,7 +40,7 @@ export function Nav() {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
             <Link
-              href="/"
+              href="/today"
               className="text-xl font-bold tracking-tight hover:text-primary transition-colors"
             >
               Volume
@@ -62,7 +66,7 @@ export function Nav() {
             <ThemeToggle />
             <div className="h-10 w-10 flex items-center justify-center">
               <UserButton
-                afterSignOutUrl="/"
+                afterSignOutUrl="/sign-in"
                 appearance={{
                   elements: {
                     avatarBox: "h-9 w-9",

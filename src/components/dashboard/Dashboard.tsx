@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useAuth } from "@clerk/nextjs";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -9,24 +10,22 @@ import {
   QuickLogFormHandle,
 } from "@/components/dashboard/quick-log-form";
 import { GroupedSetHistory } from "@/components/dashboard/grouped-set-history";
-import { UndoToast } from "@/components/dashboard/undo-toast";
 import { FirstRunExperience } from "@/components/dashboard/first-run-experience";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { handleMutationError } from "@/lib/error-handler";
 import { PageLayout } from "@/components/layout/page-layout";
 import { LAYOUT } from "@/lib/layout-constants";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { BrutalistCard } from "@/components/brutalist";
+import { motion } from "framer-motion";
+import { brutalistMotion } from "@/lib/brutalist-motion";
 import { groupSetsByExercise } from "@/lib/exercise-grouping";
 import { sortExercisesByRecency } from "@/lib/exercise-sorting";
 import { getTodayRange } from "@/lib/date-utils";
-import type { Exercise, Set } from "@/types/domain";
+import type { Exercise, Set as WorkoutSet } from "@/types/domain";
 
 export function Dashboard() {
-  const [undoToastVisible, setUndoToastVisible] = useState(false);
-  const [lastLoggedSetId, setLastLoggedSetId] = useState<Id<"sets"> | null>(
-    null
-  );
+  const { isLoaded: isClerkLoaded, userId } = useAuth();
+  const { isLoading: isConvexAuthLoading, isAuthenticated } = useConvexAuth();
   const [isHydrated, setIsHydrated] = useState(false);
   const formRef = useRef<QuickLogFormHandle>(null);
   const historyRef = useRef<HTMLDivElement>(null);
@@ -38,16 +37,26 @@ export function Dashboard() {
     includeDeleted: true,
   });
 
+  // Treat data as trustworthy only once Clerk + Convex both agree the user is authenticated
+  const authReady =
+    isClerkLoaded && Boolean(userId) && !isConvexAuthLoading && isAuthenticated;
+
   // Hydration guard - ensure data is stable before showing content
   // Waits for one full render cycle after queries resolve to prevent flashing empty states
+
   useEffect(() => {
-    if (allSets !== undefined && exercises !== undefined && !isHydrated) {
+    if (
+      authReady &&
+      allSets !== undefined &&
+      exercises !== undefined &&
+      !isHydrated
+    ) {
       // Use RAF to ensure React completes render cycle with stable data
       requestAnimationFrame(() => {
         setIsHydrated(true);
       });
     }
-  }, [allSets, exercises, isHydrated]);
+  }, [authReady, allSets, exercises, isHydrated]);
 
   // Delete set mutation
   const deleteSet = useMutation(api.sets.deleteSet);
@@ -95,15 +104,12 @@ export function Dashboard() {
   };
 
   // Handle repeat set
-  const handleRepeatSet = (set: Set) => {
+  const handleRepeatSet = (set: WorkoutSet) => {
     formRef.current?.repeatSet(set);
   };
 
-  // Handle set logged - show undo toast and scroll to history
-  const handleSetLogged = (setId: Id<"sets">) => {
-    setLastLoggedSetId(setId);
-    setUndoToastVisible(true);
-
+  // Handle set logged - scroll to history
+  const handleSetLogged = () => {
     // 100ms delay ensures React finishes rendering the newly logged set
     // in the history section before scrolling to it
     setTimeout(() => {
@@ -114,71 +120,53 @@ export function Dashboard() {
     }, 100);
   };
 
-  // Handle undo - delete the last logged set
-  const handleUndo = async () => {
-    if (lastLoggedSetId) {
-      try {
-        await deleteSet({ id: lastLoggedSetId });
-        setUndoToastVisible(false);
-        setLastLoggedSetId(null);
-      } catch (error) {
-        handleMutationError(error, "Undo Set");
-      }
+  // Handle undo - delete the set (called from toast action)
+  const handleUndo = async (setId: Id<"sets">) => {
+    try {
+      await deleteSet({ id: setId });
+    } catch (error) {
+      handleMutationError(error, "Undo Set");
     }
-  };
-
-  // Handle dismiss toast
-  const handleDismissToast = () => {
-    setUndoToastVisible(false);
-    setLastLoggedSetId(null);
   };
 
   // Loading state - show skeleton until data is stable
   if (!isHydrated) {
     return (
       <PageLayout title="Dashboard">
-        {/* Stats skeleton */}
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-4 w-32" />
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div
+          className={LAYOUT.section.spacing}
+          variants={brutalistMotion.staggerContainer}
+          initial="initial"
+          animate="animate"
+        >
+          {/* Form skeleton */}
+          <motion.div variants={brutalistMotion.weightDrop}>
+            <BrutalistCard className="p-6">
+              <div className="space-y-4">
+                <div className="h-8 w-32 bg-concrete-gray animate-pulse" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="h-12 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
+                  <div className="h-12 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
+                  <div className="h-12 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
+                  <div className="h-12 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
+                </div>
+              </div>
+            </BrutalistCard>
+          </motion.div>
 
-        {/* Form skeleton */}
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-4 w-24" />
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Skeleton className="h-10" />
-              <Skeleton className="h-10" />
-              <Skeleton className="h-10" />
-              <Skeleton className="h-10" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* History skeleton */}
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-4 w-32" />
-          </CardHeader>
-          <CardContent>
-            <div className={LAYOUT.section.spacing}>
-              <Skeleton className="h-20" />
-              <Skeleton className="h-20" />
-            </div>
-          </CardContent>
-        </Card>
+          {/* History skeleton */}
+          <motion.div variants={brutalistMotion.weightDrop}>
+            <BrutalistCard className="p-6">
+              <div className="space-y-4">
+                <div className="h-8 w-48 bg-concrete-gray animate-pulse font-mono" />
+                <div className="space-y-3">
+                  <div className="h-24 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
+                  <div className="h-24 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
+                </div>
+              </div>
+            </BrutalistCard>
+          </motion.div>
+        </motion.div>
       </PageLayout>
     );
   }
@@ -210,33 +198,36 @@ export function Dashboard() {
           /* First Run Experience - Show when no exercises exist */
           <FirstRunExperience onExerciseCreated={handleFirstExerciseCreated} />
         ) : (
-          <>
+          <motion.div
+            className={LAYOUT.section.spacing}
+            variants={brutalistMotion.staggerContainer}
+            initial="initial"
+            animate="animate"
+          >
             {/* Quick Log Form - PRIME POSITION */}
-            <QuickLogForm
-              ref={formRef}
-              exercises={activeExercisesByRecency}
-              onSetLogged={handleSetLogged}
-            />
+            <motion.div variants={brutalistMotion.weightDrop}>
+              <QuickLogForm
+                ref={formRef}
+                exercises={activeExercisesByRecency}
+                onSetLogged={handleSetLogged}
+                onUndo={handleUndo}
+              />
+            </motion.div>
 
             {/* Today's Set History - Aggregated stats with drill-down */}
-            <GroupedSetHistory
-              ref={historyRef}
-              exerciseGroups={exerciseGroups}
-              exerciseMap={exerciseMap}
-              onRepeat={handleRepeatSet}
-              onDelete={handleDeleteSet}
-              isLoading={!isHydrated}
-            />
-          </>
+            <motion.div variants={brutalistMotion.weightDrop}>
+              <GroupedSetHistory
+                ref={historyRef}
+                exerciseGroups={exerciseGroups}
+                exerciseMap={exerciseMap}
+                onRepeat={handleRepeatSet}
+                onDelete={handleDeleteSet}
+                isLoading={!isHydrated}
+              />
+            </motion.div>
+          </motion.div>
         )}
       </PageLayout>
-
-      {/* Undo Toast - Fixed position overlay, not affected by spacing */}
-      <UndoToast
-        visible={undoToastVisible}
-        onUndo={handleUndo}
-        onDismiss={handleDismissToast}
-      />
     </>
   );
 }
