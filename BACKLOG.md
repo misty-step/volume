@@ -178,6 +178,33 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Effort**: 15m | **Cost**: $0
 **Acceptance**: CI completes 1-2 min faster; failures surface in parallel.
 
+### [Observability] Add actual Convex connectivity check to health endpoint
+
+**File**: src/app/api/health/route.ts
+**Perspectives**: architecture-guardian, user-experience-advocate
+**Impact**: Current health check only validates NEXT_PUBLIC_CONVEX_URL exists, not actual connectivity. False positives when Convex is down.
+**Fix**: Add lightweight Convex query (e.g., ping mutation) with timeout. Return 503 if unreachable.
+**Effort**: 30m | **Risk**: LOW
+**Acceptance**: Health endpoint returns 503 when Convex is actually unreachable.
+
+### [Testing] Add tests for malformed email patterns in PII sanitization
+
+**File**: src/lib/sentry.test.ts
+**Perspectives**: security-sentinel
+**Impact**: Edge cases like `user@`, `@domain.com`, `user@@domain.com` may not be properly handled by email regex.
+**Fix**: Add test cases for malformed patterns, ensure they're either properly redacted or passed through safely.
+**Effort**: 30m | **Risk**: LOW
+**Acceptance**: All edge cases documented with expected behavior.
+
+### [Docs] Add curl example to health endpoint documentation
+
+**File**: CLAUDE.md
+**Perspectives**: maintainability-maven
+**Impact**: Developers may not know how to test health endpoint locally. Missing example slows onboarding.
+**Fix**: Add `curl localhost:3000/api/health | jq` example to health endpoint section.
+**Effort**: 5m | **Risk**: LOW
+**Acceptance**: Quick-copy command in docs.
+
 ### [Infrastructure] Fix Vercel build command for Convex
 
 **Files**: package.json, Vercel project settings

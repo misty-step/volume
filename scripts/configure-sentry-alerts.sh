@@ -9,9 +9,11 @@ echo "==> Sentry Alert Configuration"
 echo
 
 # Check prerequisites
-[[ -f ~/.secrets ]] || { echo "Error: ~/.secrets not found"; exit 1; }
+[[ -f ~/.secrets ]] || { echo "Error: ~/.secrets not found (create with chmod 600)"; exit 1; }
+command -v python3 &> /dev/null || { echo "Error: python3 required but not found"; exit 1; }
 
 # Source secrets
+# shellcheck source=/dev/null
 source ~/.secrets
 [[ -n "${SENTRY_MASTER_TOKEN:-}" ]] || { echo "Error: SENTRY_MASTER_TOKEN not in ~/.secrets"; exit 1; }
 
@@ -81,6 +83,13 @@ api_call() {
       sleep 5
       ((retry++))
       continue
+    fi
+
+    # Fail on non-2xx responses
+    if [[ ! "$http_code" =~ ^2[0-9]{2}$ ]]; then
+      echo "Error: API returned HTTP $http_code" >&2
+      echo "$body" >&2
+      return 1
     fi
 
     echo "$body"

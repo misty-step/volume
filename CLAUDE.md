@@ -247,7 +247,13 @@ Run `./scripts/configure-sentry-alerts.sh` to create alerts:
 2. **Error Rate Spike**: Email when >10 errors in 5 minutes
 3. **Performance Regression**: Email when p95 > 3000ms
 
-Script is idempotent (safe to re-run). Requires `SENTRY_MASTER_TOKEN` in `~/.secrets`.
+Script is idempotent (safe to re-run). Requires `SENTRY_MASTER_TOKEN` in `~/.secrets`:
+
+```bash
+# Create secrets file with secure permissions
+echo 'SENTRY_MASTER_TOKEN=your-token-here' > ~/.secrets
+chmod 600 ~/.secrets
+```
 
 ## Architecture Overview
 
