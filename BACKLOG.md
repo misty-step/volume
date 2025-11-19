@@ -298,6 +298,36 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Approach**: Document test pyramid, when to write E2E vs unit, mocking patterns, coverage expectations.
 **Effort**: 1h | **Impact**: MEDIUM
 
+### [Testing] Add Playwright authentication setup for Clerk
+
+**Files**: e2e/auth-setup.ts (new), e2e/critical-flow.spec.ts
+**Perspectives**: architecture-guardian, user-experience-advocate
+**Why**: E2E tests requiring authentication (critical-flow) are marked fixme. Can't test authenticated user flows like workout logging.
+**Approach**: Implement Clerk testing patterns from @clerk/testing, configure test user credentials, enable critical-flow spec.
+**Effort**: 2-3h | **Impact**: HIGH
+**Acceptance**: critical-flow.spec.ts passes; authenticated E2E flows testable.
+**Reference**: PR #34 review feedback
+
+### [Testing] Add data-testid attributes for reliable E2E selectors
+
+**Files**: Multiple components (QuickLogForm, ExerciseSelector, SetCard, etc.)
+**Perspectives**: maintainability-maven, architecture-guardian
+**Why**: E2E tests use brittle text-based selectors ("Bench Press", "LOG SET"). Tests break when copy changes.
+**Approach**: Add data-testid to interactive elements, update E2E tests to use testid selectors.
+**Effort**: 2h | **Impact**: MEDIUM
+**Acceptance**: E2E tests use data-testid selectors; no text-based selectors for buttons/inputs.
+**Reference**: PR #34 review feedback
+
+### [Docs] Add docstrings to test infrastructure
+
+**Files**: src/test/setup.ts, src/test/utils.tsx, vitest.config.ts
+**Perspectives**: maintainability-maven
+**Why**: Test utilities have 0% docstring coverage. New developers can't understand test setup patterns.
+**Approach**: Add JSDoc to exported functions (render, mocks) explaining purpose and usage.
+**Effort**: 30m | **Impact**: LOW
+**Acceptance**: Core test utilities documented with examples.
+**Reference**: PR #34 review feedback
+
 ### [Testing] Remove duplicate progressive overload test entry
 
 **File**: BACKLOG.md:362-367

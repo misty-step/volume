@@ -1,19 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "../../test/utils";
 import { QuickLogForm } from "./quick-log-form";
 import type { Exercise } from "@/types/domain";
 import type { Id } from "../../../convex/_generated/dataModel";
-import { WeightUnitProvider } from "@/contexts/WeightUnitContext";
-import { toast } from "sonner";
-
-// Mock Convex hooks
-const mockLogSet = vi.fn();
-const mockUseQuery = vi.fn();
-
-vi.mock("convex/react", () => ({
-  useMutation: vi.fn(() => mockLogSet),
-  useQuery: vi.fn((api, params) => mockUseQuery(api, params)),
-}));
+import { useQuery, useMutation } from "convex/react";
 
 // Mock sonner toast
 vi.mock("sonner", () => ({
@@ -31,26 +21,9 @@ vi.mock("@/lib/error-handler", () => ({
 // Mock scrollIntoView for Radix Select
 Element.prototype.scrollIntoView = vi.fn();
 
-// Helper to render with WeightUnitContext
-const renderWithContext = (
-  ui: React.ReactElement,
-  unit: "lbs" | "kg" = "lbs"
-) => {
-  // Mock localStorage for context
-  const localStorageMock = {
-    getItem: vi.fn(() => unit),
-    setItem: vi.fn(),
-    removeItem: vi.fn(),
-    clear: vi.fn(),
-    length: 0,
-    key: vi.fn(),
-  };
-  vi.stubGlobal("localStorage", localStorageMock);
-
-  return render(<WeightUnitProvider>{ui}</WeightUnitProvider>);
-};
-
 describe("QuickLogForm", () => {
+  const mockLogSet = vi.fn();
+
   const mockExercises: Exercise[] = [
     {
       _id: "ex1abc123" as Id<"exercises">,
@@ -71,11 +44,25 @@ describe("QuickLogForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockLogSet.mockResolvedValue("newSetId123");
-    mockUseQuery.mockReturnValue([]);
+
+    // Setup default Convex mocks using global mock from setup.ts
+    vi.mocked(useMutation).mockReturnValue(mockLogSet as any);
+    vi.mocked(useQuery).mockReturnValue([]);
+
+    // Reset localStorage mock
+    const localStorageMock = {
+      getItem: vi.fn(() => "lbs"),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+      length: 0,
+      key: vi.fn(),
+    } as unknown as Storage;
+    vi.stubGlobal("localStorage", localStorageMock);
   });
 
   it("renders all form fields", () => {
-    renderWithContext(<QuickLogForm exercises={mockExercises} />);
+    render(<QuickLogForm exercises={mockExercises} />);
 
     expect(screen.getByLabelText(/exercise/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/reps/i)).toBeInTheDocument();
@@ -86,7 +73,7 @@ describe("QuickLogForm", () => {
   });
 
   it("integrates with useQuickLogForm hook", () => {
-    renderWithContext(<QuickLogForm exercises={mockExercises} />);
+    render(<QuickLogForm exercises={mockExercises} />);
 
     // Form should initialize with useQuickLogForm defaults
     const repsInput = screen.getByLabelText(/reps/i) as HTMLInputElement;
@@ -111,9 +98,9 @@ describe("QuickLogForm", () => {
         performedAt: Date.now() - 60000,
       },
     ];
-    mockUseQuery.mockReturnValue(mockSets);
+    vi.mocked(useQuery).mockReturnValue(mockSets);
 
-    renderWithContext(<QuickLogForm exercises={mockExercises} />);
+    render(<QuickLogForm exercises={mockExercises} />);
 
     // Last set indicator should not be visible initially (no exercise selected)
     expect(screen.queryByText(/Last:/i)).not.toBeInTheDocument();
@@ -133,9 +120,9 @@ describe("QuickLogForm", () => {
         performedAt: Date.now() - 60000,
       },
     ];
-    mockUseQuery.mockReturnValue(mockSets);
+    vi.mocked(useQuery).mockReturnValue(mockSets);
 
-    renderWithContext(<QuickLogForm exercises={mockExercises} />);
+    render(<QuickLogForm exercises={mockExercises} />);
 
     // Note: Last set indicator only appears after selecting an exercise
     // This test verifies the component integrates with useLastSet hook
@@ -144,13 +131,15 @@ describe("QuickLogForm", () => {
   });
 
   it("displays weight unit from context", () => {
-    renderWithContext(<QuickLogForm exercises={mockExercises} />, "lbs");
+    vi.mocked(localStorage.getItem).mockReturnValue("lbs");
+    render(<QuickLogForm exercises={mockExercises} />);
 
     expect(screen.getByText(/weight \(lbs\)/i)).toBeInTheDocument();
   });
 
   it("displays kg unit when context set to kg", () => {
-    renderWithContext(<QuickLogForm exercises={mockExercises} />, "kg");
+    vi.mocked(localStorage.getItem).mockReturnValue("kg");
+    render(<QuickLogForm exercises={mockExercises} />);
 
     expect(screen.getByText(/weight \(kg\)/i)).toBeInTheDocument();
   });

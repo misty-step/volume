@@ -15,7 +15,6 @@ describe("listSets - Security Tests", () => {
   beforeEach(async () => {
     // Create fresh test environment for each test
     // Provide modules glob for convex-test
-    // @ts-expect-error - import.meta.glob is a Vite feature, types not available in test env
     t = convexTest(schema, import.meta.glob("./**/*.ts"));
 
     // Seed database: User 1 creates an exercise and logs sets
@@ -202,7 +201,6 @@ describe("logSet - Soft Delete Protection", () => {
   const user1Subject = "user_1_test_subject";
 
   beforeEach(async () => {
-    // @ts-expect-error - import.meta.glob is a Vite feature, types not available in test env
     t = convexTest(schema, import.meta.glob("./**/*.ts"));
   });
 
@@ -237,7 +235,6 @@ describe("logSet - Duration-based Exercises", () => {
   let exerciseId: Id<"exercises">;
 
   beforeEach(async () => {
-    // @ts-expect-error - import.meta.glob is a Vite feature, types not available in test env
     t = convexTest(schema, import.meta.glob("./**/*.ts"));
 
     // Create an exercise for duration-based testing
