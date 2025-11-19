@@ -12,7 +12,8 @@ export default defineConfig({
     exclude: ["**/node_modules/**", "**/dist/**", "**/e2e/**"],
     coverage: {
       provider: "v8",
-      reporter: ["text", "html", "json-summary"],
+      reporter: ["text", "html", "json-summary", "json"],
+      reportOnFailure: true,
       exclude: [
         "**/*.test.ts",
         "**/*.test.tsx",

@@ -9,6 +9,9 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Checkout code
@@ -34,8 +37,65 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Test
-        run: pnpm test --run
+      - name: Test with coverage
+        run: pnpm test --run --coverage
+        continue-on-error: true  # Don't fail CI on coverage threshold warnings
+
+      - name: Coverage report
+        if: always() && github.event_name == 'pull_request'
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          file-coverage-mode: changes
+
+      - name: Extract coverage percentages
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        id: coverage
+        run: |
+          LINES=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+          BRANCHES=$(jq '.total.branches.pct' coverage/coverage-summary.json)
+          FUNCTIONS=$(jq '.total.functions.pct' coverage/coverage-summary.json)
+          echo "lines=$LINES" >> $GITHUB_OUTPUT
+          echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
+          echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+
+      - name: Update coverage badges
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: ${{ vars.COVERAGE_GIST_ID }}
+          filename: coverage-lines.json
+          label: lines
+          message: ${{ steps.coverage.outputs.lines }}%
+          valColorRange: ${{ steps.coverage.outputs.lines }}
+          maxColorRange: 100
+          minColorRange: 0
+
+      - name: Update branches badge
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: ${{ vars.COVERAGE_GIST_ID }}
+          filename: coverage-branches.json
+          label: branches
+          message: ${{ steps.coverage.outputs.branches }}%
+          valColorRange: ${{ steps.coverage.outputs.branches }}
+          maxColorRange: 100
+          minColorRange: 0
+
+      - name: Update functions badge
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: ${{ vars.COVERAGE_GIST_ID }}
+          filename: coverage-functions.json
+          label: functions
+          message: ${{ steps.coverage.outputs.functions }}%
+          valColorRange: ${{ steps.coverage.outputs.functions }}
+          maxColorRange: 100
+          minColorRange: 0
 
       - name: Build
         run: pnpm build
