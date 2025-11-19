@@ -40,9 +40,15 @@ jobs:
       - name: Test with coverage
         run: pnpm test --run --coverage
 
-      # E2E tests (Playwright) are run locally for now
-      # TODO: Add E2E step once Clerk auth setup is implemented
-      # See e2e/critical-flow.spec.ts for auth requirements
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run E2E smoke tests
+        run: pnpm test:e2e
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
 
       - name: Coverage report
         if: always() && github.event_name == 'pull_request'
