@@ -174,6 +174,18 @@ Convex functions automatically report errors to Sentry via Convex Dashboard inte
 5. Enter Sentry DSN: `SENTRY_DSN` value from .env.local
 6. Save configuration
 
+**Verification:**
+
+1. Trigger a test error in a Convex function (throw new Error("test"))
+2. Check Sentry for error with tags: func, func_type, func_runtime
+3. Verify request_id matches Convex logs
+
+**Troubleshooting:**
+
+- "DSN invalid": Ensure DSN starts with `https://` and includes project ID
+- Errors not appearing: Check Convex logs first, integration requires Pro plan
+- Missing tags: Update to latest Convex SDK version
+
 **What Gets Tracked:**
 
 - Exceptions thrown from queries, mutations, actions
@@ -207,6 +219,35 @@ try {
   });
 }
 ```
+
+### Health Check Endpoint
+
+GET `/api/health` returns JSON health status for uptime monitoring:
+
+```json
+{
+  "status": "pass",
+  "timestamp": "2025-01-15T10:30:00.000Z",
+  "version": "abc123",
+  "checks": {
+    "convex": { "status": "pass" }
+  }
+}
+```
+
+- Returns 200 when healthy, 503 when unhealthy
+- Excluded from Clerk authentication (public route)
+- Ready for UptimeRobot, BetterUptime, or Pingdom
+
+### Alert Configuration Script
+
+Run `./scripts/configure-sentry-alerts.sh` to create alerts:
+
+1. **New Issue Alert**: Email on first occurrence of new error
+2. **Error Rate Spike**: Email when >10 errors in 5 minutes
+3. **Performance Regression**: Email when p95 > 3000ms
+
+Script is idempotent (safe to re-run). Requires `SENTRY_MASTER_TOKEN` in `~/.secrets`.
 
 ## Architecture Overview
 
