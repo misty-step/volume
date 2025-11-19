@@ -45,3 +45,5 @@ jobs:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           # Convex environment variable required for build
           NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
+          # Sentry release tracking for error correlation
+          SENTRY_RELEASE: ${{ github.sha }}
