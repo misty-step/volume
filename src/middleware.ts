@@ -12,6 +12,8 @@ const isPublicRoute = createRouteMatcher([
   "/sitemap.xml",
   "/icon",
   "/apple-icon",
+  // Health check for uptime monitoring
+  "/api/health",
 ]);
 
 const cspHeader = `
