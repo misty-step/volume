@@ -46,7 +46,7 @@ describe("QuickLogForm", () => {
     mockLogSet.mockResolvedValue("newSetId123");
 
     // Setup default Convex mocks using global mock from setup.ts
-    vi.mocked(useMutation).mockReturnValue(mockLogSet);
+    vi.mocked(useMutation).mockReturnValue(mockLogSet as any);
     vi.mocked(useQuery).mockReturnValue([]);
 
     // Reset localStorage mock

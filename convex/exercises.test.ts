@@ -12,7 +12,6 @@ describe("Exercises - Soft Delete Tests", () => {
 
   beforeEach(async () => {
     // Create fresh test environment for each test
-    // @ts-expect-error - import.meta.glob is a Vite feature, types not available in test env
     t = convexTest(schema, import.meta.glob("./**/*.ts"));
   });
 
