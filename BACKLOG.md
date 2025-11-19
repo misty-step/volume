@@ -7,51 +7,6 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 
 ## Now (Sprint-Ready, <2 weeks)
 
-### [Observability] Create health check endpoint
-
-**File**: src/app/api/health/route.ts (new)
-**Perspectives**: architecture-guardian, user-experience-advocate
-**Impact**: Cannot set up uptime monitoring (UptimeRobot, BetterUptime). No external visibility into production availability.
-**Fix**: Create simple GET route returning 200 OK.
-**Effort**: 10m | **Risk**: LOW
-**Acceptance**: `/api/health` returns 200; uptime service can monitor.
-
-### [Observability] Add Sentry release tracking to CI
-
-**File**: .github/workflows/ci.yml
-**Perspectives**: architecture-guardian, maintainability-maven
-**Impact**: Cannot correlate errors with specific deployments. "When did this bug ship?" unanswerable.
-**Fix**: Add `SENTRY_RELEASE: ${{ github.sha }}` to build env vars.
-**Effort**: 20m | **Risk**: LOW
-**Acceptance**: Sentry shows releases; errors tagged with commit SHA.
-
-### [Observability] Create CLI script for Sentry alert automation
-
-**File**: scripts/configure-sentry-alerts.sh (new)
-**Perspectives**: architecture-guardian, security-sentinel
-**Impact**: Alert configs not version-controlled, will be lost if project reset. Manual dashboard clicking.
-**Fix**: Sentry API script creating alerts for new errors, error spikes, performance regressions.
-**Effort**: 30m | **Risk**: LOW
-**Acceptance**: Script creates alerts idempotently; alerts exist after fresh project setup.
-
-### [Observability] Configure Convex Sentry Dashboard integration
-
-**File**: Convex Dashboard → Settings → Integrations
-**Perspectives**: architecture-guardian, security-sentinel
-**Impact**: Backend errors only visible in Convex logs, not correlated with frontend errors in Sentry.
-**Fix**: Add SENTRY_DSN to Convex Dashboard Sentry integration (requires Pro plan).
-**Effort**: 15m | **Risk**: LOW
-**Acceptance**: Convex function errors appear in Sentry with function name tags.
-
-### [Testing] Add tests for Sentry PII sanitization
-
-**File**: src/lib/sentry.test.ts (new)
-**Perspectives**: security-sentinel, maintainability-maven
-**Impact**: sentry.ts at 8.76% coverage. Critical PII scrubbing logic (email redaction, header filtering, circular reference handling) completely untested. Compliance risk.
-**Fix**: Comprehensive tests for sanitizeEvent, sanitizeString, sanitizeHeaders, sanitizeValue.
-**Effort**: 2h | **Risk**: HIGH
-**Acceptance**: sentry.ts > 80% coverage; all redaction patterns verified.
-
 ### [Testing] Add tests for analytics event system
 
 **File**: src/lib/analytics.test.ts (expand existing)
