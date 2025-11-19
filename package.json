@@ -14,7 +14,7 @@
     "format:check": "prettier --check .",
     "analyze": "ANALYZE=true pnpm build",
     "prepare": "husky",
-    "test": "vitest --run",
+    "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage --run",
     "test:e2e": "playwright test",
