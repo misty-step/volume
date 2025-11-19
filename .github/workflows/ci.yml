@@ -39,7 +39,10 @@ jobs:
 
       - name: Test with coverage
         run: pnpm test --run --coverage
-        continue-on-error: true  # Don't fail CI on coverage threshold warnings
+
+      # E2E tests (Playwright) are run locally for now
+      # TODO: Add E2E step once Clerk auth setup is implemented
+      # See e2e/critical-flow.spec.ts for auth requirements
 
       - name: Coverage report
         if: always() && github.event_name == 'pull_request'
