@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { internal } from "./_generated/api";
 import { paginationOptsValidator } from "convex/server";
 import {
   requireAuth,
@@ -69,18 +68,6 @@ export const logSet = mutation({
       unit: args.unit, // Store the unit with the set for data integrity
       duration, // Store duration in seconds for time-based exercises
       performedAt: Date.now(),
-    });
-
-    // Track analytics event
-    await ctx.scheduler.runAfter(0, internal.analytics.track, {
-      name: "Set Logged",
-      properties: {
-        setId,
-        exerciseId: args.exerciseId,
-        userId: identity.subject,
-        reps: reps || 0,
-        weight: weight,
-      },
     });
 
     return setId;

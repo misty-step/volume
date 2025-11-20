@@ -21,6 +21,14 @@ type MutationHandler<Args, Return> = (
  * Wraps the mutation to automatically schedule an analytics tracking action
  * on success or failure.
  *
+ * **WARNING: Not compatible with convex-test**
+ * This wrapper calls `ctx.scheduler.runAfter()` which writes to the
+ * `_scheduled_functions` table. convex-test's transaction model does not
+ * support scheduler operations, causing "Write outside of transaction" errors.
+ *
+ * **For testing**: Either remove instrumentation or create separate
+ * non-instrumented versions of mutations for testing.
+ *
  * @param handler - The original mutation handler
  * @param options - Configuration for success/failure events
  * @returns Wrapped mutation handler
