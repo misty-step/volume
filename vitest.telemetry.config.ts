@@ -12,6 +12,11 @@ export default mergeConfig(
       exclude: ["**/*.test-d.ts"],
       coverage: {
         include: ["src/lib/analytics/**", "src/app/api/test-error/**"],
+        // Exclude thin wrappers and dev-only routes from thresholds
+        exclude: [
+          "src/lib/analytics/instrumentation/**",
+          "src/app/api/test-error/**",
+        ],
         thresholds: {
           lines: 70,
           statements: 70,
