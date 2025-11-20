@@ -176,7 +176,7 @@
   Estimate: 2h
   ```
 
-- [ ] Ship server/Convex instrumentation wrappers
+- [x] Ship server/Convex instrumentation wrappers
 
   ```
   Files:
@@ -194,8 +194,8 @@
   4. Tests: mock Convex context to assert event called + userId from identity used.
 
   Success Criteria:
-  - [ ] Targeted mutations/Next handlers compile with new helper.
-  - [ ] Tests show no leakage when identity missing.
+  - [x] Targeted mutations/Next handlers compile with new helper.
+  - [x] Tests show no leakage when identity missing.
 
   Tests:
   - Unit/integration using `convex-test` or manual mocks per repo precedent.

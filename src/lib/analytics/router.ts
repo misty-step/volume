@@ -91,34 +91,27 @@ function isAnalyticsEnabled(): boolean {
 
  */
 
-export function trackEvent<Name extends AnalyticsEventName>(
+export async function trackEvent<Name extends AnalyticsEventName>(
   name: Name,
-
   ...args: {} extends AnalyticsEventDefinitions[Name]
     ? [properties?: AnalyticsEventProperties<Name>]
     : [properties: AnalyticsEventProperties<Name>]
-): void {
+): Promise<void> {
   if (!isAnalyticsEnabled()) return;
 
   const isDev = process.env.NODE_ENV === "development";
 
   // Helper to add Sentry breadcrumb
-
   const addBreadcrumb = (status: "success" | "error", error?: any) => {
     if (isSentryEnabled()) {
       Sentry.addBreadcrumb({
         category: "analytics",
-
         message: `analytics_event_${status}`,
-
         data: {
           name,
-
           status,
-
           error: error?.message || String(error),
         },
-
         level: status === "error" ? "warning" : "info",
       });
     }
@@ -126,60 +119,43 @@ export function trackEvent<Name extends AnalyticsEventName>(
 
   try {
     // Extract properties from args (undefined if not provided)
-
     const properties = args[0] || {};
 
     // Sanitize and enrich properties
-
     const sanitized = sanitizeProperties(properties);
-
     const enriched = withUserContext(sanitized);
 
     // Client-side tracking
-
     if (typeof window !== "undefined") {
       try {
         trackClient(name, enriched);
-
         addBreadcrumb("success");
       } catch (error) {
         addBreadcrumb("error", error);
-
         console.warn("[Telemetry] Client transport failed:", error);
       }
-
       return;
     }
 
-    // Server-side tracking (fire-and-forget)
-
-    loadServerTrack()
-      .then((track) => {
-        if (track) {
-          track(name, enriched);
-
-          addBreadcrumb("success");
-        }
-      })
-
-      .catch((error) => {
-        addBreadcrumb("error", error);
-
-        console.warn("[Telemetry] Server transport failed:", error);
-      });
+    // Server-side tracking
+    try {
+      const track = await loadServerTrack();
+      if (track) {
+        await track(name, enriched);
+        addBreadcrumb("success");
+      }
+    } catch (error) {
+      addBreadcrumb("error", error);
+      console.warn("[Telemetry] Server transport failed:", error);
+    }
   } catch (error) {
     // Catch sanitization or context errors
-
     if (isDev) console.warn("[Telemetry] trackEvent processing failed:", error);
-
     if (isSentryEnabled()) {
       Sentry.addBreadcrumb({
         category: "analytics",
-
         message: "analytics_processing_failed",
-
         level: "warning",
-
         data: { name, error: (error as Error).message },
       });
     }

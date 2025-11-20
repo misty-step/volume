@@ -7,6 +7,7 @@ import {
   validateExerciseName,
 } from "./lib/validate";
 import { classifyExercise } from "./ai/openai";
+import { instrumentConvexMutation } from "../src/lib/analytics/instrumentation/instrumentConvex";
 
 /**
  * Create a new exercise (action-based)
@@ -78,56 +79,70 @@ export const createExerciseInternal = internalMutation({
     name: v.string(),
     muscleGroups: v.array(v.string()),
   },
-  handler: async (ctx, args) => {
-    // Check for duplicate (including soft-deleted) - case-insensitive
-    const allUserExercises = await ctx.db
-      .query("exercises")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .collect();
+  handler: instrumentConvexMutation(
+    async (ctx, args) => {
+      // Check for duplicate (including soft-deleted) - case-insensitive
+      const allUserExercises = await ctx.db
+        .query("exercises")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .collect();
 
-    const existing = allUserExercises.find(
-      (e) => e.name.toLowerCase() === args.name.toLowerCase()
-    );
+      const existing = allUserExercises.find(
+        (e) => e.name.toLowerCase() === args.name.toLowerCase()
+      );
 
-    if (existing) {
-      // If soft-deleted, restore it instead of creating new
-      if (existing.deletedAt !== undefined) {
-        // Defensive check: Verify no active duplicate exists before restoring
-        // (protects against DB corruption or manual state manipulation)
-        const activeDuplicate = allUserExercises.find(
-          (e) =>
-            e._id !== existing._id &&
-            e.name.toLowerCase() === args.name.toLowerCase() &&
-            e.deletedAt === undefined
-        );
+      if (existing) {
+        // If soft-deleted, restore it instead of creating new
+        if (existing.deletedAt !== undefined) {
+          // Defensive check: Verify no active duplicate exists before restoring
+          // (protects against DB corruption or manual state manipulation)
+          const activeDuplicate = allUserExercises.find(
+            (e) =>
+              e._id !== existing._id &&
+              e.name.toLowerCase() === args.name.toLowerCase() &&
+              e.deletedAt === undefined
+          );
 
-        if (activeDuplicate) {
-          throw new Error("Exercise with this name already exists");
+          if (activeDuplicate) {
+            throw new Error("Exercise with this name already exists");
+          }
+
+          // Restore with updated muscle groups
+          await ctx.db.patch(existing._id, {
+            deletedAt: undefined,
+            muscleGroups: args.muscleGroups,
+          });
+
+          return existing._id; // Return restored exercise ID
         }
 
-        // Restore with updated muscle groups
-        await ctx.db.patch(existing._id, {
-          deletedAt: undefined,
-          muscleGroups: args.muscleGroups,
-        });
-
-        return existing._id; // Return restored exercise ID
+        // Active duplicate - still an error
+        throw new Error("Exercise with this name already exists");
       }
 
-      // Active duplicate - still an error
-      throw new Error("Exercise with this name already exists");
+      // No existing record - create new
+      const exerciseId = await ctx.db.insert("exercises", {
+        userId: args.userId,
+        name: args.name,
+        muscleGroups: args.muscleGroups,
+        createdAt: Date.now(),
+      });
+
+      return exerciseId;
+    },
+    {
+      eventsOnSuccess: (args, result) => [
+        {
+          name: "Exercise Created",
+          props: {
+            exerciseId: result,
+            userId: args.userId,
+            source: "manual", // Default source, could be refined if passed in args
+          },
+        },
+      ],
     }
-
-    // No existing record - create new
-    const exerciseId = await ctx.db.insert("exercises", {
-      userId: args.userId,
-      name: args.name,
-      muscleGroups: args.muscleGroups,
-      createdAt: Date.now(),
-    });
-
-    return exerciseId;
-  },
+  ),
 });
 
 // List all exercises for the current user
@@ -228,17 +243,33 @@ export const deleteExercise = mutation({
   args: {
     id: v.id("exercises"),
   },
-  handler: async (ctx, args) => {
-    const identity = await requireAuth(ctx);
+  handler: instrumentConvexMutation(
+    async (ctx, args) => {
+      const identity = await requireAuth(ctx);
 
-    const exercise = await ctx.db.get(args.id);
-    requireOwnership(exercise, identity.subject, "exercise");
+      const exercise = await ctx.db.get(args.id);
+      requireOwnership(exercise, identity.subject, "exercise");
 
-    // Soft delete: Set deletedAt timestamp instead of removing record
-    await ctx.db.patch(args.id, {
-      deletedAt: Date.now(),
-    });
-  },
+      // Soft delete: Set deletedAt timestamp instead of removing record
+      await ctx.db.patch(args.id, {
+        deletedAt: Date.now(),
+      });
+
+      // Return identity for tracking usage
+      return identity.subject;
+    },
+    {
+      eventsOnSuccess: (args, userId) => [
+        {
+          name: "Exercise Deleted",
+          props: {
+            exerciseId: args.id,
+            userId: userId,
+          },
+        },
+      ],
+    }
+  ),
 });
 
 // Restore a soft-deleted exercise
