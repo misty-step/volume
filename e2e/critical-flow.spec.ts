@@ -6,7 +6,11 @@ import { enableAnalyticsStub } from "@/lib/analytics/testkit/playwright";
 // To run them, you need to set up Playwright authentication reuse or mock the auth provider.
 // See: https://playwright.dev/docs/auth
 
-test("Critical Path: Log a Set emits analytics (stubbed)", async ({ page }) => {
+// TODO: Enable after Playwright auth setup (see BACKLOG.md:238-246)
+// Requires: Clerk test user credentials + auth-setup.ts implementation
+test.skip("Critical Path: Log a Set emits analytics (stubbed)", async ({
+  page,
+}) => {
   await enableAnalyticsStub(page);
   // 1. Start at dashboard (assumes logged in)
   await page.goto("/today");
