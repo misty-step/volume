@@ -49,8 +49,8 @@
   4. Add basic type scaffolding (interfaces per DESIGN.md) without implementation logic yet.
 
   Success Criteria:
-  - [ ] New files compile (no unused vars) and lint clean.
-  - [ ] All existing imports of `@/lib/analytics` still type-check (stubs may throw `NotImplemented`).
+  - [x] New files compile (no unused vars) and lint clean.
+  - [x] All existing imports of `@/lib/analytics` still type-check (stubs may throw `NotImplemented`).
 
   Tests:
   - Typecheck to ensure barrel works.
@@ -59,7 +59,7 @@
   Estimate: 45m
   ```
 
-- [ ] Implement EventCatalog + lint script
+- [x] Implement EventCatalog + lint script
 
   ```
   Files:
@@ -77,9 +77,9 @@
   4. Write Vitest verifying definitions include required fields and metadata.
 
   Success Criteria:
-  - [ ] TypeScript enforces required props for catalog entries.
-  - [ ] Lint script fails when docs list missing event.
-  - [ ] Tests cover at least one valid + invalid lookup.
+  - [x] TypeScript enforces required props for catalog entries.
+  - [x] Lint script fails when docs list missing event.
+  - [x] Tests cover at least one valid + invalid lookup.
 
   Tests:
   - Unit: `events.test.ts` to assert metadata + schema shape.

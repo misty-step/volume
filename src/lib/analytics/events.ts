@@ -59,5 +59,79 @@ export type AnalyticsEventName = keyof AnalyticsEventDefinitions;
 export type AnalyticsEventProperties<Name extends AnalyticsEventName> =
   AnalyticsEventDefinitions[Name] & Record<string, string | number | boolean>;
 
-// TODO: Implement EventDefinitions metadata map as per DESIGN.md
-// export const EventDefinitions: Record<AnalyticsEventName, EventMeta> = ...
+export type EventMeta = {
+  description: string;
+  // We use string[] here because extracting keys at runtime from interface is hard,
+  // so we enforce it via tests/linting against the interface.
+  required: readonly string[];
+  piiFields?: readonly string[];
+  owner: "growth" | "product" | "platform";
+  rollout?: "beta" | "ga";
+};
+
+/**
+ * Runtime metadata for events.
+ *
+ * Used for documentation generation, linting, and runtime validation (dev mode).
+ */
+export const EventDefinitions: Record<AnalyticsEventName, EventMeta> = {
+  "Exercise Created": {
+    description: "User creates a new custom exercise",
+    required: ["exerciseId"],
+    piiFields: ["userId"],
+    owner: "product",
+    rollout: "ga",
+  },
+  "Exercise Deleted": {
+    description: "User deletes an exercise",
+    required: ["exerciseId"],
+    piiFields: ["userId"],
+    owner: "product",
+    rollout: "ga",
+  },
+  "Set Logged": {
+    description: "User logs a set for an exercise",
+    required: ["setId", "exerciseId", "reps"],
+    piiFields: ["userId"],
+    owner: "product",
+    rollout: "ga",
+  },
+  "Workout Session Started": {
+    description: "User begins a new workout session",
+    required: ["sessionId"],
+    piiFields: ["userId"],
+    owner: "product",
+    rollout: "ga",
+  },
+  "Workout Session Completed": {
+    description: "User finishes a workout session",
+    required: ["sessionId", "durationMs", "setCount"],
+    piiFields: ["userId"],
+    owner: "product",
+    rollout: "ga",
+  },
+  "Marketing Page View": {
+    description: "Visitor views a marketing page",
+    required: ["path"],
+    owner: "growth",
+    rollout: "ga",
+  },
+  "Marketing CTA Click": {
+    description: "Visitor clicks a Call to Action button",
+    required: ["placement", "label"],
+    owner: "growth",
+    rollout: "ga",
+  },
+  "Marketing FAQ Toggle": {
+    description: "Visitor expands or collapses an FAQ item",
+    required: ["question", "isOpen"],
+    owner: "growth",
+    rollout: "ga",
+  },
+  "Marketing Nav Click": {
+    description: "Visitor clicks a navigation link",
+    required: ["target", "device"],
+    owner: "growth",
+    rollout: "ga",
+  },
+};
