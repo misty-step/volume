@@ -1,5 +1,6 @@
-import { describe, it, beforeEach, afterEach, expect } from "vitest";
+import { describe, it, beforeEach, afterEach, expect, vi } from "vitest";
 import { trackEvent, reportError } from "@/lib/analytics";
+import * as Sentry from "@sentry/nextjs";
 import {
   installAnalyticsMock,
   teardownAnalyticsMock,
@@ -9,8 +10,16 @@ import {
   attachAnalyticsStubToWindow,
 } from "../testkit";
 
+// Mock Sentry at module level for ESM compatibility
+vi.mock("@sentry/nextjs", () => ({
+  addBreadcrumb: vi.fn(),
+  captureException: vi.fn(() => "mock-sentry-id"),
+  setUser: vi.fn(),
+}));
+
 describe("analytics testkit", () => {
   beforeEach(() => {
+    vi.resetAllMocks();
     process.env.NEXT_PUBLIC_ENABLE_ANALYTICS = "true";
     installAnalyticsMock();
   });
@@ -47,9 +56,10 @@ describe("analytics testkit", () => {
     const error = new Error("boom");
     reportError(error, { foo: "bar" });
 
-    expect(mockAnalyticsState.errors).toHaveLength(1);
-    expect(mockAnalyticsState.errors[0].error).toBe(error);
-    expect(mockAnalyticsState.errors[0].context).toMatchObject({ foo: "bar" });
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      error,
+      expect.objectContaining({ extra: { foo: "bar" } })
+    );
   });
 
   it("throws when expected event is missing", () => {

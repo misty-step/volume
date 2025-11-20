@@ -46,7 +46,7 @@ export function instrumentConvexMutation<Args, Return>(
       args: Args,
       error: any
     ) => { name: AnalyticsEventName; props?: any }[];
-  }
+  } = {}
 ) {
   return async (ctx: MutationCtx, args: Args): Promise<Return> => {
     try {

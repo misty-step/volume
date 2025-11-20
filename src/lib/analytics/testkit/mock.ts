@@ -38,9 +38,9 @@ export function installAnalyticsMock() {
   resetAnalyticsState();
 
   vi.spyOn(clientTransport, "trackClient").mockImplementation(
-    (name: AnalyticsEventName, props: Record<string, unknown>) => {
+    (name: string, props: Record<string, string | number | boolean> = {}) => {
       mockAnalyticsState.events.push({
-        name,
+        name: name as AnalyticsEventName,
         props,
         runtime: "client",
       });
@@ -49,10 +49,16 @@ export function installAnalyticsMock() {
 
   vi.spyOn(serverTransport, "loadServerTrack").mockImplementation(
     async () =>
-      async (name: AnalyticsEventName, props: Record<string, unknown>) => {
+      async (
+        eventName: string,
+        properties?: Record<
+          string,
+          string | number | boolean | null | string[] | number[]
+        >
+      ) => {
         mockAnalyticsState.events.push({
-          name,
-          props,
+          name: eventName as AnalyticsEventName,
+          props: properties || {},
           runtime: "server",
         });
       }
@@ -60,18 +66,9 @@ export function installAnalyticsMock() {
 
   vi.spyOn(sentryTransport, "isSentryEnabled").mockReturnValue(true);
 
-  vi.spyOn(Sentry, "captureException").mockImplementation(
-    (error: unknown, options?: { extra?: Record<string, unknown> }) => {
-      mockAnalyticsState.errors.push({
-        error,
-        context: options?.extra,
-      });
-      return "mock-sentry-id" as any;
-    }
-  );
-
-  vi.spyOn(Sentry, "addBreadcrumb").mockImplementation(() => {});
-  vi.spyOn(Sentry, "setUser").mockImplementation(() => {});
+  // Note: Sentry must be mocked at module level in ESM (vi.mock('@sentry/nextjs'))
+  // Attempting to spy on Sentry exports will fail with "Module namespace is not configurable"
+  // Tests should mock Sentry themselves and use mockAnalyticsState.errors if needed
 
   return mockAnalyticsState;
 }

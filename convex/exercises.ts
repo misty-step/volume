@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { action, internalMutation, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import {
   requireAuth,
   requireOwnership,
@@ -80,7 +81,10 @@ export const createExerciseInternal = internalMutation({
     muscleGroups: v.array(v.string()),
   },
   handler: instrumentConvexMutation(
-    async (ctx, args) => {
+    async (
+      ctx,
+      args: { userId: string; name: string; muscleGroups: string[] }
+    ) => {
       // Check for duplicate (including soft-deleted) - case-insensitive
       const allUserExercises = await ctx.db
         .query("exercises")
@@ -244,7 +248,7 @@ export const deleteExercise = mutation({
     id: v.id("exercises"),
   },
   handler: instrumentConvexMutation(
-    async (ctx, args) => {
+    async (ctx, args: { id: Id<"exercises"> }) => {
       const identity = await requireAuth(ctx);
 
       const exercise = await ctx.db.get(args.id);

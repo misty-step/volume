@@ -24,22 +24,20 @@ vi.mock("../transports/sentry", () => ({
 }));
 
 describe("TransportRouter", () => {
-  const originalEnv = process.env;
-
   beforeEach(() => {
     vi.resetAllMocks();
-    process.env = { ...originalEnv };
-    process.env.NODE_ENV = "production"; // Enable by default logic
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_ENABLE_ANALYTICS", "true"); // Force enable in tests
     (isSentryEnabled as any).mockReturnValue(true);
   });
 
   afterEach(() => {
-    process.env = originalEnv;
+    vi.unstubAllEnvs();
   });
 
   describe("trackEvent", () => {
     it("should not track if disabled via env", () => {
-      process.env.NEXT_PUBLIC_DISABLE_ANALYTICS = "true";
+      vi.stubEnv("NEXT_PUBLIC_DISABLE_ANALYTICS", "true");
       trackEvent("Marketing Page View", { path: "/" });
       expect(trackClient).not.toHaveBeenCalled();
     });
