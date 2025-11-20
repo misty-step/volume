@@ -144,7 +144,7 @@
   Estimate: 1.5h
   ```
 
-- [ ] Implement TransportRouter + adapters
+- [x] Implement TransportRouter + adapters
 
   ```
   Files:
@@ -165,9 +165,9 @@
   6. Tests: mock adapters, assert sanitization + user context integration + error swallow.
 
   Success Criteria:
-  - [ ] `trackEvent` works client + server (tested via environment mocking).
-  - [ ] `reportError` redacts emails in context.
-  - [ ] Breadcrumb logged on failures.
+  - [x] `trackEvent` works client + server (tested via environment mocking).
+  - [x] `reportError` redacts emails in context.
+  - [x] Breadcrumb logged on failures.
 
   Tests:
   - Unit: router tests simulating both runtimes.
