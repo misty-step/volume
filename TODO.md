@@ -343,7 +343,7 @@
   Estimate: 45m
   ```
 
-- [ ] Update docs + onboarding
+- [~] Update docs + onboarding
 
   ```
   Files:

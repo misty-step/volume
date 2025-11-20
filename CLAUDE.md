@@ -78,12 +78,16 @@ pnpm test --run        # Run once without watch mode
 
 ## Observability Stack
 
-Volume uses Vercel Analytics for product metrics and Sentry for error tracking.
+Volume uses Vercel Analytics for product metrics and Sentry for error tracking. All code should route through `@/lib/analytics` (typed catalog + sanitizer) rather than calling providers directly.
 
 ### Architecture
 
-- **lib/analytics.ts**: Centralized API for all tracking (client + server)
-- **lib/sentry.ts**: Configuration factory with PII scrubbing
+- **lib/analytics.ts**: Barrel re-export for events/router/context
+- **lib/analytics/router.ts**: Facade: `trackEvent`, `reportError`
+- **lib/analytics/events.ts**: Event catalog (types + metadata)
+- **lib/analytics/sanitizer.ts**: PII scrubbing + size/UTF guards
+- **lib/analytics/instrumentation/**: Clerk hook + server wrappers
+- **lib/analytics/testkit/**: Mocks + Playwright stub helper
 - **components/analytics-wrapper.tsx**: Client-side analytics with URL filtering
 
 ### Key Features
@@ -93,6 +97,7 @@ Volume uses Vercel Analytics for product metrics and Sentry for error tracking.
 - User context enrichment (automatic userId attachment)
 - Unified client/server API (same code works everywhere)
 - Environment-aware (auto-disables in dev/test)
+- Playwright-friendly stub so E2E never hits real analytics
 
 ### Usage Examples
 
@@ -137,6 +142,23 @@ setUserContext(user.id, { plan: "pro" });
 clearUserContext();
 ```
 
+**Playwright Stub (E2E):**
+
+```typescript
+import { enableAnalyticsStub } from "@/lib/analytics/testkit/playwright";
+
+test("captures marketing view", async ({ page }) => {
+  await enableAnalyticsStub(page);
+  await page.goto("/");
+  const events = await page.evaluate(
+    () => (window as any).__ANALYTICS__?.state?.events ?? []
+  );
+  expect(
+    events.some((e: any) => e.name === "Marketing Page View")
+  ).toBeTruthy();
+});
+```
+
 ### Privacy Guarantees
 
 - All emails automatically redacted: `user@example.com` → `[EMAIL_REDACTED]`
@@ -146,7 +168,7 @@ clearUserContext();
 
 ### Adding New Events
 
-1. Add to `AnalyticsEventDefinitions` in lib/analytics.ts
+1. Add to `AnalyticsEventDefinitions` in `src/lib/analytics/events.ts`
 2. Define required/optional properties
 3. Use TypeScript to enforce at call sites
 
@@ -234,6 +256,8 @@ GET `/api/health` returns JSON health status for uptime monitoring:
   }
 }
 ```
+
+- **Analytics self-test**: `/test-analytics` (dev-only) shows client/server/Sentry status cards. `/api/test-error` returns 404 outside dev or when `x-preview-mode: true`.
 
 - Returns 200 when healthy, 503 when unhealthy
 - Excluded from Clerk authentication (public route)
