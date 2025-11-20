@@ -11,7 +11,11 @@ import { getDeploymentEnvironment } from "@/lib/environment";
  *   /api/test-error?type=pii     - Test PII redaction
  */
 export async function GET(request: Request) {
-  if (getDeploymentEnvironment() !== "development") {
+  const envOverrideHeader = request.headers.get("x-preview-mode");
+  const env =
+    envOverrideHeader === "true" ? "preview" : getDeploymentEnvironment();
+
+  if (env !== "development") {
     return new Response(null, { status: 404 });
   }
 

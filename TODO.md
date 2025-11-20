@@ -287,7 +287,7 @@
   Estimate: 1h
   ```
 
-- [ ] Extend Playwright + Vitest coverage for telemetry
+- [x] Extend Playwright + Vitest coverage for telemetry
 
   ```
   Files:

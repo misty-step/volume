@@ -7,3 +7,4 @@ export {
 } from "./mock";
 
 export { expectAnalyticsEvent } from "./expect";
+export { enableAnalyticsStub } from "./playwright";
