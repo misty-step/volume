@@ -379,25 +379,3 @@ export const getRecentPRs = query({
     return prs;
   },
 });
-
-import { internalAction } from "./_generated/server";
-import { trackEvent } from "../src/lib/analytics/router";
-import { AnalyticsEventName } from "../src/lib/analytics/events";
-
-/**
- * Internal action to track analytics events from mutations.
- *
- * Mutations cannot perform side effects (fetch), so they schedule this action
- * to send the event to Vercel/Sentry.
- */
-export const track = internalAction({
-  args: {
-    name: v.string(),
-    properties: v.any(), // Dynamic properties bag
-  },
-  handler: async (_ctx, args) => {
-    // We cast to any here because the strict types are enforced at the call site
-    // (via instrumentConvexMutation or explicit calls)
-    await trackEvent(args.name as AnalyticsEventName, args.properties);
-  },
-});
