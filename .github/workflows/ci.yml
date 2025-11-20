@@ -99,6 +99,12 @@ jobs:
           maxColorRange: 100
           minColorRange: 0
 
+      - name: Validate Convex functions
+        run: npx convex dev --once --typecheck enable
+        env:
+          # Use dev deployment for validation (no actual deploy)
+          CONVEX_DEPLOYMENT: ${{ secrets.CONVEX_DEV_DEPLOYMENT || 'dev:curious-salamander-943' }}
+
       - name: Build
         run: pnpm build
         env:

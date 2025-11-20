@@ -2,3 +2,12 @@
 . "$(dirname "$0")/_/husky.sh"
 
 pnpm test:telemetry
+
+# Validate Convex functions can bundle (catches Node.js import errors)
+echo "🔍 Validating Convex functions..."
+npx convex dev --once --typecheck enable || {
+  echo "❌ Convex validation failed - likely importing Node.js modules"
+  echo "See: https://docs.convex.dev/functions/runtimes"
+  exit 1
+}
+echo "✅ Convex validation passed"
