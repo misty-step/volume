@@ -232,7 +232,7 @@
   Estimate: 1.5h
   ```
 
-- [ ] Build TelemetryTestkit utilities
+- [x] Build TelemetryTestkit utilities
 
   ```
   Files:
