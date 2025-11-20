@@ -258,7 +258,7 @@
   Estimate: 1h
   ```
 
-- [ ] Upgrade `/test-analytics` + `/api/test-error` guards
+- [x] Upgrade `/test-analytics` + `/api/test-error` guards
 
   ```
   Files:

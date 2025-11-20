@@ -1,4 +1,5 @@
 import { reportError } from "@/lib/analytics";
+import { getDeploymentEnvironment } from "@/lib/environment";
 
 /**
  * Temporary API route for testing server-side Sentry error capture.
@@ -10,6 +11,10 @@ import { reportError } from "@/lib/analytics";
  *   /api/test-error?type=pii     - Test PII redaction
  */
 export async function GET(request: Request) {
+  if (getDeploymentEnvironment() !== "development") {
+    return new Response(null, { status: 404 });
+  }
+
   const type = new URL(request.url).searchParams.get("type");
 
   if (type === "throw") {
