@@ -115,7 +115,7 @@
   Estimate: 1.5h
   ```
 
-- [ ] Extract ContextManager + Clerk hook
+- [x] Extract ContextManager + Clerk hook
 
   ```
   Files:
@@ -134,8 +134,8 @@
   4. Tests: server guard throws, client set/clear flows, metadata sanitization.
 
   Success Criteria:
-  - [ ] Layout renders hook only on client (`"use client"` boundary) and does not break SSR.
-  - [ ] Tests verify server guard message + Sentry `setUser` invoked (mocked).
+  - [x] Layout renders hook only on client (`"use client"` boundary) and does not break SSR.
+  - [x] Tests verify server guard message + Sentry `setUser` invoked (mocked).
 
   Tests:
   - Unit: context guard tests + hook behavior via React Testing Library.

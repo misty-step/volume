@@ -126,4 +126,15 @@ export function withUserContext(
   return enriched;
 }
 
-// TODO: Add getUserContextForTests() per DESIGN.md
+/**
+ * Get current user context for testing assertions.
+ *
+ * @internal
+ * @returns The current user context or null
+ */
+export function getUserContextForTests() {
+  if (process.env.NODE_ENV === "test") {
+    return currentUserContext;
+  }
+  return null;
+}
