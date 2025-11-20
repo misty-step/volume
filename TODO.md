@@ -89,7 +89,7 @@
   Estimate: 1h
   ```
 
-- [ ] Build SanitizationEngine with size/UTF guards
+- [x] Build SanitizationEngine with size/UTF guards
 
   ```
   Files:
@@ -105,8 +105,8 @@
   4. Write Vitest covering nested objects, arrays, invalid UTF, large payloads.
 
   Success Criteria:
-  - [ ] Tests prove sanitizer handles circular refs + emoji + oversize payloads.
-  - [ ] Function exports typed as returning `Record<string, string|number|boolean>`.
+  - [x] Tests prove sanitizer handles circular refs + emoji + oversize payloads.
+  - [x] Function exports typed as returning `Record<string, string|number|boolean>`.
 
   Tests:
   - Unit: `sanitizer.test.ts` for all branches.
