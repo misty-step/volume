@@ -18,6 +18,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage --run",
+    "test:telemetry": "vitest --config vitest.telemetry.config.ts --run --coverage",
     "test:e2e": "playwright test",
     "sync:prod": "./scripts/pull-prod-data.sh"
   },

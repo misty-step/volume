@@ -37,6 +37,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Telemetry tests
+        run: pnpm test:telemetry
+
       - name: Test with coverage
         run: pnpm test --run --coverage
 

@@ -315,7 +315,7 @@
   Estimate: 1.5h
   ```
 
-- [ ] Wire `pnpm test:telemetry` + CI thresholds
+- [x] Wire `pnpm test:telemetry` + CI thresholds
 
   ```
   Files:
