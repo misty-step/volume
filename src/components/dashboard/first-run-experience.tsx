@@ -6,6 +6,7 @@ import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { handleMutationError } from "@/lib/error-handler";
+import { trackEvent } from "@/lib/analytics";
 
 interface FirstRunExperienceProps {
   onExerciseCreated: (exerciseId: Id<"exercises">) => void;
@@ -39,6 +40,10 @@ export function FirstRunExperience({
     setIsCreating(true);
     try {
       const exerciseId = await createExercise({ name: exerciseName.trim() });
+      void trackEvent("Exercise Created", {
+        exerciseId,
+        source: "manual",
+      });
       onExerciseCreated(exerciseId);
     } catch (error) {
       handleMutationError(error, "Create Exercise");

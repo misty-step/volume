@@ -204,7 +204,7 @@
   Estimate: 1.5h
   ```
 
-- [ ] Instrument UI flows via hook + components
+- [x] Instrument UI flows via hook + components
 
   ```
   Files:
