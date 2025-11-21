@@ -78,6 +78,7 @@ export function ExerciseSetGroup({
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="w-full text-left px-4 py-4 bg-background hover:bg-concrete-gray/10 transition-colors"
+          data-testid={`exercise-group-${exercise._id}`}
         >
           <div className="space-y-2">
             {/* Exercise Name Row */}
@@ -111,6 +112,7 @@ export function ExerciseSetGroup({
                 <div
                   key={set._id}
                   className="px-4 py-4 space-y-3 hover:bg-concrete-gray/5 transition-colors"
+                  data-testid={`exercise-set-item-${set._id}`}
                 >
                   {/* Row 1: Reps/Duration + Weight (Primary Data) - Grid for alignment */}
                   <div className="grid grid-cols-[auto_1fr] gap-x-8 font-mono text-lg">
@@ -168,6 +170,7 @@ export function ExerciseSetGroup({
                           disabled={isDeleting}
                           aria-label="Repeat set"
                           className="h-8 w-8 p-0"
+                          data-testid={`repeat-set-btn-${set._id}`}
                         >
                           <RotateCcw className="w-4 h-4" />
                         </BrutalistButton>
@@ -179,6 +182,7 @@ export function ExerciseSetGroup({
                         disabled={isDeleting}
                         aria-label="Delete set"
                         className="h-8 w-8 p-0 text-danger-red hover:text-danger-red"
+                        data-testid={`delete-set-btn-${set._id}`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </BrutalistButton>
@@ -205,7 +209,10 @@ export function ExerciseSetGroup({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              data-testid="confirm-delete-btn"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

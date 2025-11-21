@@ -63,10 +63,14 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
         rounded-lg hover:shadow-md transition-all
         ${isDeleting ? "opacity-50 pointer-events-none" : ""}
       `}
+      data-testid={`set-card-${set._id}`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <h4 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
+          <h4
+            className="font-semibold text-lg text-gray-900 dark:text-gray-100"
+            data-testid={`set-exercise-name-${set._id}`}
+          >
             {exercise?.name || "Unknown exercise"}
           </h4>
           <div className="mt-1 flex items-center gap-3 text-gray-600 dark:text-gray-300">
@@ -98,6 +102,7 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
             aria-label="Repeat this set"
             title="Repeat this set"
             type="button"
+            data-testid={`set-repeat-btn-${set._id}`}
           >
             <RotateCcw className="h-5 w-5" />
           </button>
@@ -107,6 +112,7 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
             aria-label="Delete this set"
             title="Delete this set"
             type="button"
+            data-testid={`set-delete-btn-${set._id}`}
           >
             <Trash2 className="h-5 w-5" />
           </button>
@@ -124,7 +130,10 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              data-testid="confirm-delete-btn"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

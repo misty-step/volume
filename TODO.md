@@ -82,7 +82,7 @@ Critical Path: 6h 15m
   - Estimate: 1h
   - Depends: Wire Playwright config to storageState and test env toggles
 
-- [ ] Add stable data-testid hooks to critical UI
+- [x] Add stable data-testid hooks to critical UI
   - Files: `src/components/dashboard/quick-log-form.tsx`, `src/components/dashboard/exercise-set-group.tsx`, `src/components/dashboard/set-card.tsx`, `src/components/dashboard/Dashboard.tsx` (if needed for selectors), any auth buttons in marketing page.
   - Goal: Replace brittle text selectors with testids for inputs/buttons/toasts used in E2E.
   - Approach: add `data-testid` to exercise combobox, weight/reps inputs, submit, success toast container, create-exercise CTA, history entries; follow brutalist naming (kebab-case).

@@ -316,6 +316,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                                     !field.value && "text-muted-foreground"
                                   )}
                                   disabled={form.formState.isSubmitting}
+                                  data-testid="quick-log-exercise-select"
                                 >
                                   {selectedExercise?.name || "SELECT..."}
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -348,6 +349,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                                             FOCUS_DELAY_MS
                                           );
                                         }}
+                                        data-testid={`exercise-option-${exercise._id}`}
                                       >
                                         <Check
                                           className={cn(
@@ -368,6 +370,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                                         field.onChange("");
                                       }}
                                       className="border-t"
+                                      data-testid="quick-log-create-new"
                                     >
                                       + Create New
                                     </CommandItem>
@@ -411,6 +414,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                               placeholder="0"
                               className="w-full"
                               disabled={form.formState.isSubmitting}
+                              data-testid="quick-log-reps-input"
                             />
                           </FormControl>
                           <FormMessage />
@@ -439,6 +443,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                                   form.handleSubmit(onSubmit)();
                                 }
                               }}
+                              data-testid="quick-log-duration-input"
                             />
                           </FormControl>
                           <FormMessage />
@@ -476,6 +481,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                             placeholder="0"
                             className="w-full"
                             disabled={form.formState.isSubmitting}
+                            data-testid="quick-log-weight-input"
                           />
                         </FormControl>
                         <FormMessage />
@@ -493,6 +499,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                   size="lg"
                   className="w-full md:w-64"
                   disabled={form.formState.isSubmitting}
+                  data-testid="quick-log-submit-btn"
                 >
                   {form.formState.isSubmitting ? (
                     <>
