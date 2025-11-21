@@ -64,7 +64,7 @@ Critical Path: 6h 15m
   - Estimate: 45m
   - Depends: Implement Clerk global setup with API user provisioning
 
-- [ ] Add auth fixture helper for specs
+- [x] Add auth fixture helper for specs
   - Files: `e2e/auth-fixture.ts`
   - Goal: Hide Clerk/session handling behind deep module; provide authenticated `page`/helpers.
   - Approach: export test fixture wrapping Playwright `test` with storageState loaded; expose helper to reset user data (calls guarded Convex endpoint when configured).
