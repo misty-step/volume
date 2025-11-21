@@ -236,12 +236,14 @@ export const getEligibleUsersForDailyReports = internalQuery({
  * 24-hour windows for daily reports.
  *
  * Algorithm:
- * 1. Format current time as date string in user's timezone (e.g., "1/15/2025, 00:00:00")
- * 2. Format current time as date string in UTC
- * 3. Parse both strings back to timestamps to compute timezone offset
- * 4. Extract date components (year/month/day) from user's timezone
- * 5. Construct midnight timestamp by subtracting time-of-day and applying offset
- * 6. Subtract 24 hours for yesterday
+ * 1. Extract time components in user's timezone using Intl.DateTimeFormat
+ * 2. Calculate milliseconds elapsed since local midnight
+ * 3. Subtract from current UTC timestamp to get "today 00:00 in user's timezone"
+ * 4. Subtract 24 hours to get yesterday's midnight
+ *
+ * Note: Uses hourCycle: 'h23' to ensure hours are always 0-23. Without this,
+ * Intl.DateTimeFormat with hour12: false can return hour 24 at midnight for
+ * some locales (e.g., America/Los_Angeles), which would cause a 48-hour offset.
  *
  * @param timezone - IANA timezone string (e.g., "America/New_York", "Europe/Moscow")
  * @returns Unix timestamp (milliseconds) of yesterday's midnight in the user's timezone
@@ -265,6 +267,7 @@ function getPreviousDayStartInTimezone(timezone: string): number {
     minute: "2-digit",
     second: "2-digit",
     hour12: false,
+    hourCycle: "h23", // Force 0-23 range to prevent hour 24 at midnight
   });
 
   const parts = formatter.formatToParts(now);
