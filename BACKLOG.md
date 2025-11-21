@@ -25,24 +25,6 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Effort**: 10m | **Risk**: LOW
 **Acceptance**: `pnpm test:coverage` passes; CI unblocked.
 
-### [Testing] Set up Playwright E2E with Clerk testing
-
-**Files**: playwright.config.ts (new), e2e/ directory (new)
-**Perspectives**: architecture-guardian, user-experience-advocate
-**Impact**: Zero E2E tests. Critical user flows (logging workout, auth) untested. No smoke tests to catch regressions.
-**Fix**: Install @playwright/test + @clerk/testing. Configure with Clerk test credentials. Create e2e/ directory.
-**Effort**: 2h | **Risk**: LOW
-**Acceptance**: `pnpm exec playwright test` runs; Clerk auth works in tests.
-
-### [Testing] Create critical path E2E smoke tests
-
-**Files**: e2e/smoke.spec.ts (new), e2e/auth.spec.ts (new)
-**Perspectives**: user-experience-advocate, architecture-guardian
-**Impact**: No verification that app works end-to-end. Regressions only found by users.
-**Fix**: 5 smoke tests: homepage loads, log a set, create exercise, view history, auth flow (sign in/out).
-**Effort**: 4h | **Risk**: LOW
-**Acceptance**: All smoke tests pass; run in CI on merge.
-
 ### [Security] Fix backfill functions auth bypass
 
 **File**: convex/ai/reports.ts:849-851, 937-939
@@ -282,14 +264,6 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Approach**: Test form submission → mutation → PR detection → toast → history update.
 **Effort**: 3h | **Impact**: MEDIUM
 
-### [Testing] Add E2E tests to CI pipeline
-
-**File**: .github/workflows/ci.yml
-**Perspectives**: architecture-guardian
-**Why**: E2E tests exist but not enforced. Regressions can merge without E2E passing.
-**Approach**: Add Playwright job to CI, run on merge to main (not every PR for speed).
-**Effort**: 1h | **Impact**: MEDIUM
-
 ### [Testing] Document testing strategy
 
 **File**: CONTRIBUTING.md (new or update)
@@ -297,16 +271,6 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Why**: No documentation on what to test, testing philosophy, or patterns to follow.
 **Approach**: Document test pyramid, when to write E2E vs unit, mocking patterns, coverage expectations.
 **Effort**: 1h | **Impact**: MEDIUM
-
-### [Testing] Add Playwright authentication setup for Clerk
-
-**Files**: e2e/auth-setup.ts (new), e2e/critical-flow.spec.ts
-**Perspectives**: architecture-guardian, user-experience-advocate
-**Why**: E2E tests requiring authentication (critical-flow) are marked fixme. Can't test authenticated user flows like workout logging.
-**Approach**: Implement Clerk testing patterns from @clerk/testing, configure test user credentials, enable critical-flow spec.
-**Effort**: 2-3h | **Impact**: HIGH
-**Acceptance**: critical-flow.spec.ts passes; authenticated E2E flows testable.
-**Reference**: PR #34 review feedback
 
 ### [Testing] Add data-testid attributes for reliable E2E selectors
 

@@ -47,3 +47,7 @@ tsconfig.tsbuildinfo
 
 # clerk configuration (can include secrets)
 /.clerk/
+
+# Playwright auth
+e2e/.auth/*
+!e2e/.auth/README.md
