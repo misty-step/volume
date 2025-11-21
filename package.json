@@ -58,6 +58,7 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@clerk/testing": "^1.13.18",
     "@next/bundle-analyzer": "^15.5.4",
     "@playwright/test": "^1.56.1",
     "@sentry/cli": "^2.58.0",

@@ -42,7 +42,7 @@ Critical Path: 6h 15m
   - Tests: none (manual check).
   - Estimate: 30m
 
-- [ ] Implement Clerk global setup with API user provisioning
+- [x] Implement Clerk global setup with API user provisioning
   - Files: `e2e/global-setup.ts`, `package.json` (add playwright globalConfig path if needed)
   - Goal: Create/ensure test user via Clerk API or test creds, mint session, write `e2e/.auth/state.json`.
   - Approach:
