@@ -118,7 +118,7 @@ Critical Path: 6h 15m
   - Estimate: 45m
   - Depends: Document required env for E2E; Wire Playwright config to storageState and test env toggles
 
-- [ ] Post-implementation validation
+- [x] Post-implementation validation
   - Files: n/a (checklist)
   - Goal: Ensure quality gates and runtime budgets met.
   - Approach: run `pnpm lint`, `pnpm typecheck`, `pnpm test:e2e`; measure runtime; verify storageState ignored; confirm Convex reset guarded.
