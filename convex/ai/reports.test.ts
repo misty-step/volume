@@ -10,11 +10,6 @@
  * Note: The internal generateReport mutation is tested indirectly through
  * generateOnDemandReport. Full integration testing requires OpenAI API mocking
  * which is complex in convex-test environment.
- *
- * KNOWN ISSUE: Tests currently skip due to convex-test module resolution
- * challenges in subdirectories (convex/ai/). The test structure is correct
- * and would pass with proper module resolution. This is a known limitation
- * of convex-test@0.0.38 when testing modules in subdirectories.
  */
 
 import { convexTest } from "convex-test";
@@ -23,6 +18,10 @@ import schema from "../schema";
 import { api } from "../_generated/api";
 import type { TestConvex } from "convex-test";
 import type { Id } from "../_generated/dataModel";
+import * as aiReports from "./reports";
+import * as aiData from "./data";
+import * as aiGenerate from "./generate";
+import * as generatedApi from "../_generated/api";
 
 // Mock the OpenAI generateAnalysis function
 vi.mock("./openai", () => ({
@@ -43,7 +42,7 @@ vi.mock("./openai", () => ({
   }),
 }));
 
-describe.skip("AI Report Queries and Mutations", () => {
+describe("AI Report Queries and Mutations", () => {
   let t: TestConvex<typeof schema>;
   const user1 = "user_1_test";
   const user2 = "user_2_test";
@@ -55,8 +54,13 @@ describe.skip("AI Report Queries and Mutations", () => {
 
   beforeEach(async () => {
     // Fresh test environment for each test
-    // Note: Since we're in convex/ai/ subdirectory, we need to glob from parent
-    t = convexTest(schema);
+    // Explicitly load modules to workaround convex-test globbing issues in subdirectories
+    t = convexTest(schema, {
+      "ai/reports": () => Promise.resolve(aiReports),
+      "ai/data": () => Promise.resolve(aiData),
+      "ai/generate": () => Promise.resolve(aiGenerate),
+      "_generated/api": () => Promise.resolve(generatedApi),
+    });
 
     // Set OPENAI_API_KEY for tests
     process.env.OPENAI_API_KEY = "test-key-12345";
@@ -243,7 +247,7 @@ describe.skip("AI Report Queries and Mutations", () => {
       await expect(
         t
           .withIdentity({ subject: user1 })
-          .mutation(aiApi.ai.reports.generateOnDemandReport, {})
+          .action(aiApi.ai.reports.generateOnDemandReport, {})
       ).rejects.toThrow("Daily limit reached (5/5)");
     });
 
@@ -264,7 +268,7 @@ describe.skip("AI Report Queries and Mutations", () => {
 
     test("should throw error when not authenticated", async () => {
       await expect(
-        t.mutation(aiApi.ai.reports.generateOnDemandReport, {})
+        t.action(aiApi.ai.reports.generateOnDemandReport, {})
       ).rejects.toThrow("You must be signed in");
     });
 
@@ -280,7 +284,7 @@ describe.skip("AI Report Queries and Mutations", () => {
       await expect(
         t
           .withIdentity({ subject: user1 })
-          .mutation(aiApi.ai.reports.generateOnDemandReport, {})
+          .action(aiApi.ai.reports.generateOnDemandReport, {})
       ).rejects.toThrow("Daily limit reached");
 
       // User 2 should have no reports and be under limit

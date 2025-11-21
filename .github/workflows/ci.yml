@@ -37,9 +37,6 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Telemetry tests
-        run: pnpm test:telemetry
-
       - name: Test with coverage
         run: pnpm test --run --coverage
 
@@ -98,9 +95,6 @@ jobs:
           valColorRange: ${{ steps.coverage.outputs.functions }}
           maxColorRange: 100
           minColorRange: 0
-
-      # Note: Convex validation happens in Build step via "npx convex deploy"
-      # Pre-push hook catches issues locally before CI
 
       - name: Build
         run: pnpm build

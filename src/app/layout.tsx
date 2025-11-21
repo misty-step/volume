@@ -8,7 +8,6 @@ import { WeightUnitProvider } from "@/contexts/WeightUnitContext";
 import { Toaster } from "sonner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AnalyticsWrapper } from "@/components/analytics-wrapper";
-import { AnalyticsUserProvider } from "./(app)/AnalyticsUserProvider";
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -73,7 +72,6 @@ export default function RootLayout({
           </ThemeProvider>
           <Toaster position="bottom-right" />
           <AnalyticsWrapper />
-          <AnalyticsUserProvider />
           <SpeedInsights />
         </body>
       </html>

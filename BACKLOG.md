@@ -7,6 +7,69 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 
 ## Now (Sprint-Ready, <2 weeks)
 
+### [Testing] Add tests for analytics event system
+
+**File**: src/lib/analytics.test.ts (expand existing)
+**Perspectives**: maintainability-maven, security-sentinel
+**Impact**: analytics.ts at 35.84% coverage. Type-safe event tracking, PII sanitization, user context management mostly untested.
+**Fix**: Tests for sanitizeEventProperties, trackEvent server/client paths, user context guards.
+**Effort**: 2h | **Risk**: MEDIUM
+**Acceptance**: analytics.ts > 70% coverage; server-side safety guards verified.
+
+### [Testing] Adjust coverage thresholds to realistic targets
+
+**File**: vitest.config.ts
+**Perspectives**: architecture-guardian
+**Impact**: Coverage thresholds (70%) failing in CI. Blocks quality gates. Current reality: 35.86% lines.
+**Fix**: Lower to 50% lines/statements, 60% functions/branches. Exclude presentation components. Gradually increase.
+**Effort**: 10m | **Risk**: LOW
+**Acceptance**: `pnpm test:coverage` passes; CI unblocked.
+
+### [Testing] Set up Playwright E2E with Clerk testing
+
+**Files**: playwright.config.ts (new), e2e/ directory (new)
+**Perspectives**: architecture-guardian, user-experience-advocate
+**Impact**: Zero E2E tests. Critical user flows (logging workout, auth) untested. No smoke tests to catch regressions.
+**Fix**: Install @playwright/test + @clerk/testing. Configure with Clerk test credentials. Create e2e/ directory.
+**Effort**: 2h | **Risk**: LOW
+**Acceptance**: `pnpm exec playwright test` runs; Clerk auth works in tests.
+
+### [Testing] Create critical path E2E smoke tests
+
+**Files**: e2e/smoke.spec.ts (new), e2e/auth.spec.ts (new)
+**Perspectives**: user-experience-advocate, architecture-guardian
+**Impact**: No verification that app works end-to-end. Regressions only found by users.
+**Fix**: 5 smoke tests: homepage loads, log a set, create exercise, view history, auth flow (sign in/out).
+**Effort**: 4h | **Risk**: LOW
+**Acceptance**: All smoke tests pass; run in CI on merge.
+
+### [Security] Fix backfill functions auth bypass
+
+**File**: convex/ai/reports.ts:849-851, 937-939
+**Perspectives**: security-sentinel, architecture-guardian
+**Impact**: `backfillWeeklyReports` and `backfillDailyReports` accept arbitrary `userId` parameter with no auth check. Attacker can generate reports for any user, burning OpenAI tokens and corrupting report history.
+**Fix**: Either convert to `internalAction` (admin-only) or add auth check verifying `userId === identity.subject`.
+**Effort**: 30m | **Risk**: MEDIUM
+**Acceptance**: Unauthenticated calls fail; authenticated calls only work for own userId.
+
+### [Security] Gate test-error route to non-production
+
+**File**: src/app/api/test-error/route.ts:1-35
+**Perspectives**: security-sentinel
+**Impact**: Test endpoint accessible in production allows triggering server errors, polluting Sentry with noise and wasting quota.
+**Fix**: Add `if (process.env.NODE_ENV === 'production') return new Response('Not found', { status: 404 });`
+**Effort**: 5m | **Risk**: MEDIUM
+**Acceptance**: Route returns 404 in production, works in development.
+
+### [Security] Update vulnerable dependencies
+
+**File**: package.json
+**Perspectives**: security-sentinel
+**Impact**: 3 CVEs in transitive dependencies - glob (command injection), vite (fs.deny bypass), js-yaml (prototype pollution).
+**Fix**: `pnpm update @vitejs/plugin-react eslint @vitest/coverage-v8`
+**Effort**: 15m + testing | **Risk**: MEDIUM
+**Acceptance**: `pnpm audit` shows no high/critical vulnerabilities.
+
 ### [Performance] Fix O(n) lookups in analytics queries
 
 **Files**: convex/analyticsFocus.ts:113, convex/analyticsRecovery.ts:161

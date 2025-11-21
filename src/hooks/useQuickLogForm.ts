@@ -9,7 +9,6 @@ import { handleMutationError } from "@/lib/error-handler";
 import { checkForPR } from "@/lib/pr-detection";
 import { showPRCelebration } from "@/components/dashboard/pr-celebration";
 import { Exercise } from "@/types/domain";
-import { trackEvent } from "@/lib/analytics";
 
 // Validation schema for quick log form
 // Supports both rep-based and duration-based exercises
@@ -83,16 +82,6 @@ export function useQuickLogForm({
         weight: values.weight,
         unit: values.weight ? values.unit : undefined,
         duration: values.duration,
-      });
-
-      // Emit analytics for set logging immediately after success
-      void trackEvent("Set Logged", {
-        setId,
-        exerciseId: values.exerciseId as Id<"exercises">,
-        reps: values.reps ?? 0,
-        ...(values.weight !== undefined ? { weight: values.weight } : {}),
-        ...(values.duration !== undefined ? { duration: values.duration } : {}),
-        ...(values.unit ? { unit: values.unit } : {}),
       });
 
       // Check for PR before showing success toast (only for rep-based exercises)

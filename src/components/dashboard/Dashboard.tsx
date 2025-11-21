@@ -2,7 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
-import { useMemo, useState, useRef, useEffect, useCallback } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import {
@@ -22,7 +22,6 @@ import { groupSetsByExercise } from "@/lib/exercise-grouping";
 import { sortExercisesByRecency } from "@/lib/exercise-sorting";
 import { getTodayRange } from "@/lib/date-utils";
 import type { Exercise, Set as WorkoutSet } from "@/types/domain";
-import { trackEvent } from "@/lib/analytics";
 
 export function Dashboard() {
   const { isLoaded: isClerkLoaded, userId } = useAuth();
@@ -30,15 +29,6 @@ export function Dashboard() {
   const [isHydrated, setIsHydrated] = useState(false);
   const formRef = useRef<QuickLogFormHandle>(null);
   const historyRef = useRef<HTMLDivElement>(null);
-  const sessionRef = useRef<{
-    id: string | null;
-    startTime: number;
-    setCount: number;
-  }>({
-    id: null,
-    startTime: 0,
-    setCount: 0,
-  });
   const { unit } = useWeightUnit();
 
   // Fetch data from Convex
@@ -119,20 +109,7 @@ export function Dashboard() {
   };
 
   // Handle set logged - scroll to history
-  const handleSetLogged = (_setId: Id<"sets">) => {
-    if (!sessionRef.current.id) {
-      const sessionId =
-        typeof crypto !== "undefined" && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `session-${Date.now()}`;
-      sessionRef.current.id = sessionId;
-      sessionRef.current.startTime = Date.now();
-      sessionRef.current.setCount = 0;
-      void trackEvent("Workout Session Started", { sessionId });
-    }
-
-    sessionRef.current.setCount += 1;
-
+  const handleSetLogged = () => {
     // 100ms delay ensures React finishes rendering the newly logged set
     // in the history section before scrolling to it
     setTimeout(() => {
@@ -147,29 +124,10 @@ export function Dashboard() {
   const handleUndo = async (setId: Id<"sets">) => {
     try {
       await deleteSet({ id: setId });
-      sessionRef.current.setCount = Math.max(
-        0,
-        sessionRef.current.setCount - 1
-      );
     } catch (error) {
       handleMutationError(error, "Undo Set");
     }
   };
-
-  const finalizeSession = useCallback(() => {
-    const { id, startTime, setCount } = sessionRef.current;
-    if (!id || setCount === 0) return;
-
-    const durationMs = Math.max(0, Date.now() - startTime);
-    void trackEvent("Workout Session Completed", {
-      sessionId: id,
-      durationMs,
-      setCount,
-    });
-  }, []);
-
-  // Finalize active workout session on unmount to capture duration + set count
-  useEffect(() => finalizeSession, [finalizeSession]);
 
   // Loading state - show skeleton until data is stable
   if (!isHydrated) {

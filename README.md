@@ -158,14 +158,6 @@ pnpm typecheck    # Run TypeScript checks
 pnpm lint         # Run ESLint
 ```
 
-### Telemetry / Analytics
-
-- Track events via `trackEvent` from `@/lib/analytics` (typed catalog in `src/lib/analytics/events.ts`).
-- Dev-only self-test at `/test-analytics` (404s in preview/prod) exercises client/server/Sentry paths.
-- `/api/test-error` is guarded; returns 404 outside development.
-- E2E uses an in-browser stub (`NEXT_PUBLIC_ANALYTICS_STUB=true`) so Vercel Analytics isn’t called during tests.
-- Focused suite: `pnpm test:telemetry` (≥85% lines/func coverage enforced for analytics files).
-
 ## MVP Features
 
 - ✅ User authentication (Clerk)

@@ -25,7 +25,6 @@ import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
 import { Exercise, Set } from "@/types/domain";
 import { EditMuscleGroupsDialog } from "./edit-muscle-groups-dialog";
-import { trackEvent } from "@/lib/analytics";
 
 interface ExerciseManagerProps {
   exercises: Exercise[];
@@ -88,9 +87,6 @@ export function ExerciseManager({ exercises, sets }: ExerciseManagerProps) {
 
     try {
       await deleteExercise({ id: exerciseToDelete._id });
-      void trackEvent("Exercise Deleted", {
-        exerciseId: exerciseToDelete._id,
-      });
       toast.success("Exercise deleted");
       setExerciseToDelete(null);
     } catch (error) {
