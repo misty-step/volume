@@ -198,6 +198,16 @@ fi
 unset SENTRY_ORG_SLUG
 echo
 
+# Test 9: Dev-only guard present on /api/test-error
+echo "Test 9: API guard present for /api/test-error"
+if rg -q "getDeploymentEnvironment" src/app/api/test-error/route.ts && rg -q "404" src/app/api/test-error/route.ts; then
+  echo "  ✓ Guard detected (getDeploymentEnvironment + 404)"
+else
+  echo "  ✗ Guard missing in api/test-error route"
+  exit 1
+fi
+echo
+
 # Test 9: DSN format validation
 echo "Test 9: DSN format validation"
 VALID_DSN="https://abc123@o123.ingest.sentry.io/456"
