@@ -78,12 +78,16 @@ pnpm test --run        # Run once without watch mode
 
 ## Observability Stack
 
-Volume uses Vercel Analytics for product metrics and Sentry for error tracking.
+Volume uses Vercel Analytics for product metrics and Sentry for error tracking. All code should route through `@/lib/analytics` (typed catalog + sanitizer) rather than calling providers directly.
 
 ### Architecture
 
-- **lib/analytics.ts**: Centralized API for all tracking (client + server)
-- **lib/sentry.ts**: Configuration factory with PII scrubbing
+- **lib/analytics.ts**: Barrel re-export for events/router/context
+- **lib/analytics/router.ts**: Facade: `trackEvent`, `reportError`
+- **lib/analytics/events.ts**: Event catalog (types + metadata)
+- **lib/analytics/sanitizer.ts**: PII scrubbing + size/UTF guards
+- **lib/analytics/instrumentation/**: Clerk hook + server wrappers
+- **lib/analytics/testkit/**: Mocks + Playwright stub helper
 - **components/analytics-wrapper.tsx**: Client-side analytics with URL filtering
 
 ### Key Features
@@ -93,6 +97,7 @@ Volume uses Vercel Analytics for product metrics and Sentry for error tracking.
 - User context enrichment (automatic userId attachment)
 - Unified client/server API (same code works everywhere)
 - Environment-aware (auto-disables in dev/test)
+- Playwright-friendly stub so E2E never hits real analytics
 
 ### Usage Examples
 
@@ -137,6 +142,23 @@ setUserContext(user.id, { plan: "pro" });
 clearUserContext();
 ```
 
+**Playwright Stub (E2E):**
+
+```typescript
+import { enableAnalyticsStub } from "@/lib/analytics/testkit/playwright";
+
+test("captures marketing view", async ({ page }) => {
+  await enableAnalyticsStub(page);
+  await page.goto("/");
+  const events = await page.evaluate(
+    () => (window as any).__ANALYTICS__?.state?.events ?? []
+  );
+  expect(
+    events.some((e: any) => e.name === "Marketing Page View")
+  ).toBeTruthy();
+});
+```
+
 ### Privacy Guarantees
 
 - All emails automatically redacted: `user@example.com` → `[EMAIL_REDACTED]`
@@ -146,7 +168,7 @@ clearUserContext();
 
 ### Adding New Events
 
-1. Add to `AnalyticsEventDefinitions` in lib/analytics.ts
+1. Add to `AnalyticsEventDefinitions` in `src/lib/analytics/events.ts`
 2. Define required/optional properties
 3. Use TypeScript to enforce at call sites
 
@@ -235,6 +257,8 @@ GET `/api/health` returns JSON health status for uptime monitoring:
 }
 ```
 
+- **Analytics self-test**: `/test-analytics` (dev-only) shows client/server/Sentry status cards. `/api/test-error` returns 404 outside dev or when `x-preview-mode: true`.
+
 - Returns 200 when healthy, 503 when unhealthy
 - Excluded from Clerk authentication (public route)
 - Ready for UptimeRobot, BetterUptime, or Pingdom
@@ -256,6 +280,99 @@ chmod 600 ~/.secrets
 ```
 
 ## Architecture Overview
+
+### Convex Runtime Constraints
+
+**CRITICAL**: Convex functions run in a sandboxed JavaScript environment, NOT Node.js. Importing Node.js built-ins or packages that use them will cause deployment failures.
+
+#### Rules for Convex Functions
+
+1. **No Node.js Built-ins in Regular Functions**
+   - ❌ `import fs from "fs"`
+   - ❌ `import { track } from "@sentry/nextjs"` (uses Node.js internally)
+   - ❌ Importing frontend code from `src/` (may use Node.js deps)
+   - ✅ Use Convex-compatible packages only
+
+2. **"use node" for Node.js APIs**
+   - Only available in ACTIONS (not queries/mutations)
+   - Must be in separate file from queries/mutations
+   - Directive must be at TOP of file
+   - Example:
+
+     ```typescript
+     "use node";
+
+     import { internalAction } from "./_generated/server";
+     import { trackEvent } from "../src/lib/analytics/router"; // OK in action
+
+     export const myAction = internalAction({
+       // ... action that uses Node.js APIs
+     });
+     ```
+
+3. **Import Constraints**
+   - Files WITHOUT "use node" cannot import files WITH "use node"
+   - Keep "use node" actions isolated in dedicated files
+   - Don't mix queries/mutations with Node.js actions
+
+#### Common Violations
+
+**Importing Frontend Code**:
+
+```typescript
+// ❌ BAD - src/ code may use Node.js deps
+import { trackEvent } from "../src/lib/analytics/router";
+
+// ✅ GOOD - Create Convex-specific wrappers
+// convex/analytics/track.ts
+"use node";
+export const track = internalAction({...});
+```
+
+**Mixing Functions and Actions**:
+
+```typescript
+// ❌ BAD - queries and Node.js imports in same file
+export const myQuery = query({...});
+import { someNodeModule } from "node-module";
+export const myAction = action({...});
+
+// ✅ GOOD - Separate files
+// convex/queries.ts - No Node.js imports
+export const myQuery = query({...});
+
+// convex/nodeActions.ts - "use node" at top
+"use node";
+export const myAction = action({...});
+```
+
+#### Testing Locally
+
+Always validate Convex functions before pushing:
+
+```bash
+# Type check and validate (fast)
+npx convex dev --once --typecheck enable
+
+# Full deploy to dev (slower but comprehensive)
+npx convex deploy
+```
+
+Pre-push hooks automatically run validation to catch issues before CI.
+
+#### Troubleshooting
+
+**Error**: "Could not resolve 'fs'" or "Could not resolve 'stream'"
+
+- **Cause**: Importing Node.js built-ins in regular functions
+- **Fix**: Move to separate file with "use node" or remove import
+
+**Error**: "Write outside of transaction"
+
+- **Cause**: Using `ctx.scheduler` in convex-test tests
+- **Fix**: Remove instrumentation or create separate test versions
+
+See: https://docs.convex.dev/functions/runtimes
 
 ### Authentication Flow
 

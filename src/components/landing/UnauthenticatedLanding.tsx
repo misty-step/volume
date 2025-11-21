@@ -5,9 +5,49 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { brutalistMotion } from "@/lib/brutalist-motion";
 import { BrutalistButton } from "@/components/brutalist";
+import { trackEvent } from "@/lib/analytics";
+
+const FAQ_ITEMS = [
+  {
+    question: "Is there a free plan?",
+    answer: "Yes. Track unlimited workouts on the free tier while we iterate.",
+  },
+  {
+    question: "Do you support weights and timers?",
+    answer: "Log reps, weight, and time—Volume records units with every set.",
+  },
+  {
+    question: "Will my data sync across devices?",
+    answer: "Your sets stay in sync automatically; no manual exports required.",
+  },
+];
 
 export function UnauthenticatedLanding() {
   const router = useRouter();
+
+  const getDeviceTag = () =>
+    typeof window !== "undefined" && window.innerWidth < 768
+      ? "mobile"
+      : "desktop";
+
+  const handlePrimaryCta = () => {
+    void trackEvent("Marketing CTA Click", {
+      placement: "hero",
+      label: "get started",
+    });
+    router.push("/sign-up");
+  };
+
+  const handleNavClick = (target: string) => {
+    void trackEvent("Marketing Nav Click", {
+      target,
+      device: getDeviceTag(),
+    });
+  };
+
+  const handleFaqToggle = (question: string, isOpen: boolean) => {
+    void trackEvent("Marketing FAQ Toggle", { question, isOpen });
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-concrete-black text-concrete-white">
@@ -86,7 +126,7 @@ export function UnauthenticatedLanding() {
               <BrutalistButton
                 variant="danger"
                 size="lg"
-                onClick={() => router.push("/sign-up")}
+                onClick={handlePrimaryCta}
                 className="w-full text-2xl py-8"
               >
                 GET STARTED →
@@ -95,7 +135,11 @@ export function UnauthenticatedLanding() {
               {/* Secondary sign-in link */}
               <p className="text-center font-mono text-sm text-concrete-black">
                 ALREADY HAVE AN ACCOUNT?{" "}
-                <Link href="/sign-in" className="text-danger-red font-bold">
+                <Link
+                  href="/sign-in"
+                  className="text-danger-red font-bold"
+                  onClick={() => handleNavClick("/sign-in")}
+                >
                   SIGN IN
                 </Link>
               </p>
@@ -113,6 +157,37 @@ export function UnauthenticatedLanding() {
           </motion.div>
         </section>
       </main>
+
+      {/* FAQ Section */}
+      <section className="border-t-3 border-concrete-white bg-concrete-black px-8 py-10 lg:px-16 lg:py-14">
+        <h2 className="font-display text-3xl uppercase tracking-wide mb-6">
+          FAQ
+        </h2>
+        <div className="space-y-3">
+          {FAQ_ITEMS.map((item) => (
+            <details
+              key={item.question}
+              className="border-3 border-concrete-white/60 bg-concrete-black px-4 py-3"
+              onToggle={(event) =>
+                handleFaqToggle(
+                  item.question,
+                  (event.target as HTMLDetailsElement).open
+                )
+              }
+            >
+              <summary className="font-mono text-sm uppercase tracking-wide cursor-pointer flex items-center justify-between">
+                {item.question}
+                <span aria-hidden className="pl-2">
+                  +
+                </span>
+              </summary>
+              <p className="pt-2 text-sm text-concrete-gray leading-relaxed">
+                {item.answer}
+              </p>
+            </details>
+          ))}
+        </div>
+      </section>
 
       {/* Footer */}
       <footer className="border-t-3 border-concrete-white py-6 px-8 lg:px-16">
