@@ -56,10 +56,16 @@ export function setUserContext(
   };
 
   // Sync to Sentry for error correlation
-  Sentry.setUser({
-    id: sanitizedUserId,
-    ...sanitizedMetadata,
-  });
+  try {
+    Sentry.setUser({
+      id: sanitizedUserId,
+      ...sanitizedMetadata,
+    });
+  } catch (err) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[Telemetry] Sentry setUser failed:", err);
+    }
+  }
 }
 
 /**
@@ -84,7 +90,13 @@ export function clearUserContext(): void {
   }
 
   currentUserContext = null;
-  Sentry.setUser(null);
+  try {
+    Sentry.setUser(null);
+  } catch (err) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[Telemetry] Sentry setUser failed:", err);
+    }
+  }
 }
 
 /**

@@ -48,11 +48,16 @@ const MAX_PAYLOAD_BYTES = 4096;
  * - Recursive PII redaction (emails)
  * - Circular reference handling
  * - UTF-8 validation
- * - Payload size limit (4KB)
+ * - Payload size limit (4KB) - replaces with sentinel on overflow
  * - Type normalization (flattens objects to JSON strings)
  *
+ * **Sentinel Contract:**
+ * When payload exceeds MAX_PAYLOAD_BYTES, returns:
+ * `{ droppedReason: "payload_too_large" }`
+ * Callers should check for `droppedReason` if they want to skip the event.
+ *
  * @param properties - Raw event properties
- * @returns Sanitized properties or dropped reason
+ * @returns Sanitized properties or sentinel object
  */
 export function sanitizeProperties(
   properties: Record<string, unknown>
@@ -143,7 +148,7 @@ export function sanitizeProperties(
     if (payloadString.length > MAX_PAYLOAD_BYTES) {
       if (process.env.NODE_ENV === "development") {
         console.warn(
-          `[Telemetry] Payload too large (${payloadString.length} bytes), dropping event.`
+          `[Telemetry] Payload too large (${payloadString.length} bytes), replacing with sentinel { droppedReason: 'payload_too_large' }.`
         );
       }
       return { droppedReason: "payload_too_large" };

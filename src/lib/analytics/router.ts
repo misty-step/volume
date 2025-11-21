@@ -29,6 +29,11 @@ function isAnalyticsEnabled(): boolean {
     return true;
   }
 
+  // Analytics stub mode for E2E testing (overrides dev/test disable)
+  if (process.env.NEXT_PUBLIC_ANALYTICS_STUB === "true") {
+    return true;
+  }
+
   // Auto-disable in test environment
   if (process.env.NODE_ENV === "test") {
     return false;
@@ -102,19 +107,23 @@ export async function trackEvent<Name extends AnalyticsEventName>(
   const isDev = process.env.NODE_ENV === "development";
 
   // Helper to add Sentry breadcrumb
-  const addBreadcrumb = (status: "success" | "error", error?: any) => {
-    if (isSentryEnabled()) {
-      Sentry.addBreadcrumb({
-        category: "analytics",
-        message: `analytics_event_${status}`,
-        data: {
-          name,
-          status,
-          error: error?.message || String(error),
-        },
-        level: status === "error" ? "warning" : "info",
-      });
+  const addBreadcrumb = (status: "success" | "error", error?: unknown) => {
+    if (!isSentryEnabled()) return;
+
+    const data: Record<string, unknown> = { name, status };
+    if (error != null) {
+      data.error =
+        (error as any)?.message !== undefined
+          ? (error as any).message
+          : String(error);
     }
+
+    Sentry.addBreadcrumb({
+      category: "analytics",
+      message: `analytics_event_${status}`,
+      data,
+      level: status === "error" ? "warning" : "info",
+    });
   };
 
   try {
