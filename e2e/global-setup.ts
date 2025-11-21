@@ -1,5 +1,6 @@
 import { chromium, type FullConfig } from "@playwright/test";
 import path from "path";
+import fs from "fs";
 
 export default async function globalSetup(config: FullConfig) {
   const { baseURL } = config.projects[0].use;
@@ -18,8 +19,11 @@ export default async function globalSetup(config: FullConfig) {
     console.warn(
       "Skipping authentication setup. Tests requiring auth may fail."
     );
-    // We return instead of throwing to allow CI to proceed if auth isn't strictly required for all tests,
-    // or if secrets aren't available in this environment (e.g. fork PRs).
+    // Write empty state so Playwright doesn't crash when looking for the file
+    fs.writeFileSync(
+      storageState,
+      JSON.stringify({ cookies: [], origins: [] })
+    );
     return;
   }
 

@@ -12,6 +12,7 @@ export default defineConfig({
     baseURL: "http://localhost:3000",
     trace: "on-first-retry",
     headless: true,
+    storageState: "e2e/.auth/user.json",
   },
   projects: [
     {
@@ -25,5 +26,9 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     stdout: "ignore",
     stderr: "pipe",
+    env: {
+      NEXT_PUBLIC_DISABLE_SENTRY: "true",
+      NEXT_PUBLIC_DISABLE_ANALYTICS: "true",
+    },
   },
 });

@@ -55,10 +55,10 @@ Critical Path: 6h 15m
   - Estimate: 1h 30m
   - Depends: Create Playwright auth scaffolding
 
-- [ ] Wire Playwright config to storageState and test env toggles
+- [x] Wire Playwright config to storageState and test env toggles
   - Files: `playwright.config.ts`
   - Goal: Use saved storageState for all projects; disable telemetry during E2E; keep runtime under budget.
-  - Approach: set `use.storageState: "e2e/.auth/state.json"`; add `expect.timeout` reductions if needed; set `env` for `NEXT_PUBLIC_DISABLE_SENTRY`, `NEXT_PUBLIC_DISABLE_ANALYTICS`; adjust `webServer` to Next-only (no Convex local); ensure retries=CI only, workers=1 in CI.
+  - Approach: set `use.storageState: "e2e/.auth/user.json"`; add `expect.timeout` reductions if needed; set `env` for `NEXT_PUBLIC_DISABLE_SENTRY`, `NEXT_PUBLIC_DISABLE_ANALYTICS`; adjust `webServer` to Next-only (no Convex local); ensure retries=CI only, workers=1 in CI.
   - Success: `pnpm test:e2e` starts Next server, reuses auth, passes without contacting Sentry/analytics.
   - Tests: local run `pnpm test:e2e --reporter=line`.
   - Estimate: 45m
