@@ -29,9 +29,9 @@ export default defineConfig({
     env: {
       // Pass through Clerk environment variables for authentication
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
-        process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
-      NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL,
+        process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "",
+      CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY || "",
+      NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL || "",
       // Disable telemetry during E2E tests
       NEXT_PUBLIC_DISABLE_SENTRY: "true",
       NEXT_PUBLIC_DISABLE_ANALYTICS: "true",
