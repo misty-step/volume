@@ -37,13 +37,20 @@ export default async function globalSetup(config: FullConfig) {
     const signInUrl = `${baseURL}/sign-in`;
     console.log(`Navigating to ${signInUrl} to sign in...`);
 
-    await page.goto(signInUrl);
+    await page.goto(signInUrl, { waitUntil: "networkidle" });
+
+    // Wait for page to be fully loaded
+    await page.waitForLoadState("domcontentloaded");
+
+    // Log page title for debugging
+    const title = await page.title();
+    console.log(`Page loaded. Title: ${title}`);
 
     // Handle Clerk Sign In
     // Wait for email input
     await page.waitForSelector('input[name="identifier"]', {
       state: "visible",
-      timeout: 15000,
+      timeout: 30000, // Increased timeout
     });
     await page.fill('input[name="identifier"]', email);
 
@@ -78,12 +85,24 @@ export default async function globalSetup(config: FullConfig) {
     console.log(`Auth state saved to ${storageState}`);
   } catch (error) {
     console.error("Global setup authentication failed:", error);
-    // Check if we are stuck on a verification screen or something
-    if (process.env.CI) {
-      console.log("Dumping page content for debug...");
-      // In CI, we might want to fail harder.
-      throw error;
+
+    // Capture page state for debugging
+    try {
+      const url = page.url();
+      const title = await page.title();
+      const html = await page.content();
+
+      console.log("=== Debug Information ===");
+      console.log(`Current URL: ${url}`);
+      console.log(`Page Title: ${title}`);
+      console.log(`Page HTML (first 500 chars):`);
+      console.log(html.substring(0, 500));
+      console.log("========================");
+    } catch (debugError) {
+      console.error("Failed to capture debug info:", debugError);
     }
+
+    throw error;
   } finally {
     await browser.close();
   }
