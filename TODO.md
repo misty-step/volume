@@ -73,7 +73,7 @@ Critical Path: 6h 15m
   - Estimate: 45m
   - Depends: Wire Playwright config to storageState and test env toggles
 
-- [ ] Add guarded Convex test reset endpoint (optional but recommended)
+- [x] Add guarded Convex test reset endpoint (optional but recommended)
   - Files: `convex/test/resetUserData.ts` (new), `convex/_generated/server.ts` import if needed, `src/app/api/health/route.ts`? (doc), `README.md` (usage)
   - Goal: Deterministic cleanup per-run, only in test env.
   - Approach: create internal action gated by `NODE_ENV === "test"` and `X-TEST-SECRET`; wipes exercises/sets for given userId. Document env `TEST_RESET_SECRET`.
