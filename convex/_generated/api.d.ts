@@ -13,8 +13,6 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
-import type * as ai_data from "../ai/data.js";
-import type * as ai_generate from "../ai/generate.js";
 import type * as ai_openai from "../ai/openai.js";
 import type * as ai_prompts from "../ai/prompts.js";
 import type * as ai_reports from "../ai/reports.js";
@@ -40,8 +38,6 @@ import type * as users from "../users.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
-  "ai/data": typeof ai_data;
-  "ai/generate": typeof ai_generate;
   "ai/openai": typeof ai_openai;
   "ai/prompts": typeof ai_prompts;
   "ai/reports": typeof ai_reports;

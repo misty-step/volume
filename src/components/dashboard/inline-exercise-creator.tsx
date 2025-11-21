@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/form";
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
-import { trackEvent } from "@/lib/analytics";
 
 // Validation schema
 const exerciseNameSchema = z.object({
@@ -56,10 +55,6 @@ export function InlineExerciseCreator({
   const onSubmit = async (values: ExerciseNameFormValues) => {
     try {
       const exerciseId = await createExercise({ name: values.name.trim() });
-      void trackEvent("Exercise Created", {
-        exerciseId,
-        source: "manual",
-      });
       toast.success("Exercise created");
       form.reset({ name: "" });
       onCreated(exerciseId);

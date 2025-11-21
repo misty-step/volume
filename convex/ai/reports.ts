@@ -99,9 +99,10 @@ export const generateOnDemandReport = action({
     const userId = identity.subject;
 
     // Check rate limit via internal query
-    const reportsCount = await ctx.runQuery(internal.ai.data.checkRateLimit, {
-      userId,
-    });
+    const reportsCount = await ctx.runQuery(
+      (internal as any).ai.data.checkRateLimit,
+      { userId }
+    );
 
     // Rate limit: 5 reports per day
     const DAILY_LIMIT = 5;
@@ -118,7 +119,7 @@ export const generateOnDemandReport = action({
     // Generate report via internal action
     try {
       const reportId = await ctx.runAction(
-        internal.ai.generate.generateReport,
+        (internal as any).ai.generate.generateReport,
         {
           userId,
         }
@@ -187,7 +188,7 @@ export const backfillWeeklyReports = action({
         );
 
         const reportId = await ctx.runAction(
-          internal.ai.generate.generateReport,
+          (internal as any).ai.generate.generateReport,
           {
             userId,
             reportType: "weekly",
@@ -306,7 +307,7 @@ export const backfillDailyReports = action({
         );
 
         const reportId = await ctx.runAction(
-          internal.ai.generate.generateReport,
+          (internal as any).ai.generate.generateReport,
           {
             userId,
             reportType: "daily",

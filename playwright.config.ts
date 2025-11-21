@@ -1,9 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Enable client-side analytics stub during e2e to avoid real network calls
-process.env.NEXT_PUBLIC_ANALYTICS_STUB =
-  process.env.NEXT_PUBLIC_ANALYTICS_STUB || "true";
-
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
