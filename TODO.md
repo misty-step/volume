@@ -100,7 +100,7 @@ Critical Path: 6h 15m
   - Estimate: 1h 30m
   - Depends: Add stable data-testid hooks to critical UI
 
-- [ ] Document required env for E2E
+- [x] Document required env for E2E
   - Files: `README.md` (Testing section), `.env.example` (add test vars), `TASK.md` (append quickstart?), `e2e/README.md` (new)
   - Goal: One-copy-paste setup for dev/CI; clarify needed Clerk/Convex vars and optional reset secret.
   - Approach: add subsection “E2E (Playwright)”; list required vars; note storageState path; instructions to run `pnpm test:e2e`.
@@ -109,7 +109,7 @@ Critical Path: 6h 15m
   - Estimate: 30m
   - Depends: Implement Clerk global setup with API user provisioning
 
-- [ ] Enhance CI E2E job for stability & artifacts
+- [x] Enhance CI E2E job for stability & artifacts
   - Files: `.github/workflows/ci.yml`
   - Goal: Keep E2E on pushes/PRs with artifacts and proper env toggles.
   - Approach: inject env flags disabling telemetry; ensure `pnpm exec playwright install --with-deps chromium` before tests; upload traces/videos on failure; consider splitting job if runtime >6m.
