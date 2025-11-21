@@ -72,7 +72,7 @@ export const generateWeeklyReports = internalAction({
     try {
       // Query active users (workout in last 14 days)
       const activeUserIds = await ctx.runQuery(
-        (internal as any).crons.getActiveUserIds,
+        internal.crons.getActiveUserIds,
         {}
       );
 
@@ -100,7 +100,7 @@ export const generateWeeklyReports = internalAction({
         try {
           console.log(`[Cron] Generating report for user: ${userId}`);
 
-          await ctx.runAction((internal as any).ai.generate.generateReport, {
+          await ctx.runAction(internal.ai.generate.generateReport, {
             userId,
             // weekStartDate will default to current week in generateReport
           });
@@ -230,28 +230,63 @@ export const getEligibleUsersForDailyReports = internalQuery({
 /**
  * Calculate start of YESTERDAY based on user's timezone.
  * This is the canonical timestamp for the daily report generated at midnight.
+ *
+ * Returns a Unix timestamp representing "yesterday at 00:00 in the user's timezone".
+ * Properly accounts for timezone offsets so users in different timezones get correct
+ * 24-hour windows for daily reports.
+ *
+ * Algorithm:
+ * 1. Format current time as date string in user's timezone (e.g., "1/15/2025, 00:00:00")
+ * 2. Format current time as date string in UTC
+ * 3. Parse both strings back to timestamps to compute timezone offset
+ * 4. Extract date components (year/month/day) from user's timezone
+ * 5. Construct midnight timestamp by subtracting time-of-day and applying offset
+ * 6. Subtract 24 hours for yesterday
+ *
+ * @param timezone - IANA timezone string (e.g., "America/New_York", "Europe/Moscow")
+ * @returns Unix timestamp (milliseconds) of yesterday's midnight in the user's timezone
+ *
+ * @example
+ * // For a user in UTC+3 (Europe/Moscow) when it's 2025-01-15 01:00 local time:
+ * // Today midnight = 2025-01-15 00:00 UTC+3 = 2025-01-14 21:00 UTC
+ * // Yesterday midnight = 2025-01-14 00:00 UTC+3 = 2025-01-13 21:00 UTC
+ * // Returns: 1736802000000 (2025-01-13T21:00:00.000Z)
  */
 function getPreviousDayStartInTimezone(timezone: string): number {
   const now = new Date();
 
-  // Use Intl to find the date parts in the target timezone
+  // Get date components in user's timezone
   const formatter = new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
     year: "numeric",
-    month: "numeric",
-    day: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
   });
 
   const parts = formatter.formatToParts(now);
   const year = parseInt(parts.find((p) => p.type === "year")!.value);
-  const month = parseInt(parts.find((p) => p.type === "month")!.value) - 1; // 0-indexed
+  const month = parseInt(parts.find((p) => p.type === "month")!.value);
   const day = parseInt(parts.find((p) => p.type === "day")!.value);
+  const hour = parseInt(parts.find((p) => p.type === "hour")!.value);
+  const minute = parseInt(parts.find((p) => p.type === "minute")!.value);
+  const second = parseInt(parts.find((p) => p.type === "second")!.value);
 
-  // Canonical timestamp for "Today 00:00 UTC" (based on local date)
-  const todayStartUTC = Date.UTC(year, month, day);
+  // Calculate milliseconds since midnight in user's local time
+  const msSinceMidnight =
+    (hour * 60 * 60 + minute * 60 + second) * 1000 + now.getMilliseconds();
 
-  // Return yesterday (minus 24 hours)
-  return todayStartUTC - 24 * 60 * 60 * 1000;
+  // To get midnight today in user's timezone:
+  // 1. Start with current UTC timestamp
+  // 2. Subtract the time elapsed since midnight in user's timezone
+  // 3. This gives us "today at 00:00 in user's timezone" as a UTC timestamp
+  const todayMidnightUTC = now.getTime() - msSinceMidnight;
+
+  // Subtract 24 hours to get yesterday's midnight
+  return todayMidnightUTC - 24 * 60 * 60 * 1000;
 }
 
 /**
@@ -287,7 +322,7 @@ export const generateDailyReports = internalAction({
 
     // Get eligible users for this hour
     const eligibleUsers = await ctx.runQuery(
-      (internal as any).crons.getEligibleUsersForDailyReports,
+      internal.crons.getEligibleUsersForDailyReports,
       { currentHourUTC }
     );
 
@@ -306,7 +341,7 @@ export const generateDailyReports = internalAction({
         // This is the report date.
         const reportDate = getPreviousDayStartInTimezone(timezone);
 
-        await ctx.runAction((internal as any).ai.generate.generateReport, {
+        await ctx.runAction(internal.ai.generate.generateReport, {
           userId,
           reportType: "daily",
           weekStartDate: reportDate, // Pass canonical day start for deduplication
@@ -388,7 +423,7 @@ export const generateMonthlyReports = internalAction({
 
     // Get all users with monthlyReportsEnabled = true
     const users = await ctx.runQuery(
-      (internal as any).crons.getActiveUsersWithMonthlyReports,
+      internal.crons.getActiveUsersWithMonthlyReports,
       {}
     );
 
@@ -403,7 +438,7 @@ export const generateMonthlyReports = internalAction({
 
     for (const userId of users) {
       try {
-        await ctx.runAction((internal as any).ai.generate.generateReport, {
+        await ctx.runAction(internal.ai.generate.generateReport, {
           userId,
           reportType: "monthly",
         });
@@ -451,7 +486,7 @@ const crons = cronJobs();
 crons.hourly(
   "generate-daily-reports",
   { minuteUTC: 0 },
-  (internal as any).crons.generateDailyReports
+  internal.crons.generateDailyReports
 );
 
 // Weekly reports: Run every Sunday at 9 PM UTC
@@ -462,7 +497,7 @@ crons.weekly(
     minuteUTC: 0,
     dayOfWeek: "sunday",
   },
-  (internal as any).crons.generateWeeklyReports
+  internal.crons.generateWeeklyReports
 );
 
 // Monthly reports: Run on 1st day of month at midnight UTC
@@ -473,7 +508,7 @@ crons.monthly(
     hourUTC: 0,
     minuteUTC: 0,
   },
-  (internal as any).crons.generateMonthlyReports
+  internal.crons.generateMonthlyReports
 );
 
 export default crons;

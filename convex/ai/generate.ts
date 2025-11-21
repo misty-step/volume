@@ -49,6 +49,7 @@ function calculateDateRange(
       // Last 7 days (or custom start for Monday-based weeks)
       if (customStart) {
         startDate = customStart;
+        endDate = customStart + 7 * 24 * 60 * 60 * 1000; // 7 days after start
       } else {
         startDate = endDate - 7 * 24 * 60 * 60 * 1000;
       }
@@ -195,7 +196,7 @@ export const generateReport = internalAction({
 
     // Check for existing report (deduplication)
     const existingReportId: string | null = await ctx.runQuery(
-      (internal as any).ai.data.checkExistingReport,
+      internal.ai.data.checkExistingReport,
       { userId, reportType, weekStartDate }
     );
 
@@ -214,7 +215,7 @@ export const generateReport = internalAction({
 
     // Fetch workout data via internal query
     const { volumeData, recentPRs, allSets, exercises } = await ctx.runQuery(
-      (internal as any).ai.data.getWorkoutData,
+      internal.ai.data.getWorkoutData,
       { userId, startDate, endDate }
     );
 
@@ -343,7 +344,7 @@ export const generateReport = internalAction({
 
     // Store report in database via internal mutation
     const reportId: string = await ctx.runMutation(
-      (internal as any).ai.data.saveReport,
+      internal.ai.data.saveReport,
       {
         userId,
         reportType,

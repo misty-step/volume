@@ -151,6 +151,42 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Effort**: 5m | **Risk**: MEDIUM
 **Acceptance**: Vercel builds succeed with fresh Convex types; no stale API errors.
 
+### [Observability] Integrate Sentry error reporting in cron batch operations
+
+**File**: convex/crons.ts:99-125
+**Perspectives**: architecture-guardian, user-experience-advocate
+**Impact**: When report generation fails for a user in batch operations, errors are logged but not sent to Sentry. Silent failures prevent proper monitoring and alerting.
+**Fix**: Wrap batch operation errors with Sentry reporting: `reportError(error, { context: 'weekly-report-cron', userId, operation: 'generateWeeklyReports' })`.
+**Effort**: 30m | **Risk**: LOW
+**Acceptance**: Failed report generations trigger Sentry alerts with user context.
+
+### [Testing] Add integration tests for AI report deduplication
+
+**Files**: convex/ai/reports.test.ts (expand)
+**Perspectives**: maintainability-maven, architecture-guardian
+**Impact**: Daily/weekly report deduplication logic is complex but only tested indirectly. Timezone-based deduplication could break silently.
+**Fix**: Add integration tests verifying: (1) generating same report twice returns same ID, (2) timezone-specific daily reports use correct canonical timestamps.
+**Effort**: 2h | **Risk**: MEDIUM
+**Acceptance**: Tests verify deduplication works across timezones and report types.
+
+### [Code Quality] Extract magic numbers to constants in AI reporting
+
+**Files**: convex/crons.ts, convex/ai/reports.ts, convex/ai/data.ts
+**Perspectives**: maintainability-maven
+**Impact**: Magic numbers like `MAX_USERS_PER_RUN = 100`, `DAILY_LIMIT = 5`, `14 days lookback` are defined inline, making tuning difficult.
+**Fix**: Extract to module-level constants with descriptive names and JSDoc explaining rationale.
+**Effort**: 15m | **Risk**: LOW
+**Acceptance**: All numeric thresholds extracted to named constants at top of files.
+
+### [Data Integrity] Add schema-level validation for reportType field
+
+**File**: convex/schema.ts
+**Perspectives**: security-sentinel, architecture-guardian
+**Impact**: `reportType` field validated only at function level, not schema level. Database could contain invalid types.
+**Fix**: Add union type to schema: `reportType: v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly"))`.
+**Effort**: 30m | **Risk**: LOW
+**Acceptance**: Schema rejects invalid reportType values at database level.
+
 ---
 
 ## Next (This Quarter, <3 months)

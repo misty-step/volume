@@ -61,7 +61,7 @@ export const backfillMuscleGroups = internalAction({
 
     // Fetch all exercises
     const exercises: Doc<"exercises">[] = await ctx.runQuery(
-      (internal as any).migrations.backfillMuscleGroups.listAllExercises
+      internal.migrations.backfillMuscleGroups.listAllExercises
     );
     console.log(`[Migration] Found ${exercises.length} total exercises`);
 
@@ -95,8 +95,7 @@ export const backfillMuscleGroups = internalAction({
         const muscleGroups = await classifyExercise(exercise.name);
 
         await ctx.runMutation(
-          (internal as any).migrations.backfillMuscleGroups
-            .updateExerciseMuscleGroups,
+          internal.migrations.backfillMuscleGroups.updateExerciseMuscleGroups,
           {
             exerciseId: exercise._id,
             muscleGroups,
