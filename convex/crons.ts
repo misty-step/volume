@@ -100,7 +100,7 @@ export const generateWeeklyReports = internalAction({
         try {
           console.log(`[Cron] Generating report for user: ${userId}`);
 
-          await ctx.runAction((internal as any).ai.reports.generateReport, {
+          await ctx.runAction((internal as any).ai.generate.generateReport, {
             userId,
             // weekStartDate will default to current week in generateReport
           });
@@ -191,10 +191,10 @@ function getLocalHourFromUTC(utcHour: number, timezone: string): number {
  * Internal query to get eligible users for daily reports
  *
  * Returns list of user IDs whose local time is currently midnight (hour 0).
- * Used by hourly cron job to identify users ready for daily report.
+ * Robustness: Also returns users in hours 1 and 2 to catch missed runs.
  *
  * @param currentHourUTC - Current UTC hour (0-23)
- * @returns Array of user IDs (clerkUserId) ready for daily report
+ * @returns Array of objects { userId, timezone }
  */
 export const getEligibleUsersForDailyReports = internalQuery({
   args: { currentHourUTC: v.number() },
@@ -205,37 +205,72 @@ export const getEligibleUsersForDailyReports = internalQuery({
       .withIndex("by_daily_enabled", (q) => q.eq("dailyReportsEnabled", true))
       .collect();
 
-    // Filter users whose local time is midnight (based on timezone)
-    const eligibleUsers = users.filter((user) => {
-      if (!user.timezone) return false;
+    const eligibleUsers = [];
+
+    for (const user of users) {
+      if (!user.timezone) continue;
 
       // Calculate local hour for user's timezone
       const localHour = getLocalHourFromUTC(args.currentHourUTC, user.timezone);
 
-      // Check if local time is midnight (hour 0)
-      return localHour === 0;
-    });
+      // Check if local time is within midnight window (0, 1, 2)
+      // This provides 3 chances to generate the report
+      if (localHour >= 0 && localHour <= 2) {
+        eligibleUsers.push({
+          userId: user.clerkUserId,
+          timezone: user.timezone,
+        });
+      }
+    }
 
-    return eligibleUsers.map((u) => u.clerkUserId);
+    return eligibleUsers;
   },
 });
+
+/**
+ * Calculate start of YESTERDAY based on user's timezone.
+ * This is the canonical timestamp for the daily report generated at midnight.
+ */
+function getPreviousDayStartInTimezone(timezone: string): number {
+  const now = new Date();
+
+  // Use Intl to find the date parts in the target timezone
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  });
+
+  const parts = formatter.formatToParts(now);
+  const year = parseInt(parts.find((p) => p.type === "year")!.value);
+  const month = parseInt(parts.find((p) => p.type === "month")!.value) - 1; // 0-indexed
+  const day = parseInt(parts.find((p) => p.type === "day")!.value);
+
+  // Canonical timestamp for "Today 00:00 UTC" (based on local date)
+  const todayStartUTC = Date.UTC(year, month, day);
+
+  // Return yesterday (minus 24 hours)
+  return todayStartUTC - 24 * 60 * 60 * 1000;
+}
 
 /**
  * Daily AI Report Generation Action
  *
  * Internal action that generates daily workout analysis reports for
- * users whose local time is currently midnight (hour 0).
+ * users whose local time is currently midnight (hour 0-2).
  *
  * **Process**:
  * 1. Get current UTC hour
- * 2. Query users with dailyReportsEnabled where local time = midnight
+ * 2. Query users with dailyReportsEnabled where local time is 0-2
  * 3. Generate daily report for each eligible user
  * 4. Error logging for individual failures
  *
  * **Timezone Awareness**:
  * - Runs every hour on the hour (UTC)
- * - Checks each user's timezone to determine if it's midnight locally
+ * - Checks each user's timezone
  * - Distributes load across 24 hours (not all users at once)
+ * - Retry window (hours 0, 1, 2) ensures robustness against missed jobs
  *
  * **Cost Management**:
  * - Only generates for opted-in users (dailyReportsEnabled = true)
@@ -251,13 +286,13 @@ export const generateDailyReports = internalAction({
     const currentHourUTC = new Date().getUTCHours();
 
     // Get eligible users for this hour
-    const eligibleUserIds = await ctx.runQuery(
+    const eligibleUsers = await ctx.runQuery(
       (internal as any).crons.getEligibleUsersForDailyReports,
       { currentHourUTC }
     );
 
     console.log(
-      `[Cron] Found ${eligibleUserIds.length} users eligible for daily reports (local midnight at UTC ${currentHourUTC}:00)`
+      `[Cron] Found ${eligibleUsers.length} users eligible for daily reports (local hour 0-2 at UTC ${currentHourUTC}:00)`
     );
 
     // Generate reports
@@ -265,11 +300,16 @@ export const generateDailyReports = internalAction({
     let errorCount = 0;
     const errors: Array<{ userId: string; error: string }> = [];
 
-    for (const userId of eligibleUserIds) {
+    for (const { userId, timezone } of eligibleUsers) {
       try {
-        await ctx.runAction((internal as any).ai.reports.generateReport, {
+        // Calculate canonical "Yesterday" timestamp for this user
+        // This is the report date.
+        const reportDate = getPreviousDayStartInTimezone(timezone);
+
+        await ctx.runAction((internal as any).ai.generate.generateReport, {
           userId,
           reportType: "daily",
+          weekStartDate: reportDate, // Pass canonical day start for deduplication
         });
         successCount++;
       } catch (error: unknown) {
@@ -292,7 +332,7 @@ export const generateDailyReports = internalAction({
 
     return {
       success: true,
-      processed: eligibleUserIds.length,
+      processed: eligibleUsers.length,
       succeeded: successCount,
       failed: errorCount,
       durationSeconds: Number(duration),
@@ -363,7 +403,7 @@ export const generateMonthlyReports = internalAction({
 
     for (const userId of users) {
       try {
-        await ctx.runAction((internal as any).ai.reports.generateReport, {
+        await ctx.runAction((internal as any).ai.generate.generateReport, {
           userId,
           reportType: "monthly",
         });
