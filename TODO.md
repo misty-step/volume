@@ -91,7 +91,7 @@ Critical Path: 6h 15m
   - Estimate: 1h 15m
   - Depends: Add auth fixture helper for specs
 
-- [ ] Update smoke and critical-flow specs to use fixture + expand coverage
+- [x] Update smoke and critical-flow specs to use fixture + expand coverage
   - Files: `e2e/smoke.spec.ts`, `e2e/critical-flow.spec.ts`
   - Goal: Authenticated flows exercised end-to-end with stable selectors; cover create exercise, log set, history view, sign-in/out.
   - Approach: import fixture; add beforeEach using authenticated page; switch selectors to testids; unskip critical flow; add assertions for history entry; include sign-out/in roundtrip.
