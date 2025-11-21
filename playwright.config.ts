@@ -21,11 +21,14 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: process.env.CI ? "pnpm start" : "pnpm dev",
+    // Always use dev server for E2E tests - it respects runtime env vars
+    // Production build bakes env vars at build time, so they can't be overridden
+    command: "pnpm dev:next",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     stdout: "ignore",
     stderr: "pipe",
+    timeout: 120000, // Give dev server 2 minutes to start
     env: {
       // Pass through Clerk environment variables for authentication
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
