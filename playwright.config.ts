@@ -1,7 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const authFile = "e2e/.auth/user.json";
+
 export default defineConfig({
-  globalSetup: require.resolve("./e2e/global-setup"),
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -12,12 +13,21 @@ export default defineConfig({
     baseURL: "http://localhost:3000",
     trace: "on-first-retry",
     headless: true,
-    storageState: "e2e/.auth/user.json",
   },
   projects: [
+    // Setup project - runs authentication and saves state
+    {
+      name: "setup",
+      testMatch: /global\.setup\.ts/,
+    },
+    // Test project - uses authenticated state from setup
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: authFile,
+      },
+      dependencies: ["setup"],
     },
   ],
   webServer: {

@@ -1,109 +1,52 @@
-import { chromium, type FullConfig } from "@playwright/test";
+import { clerk, clerkSetup } from "@clerk/testing/playwright";
+import { test as setup } from "@playwright/test";
 import path from "path";
-import fs from "fs";
 
-export default async function globalSetup(config: FullConfig) {
-  const { baseURL } = config.projects[0].use;
-  const storageState = path.join(__dirname, ".auth/user.json");
+// Configure setup tests to run serially
+setup.describe.configure({ mode: "serial" });
 
-  console.log("Global setup: configuring authentication...");
+// Global setup: Initialize Clerk testing environment
+setup("global setup", async () => {
+  console.log("Global setup: Initializing Clerk testing environment...");
+  await clerkSetup();
+});
+
+const authFile = path.join(__dirname, ".auth/user.json");
+
+// Authenticate user and save session state
+setup("authenticate", async ({ page }) => {
+  console.log("Authenticating test user...");
 
   // Check for required environment variables
   const email = process.env.CLERK_TEST_USER_EMAIL;
   const password = process.env.CLERK_TEST_USER_PASSWORD;
 
   if (!email || !password) {
-    console.warn(
-      "WARNING: CLERK_TEST_USER_EMAIL or CLERK_TEST_USER_PASSWORD not set."
+    throw new Error(
+      "CLERK_TEST_USER_EMAIL and CLERK_TEST_USER_PASSWORD must be set"
     );
-    console.warn(
-      "Skipping authentication setup. Tests requiring auth may fail."
-    );
-    // Write empty state so Playwright doesn't crash when looking for the file
-    fs.writeFileSync(
-      storageState,
-      JSON.stringify({ cookies: [], origins: [] })
-    );
-    return;
   }
 
-  const browser = await chromium.launch({ headless: true });
-  // Use a new context to ensure fresh start
-  const context = await browser.newContext();
-  const page = await context.newPage();
+  // Navigate to home page
+  await page.goto("/");
 
-  try {
-    // Construct sign-in URL
-    const signInUrl = `${baseURL}/sign-in`;
-    console.log(`Navigating to ${signInUrl} to sign in...`);
+  // Use Clerk's official sign-in helper
+  await clerk.signIn({
+    page,
+    signInParams: {
+      strategy: "password",
+      identifier: email,
+      password: password,
+    },
+  });
 
-    await page.goto(signInUrl, { waitUntil: "networkidle" });
+  console.log("Sign-in successful, verifying authenticated state...");
 
-    // Wait for page to be fully loaded
-    await page.waitForLoadState("domcontentloaded");
+  // Navigate to authenticated route and verify
+  await page.goto("/today");
+  await page.waitForSelector("h1", { timeout: 10000 });
 
-    // Log page title for debugging
-    const title = await page.title();
-    console.log(`Page loaded. Title: ${title}`);
-
-    // Handle Clerk Sign In
-    // Wait for email input
-    await page.waitForSelector('input[name="identifier"]', {
-      state: "visible",
-      timeout: 30000, // Increased timeout
-    });
-    await page.fill('input[name="identifier"]', email);
-
-    // Click Continue (usually the primary button)
-    // Using a broad selector to catch 'Continue' or 'Sign In'
-    await page.keyboard.press("Enter");
-
-    // Wait for password input
-    await page.waitForSelector('input[name="password"]', {
-      state: "visible",
-      timeout: 15000,
-    });
-    await page.fill('input[name="password"]', password);
-
-    // Submit
-    await page.keyboard.press("Enter");
-
-    // Wait for redirect to app (away from Clerk)
-    // Adjust this regex based on your post-login destination
-    await page.waitForURL(
-      (url) => {
-        return (
-          url.origin === new URL(baseURL!).origin &&
-          !url.pathname.includes("sign-in")
-        );
-      },
-      { timeout: 30000 }
-    );
-
-    // Save state
-    await context.storageState({ path: storageState });
-    console.log(`Auth state saved to ${storageState}`);
-  } catch (error) {
-    console.error("Global setup authentication failed:", error);
-
-    // Capture page state for debugging
-    try {
-      const url = page.url();
-      const title = await page.title();
-      const html = await page.content();
-
-      console.log("=== Debug Information ===");
-      console.log(`Current URL: ${url}`);
-      console.log(`Page Title: ${title}`);
-      console.log(`Page HTML (first 2000 chars):`);
-      console.log(html.substring(0, 2000));
-      console.log("========================");
-    } catch (debugError) {
-      console.error("Failed to capture debug info:", debugError);
-    }
-
-    throw error;
-  } finally {
-    await browser.close();
-  }
-}
+  // Save authenticated state
+  await page.context().storageState({ path: authFile });
+  console.log(`Auth state saved to ${authFile}`);
+});
