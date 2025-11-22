@@ -5,7 +5,7 @@ test("Critical Path: Create Exercise and Log Set", async ({ page }) => {
   await page.goto("/today");
 
   // Verify we are on the dashboard
-  await expect(page.getByText("Today")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Today" })).toBeVisible();
 
   // 2. Create a new exercise
   // Open exercise selector
