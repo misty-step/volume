@@ -31,10 +31,11 @@ export default defineConfig({
     timeout: 120000, // Give dev server 2 minutes to start
     env: {
       // Pass through Clerk environment variables for authentication
+      // These MUST be set before running E2E tests
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
-        process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "",
-      CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY || "",
-      NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL || "",
+        process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!,
+      CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY!,
+      NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL!,
       // Disable telemetry during E2E tests
       NEXT_PUBLIC_DISABLE_SENTRY: "true",
       NEXT_PUBLIC_DISABLE_ANALYTICS: "true",

@@ -95,8 +95,8 @@ export default async function globalSetup(config: FullConfig) {
       console.log("=== Debug Information ===");
       console.log(`Current URL: ${url}`);
       console.log(`Page Title: ${title}`);
-      console.log(`Page HTML (first 500 chars):`);
-      console.log(html.substring(0, 500));
+      console.log(`Page HTML (first 2000 chars):`);
+      console.log(html.substring(0, 2000));
       console.log("========================");
     } catch (debugError) {
       console.error("Failed to capture debug info:", debugError);
