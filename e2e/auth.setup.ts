@@ -1,5 +1,7 @@
 import { clerk } from "@clerk/testing/playwright";
 import { test as setup } from "@playwright/test";
+import { loadE2EEnv } from "./env";
+import { waitForClerkLoaded } from "./clerk-helpers";
 import path from "path";
 
 /**
@@ -27,20 +29,7 @@ setup("authenticate", async ({ page }) => {
   console.log("Authenticating test user...");
 
   // Check for required environment variables
-  const email = process.env.CLERK_TEST_USER_EMAIL;
-  const password = process.env.CLERK_TEST_USER_PASSWORD;
-  const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
-
-  if (!email || !password || !publishableKey) {
-    const missing = [
-      !email && "CLERK_TEST_USER_EMAIL",
-      !password && "CLERK_TEST_USER_PASSWORD",
-      !publishableKey && "CLERK_PUBLISHABLE_KEY",
-    ].filter(Boolean);
-    throw new Error(
-      `Missing required E2E env vars: ${missing.join(", ")}. Set them in CI secrets/vars.`
-    );
-  }
+  const env = loadE2EEnv();
 
   // Navigate to unprotected page that loads Clerk
   await page.goto("/");
@@ -48,7 +37,8 @@ setup("authenticate", async ({ page }) => {
   // CRITICAL: Wait for Clerk to fully load before attempting sign-in
   // This eliminates race condition that causes "Password is incorrect" errors
   console.log("Waiting for Clerk to load...");
-  await clerk.loaded({ page, timeout: 60000 });
+  await clerk.loaded({ page });
+  await waitForClerkLoaded(page, 60000);
   console.log("Clerk loaded, proceeding with sign-in...");
 
   // Use Clerk's official sign-in helper
@@ -56,8 +46,8 @@ setup("authenticate", async ({ page }) => {
     page,
     signInParams: {
       strategy: "password",
-      identifier: email,
-      password: password,
+      identifier: env.CLERK_TEST_USER_EMAIL,
+      password: env.CLERK_TEST_USER_PASSWORD,
     },
   });
 
