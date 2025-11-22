@@ -29,10 +29,16 @@ setup("authenticate", async ({ page }) => {
   // Check for required environment variables
   const email = process.env.CLERK_TEST_USER_EMAIL;
   const password = process.env.CLERK_TEST_USER_PASSWORD;
+  const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
 
-  if (!email || !password) {
+  if (!email || !password || !publishableKey) {
+    const missing = [
+      !email && "CLERK_TEST_USER_EMAIL",
+      !password && "CLERK_TEST_USER_PASSWORD",
+      !publishableKey && "CLERK_PUBLISHABLE_KEY",
+    ].filter(Boolean);
     throw new Error(
-      "CLERK_TEST_USER_EMAIL and CLERK_TEST_USER_PASSWORD must be set"
+      `Missing required E2E env vars: ${missing.join(", ")}. Set them in CI secrets/vars.`
     );
   }
 
@@ -42,7 +48,7 @@ setup("authenticate", async ({ page }) => {
   // CRITICAL: Wait for Clerk to fully load before attempting sign-in
   // This eliminates race condition that causes "Password is incorrect" errors
   console.log("Waiting for Clerk to load...");
-  await clerk.loaded({ page });
+  await clerk.loaded({ page, timeout: 60000 });
   console.log("Clerk loaded, proceeding with sign-in...");
 
   // Use Clerk's official sign-in helper

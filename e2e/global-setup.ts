@@ -1,5 +1,15 @@
 import { clerkSetup } from "@clerk/testing/playwright";
 
+const REQUIRED_ENV = [
+  "CLERK_PUBLISHABLE_KEY",
+  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
+  "CLERK_SECRET_KEY",
+  "CLERK_JWT_ISSUER_DOMAIN",
+  "CLERK_TEST_USER_EMAIL",
+  "CLERK_TEST_USER_PASSWORD",
+  "TEST_RESET_SECRET",
+];
+
 /**
  * Global setup for Playwright E2E tests
  *
@@ -19,6 +29,13 @@ import { clerkSetup } from "@clerk/testing/playwright";
  */
 async function globalSetup() {
   console.log("Generating Clerk testing token...");
+
+  const missing = REQUIRED_ENV.filter((key) => !process.env[key]);
+  if (missing.length) {
+    throw new Error(
+      `Missing required E2E env vars: ${missing.join(", ")}. Set them in CI secrets/vars.`
+    );
+  }
 
   await clerkSetup();
 
