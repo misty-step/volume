@@ -47,6 +47,7 @@ export default defineConfig({
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
         process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!,
       CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY!,
+      CLERK_JWT_ISSUER_DOMAIN: process.env.CLERK_JWT_ISSUER_DOMAIN!,
       NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL!,
       // Disable telemetry during E2E tests
       NEXT_PUBLIC_DISABLE_SENTRY: "true",
