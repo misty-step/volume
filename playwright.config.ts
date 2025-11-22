@@ -18,7 +18,7 @@ export default defineConfig({
     // Setup project - runs authentication and saves state
     {
       name: "setup",
-      testMatch: /global\.setup\.ts/,
+      testMatch: /global-setup\.ts/,
     },
     // Test project - uses authenticated state from setup
     {
