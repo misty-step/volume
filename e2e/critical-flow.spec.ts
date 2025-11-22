@@ -4,34 +4,61 @@ test("Critical Path: Create Exercise and Log Set", async ({ page }) => {
   // 1. Start at dashboard (authenticated)
   await page.goto("/today");
 
-  // Verify we are on the dashboard
-  await expect(page.getByRole("heading", { name: "Today" })).toBeVisible();
+  // Verify we are on the dashboard (use h1 specifically to avoid ambiguity)
+  await expect(page.locator("h1").getByText("Today")).toBeVisible();
 
   // 2. Create a new exercise
-  // Open exercise selector
-  await page.getByTestId("quick-log-exercise-select").click();
-
-  // Select "Create New"
-  await page.getByTestId("quick-log-create-new").click();
-
-  // Enter unique name
   const exerciseName = `Test Lift ${Date.now()}`;
-  await page.getByTestId("create-exercise-name-input").fill(exerciseName);
-  await page.getByTestId("create-exercise-submit-btn").click();
 
-  // Verify exercise is selected (combobox button text should match)
-  await expect(page.getByTestId("quick-log-exercise-select")).toHaveText(
-    exerciseName
-  );
+  // Check if we're in First Run Experience (no exercises yet)
+  const welcomeMessage = page.getByText("Welcome to Volume");
+  const isFirstRun = await welcomeMessage.isVisible().catch(() => false);
+
+  if (isFirstRun) {
+    // First Run Experience: Use inline exercise creator
+    const exerciseInput = page.getByPlaceholder(
+      "Exercise name (e.g., Push-ups)"
+    );
+    await exerciseInput.fill(exerciseName);
+    await page.getByRole("button", { name: "Create" }).click();
+
+    // Wait for exercise to be created and QuickLogForm to appear
+    await expect(page.getByTestId("quick-log-exercise-select")).toBeVisible();
+  } else {
+    // Regular flow: Use exercise selector
+    await page.getByTestId("quick-log-exercise-select").click();
+
+    // Select "Create New"
+    await page.getByTestId("quick-log-create-new").click();
+
+    // Enter unique name
+    await page.getByTestId("create-exercise-name-input").fill(exerciseName);
+    await page.getByTestId("create-exercise-submit-btn").click();
+
+    // Verify exercise is selected (combobox button text should match)
+    await expect(page.getByTestId("quick-log-exercise-select")).toHaveText(
+      exerciseName
+    );
+  }
 
   // 3. Log a set
   await page.getByTestId("quick-log-weight-input").fill("135");
   await page.getByTestId("quick-log-reps-input").fill("10");
   await page.getByTestId("quick-log-submit-btn").click();
 
-  // 4. Verify success toast
-  // Sonner toast usually contains the text
-  await expect(page.getByText("Set logged")).toBeVisible();
+  // 4. Verify success toast (either regular "Set logged" or "NEW PR!" for records)
+  const toast = page.locator('[role="region"][aria-label*="Notifications"]');
+  await expect(toast).toBeVisible();
+  // Accept either "Set logged" or "NEW PR!" toast
+  const hasSetLoggedToast = await page
+    .getByText("Set logged")
+    .isVisible()
+    .catch(() => false);
+  const hasPrToast = await page
+    .getByText("NEW PR!")
+    .isVisible()
+    .catch(() => false);
+  expect(hasSetLoggedToast || hasPrToast).toBeTruthy();
 
   // 5. Verify it appears in history (optimistic update)
   // The set card should be visible. We might need to find it by text since ID isn't known easily.

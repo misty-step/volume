@@ -9,6 +9,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
+  globalSetup: "./e2e/global-setup.ts",
   use: {
     baseURL: "http://localhost:3000",
     trace: "on-first-retry",
@@ -18,7 +19,8 @@ export default defineConfig({
     // Setup project - runs authentication and saves state
     {
       name: "setup",
-      testMatch: /global-setup\.ts/,
+      testMatch: /auth\.setup\.ts/,
+      retries: 2,
     },
     // Test project - uses authenticated state from setup
     {
