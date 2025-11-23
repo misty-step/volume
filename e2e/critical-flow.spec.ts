@@ -46,19 +46,10 @@ test("Critical Path: Create Exercise and Log Set", async ({ page }) => {
   await page.getByTestId("quick-log-reps-input").fill("10");
   await page.getByTestId("quick-log-submit-btn").click();
 
-  // 4. Verify success toast (either regular "Set logged" or "NEW PR!" for records)
-  const toast = page.locator('[role="region"][aria-label*="Notifications"]');
-  await expect(toast).toBeVisible();
-  // Accept either "Set logged" or "NEW PR!" toast
-  const hasSetLoggedToast = await page
-    .getByText("Set logged")
-    .isVisible()
-    .catch(() => false);
-  const hasPrToast = await page
-    .getByText("NEW PR!")
-    .isVisible()
-    .catch(() => false);
-  expect(hasSetLoggedToast || hasPrToast).toBeTruthy();
+  // 4. Verify success toast (sonner uses a status region, so match by text)
+  await expect(
+    page.getByText(/Set logged|NEW PR!/, { exact: false })
+  ).toBeVisible({ timeout: 15000 });
 
   // 5. Verify it appears in history (optimistic update)
   // The set card should be visible. We might need to find it by text since ID isn't known easily.
