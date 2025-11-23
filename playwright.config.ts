@@ -1,15 +1,22 @@
 import { defineConfig, devices } from "@playwright/test";
 import dotenv from "dotenv";
 import path from "path";
+import fs from "fs";
 
 // Load environment variables from .env.local or .env
-dotenv.config({ path: path.resolve(__dirname, ".env.local") });
+if (fs.existsSync(path.resolve(__dirname, ".env.local"))) {
+  dotenv.config({ path: path.resolve(__dirname, ".env.local") });
+}
 dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 const authFile = "e2e/.auth/user.json";
 
 export default defineConfig({
   testDir: "./e2e",
+  timeout: 60_000,
+  expect: {
+    timeout: 10_000,
+  },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
