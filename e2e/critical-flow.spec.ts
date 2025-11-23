@@ -52,13 +52,7 @@ test("Critical Path: Create Exercise and Log Set", async ({ page }) => {
   ).toBeVisible({ timeout: 15000 });
 
   // 5. Verify it appears in history (optimistic update)
-  // The set card should be visible. We might need to find it by text since ID isn't known easily.
-  // But we can look for the exercise header we just created.
-  await expect(
-    page.getByTestId(`exercise-group-${exerciseName}`)
-  ).toBeVisible(); // Wait, ID is unknown?
-  // The exercise group ID is based on exercise._id, which we don't have in the test context easily.
-  // However, we can look for the text content.
+  // Assert via accessible name instead of internal IDs that use the server-generated _id.
   const exerciseGroup = page.getByRole("button", { name: exerciseName });
   await expect(exerciseGroup).toBeVisible();
 
