@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { clientVersion } from "@/lib/version";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
+  const version = clientVersion;
 
   return (
     <footer className="border-t-[3px] border-border mt-auto bg-background">
@@ -77,9 +79,10 @@ export function Footer() {
             <h3 className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
               &nbsp;
             </h3>
-            <p className="font-mono text-sm text-muted-foreground">
-              © {currentYear} Volume
-            </p>
+            <div className="font-mono text-sm text-muted-foreground space-y-0.5">
+              <p>© {currentYear} Volume</p>
+              <p className="text-xs text-muted-foreground/80">v{version}</p>
+            </div>
           </div>
         </div>
       </div>
