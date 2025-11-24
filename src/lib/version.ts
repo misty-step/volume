@@ -7,12 +7,14 @@
  * consumers consistent.
  */
 
-type EnvSource = Pick<
-  NodeJS.ProcessEnv,
-  | "SENTRY_RELEASE"
-  | "VERCEL_GIT_COMMIT_SHA"
-  | "NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA"
-  | "npm_package_version"
+type EnvSource = Partial<
+  Pick<
+    NodeJS.ProcessEnv,
+    | "SENTRY_RELEASE"
+    | "VERCEL_GIT_COMMIT_SHA"
+    | "NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA"
+    | "npm_package_version"
+  >
 >;
 
 /**
@@ -34,7 +36,9 @@ function normalizeSha(value: string): string {
  *
  * @param env - Optional environment source (defaults to process.env)
  */
-export function resolveVersion(env: EnvSource = process.env): string {
+export function resolveVersion(
+  env: EnvSource = process.env as EnvSource
+): string {
   if (env.SENTRY_RELEASE) {
     return env.SENTRY_RELEASE;
   }
