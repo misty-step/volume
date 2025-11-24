@@ -96,6 +96,7 @@ export function InlineExerciseCreator({
                     placeholder="e.g. Planks"
                     className="h-[46px]"
                     disabled={form.formState.isSubmitting}
+                    data-testid="create-exercise-name-input"
                   />
                 </FormControl>
                 <FormMessage />
@@ -106,6 +107,7 @@ export function InlineExerciseCreator({
             type="submit"
             className="h-[46px]"
             disabled={form.formState.isSubmitting}
+            data-testid="create-exercise-submit-btn"
           >
             {form.formState.isSubmitting ? "Creating..." : "Create"}
           </Button>
@@ -115,6 +117,7 @@ export function InlineExerciseCreator({
             onClick={onCancel}
             className="h-[46px]"
             disabled={form.formState.isSubmitting}
+            data-testid="create-exercise-cancel-btn"
           >
             Cancel
           </Button>

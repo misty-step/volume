@@ -30,7 +30,7 @@ const cspHeader = `
   form-action 'self';
   frame-ancestors 'none';
   block-all-mixed-content;
-  upgrade-insecure-requests;
+  ${process.env.NODE_ENV === "production" ? "upgrade-insecure-requests;" : ""}
 `
   .replace(/\s{2,}/g, " ")
   .trim();

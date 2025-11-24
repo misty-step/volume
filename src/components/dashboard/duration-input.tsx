@@ -18,6 +18,7 @@ interface DurationInputProps {
   disabled?: boolean;
   onEnter?: () => void;
   className?: string;
+  "data-testid"?: string;
 }
 
 /**
@@ -26,7 +27,14 @@ interface DurationInputProps {
  */
 export const DurationInput = forwardRef<HTMLInputElement, DurationInputProps>(
   function DurationInput(
-    { value, onChange, disabled, onEnter, className }: DurationInputProps,
+    {
+      value,
+      onChange,
+      disabled,
+      onEnter,
+      className,
+      "data-testid": testId,
+    }: DurationInputProps,
     ref
   ) {
     const minutesRef = useRef<HTMLInputElement>(null);
@@ -97,6 +105,7 @@ export const DurationInput = forwardRef<HTMLInputElement, DurationInputProps>(
           "grid grid-cols-[minmax(90px,1fr)_auto_minmax(90px,1fr)] items-center gap-2",
           className
         )}
+        data-testid={testId}
       >
         <div>
           <label className="sr-only" htmlFor={minutesId}>
@@ -114,6 +123,7 @@ export const DurationInput = forwardRef<HTMLInputElement, DurationInputProps>(
             onKeyDown={handleMinutesKeyDown}
             className="h-[46px] tabular-nums"
             disabled={disabled}
+            data-testid={testId ? `${testId}-minutes` : undefined}
           />
         </div>
         <span className="text-lg font-semibold text-muted-foreground text-center select-none">
@@ -135,6 +145,7 @@ export const DurationInput = forwardRef<HTMLInputElement, DurationInputProps>(
             onKeyDown={handleSecondsKeyDown}
             className="h-[46px] tabular-nums"
             disabled={disabled}
+            data-testid={testId ? `${testId}-seconds` : undefined}
           />
         </div>
       </div>
