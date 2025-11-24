@@ -68,4 +68,15 @@ describe("resolveVersion", () => {
 
     expect(resolveVersion(env)).toBe("not-a-sha-value");
   });
+
+  it("treats empty strings as absent and falls back to npm package version", () => {
+    const env = {
+      SENTRY_RELEASE: "",
+      VERCEL_GIT_COMMIT_SHA: "",
+      NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: "",
+      npm_package_version: "0.3.1",
+    };
+
+    expect(resolveVersion(env)).toBe("0.3.1");
+  });
 });
