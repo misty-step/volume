@@ -8,7 +8,7 @@
 - [x] **Add unit tests for version resolution** in `src/lib/version.test.ts`: cover each precedence path, missing envs fallback, and sanitizing SHA to 7 chars. Success criteria: Vitest green; branch coverage for `resolveVersion` ≥ 90%.
 - [x] **Initialize Changesets**: add `.changeset/config.json`, `.changeset/README.md`, and `pnpm` scripts (`changeset`, `version`, `tag`) in `package.json` tailored for app (no npm publish). Success criteria: `pnpm changeset` creates markdown in `.changeset/`; `pnpm changeset version` bumps package.json and generates/updates `CHANGELOG.md`.
 - [x] **Add release workflow** at `.github/workflows/release.yml` using `changesets/action@v1` to open/maintain a Release PR and, on merge, run `pnpm changeset version && pnpm changeset tag`. Success criteria: workflow validates in `pnpm lint --dry-run` and uses `GITHUB_TOKEN` only; no npm publish step.
-- [ ] **Enforce changeset presence in CI** by adding a lightweight job (e.g., `pnpm changeset status --since=origin/main`) in existing CI workflow to fail when code changes lack a changeset. Success criteria: job skips on documentation-only commits; provides actionable message.
+- [x] **Enforce changeset presence in CI** by adding a lightweight job (e.g., `pnpm changeset status --since=origin/main`) in existing CI workflow to fail when code changes lack a changeset. Success criteria: job skips on documentation-only commits; provides actionable message.
 - [ ] **Document release/version contract** in `README.md` (short section) describing version precedence, how to add a changeset, and how footer/health/Sentry derive version. Success criteria: doc references exact scripts and paths; keeps instructions <12 lines.
 
 ## Problem Statement

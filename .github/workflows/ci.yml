@@ -31,6 +31,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Require changeset for code changes
+        if: github.event_name == 'pull_request'
+        run: |
+          pnpm changeset status --since=origin/master || {
+            echo "::error::Missing changeset. Run 'pnpm changeset' and commit the generated file under .changeset/." 
+            exit 1
+          }
+        env:
+          # Prevent publish; we only need status
+          CI: true
+
       - name: Type check
         run: pnpm typecheck
 
