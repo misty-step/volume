@@ -113,6 +113,7 @@ export function ExerciseSetGroup({
                   key={set._id}
                   className="px-4 py-4 space-y-3 hover:bg-concrete-gray/5 transition-colors"
                   data-testid={`exercise-set-item-${set._id}`}
+                  data-exercise-name={exercise.name}
                 >
                   {/* Row 1: Reps/Duration + Weight (Primary Data) - Grid for alignment */}
                   <div className="grid grid-cols-[auto_1fr] gap-x-8 font-mono text-lg">
@@ -120,19 +121,31 @@ export function ExerciseSetGroup({
                     <div className="flex items-center gap-2">
                       {set.duration !== undefined ? (
                         <>
-                          <span className="font-bold tabular-nums text-safety-orange">
+                          <span
+                            className="font-bold tabular-nums text-safety-orange"
+                            data-testid="set-duration-value"
+                          >
                             {formatDuration(set.duration)}
                           </span>
-                          <span className="text-concrete-gray text-xs uppercase tracking-wider">
+                          <span
+                            className="text-concrete-gray text-xs uppercase tracking-wider"
+                            data-testid="set-duration-label"
+                          >
                             TIME
                           </span>
                         </>
                       ) : (
                         <>
-                          <span className="font-bold tabular-nums text-safety-orange">
+                          <span
+                            className="font-bold tabular-nums text-safety-orange"
+                            data-testid="set-reps-value"
+                          >
                             {set.reps}
                           </span>
-                          <span className="text-concrete-gray text-xs uppercase tracking-wider">
+                          <span
+                            className="text-concrete-gray text-xs uppercase tracking-wider"
+                            data-testid="set-reps-label"
+                          >
                             REPS
                           </span>
                         </>
@@ -143,10 +156,16 @@ export function ExerciseSetGroup({
                     <div className="flex items-center gap-2">
                       {set.weight != null ? (
                         <>
-                          <span className="font-bold tabular-nums">
+                          <span
+                            className="font-bold tabular-nums"
+                            data-testid="set-weight-value"
+                          >
                             {set.weight}
                           </span>
-                          <span className="text-concrete-gray text-xs uppercase tracking-wider">
+                          <span
+                            className="text-concrete-gray text-xs uppercase tracking-wider"
+                            data-testid="set-weight-unit"
+                          >
                             {(set.unit || preferredUnit).toUpperCase()}
                           </span>
                         </>

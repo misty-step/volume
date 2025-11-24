@@ -65,9 +65,17 @@ test("Critical Path: Create Exercise and Log Set", async ({ page }) => {
   await exerciseGroup.click();
 
   // Check for the set data
-  await expect(page.getByText("135 LBS")).toBeVisible();
-  await expect(page.getByText("10")).toBeVisible();
-  await expect(page.getByText("REPS")).toBeVisible();
+  const setItem = page
+    .locator(
+      `[data-testid^="exercise-set-item-"][data-exercise-name="${exerciseName}"]`
+    )
+    .first();
+
+  await expect(setItem).toBeVisible();
+  await expect(setItem.getByTestId("set-weight-value")).toHaveText("135");
+  await expect(setItem.getByTestId("set-weight-unit")).toHaveText("LBS");
+  await expect(setItem.getByTestId("set-reps-value")).toHaveText("10");
+  await expect(setItem.getByTestId("set-reps-label")).toHaveText("REPS");
 
   // 6. Delete the set
   // We need to find the delete button. Since we don't have the ID, we use the first one visible
@@ -94,7 +102,7 @@ test("Critical Path: Create Exercise and Log Set", async ({ page }) => {
   // Since this is a clean test user (ideally) or we just created a unique exercise,
   // it should be the only set for this exercise.
 
-  const deleteBtn = page
+  const deleteBtn = setItem
     .locator('button[data-testid^="delete-set-btn-"]')
     .first();
   await deleteBtn.click();
@@ -104,5 +112,5 @@ test("Critical Path: Create Exercise and Log Set", async ({ page }) => {
 
   // 8. Verify gone
   await expect(page.getByText("Set deleted")).toBeVisible();
-  await expect(page.getByText("135 LBS")).not.toBeVisible();
+  await expect(setItem).toBeHidden();
 });
