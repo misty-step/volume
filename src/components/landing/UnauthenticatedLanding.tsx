@@ -5,14 +5,15 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { brutalistMotion } from "@/lib/brutalist-motion";
 import { BrutalistButton } from "@/components/brutalist";
+import { Footer } from "@/components/layout/footer";
 
 export function UnauthenticatedLanding() {
   const router = useRouter();
 
   return (
     <div className="min-h-screen flex flex-col bg-concrete-black text-concrete-white">
-      {/* Hero Section - Full height */}
-      <main className="flex-1 grid lg:grid-cols-2">
+      {/* Hero Section - Full viewport height */}
+      <main className="min-h-screen grid lg:grid-cols-2">
         {/* Left: Brand + Messaging */}
         <section className="relative p-8 lg:p-16 flex items-center justify-center concrete-texture">
           <motion.div
@@ -115,11 +116,7 @@ export function UnauthenticatedLanding() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t-3 border-concrete-white py-6 px-8 lg:px-16">
-        <p className="font-mono text-sm uppercase tracking-wide">
-          © {new Date().getFullYear()} VOLUME
-        </p>
-      </footer>
+      <Footer />
     </div>
   );
 }
