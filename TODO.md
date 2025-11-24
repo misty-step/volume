@@ -1,5 +1,16 @@
 # TODO: Fix Flaky E2E Authentication ✅ COMPLETED
 
+## TODO: Automated Versioning + Footer Version Display (Ousterhout/Carmack)
+
+- [x] **Create deep version module** in `src/lib/version.ts` that resolves version with strict precedence `process.env.SENTRY_RELEASE` → `process.env.VERCEL_GIT_COMMIT_SHA || NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA` → `process.env.npm_package_version` → `"dev"`; export both server-safe `resolveVersion()` and client-safe `clientVersion` string. Success criteria: deterministic output in tests when envs are stubbed; no direct env reads in UI components.
+- [ ] **Expose build-time public version env** in `next.config.ts` (or `next.config.js`) by injecting `process.env.NEXT_PUBLIC_APP_VERSION = resolveVersion()` during build using Next `env` config. Success criteria: `process.env.NEXT_PUBLIC_APP_VERSION` available on client without additional network calls; value matches server `resolveVersion()` in CI.
+- [ ] **Update footer to show version** in `src/components/layout/footer.tsx`: render `v{version}` (and short SHA when present, e.g., `v1.2.3 (abc123)`), styled minimally to match existing typography. Success criteria: renders in marketing pages; no hydration mismatch warnings.
+- [ ] **Add unit tests for version resolution** in `src/lib/version.test.ts`: cover each precedence path, missing envs fallback, and sanitizing SHA to 7 chars. Success criteria: Vitest green; branch coverage for `resolveVersion` ≥ 90%.
+- [ ] **Initialize Changesets**: add `.changeset/config.json`, `.changeset/README.md`, and `pnpm` scripts (`changeset`, `version`, `tag`) in `package.json` tailored for app (no npm publish). Success criteria: `pnpm changeset` creates markdown in `.changeset/`; `pnpm changeset version` bumps package.json and generates/updates `CHANGELOG.md`.
+- [ ] **Add release workflow** at `.github/workflows/release.yml` using `changesets/action@v1` to open/maintain a Release PR and, on merge, run `pnpm changeset version && pnpm changeset tag`. Success criteria: workflow validates in `pnpm lint --dry-run` and uses `GITHUB_TOKEN` only; no npm publish step.
+- [ ] **Enforce changeset presence in CI** by adding a lightweight job (e.g., `pnpm changeset status --since=origin/main`) in existing CI workflow to fail when code changes lack a changeset. Success criteria: job skips on documentation-only commits; provides actionable message.
+- [ ] **Document release/version contract** in `README.md` (short section) describing version precedence, how to add a changeset, and how footer/health/Sentry derive version. Success criteria: doc references exact scripts and paths; keeps instructions <12 lines.
+
 ## Problem Statement
 
 Clerk authentication in E2E tests failed intermittently with "Password is incorrect" error. Root cause: race condition between Clerk loading and `clerk.signIn()` being called. Missing `clerk.loaded()` wait per official docs.
