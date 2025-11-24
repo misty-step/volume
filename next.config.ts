@@ -1,8 +1,13 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 import withBundleAnalyzer from "@next/bundle-analyzer";
+import { resolveVersion } from "./src/lib/version";
 
 const nextConfig: NextConfig = {
+  env: {
+    // Expose a deterministic, pre-resolved app version to the client.
+    NEXT_PUBLIC_APP_VERSION: resolveVersion(),
+  },
   async headers() {
     return [
       {
