@@ -1,0 +1,10 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🚦 Running typecheck before push..."
+pnpm typecheck || {
+  echo "❌ Typecheck failed. Fix errors before pushing."
+  exit 1
+}
+
+echo "✅ Typecheck passed."
