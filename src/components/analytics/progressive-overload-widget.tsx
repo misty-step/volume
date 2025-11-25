@@ -193,7 +193,11 @@ export function ProgressiveOverloadWidget({
                 </div>
 
                 {/* Mini Line Chart */}
-                <ResponsiveContainer width="100%" height={80}>
+                <ResponsiveContainer
+                  width="100%"
+                  height={80}
+                  className="[&_.recharts-surface]:rounded-none"
+                >
                   <LineChart
                     data={chartData}
                     margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
