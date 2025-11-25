@@ -1,6 +1,7 @@
 "use client";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
 import {
   Table,
   TableHeader,
@@ -11,6 +12,10 @@ import {
 } from "@/components/ui/table";
 import { ExerciseStats } from "@/lib/stats-calculator";
 import { Dumbbell } from "lucide-react";
+import {
+  numberDisplayClasses,
+  labelDisplayClasses,
+} from "@/lib/typography-utils";
 
 interface DailyStatsCardProps {
   exerciseStats: ExerciseStats[];
@@ -18,7 +23,7 @@ interface DailyStatsCardProps {
 
 export function DailyStatsCard({ exerciseStats }: DailyStatsCardProps) {
   return (
-    <Card className="shadow-sm">
+    <BrutalistCard className="p-6">
       <CardHeader>
         <CardTitle className="text-lg">{"Today's Progress"}</CardTitle>
       </CardHeader>
@@ -30,19 +35,31 @@ export function DailyStatsCard({ exerciseStats }: DailyStatsCardProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Exercise</TableHead>
-                    <TableHead className="text-right">Reps</TableHead>
-                    <TableHead className="text-right">Sets</TableHead>
+                    <TableHead className="font-display uppercase text-xs tracking-wider">
+                      Exercise
+                    </TableHead>
+                    <TableHead className="text-right font-display uppercase text-xs tracking-wider">
+                      Reps
+                    </TableHead>
+                    <TableHead className="text-right font-display uppercase text-xs tracking-wider">
+                      Sets
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {exerciseStats.map((exercise, idx) => (
                     <TableRow key={idx}>
-                      <TableCell>{exercise.name}</TableCell>
-                      <TableCell className="text-right font-bold tabular-nums">
+                      <TableCell className="font-display uppercase">
+                        {exercise.name}
+                      </TableCell>
+                      <TableCell
+                        className={`text-right ${numberDisplayClasses.large}`}
+                      >
                         {exercise.reps}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell
+                        className={`text-right ${numberDisplayClasses.default}`}
+                      >
                         {exercise.sets}
                       </TableCell>
                     </TableRow>
@@ -56,15 +73,21 @@ export function DailyStatsCard({ exerciseStats }: DailyStatsCardProps) {
               {exerciseStats.map((exercise, idx) => (
                 <div
                   key={idx}
-                  className="border rounded-md p-3 bg-card hover:bg-muted/50 transition-colors"
+                  className="border-3 border-concrete-black dark:border-concrete-white p-3 bg-background hover:bg-muted/50 transition-colors"
                 >
-                  <div className="font-medium">{exercise.name}</div>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    <span className="font-bold tabular-nums">
+                  <div className="font-display uppercase tracking-wide">
+                    {exercise.name}
+                  </div>
+                  <div className="mt-1 flex items-baseline gap-2">
+                    <span className={numberDisplayClasses.large}>
                       {exercise.reps}
-                    </span>{" "}
-                    reps • <span className="tabular-nums">{exercise.sets}</span>{" "}
-                    sets
+                    </span>
+                    <span className={labelDisplayClasses.default}>reps</span>
+                    <span className="text-concrete-gray">•</span>
+                    <span className={numberDisplayClasses.default}>
+                      {exercise.sets}
+                    </span>
+                    <span className={labelDisplayClasses.default}>sets</span>
                   </div>
                 </div>
               ))}
@@ -77,6 +100,6 @@ export function DailyStatsCard({ exerciseStats }: DailyStatsCardProps) {
           </div>
         )}
       </CardContent>
-    </Card>
+    </BrutalistCard>
   );
 }
