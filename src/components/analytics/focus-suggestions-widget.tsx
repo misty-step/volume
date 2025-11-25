@@ -31,8 +31,8 @@ function getPriorityColor(priority: FocusSuggestion["priority"]): {
       };
     case "low":
       return {
-        bg: "bg-gray-500/10 dark:bg-gray-500/20",
-        text: "text-gray-700 dark:text-gray-300",
+        bg: "bg-concrete-gray/10 dark:bg-concrete-gray/20",
+        text: "text-muted-foreground",
       };
   }
 }
