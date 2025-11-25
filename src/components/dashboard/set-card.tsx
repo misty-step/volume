@@ -23,7 +23,7 @@ import {
   numberDisplayClasses,
   labelDisplayClasses,
 } from "@/lib/typography-utils";
-import { brutalistMotion } from "@/lib/brutalist-motion";
+import { motionPresets, PRECISION_TIMING } from "@/lib/brutalist-motion";
 
 interface SetCardProps {
   set: Set;
@@ -66,7 +66,7 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
 
   return (
     <motion.div
-      variants={brutalistMotion.mechanicalSlide}
+      variants={motionPresets.cardEntrance}
       initial="initial"
       animate="animate"
       exit="exit"
