@@ -18,6 +18,10 @@ import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
 import { formatTimeAgo } from "@/lib/date-utils";
 import { Exercise, Set } from "@/types/domain";
+import {
+  numberDisplayClasses,
+  labelDisplayClasses,
+} from "@/lib/typography-utils";
 
 interface SetCardProps {
   set: Set;
@@ -76,27 +80,25 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
           </h4>
           <div className="mt-1 flex items-center gap-3">
             {set.duration !== undefined ? (
-              <span className="font-mono text-lg font-semibold tabular-nums">
+              <span className={numberDisplayClasses.default}>
                 {formatDuration(set.duration)}
               </span>
             ) : (
-              <span className="font-mono text-lg font-semibold tabular-nums">
+              <span className={numberDisplayClasses.default}>
                 {set.reps} reps
               </span>
             )}
             {set.weight && (
               <>
                 <span className="text-concrete-gray">•</span>
-                <span className="font-mono text-2xl font-bold text-danger-red tabular-nums">
-                  {set.weight}
-                </span>
-                <span className="font-mono text-sm text-concrete-gray uppercase ml-1">
+                <span className={numberDisplayClasses.large}>{set.weight}</span>
+                <span className={`${labelDisplayClasses.default} ml-1`}>
                   {displayUnit}
                 </span>
               </>
             )}
           </div>
-          <p className="mt-1 font-mono text-xs uppercase text-muted-foreground">
+          <p className={`mt-1 ${labelDisplayClasses.small}`}>
             {formatTimeAgo(set.performedAt, "compact")}
           </p>
         </div>
