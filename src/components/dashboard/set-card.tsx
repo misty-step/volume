@@ -96,7 +96,7 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
               </>
             )}
           </div>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-1 font-mono text-xs uppercase text-muted-foreground">
             {formatTimeAgo(set.performedAt, "compact")}
           </p>
         </div>
