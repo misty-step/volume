@@ -12,7 +12,7 @@
 
 ### Backend: Add Date-Filtered Query
 
-- [ ] **Add `listSetsForDateRange` query to `convex/sets.ts`**
+- [x] **Add `listSetsForDateRange` query to `convex/sets.ts`**
   - Location: After `listSets` query (around line 113)
   - Create new query with args: `{ startDate: v.number(), endDate: v.number() }`
   - Use existing `by_user_performed` index with date range filters
@@ -21,7 +21,7 @@
   - Add auth check: `await ctx.auth.getUserIdentity()` with early return `[]` if unauthenticated
   - Success criteria: Query returns only sets within date range, not entire history. Verify index is used (not full table scan).
 
-- [ ] **Write unit tests for `listSetsForDateRange` in `convex/sets.test.ts`**
+- [x] **Write unit tests for `listSetsForDateRange` in `convex/sets.test.ts`**
   - Test case 1: Returns empty array for unauthenticated user
   - Test case 2: Returns only sets within specified date range (create 3 sets: yesterday, today, tomorrow; query for today only)
   - Test case 3: Returns sets in descending order by performedAt

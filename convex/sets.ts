@@ -112,6 +112,34 @@ export const listSets = query({
   },
 });
 
+// List sets within a date range (for Dashboard - optimized to reduce payload)
+export const listSetsForDateRange = query({
+  args: {
+    startDate: v.number(),
+    endDate: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return [];
+    }
+
+    const sets = await ctx.db
+      .query("sets")
+      .withIndex("by_user_performed", (q) => q.eq("userId", identity.subject))
+      .filter((q) =>
+        q.and(
+          q.gte(q.field("performedAt"), args.startDate),
+          q.lte(q.field("performedAt"), args.endDate)
+        )
+      )
+      .order("desc")
+      .collect();
+
+    return sets;
+  },
+});
+
 // List all sets with pagination (for history page)
 export const listSetsPaginated = query({
   args: {
