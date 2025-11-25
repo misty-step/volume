@@ -52,8 +52,9 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Effort**: 15m + testing | **Risk**: MEDIUM
 **Acceptance**: `pnpm audit` shows no high/critical vulnerabilities.
 
-### [Performance] Fix O(n) lookups in analytics queries
+### [Performance] Fix O(n) lookups in analytics queries ✅ IN PROGRESS
 
+**Status**: Moved to TODO.md on 2025-11-24 for immediate implementation
 **Files**: convex/analyticsFocus.ts:113, convex/analyticsRecovery.ts:161
 **Perspectives**: performance-pathfinder, complexity-archaeologist
 **Impact**: `exercises.find()` in loop creates O(n×m) complexity. With 1000+ sets, adds 200-500ms latency to Focus Suggestions and Recovery Dashboard.
@@ -61,13 +62,14 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Effort**: 30m | **Speedup**: 5-10x for large datasets
 **Acceptance**: Analytics widgets load <100ms with 1000-set fixture.
 
-### [Performance] Add listSetsForToday query
+### [Performance] Add date-filtered query for Dashboard ✅ IN PROGRESS
 
+**Status**: Moved to TODO.md on 2025-11-24 for immediate implementation (renamed to listSetsForDateRange for flexibility)
 **File**: convex/sets.ts (new query), src/components/dashboard/Dashboard.tsx:35
 **Perspectives**: performance-pathfinder, user-experience-advocate
 **Impact**: Dashboard fetches ALL historical sets (500KB-5MB) then filters client-side for today. Users with 1000+ sets see multi-second load.
-**Fix**: Add `listSetsForToday` query with date range filter at DB level using `by_user_performed` index.
-**Effort**: 30m | **Speedup**: 10-50x payload reduction
+**Fix**: Add `listSetsForDateRange` query with start/end date filters at DB level using `by_user_performed` index.
+**Effort**: 4-6h | **Speedup**: 10-50x payload reduction
 **Acceptance**: Dashboard network payload <50KB; loads <400ms with 10k-set fixture.
 
 ### [Architecture] Consolidate PR detection to single source
@@ -412,6 +414,24 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Approach**: Add `notes` field, optional text input in QuickLogForm.
 **Effort**: 1-2d | **Strategic Value**: MEDIUM
 
+### [Performance] Add date filtering to getRecentPRs query
+
+**File**: convex/analytics.ts:316-320
+**Perspectives**: performance-pathfinder
+**Why**: Currently fetches ALL user sets, then filters in-memory for recent period. With 1000+ sets, transfers unnecessary data.
+**Approach**: Add `.filter((q) => q.gte(q.field("performedAt"), cutoffDate))` to initial query to reduce dataset at source.
+**Effort**: 30m | **Impact**: 50% reduction in data fetched for users with 1000+ sets
+**Note**: Implement only if users still report analytics slowness after current Dashboard/O(n) fixes
+
+### [Performance] Frontend bundle splitting for analytics libraries
+
+**Files**: src/components/analytics/volume-chart.tsx, activity-heatmap.tsx
+**Perspectives**: performance-pathfinder, user-experience-advocate
+**Why**: Heavy libraries loaded on every page: recharts (~100KB), react-activity-calendar (~50KB), framer-motion (~50KB). Increases initial bundle by 200KB.
+**Approach**: Dynamic imports for analytics-specific libraries: `const { BarChart } = await import('recharts');`
+**Effort**: 2h | **Impact**: 150-200KB bundle reduction, faster initial page load
+**Trade-off**: Slight delay when first loading Analytics page
+
 ### [Performance] Reduce redundant analytics scans
 
 **Scope**: convex/ai/reports.ts:76, convex/analytics.ts:315
@@ -491,6 +511,7 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 - **[Architecture] Domain service for PR detection** – Move shared logic to pure module for reuse and deterministic tests.
 - **[Architecture] Create opaque ID types** – Decouple frontend from Convex `Id<>` types for backend flexibility.
 - **[Infrastructure] Structured logging with Pino** – Replace console.log with structured context, levels, correlation IDs.
+- **[Infrastructure] Performance measurement infrastructure** – Deferred from 2025-11 performance optimization. Backend timing utilities (`convex/lib/instrumentation.ts`), frontend PerformanceMonitor (`src/lib/performance.ts`), production analytics events. Implement only if performance degrades over time or new bottlenecks emerge requiring profiling data. Effort: 8-12h.
 - **[Documentation] Component library JSDoc** – Document all public components with usage examples.
 - **[Performance] Move exercise sorting to backend** – `sortExercisesByRecency` scans all sets on every render.
 - **[Testing] Visual regression baseline** – Playwright screenshots for key pages, catch unintended UI changes.
@@ -514,6 +535,14 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 ---
 
 ## Learnings
+
+**From 2025-11-24 performance optimization sprint:**
+
+- **Quick wins strategy validated**: User feedback indicated performance as critical blocker. Skipped measurement infrastructure, went straight to proven bottlenecks: Dashboard query filtering + Analytics O(n) Map optimizations. Expected 10-50x speedup.
+
+- **Performance Council approach**: Simultaneous analysis through Gregg (measurement), Hickey (simplification), Knuth (critical 3%) lenses identified true hot paths vs assumed bottlenecks. Dashboard (80% of traffic) was being ignored while BACKLOG focused on analytics cold paths.
+
+- **Items moved to active work**: Lines 55-71 (O(n) lookups, listSetsForToday) moved from BACKLOG to TODO.md for immediate implementation. Remaining performance enhancements (getRecentPRs filtering, bundle splitting, measurement infrastructure) kept in BACKLOG for post-launch evaluation.
 
 **From 2025-11-18 grooming session:**
 

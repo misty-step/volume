@@ -1,99 +1,173 @@
-# TODO: Fix Flaky E2E Authentication ✅ COMPLETED
+# TODO: Performance Optimization - Dashboard Hot Path & Analytics O(n) Fixes
 
-## TODO: Automated Versioning + Footer Version Display (Ousterhout/Carmack)
+**Context**: Users with 100-500 sets experiencing critical performance issues. Dashboard fetches entire workout history (500KB-5MB) to display today's sets (5-10KB). Analytics queries perform O(n×m) lookups with `exercises.find()` inside loops, resulting in up to 50,000 unnecessary iterations.
 
-- [x] **Create deep version module** in `src/lib/version.ts` that resolves version with strict precedence `process.env.SENTRY_RELEASE` → `process.env.VERCEL_GIT_COMMIT_SHA || NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA` → `process.env.npm_package_version` → `"dev"`; export both server-safe `resolveVersion()` and client-safe `clientVersion` string. Success criteria: deterministic output in tests when envs are stubbed; no direct env reads in UI components.
-- [x] **Expose build-time public version env** in `next.config.ts` (or `next.config.js`) by injecting `process.env.NEXT_PUBLIC_APP_VERSION = resolveVersion()` during build using Next `env` config. Success criteria: `process.env.NEXT_PUBLIC_APP_VERSION` available on client without additional network calls; value matches server `resolveVersion()` in CI.
-- [x] **Update footer to show version** in `src/components/layout/footer.tsx`: render `v{version}` (and short SHA when present, e.g., `v1.2.3 (abc123)`), styled minimally to match existing typography. Success criteria: renders in marketing pages; no hydration mismatch warnings.
-- [x] **Add unit tests for version resolution** in `src/lib/version.test.ts`: cover each precedence path, missing envs fallback, and sanitizing SHA to 7 chars. Success criteria: Vitest green; branch coverage for `resolveVersion` ≥ 90%.
-- [x] **Initialize Changesets**: add `.changeset/config.json`, `.changeset/README.md`, and `pnpm` scripts (`changeset`, `version`, `tag`) in `package.json` tailored for app (no npm publish). Success criteria: `pnpm changeset` creates markdown in `.changeset/`; `pnpm changeset version` bumps package.json and generates/updates `CHANGELOG.md`.
-- [x] **Add release workflow** at `.github/workflows/release.yml` using `changesets/action@v1` to open/maintain a Release PR and, on merge, run `pnpm changeset version && pnpm changeset tag`. Success criteria: workflow validates in `pnpm lint --dry-run` and uses `GITHUB_TOKEN` only; no npm publish step.
-- [x] **Enforce changeset presence in CI** by adding a lightweight job (e.g., `pnpm changeset status --since=origin/main`) in existing CI workflow to fail when code changes lack a changeset. Success criteria: job skips on documentation-only commits; provides actionable message.
-- [x] **Document release/version contract** in `README.md` (short section) describing version precedence, how to add a changeset, and how footer/health/Sentry derive version. Success criteria: doc references exact scripts and paths; keeps instructions <12 lines.
+**Strategic Goal** (Ousterhout): Create deeper modules by moving data filtering server-side (information hiding), reducing client payload by 100x. Simplify analytics by eliminating quadratic complexity through proper data structures (Map instead of Array.find).
 
-## Problem Statement
-
-Clerk authentication in E2E tests failed intermittently with "Password is incorrect" error. Root cause: race condition between Clerk loading and `clerk.signIn()` being called. Missing `clerk.loaded()` wait per official docs.
-
-## Solution Architecture ✅
-
-Separate token generation (global setup) from authentication (setup test) with explicit Clerk readiness checks. Follows Clerk + Playwright official patterns for zero-flake reliability.
+**Expected Impact**: Dashboard 10-50x faster (2s → 300ms), Analytics 20-50x faster (500ms → 50ms).
 
 ---
 
-## Tasks
+## Phase 1: Dashboard Hot Path Optimization (CRITICAL - 80% of traffic)
 
-### 1. Core Architecture Changes ✅ COMPLETED
+### Backend: Add Date-Filtered Query
 
-- [x] **Create proper global setup for Clerk testing token**
-  - File: `e2e/global-setup.ts` (CREATED)
-  - Pure Node.js global setup function that calls `clerkSetup()` ONLY
-  - Execution: Runs before ANY browser contexts launch
-  - Result: Token ready for all tests ✅
+- [ ] **Add `listSetsForDateRange` query to `convex/sets.ts`**
+  - Location: After `listSets` query (around line 113)
+  - Create new query with args: `{ startDate: v.number(), endDate: v.number() }`
+  - Use existing `by_user_performed` index with date range filters
+  - Apply filters: `q.and(q.gte(q.field("performedAt"), args.startDate), q.lte(q.field("performedAt"), args.endDate))`
+  - Maintain `order("desc")` for consistency with existing query
+  - Add auth check: `await ctx.auth.getUserIdentity()` with early return `[]` if unauthenticated
+  - Success criteria: Query returns only sets within date range, not entire history. Verify index is used (not full table scan).
 
-- [x] **Create dedicated authentication setup file**
-  - File: `e2e/auth.setup.ts` (CREATED)
-  - Contains ONLY authentication logic with Clerk readiness wait
-  - Separated from token generation ✅
+- [ ] **Write unit tests for `listSetsForDateRange` in `convex/sets.test.ts`**
+  - Test case 1: Returns empty array for unauthenticated user
+  - Test case 2: Returns only sets within specified date range (create 3 sets: yesterday, today, tomorrow; query for today only)
+  - Test case 3: Returns sets in descending order by performedAt
+  - Test case 4: Filters by userId (create sets for 2 users, verify isolation)
+  - Test case 5: Handles edge case where startDate === endDate (single day query)
+  - Test case 6: Returns empty array when no sets in range
+  - Success criteria: All tests pass, coverage includes auth, date filtering, ordering, and user isolation.
 
-- [x] **Add explicit Clerk readiness check to auth setup**
-  - File: `e2e/auth.setup.ts:45`
-  - Added: `await clerk.loaded({ page });` before `clerk.signIn()`
-  - Eliminates race condition - Clerk always ready before sign-in ✅
+### Frontend: Use Date-Filtered Query
 
-- [x] **Update Playwright config to use proper global setup**
-  - File: `playwright.config.ts:12`
-  - Added `globalSetup: './e2e/global-setup.ts'` at config root
-  - Updated setup project `testMatch` to `/auth\.setup\.ts/`
-  - Added `retries: 2` to setup project
-  - Guarantees execution order: token generation → authentication → tests ✅
+- [ ] **Update `Dashboard.tsx` to use `listSetsForDateRange` instead of `listSets`**
+  - Location: Line 35 (replace `allSets` query)
+  - Import `getTodayRange` from `@/lib/date-utils` (already imported line 23)
+  - Calculate date range: `const { start, end } = getTodayRange();` (add before useQuery)
+  - Replace query: `const todaysSets = useQuery(api.sets.listSetsForDateRange, { startDate: start, endDate: end });`
+  - Remove client-side filtering logic (delete lines 64-71, the `useMemo` that filters `allSets`)
+  - Update all downstream usages of `allSets` to use `todaysSets` directly
+  - Verify `exerciseGroups` useMemo (line 74-77) now receives pre-filtered data
+  - Success criteria: Dashboard only fetches today's sets from server. No client-side date filtering. Component renders correctly with filtered data.
 
-### 2. Test Improvements ✅ COMPLETED
+- [ ] **Verify `getTodayRange()` in `src/lib/date-utils.ts` returns timestamps**
+  - Location: Likely exists in date-utils.ts (read file first)
+  - Check return type: Should return `{ start: number, end: number }` (Unix timestamps in ms)
+  - If returns Date objects, convert to `.getTime()` for Convex compatibility
+  - Ensure start is midnight local time (00:00:00.000) and end is 23:59:59.999
+  - Success criteria: Function returns numeric timestamps compatible with Convex performedAt field (number type).
 
-- [x] **Handle FirstRunExperience state in critical-flow test**
-  - File: `e2e/critical-flow.spec.ts:13-40`
-  - Test handles both FirstRun (0 exercises) and regular states ✅
-
-- [x] **Fix toast message assertion**
-  - File: `e2e/critical-flow.spec.ts:47-59`
-  - Handles both "Set logged" and "NEW PR!" toast variants ✅
-
-- [x] **Fix duplicate heading selector**
-  - File: `e2e/critical-flow.spec.ts:8`
-  - Uses specific h1 selector to avoid strict mode violation ✅
-
-### 3. Verification ✅ ARCHITECTURE VALIDATED
-
-- [x] **Verify new architecture eliminates race condition**
-  - Test runs show consistent execution: token → Clerk load wait → auth → tests
-  - No "Password is incorrect" errors even when credentials missing
-  - Architecture working correctly ✅
-
-- [x] **Clean up old auth state**
-  - Deleted stale `e2e/.auth/user.json`
-  - New architecture generates fresh auth state ✅
+- [ ] **Update Dashboard component tests if they exist**
+  - Search for `Dashboard.test.tsx` or similar test file
+  - If exists: Update test mocks to use `listSetsForDateRange` instead of `listSets`
+  - Mock `getTodayRange()` to return fixed timestamps for deterministic tests
+  - Verify component still renders correctly with date-filtered query
+  - Success criteria: Existing Dashboard tests pass with new query. No test failures from query change.
 
 ---
 
-## Technical Notes
+## Phase 2: Analytics O(n) Loop Optimization
 
-**Execution Order (Guaranteed by Config):**
+### Fix analyticsFocus.ts O(n) Lookup
 
-1. `global-setup.ts` - Token generation (Node.js, before browsers)
-2. `auth.setup.ts` - Login once, save state (Playwright test)
-3. `*.spec.ts` - Business logic tests (use saved state)
+- [ ] **Build exercise Map before loop in `getFocusSuggestions` (`convex/analyticsFocus.ts:107-114`)**
+  - Location: After fetching exercises (line 63), before loop (line 80)
+  - Add after line 74 (early return check): `const exerciseMap = new Map(exercises.map((ex) => [ex._id, ex]));`
+  - Replace line 113 `exercises.find((ex) => ex._id === set.exerciseId)` with `exerciseMap.get(set.exerciseId)`
+  - Keep existing `if (!exercise) continue;` guard unchanged
+  - Complexity reduction: O(n sets × m exercises) → O(n + m)
+  - Success criteria: Loop uses Map.get() (O(1)) instead of Array.find() (O(n)). Logic unchanged, only performance improved.
 
-**Key Fixes:**
+- [ ] **Verify analyticsFocus tests still pass after Map optimization**
+  - Run existing tests: `pnpm test analyticsFocus.test.ts`
+  - Ensure getFocusSuggestions returns same results with Map lookup
+  - If tests fail, verify Map key/value structure matches original find() logic
+  - Success criteria: All existing tests pass. No behavior changes, only performance improvement.
 
-- **Race Condition**: `clerk.loaded()` ensures Clerk ready before `clerk.signIn()`
-- **Timing Issues**: Global setup ensures token exists before browser launch
-- **State Isolation**: Each test gets fresh context with saved auth state
+### Fix analyticsRecovery.ts O(n) Lookup
 
-**What This Doesn't Change:**
+- [ ] **Build exercise Map before loop in `getRecoveryStatus` (`convex/analyticsRecovery.ts:158-165`)**
+  - Location: After fetching exercises (line 86), before processing sets (line 160)
+  - Add after line 157 (metric initialization loop): `const exerciseMap = new Map(exercises.map((ex) => [ex._id, ex]));`
+  - Replace line 161 `exercises.find((ex) => ex._id === set.exerciseId)` with `exerciseMap.get(set.exerciseId)`
+  - Keep existing `if (!exercise) continue;` guard unchanged
+  - Complexity reduction: O(n sets × m exercises) → O(n + m)
+  - Success criteria: Loop uses Map.get() (O(1)) instead of Array.find() (O(n)). Logic unchanged, only performance improved.
 
-- Auth fixture (`auth-fixture.ts`) - still works, uses saved state
-- Test structure - still uses `storageState` from setup
-- Environment variables - still requires same Clerk env vars
+- [ ] **Verify analyticsRecovery tests still pass after Map optimization**
+  - Run existing tests: `pnpm test analyticsRecovery.test.ts`
+  - Ensure getRecoveryStatus returns same muscle group data with Map lookup
+  - If tests fail, verify Map contains exercises with muscleGroups field
+  - Success criteria: All existing tests pass. Recovery calculations identical to before.
 
-**If Tests Still Fail After This:**
-Consider fallback: API-based auth instead of UI (skip Clerk UI entirely, use Backend API to generate session tokens). But this proper separation + explicit waits should eliminate all flakiness.
+---
+
+## Phase 3: Integration & Verification
+
+### Type Safety & Schema Verification
+
+- [ ] **Verify Convex schema supports date range filtering on `by_user_performed` index**
+  - Location: `convex/schema.ts` (read to verify index structure)
+  - Check that `by_user_performed` index includes `performedAt` field
+  - Confirm index definition: `.withIndex("by_user_performed", ["userId", "performedAt"])`
+  - No changes needed if index already optimal (it should be based on plan analysis)
+  - Success criteria: Index supports efficient date range queries without full table scan.
+
+- [ ] **Verify TypeScript types for new query parameters**
+  - Run typecheck: `pnpm typecheck`
+  - Ensure `startDate: v.number()` and `endDate: v.number()` infer correct types in Convex
+  - Verify Dashboard.tsx passes numbers (not Date objects) to query
+  - Fix any type errors from query signature changes
+  - Success criteria: `pnpm typecheck` passes with no errors in Dashboard or sets query.
+
+### End-to-End Testing
+
+- [ ] **Manual testing: Dashboard with varying data sizes**
+  - Test with 0 sets: Should show empty state, no errors
+  - Test with 10 sets today: Should load instantly, show all 10 sets
+  - Test with 100 sets total, 5 today: Should only fetch 5 sets, not 100
+  - Test with 500 sets total, 20 today: Should load <500ms (use browser DevTools Network tab to verify payload size)
+  - Verify no client-side filtering happening (check React DevTools Profiler)
+  - Success criteria: Dashboard loads feel instant. Network payload reduced 10-100x. Only today's data transferred.
+
+- [ ] **Manual testing: Analytics page with Map optimizations**
+  - Navigate to `/analytics` page
+  - Verify Focus Suggestions widget loads without lag
+  - Verify Recovery Dashboard widget loads without lag
+  - Check browser console for any errors from Map.get() returning undefined
+  - Test with realistic data (50+ exercises, 200+ sets)
+  - Success criteria: Analytics queries feel instant. No lag when opening analytics page. No console errors.
+
+- [ ] **Run full test suite before deployment**
+  - Execute: `pnpm test --run` (run all tests once, no watch mode)
+  - Verify all existing tests pass (Dashboard, Analytics, sets query, exercises query)
+  - If failures occur, diagnose whether from query changes or Map optimizations
+  - Fix any broken tests (likely mock updates needed for new query signature)
+  - Success criteria: `pnpm test --run` shows 100% pass rate. No new test failures introduced.
+
+---
+
+## Deployment Readiness
+
+- [ ] **Pre-deployment verification checklist**
+  - ✓ TypeScript compilation: `pnpm typecheck` passes
+  - ✓ All tests pass: `pnpm test --run` succeeds
+  - ✓ Linting clean: `pnpm lint` passes
+  - ✓ Local manual testing: Dashboard and Analytics feel fast
+  - ✓ No console errors in browser DevTools
+  - ✓ Git status clean: All changes committed with clear commit messages
+  - Success criteria: All quality gates pass. Ready for production deployment.
+
+---
+
+## Notes
+
+**Performance Monitoring** (post-implementation):
+
+- After deployment, monitor user feedback for speed improvements
+- If users still report slowness, revisit measurement infrastructure from original plan
+- Future optimization candidates in BACKLOG.md (getRecentPRs filtering, bundle splitting)
+
+**Testing Philosophy**:
+
+- Tests verify behavior unchanged, only performance improved
+- Map optimizations are refactoring (same inputs → same outputs, just faster)
+- Dashboard query change is feature enhancement (reduces data transfer)
+
+**Strategic Improvements** (Ousterhout):
+
+- Dashboard query: Deeper module (simple interface hiding filtering complexity)
+- Analytics Map: Better data structure choice (O(1) vs O(n) for fundamental operation)
+- Both changes: Information hiding principle (server handles filtering, client doesn't see entire dataset)
