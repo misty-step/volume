@@ -133,11 +133,11 @@
 - [x] Add PRECISION_TIMING to brutalist-motion.ts
 - [x] Update animation durations to golden ratio (0.618s)
 - [x] Apply to SetCard entrance animations
-- [~] Apply to form field focus transitions
+- [x] Apply to form field focus transitions
 
 ### 2.2 Chrome Accent System
 
-- [ ] Add chromeHighlight/chromeShadow to design-tokens.ts
+- [~] Add chromeHighlight/chromeShadow to design-tokens.ts
 - [ ] Apply chrome accents to input focus states
 - [ ] Apply chrome to button pressed states
 - [ ] Apply subtle chrome glow to card hover states

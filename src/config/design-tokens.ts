@@ -14,6 +14,11 @@ export const BRUTALIST_COLORS = {
   safetyOrange: "#FF6B00", // Industrial/construction orange
   metalEdge: "#D1D5DB", // Chrome highlight
 
+  // Chrome accent system (metallic highlights/shadows for precision instrument feel)
+  chromeHighlight: "#E8EAED", // Bright metallic highlight
+  chromeShadow: "#9CA3AF", // Subtle metallic shadow
+  chromeGlow: "rgba(232, 234, 237, 0.15)", // Subtle glow for hover states
+
   // HSL for CSS variables
   hsl: {
     concreteBlack: "0 0% 0%",
@@ -22,6 +27,8 @@ export const BRUTALIST_COLORS = {
     dangerRed: "349 78% 45%",
     safetyOrange: "23 100% 50%",
     metalEdge: "210 10% 85%",
+    chromeHighlight: "220 13% 91%",
+    chromeShadow: "220 9% 65%",
   },
 } as const;
 
