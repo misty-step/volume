@@ -124,8 +124,7 @@
 
   /* Context-aware focus system with golden ratio timing */
   *:focus-visible {
-    @apply outline-none ring-danger-red;
-    --tw-ring-offset-width: 0px;
+    @apply outline-none ring-danger-red ring-offset-2 ring-offset-background;
     --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(var(--ring-width) + var(--tw-ring-offset-width)) var(--tw-ring-color);
     box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow, 0 0 #0000);
     transition: box-shadow 0.146s cubic-bezier(0.4, 0, 0.2, 1); /* PRECISION_TIMING.MICRO */
