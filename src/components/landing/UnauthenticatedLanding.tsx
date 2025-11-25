@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { brutalistMotion } from "@/lib/brutalist-motion";
+import { motionPresets } from "@/lib/brutalist-motion";
 import { BrutalistButton } from "@/components/brutalist";
 import { Footer } from "@/components/layout/footer";
 
@@ -18,13 +18,13 @@ export function UnauthenticatedLanding() {
         <section className="relative p-8 lg:p-16 flex items-center justify-center concrete-texture">
           <motion.div
             className="w-full max-w-2xl space-y-8"
-            variants={brutalistMotion.staggerContainer}
+            variants={motionPresets.listStagger}
             initial="initial"
             animate="animate"
           >
             {/* Logo mark - three bars */}
             <motion.div
-              variants={brutalistMotion.weightDrop}
+              variants={motionPresets.cardEntrance}
               className="flex items-center gap-2 mb-8"
             >
               <div className="flex items-center gap-1 border-3 border-concrete-white p-2">
@@ -36,7 +36,7 @@ export function UnauthenticatedLanding() {
 
             {/* Hero headline */}
             <motion.h1
-              variants={brutalistMotion.mechanicalSlide}
+              variants={motionPresets.cardEntrance}
               className="font-display text-hero leading-none tracking-tight"
             >
               VOLUME
@@ -44,7 +44,7 @@ export function UnauthenticatedLanding() {
 
             {/* Tagline */}
             <motion.p
-              variants={brutalistMotion.mechanicalSlide}
+              variants={motionPresets.cardEntrance}
               className="text-2xl lg:text-3xl font-mono uppercase tracking-wide border-l-4 border-danger-red pl-4"
             >
               SIMPLE LOGGING.
@@ -54,7 +54,7 @@ export function UnauthenticatedLanding() {
 
             {/* Feature list */}
             <motion.ul
-              variants={brutalistMotion.mechanicalSlide}
+              variants={motionPresets.cardEntrance}
               className="space-y-3 font-mono text-lg"
             >
               {[
