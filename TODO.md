@@ -130,8 +130,8 @@
 
 ### 2.1 Golden Ratio Motion System
 
-- [~] Add PRECISION_TIMING to brutalist-motion.ts
-- [ ] Update animation durations to golden ratio (0.618s)
+- [x] Add PRECISION_TIMING to brutalist-motion.ts
+- [~] Update animation durations to golden ratio (0.618s)
 - [ ] Apply to SetCard entrance animations
 - [ ] Apply to form field focus transitions
 

@@ -27,14 +27,14 @@ export const brutalistMotion = {
       y: 0,
       opacity: 1,
       transition: {
-        duration: 0.4,
+        duration: PRECISION_TIMING.FAST,
         ease: [0.9, 0.1, 0.3, 0.9],
       },
     },
     exit: {
       y: 20,
       opacity: 0,
-      transition: { duration: 0.2 },
+      transition: { duration: PRECISION_TIMING.SNAP },
     },
   } as Variants,
 
@@ -45,14 +45,14 @@ export const brutalistMotion = {
       x: 0,
       opacity: 1,
       transition: {
-        duration: 0.3,
+        duration: PRECISION_TIMING.FAST,
         ease: [0.4, 0.0, 0.2, 1],
       },
     },
     exit: {
       x: 100,
       opacity: 0,
-      transition: { duration: 0.2 },
+      transition: { duration: PRECISION_TIMING.SNAP },
     },
   } as Variants,
 
@@ -63,14 +63,14 @@ export const brutalistMotion = {
       scale: 1,
       opacity: 1,
       transition: {
-        duration: 0.3,
+        duration: PRECISION_TIMING.FAST,
         ease: [0.2, 1, 0.3, 1],
       },
     },
     exit: {
       scale: 0,
       opacity: 0,
-      transition: { duration: 0.2 },
+      transition: { duration: PRECISION_TIMING.SNAP },
     },
   } as Variants,
 
@@ -89,7 +89,7 @@ export const brutalistMotion = {
     animate: {
       transition: {
         staggerChildren: 0.05,
-        delayChildren: 0.1,
+        delayChildren: PRECISION_TIMING.MICRO,
       },
     },
   } as Variants,
@@ -101,7 +101,7 @@ export const brutalistMotion = {
       x: 0,
       opacity: 1,
       transition: {
-        duration: 0.2,
+        duration: PRECISION_TIMING.SNAP,
         ease: [0.4, 0.0, 0.2, 1],
       },
     },
@@ -111,7 +111,7 @@ export const brutalistMotion = {
   buttonPress: {
     tap: {
       scale: 0.95,
-      transition: { duration: 0.075 },
+      transition: { duration: PRECISION_TIMING.MICRO },
     },
   } as Variants,
 
@@ -119,7 +119,10 @@ export const brutalistMotion = {
   focusExpand: {
     focus: {
       scale: 1.02,
-      transition: { duration: 0.1, ease: [0.4, 0.0, 0.2, 1] },
+      transition: {
+        duration: PRECISION_TIMING.MICRO,
+        ease: [0.4, 0.0, 0.2, 1],
+      },
     },
   } as Variants,
 };
