@@ -32,7 +32,7 @@
 
 ### Frontend: Use Date-Filtered Query
 
-- [ ] **Update `Dashboard.tsx` to use `listSetsForDateRange` instead of `listSets`**
+- [x] **Update `Dashboard.tsx` to use `listSetsForDateRange` instead of `listSets`**
   - Location: Line 35 (replace `allSets` query)
   - Import `getTodayRange` from `@/lib/date-utils` (already imported line 23)
   - Calculate date range: `const { start, end } = getTodayRange();` (add before useQuery)
@@ -42,7 +42,7 @@
   - Verify `exerciseGroups` useMemo (line 74-77) now receives pre-filtered data
   - Success criteria: Dashboard only fetches today's sets from server. No client-side date filtering. Component renders correctly with filtered data.
 
-- [ ] **Verify `getTodayRange()` in `src/lib/date-utils.ts` returns timestamps**
+- [x] **Verify `getTodayRange()` in `src/lib/date-utils.ts` returns timestamps**
   - Location: Likely exists in date-utils.ts (read file first)
   - Check return type: Should return `{ start: number, end: number }` (Unix timestamps in ms)
   - If returns Date objects, convert to `.getTime()` for Convex compatibility
