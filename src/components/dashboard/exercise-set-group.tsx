@@ -19,6 +19,10 @@ import { handleMutationError } from "@/lib/error-handler";
 import { formatNumber } from "@/lib/number-utils";
 import { formatTimestamp } from "@/lib/date-utils";
 import { Exercise, Set, WeightUnit } from "@/types/domain";
+import {
+  numberDisplayClasses,
+  labelDisplayClasses,
+} from "@/lib/typography-utils";
 
 interface ExerciseSetGroupProps {
   exercise: Exercise;
@@ -94,11 +98,28 @@ export function ExerciseSetGroup({
             </div>
 
             {/* Stats Row */}
-            <div className="pl-8 font-mono text-xs uppercase tracking-wider text-concrete-gray">
-              {sets.length} SET{sets.length === 1 ? "" : "S"} •{" "}
-              {totalVolume > 0
-                ? `${formatNumber(Math.round(totalVolume))} ${preferredUnit.toUpperCase()}`
-                : `${totalReps} REPS`}
+            <div className="pl-8 flex items-baseline gap-2">
+              <span className={labelDisplayClasses.default}>
+                {sets.length} SET{sets.length === 1 ? "" : "S"}
+              </span>
+              <span className="text-concrete-gray">•</span>
+              {totalVolume > 0 ? (
+                <>
+                  <span className={numberDisplayClasses.large}>
+                    {formatNumber(Math.round(totalVolume))}
+                  </span>
+                  <span className={labelDisplayClasses.default}>
+                    {preferredUnit.toUpperCase()}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className={numberDisplayClasses.large}>
+                    {totalReps}
+                  </span>
+                  <span className={labelDisplayClasses.default}>REPS</span>
+                </>
+              )}
             </div>
           </div>
         </button>
