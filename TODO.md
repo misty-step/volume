@@ -132,8 +132,8 @@
 
 - [x] Add PRECISION_TIMING to brutalist-motion.ts
 - [x] Update animation durations to golden ratio (0.618s)
-- [~] Apply to SetCard entrance animations
-- [ ] Apply to form field focus transitions
+- [x] Apply to SetCard entrance animations
+- [~] Apply to form field focus transitions
 
 ### 2.2 Chrome Accent System
 
