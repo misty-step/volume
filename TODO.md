@@ -147,11 +147,11 @@
 - [x] Add tap scale to BrutalistButton (0.97 on press)
 - [x] Add border glow on input focus (chrome accent)
 - [x] Add 360° rotate to SetCard repeat button on click
-- [~] Add shake animation to delete confirmation on cancel
+- [x] Add shake animation to delete confirmation on cancel
 
 ### 2.4 Focus Ring Enhancement
 
-- [ ] Strengthen focus system in globals.css
+- [~] Strengthen focus system in globals.css
 - [ ] Add 2px ring-offset for clarity
 - [ ] Thicker rings for number inputs (4px)
 - [ ] Test keyboard navigation flow
