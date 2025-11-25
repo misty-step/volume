@@ -74,19 +74,24 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
           >
             {exercise?.name || "Unknown exercise"}
           </h4>
-          <div className="mt-1 flex items-center gap-3 text-gray-600 dark:text-gray-300">
+          <div className="mt-1 flex items-center gap-3">
             {set.duration !== undefined ? (
-              <span className="font-medium">
+              <span className="font-mono text-lg font-semibold tabular-nums">
                 {formatDuration(set.duration)}
               </span>
             ) : (
-              <span className="font-medium">{set.reps} reps</span>
+              <span className="font-mono text-lg font-semibold tabular-nums">
+                {set.reps} reps
+              </span>
             )}
             {set.weight && (
               <>
-                <span className="text-gray-400 dark:text-gray-500">•</span>
-                <span>
-                  {set.weight} {displayUnit}
+                <span className="text-concrete-gray">•</span>
+                <span className="font-mono text-2xl font-bold text-danger-red tabular-nums">
+                  {set.weight}
+                </span>
+                <span className="font-mono text-sm text-concrete-gray uppercase ml-1">
+                  {displayUnit}
                 </span>
               </>
             )}
