@@ -152,8 +152,8 @@
 ### 2.4 Focus Ring Enhancement
 
 - [x] Strengthen focus system in globals.css
-- [~] Add 2px ring-offset for clarity
-- [ ] Thicker rings for number inputs (4px)
+- [x] Add 2px ring-offset for clarity
+- [~] Thicker rings for number inputs (4px)
 - [ ] Test keyboard navigation flow
 
 ---

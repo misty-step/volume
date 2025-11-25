@@ -122,6 +122,11 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* Thicker focus rings for number inputs (critical for workout logging) */
+  input[type="number"]:focus-visible {
+    --ring-width: 4px;
+  }
+
   /* Context-aware focus system with golden ratio timing */
   *:focus-visible {
     @apply outline-none ring-danger-red ring-offset-2 ring-offset-background;
