@@ -49,12 +49,13 @@
   - Ensure start is midnight local time (00:00:00.000) and end is 23:59:59.999
   - Success criteria: Function returns numeric timestamps compatible with Convex performedAt field (number type).
 
-- [ ] **Update Dashboard component tests if they exist**
+- [x] **Update Dashboard component tests if they exist**
   - Search for `Dashboard.test.tsx` or similar test file
   - If exists: Update test mocks to use `listSetsForDateRange` instead of `listSets`
   - Mock `getTodayRange()` to return fixed timestamps for deterministic tests
   - Verify component still renders correctly with date-filtered query
   - Success criteria: Existing Dashboard tests pass with new query. No test failures from query change.
+  - **Result**: No Dashboard tests exist (searched with Glob). N/A.
 
 ---
 
@@ -62,7 +63,7 @@
 
 ### Fix analyticsFocus.ts O(n) Lookup
 
-- [ ] **Build exercise Map before loop in `getFocusSuggestions` (`convex/analyticsFocus.ts:107-114`)**
+- [x] **Build exercise Map before loop in `getFocusSuggestions` (`convex/analyticsFocus.ts:107-114`)**
   - Location: After fetching exercises (line 63), before loop (line 80)
   - Add after line 74 (early return check): `const exerciseMap = new Map(exercises.map((ex) => [ex._id, ex]));`
   - Replace line 113 `exercises.find((ex) => ex._id === set.exerciseId)` with `exerciseMap.get(set.exerciseId)`
@@ -70,7 +71,7 @@
   - Complexity reduction: O(n sets × m exercises) → O(n + m)
   - Success criteria: Loop uses Map.get() (O(1)) instead of Array.find() (O(n)). Logic unchanged, only performance improved.
 
-- [ ] **Verify analyticsFocus tests still pass after Map optimization**
+- [x] **Verify analyticsFocus tests still pass after Map optimization**
   - Run existing tests: `pnpm test analyticsFocus.test.ts`
   - Ensure getFocusSuggestions returns same results with Map lookup
   - If tests fail, verify Map key/value structure matches original find() logic
@@ -78,7 +79,7 @@
 
 ### Fix analyticsRecovery.ts O(n) Lookup
 
-- [ ] **Build exercise Map before loop in `getRecoveryStatus` (`convex/analyticsRecovery.ts:158-165`)**
+- [x] **Build exercise Map before loop in `getRecoveryStatus` (`convex/analyticsRecovery.ts:158-165`)**
   - Location: After fetching exercises (line 86), before processing sets (line 160)
   - Add after line 157 (metric initialization loop): `const exerciseMap = new Map(exercises.map((ex) => [ex._id, ex]));`
   - Replace line 161 `exercises.find((ex) => ex._id === set.exerciseId)` with `exerciseMap.get(set.exerciseId)`
@@ -86,7 +87,7 @@
   - Complexity reduction: O(n sets × m exercises) → O(n + m)
   - Success criteria: Loop uses Map.get() (O(1)) instead of Array.find() (O(n)). Logic unchanged, only performance improved.
 
-- [ ] **Verify analyticsRecovery tests still pass after Map optimization**
+- [x] **Verify analyticsRecovery tests still pass after Map optimization**
   - Run existing tests: `pnpm test analyticsRecovery.test.ts`
   - Ensure getRecoveryStatus returns same muscle group data with Map lookup
   - If tests fail, verify Map contains exercises with muscleGroups field
