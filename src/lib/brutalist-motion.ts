@@ -1,5 +1,24 @@
 import { Variants } from "framer-motion";
 
+/**
+ * Precision timing constants based on golden ratio (φ ≈ 0.618)
+ *
+ * The golden ratio creates mathematically harmonious motion that feels
+ * both precise and organic. These timings are derived from φ and its powers:
+ * - BASE: φ (0.618s) - Primary motion duration
+ * - FAST: φ² (0.382s) - Quick interactions
+ * - SLOW: φ × 1.618 (1.0s) - Deliberate, emphasized motion
+ * - SNAP: φ³ (0.236s) - Instant feedback
+ * - MICRO: φ⁴ (0.146s) - Subtle transitions
+ */
+export const PRECISION_TIMING = {
+  MICRO: 0.146, // φ⁴ - Subtle micro-interactions (hover, focus)
+  SNAP: 0.236, // φ³ - Instant feedback (tap, click)
+  FAST: 0.382, // φ² - Quick transitions (exit, collapse)
+  BASE: 0.618, // φ   - Primary motion (entrance, expand)
+  SLOW: 1.0, // φ × 1.618 - Deliberate motion (celebration, emphasis)
+} as const;
+
 export const brutalistMotion = {
   // Weight drop animation
   weightDrop: {
