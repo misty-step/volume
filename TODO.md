@@ -139,8 +139,8 @@
 
 - [x] Add chromeHighlight/chromeShadow to design-tokens.ts
 - [x] Apply chrome accents to input focus states
-- [~] Apply chrome to button pressed states
-- [ ] Apply subtle chrome glow to card hover states
+- [x] Apply chrome to button pressed states
+- [~] Apply subtle chrome glow to card hover states
 
 ### 2.3 Micro-Interaction Polish
 

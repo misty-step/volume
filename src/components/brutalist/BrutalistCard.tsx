@@ -27,7 +27,8 @@ export const BrutalistCard = forwardRef<HTMLDivElement, BrutalistCardProps>(
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: [0.4, 0.0, 0.2, 1] }}
         className={cn(
-          "border-3 bg-background",
+          "border-3 bg-background transition-shadow duration-150",
+          "hover:shadow-[0_0_0_1px_rgba(232,234,237,0.15)]",
           variantStyles[variant],
           textured && "concrete-texture",
           className
