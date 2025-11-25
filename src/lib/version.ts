@@ -13,6 +13,7 @@ type EnvSource = Partial<
     | "SENTRY_RELEASE"
     | "VERCEL_GIT_COMMIT_SHA"
     | "NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA"
+    | "NEXT_PUBLIC_PACKAGE_VERSION"
     | "npm_package_version"
   >
 >;
@@ -29,30 +30,49 @@ function normalizeSha(value: string): string {
 
 /**
  * Resolve the current application version using a strict precedence:
- * 1) SENTRY_RELEASE
- * 2) VERCEL_GIT_COMMIT_SHA or NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA (short SHA)
- * 3) npm_package_version
- * 4) "dev" fallback
+ * 1) SENTRY_RELEASE (explicit override)
+ * 2) VERCEL_GIT_COMMIT_SHA or NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA (git commit SHA, short form)
+ * 3) NEXT_PUBLIC_PACKAGE_VERSION (build-time injected from package.json)
+ * 4) npm_package_version (npm run context only)
+ * 5) "dev" fallback
+ *
+ * Note: Empty strings and whitespace-only values are treated as absent.
  *
  * @param env - Optional environment source (defaults to process.env)
  */
 export function resolveVersion(
   env: EnvSource = process.env as EnvSource
 ): string {
-  if (env.SENTRY_RELEASE) {
-    return env.SENTRY_RELEASE;
+  // Helper to filter empty strings and whitespace
+  const getEnv = (key: keyof EnvSource) => env[key]?.trim() || undefined;
+
+  // Priority 1: Sentry release (explicit override)
+  const sentryRelease = getEnv("SENTRY_RELEASE");
+  if (sentryRelease) {
+    return sentryRelease;
   }
 
+  // Priority 2: Git commit SHA (Vercel auto-injected)
   const gitSha =
-    env.VERCEL_GIT_COMMIT_SHA || env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA;
+    getEnv("VERCEL_GIT_COMMIT_SHA") ||
+    getEnv("NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA");
   if (gitSha) {
     return normalizeSha(gitSha);
   }
 
-  if (env.npm_package_version) {
-    return env.npm_package_version;
+  // Priority 3: Build-time injected package version
+  const packageVersion = getEnv("NEXT_PUBLIC_PACKAGE_VERSION");
+  if (packageVersion) {
+    return packageVersion;
   }
 
+  // Priority 4: npm package version (local dev with npm run)
+  const npmVersion = getEnv("npm_package_version");
+  if (npmVersion) {
+    return npmVersion;
+  }
+
+  // Priority 5: Fallback for development
   return "dev";
 }
 

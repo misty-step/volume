@@ -2,11 +2,21 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import { resolveVersion } from "./src/lib/version";
+import { readFileSync } from "fs";
+import { join } from "path";
+
+// Read package.json version at build time
+const packageJson = JSON.parse(
+  readFileSync(join(__dirname, "package.json"), "utf-8")
+);
+const packageVersion = packageJson.version;
 
 const nextConfig: NextConfig = {
   env: {
     // Expose a deterministic, pre-resolved app version to the client.
     NEXT_PUBLIC_APP_VERSION: resolveVersion(),
+    // Inject package.json version at build time for production fallback
+    NEXT_PUBLIC_PACKAGE_VERSION: packageVersion,
   },
   async headers() {
     return [

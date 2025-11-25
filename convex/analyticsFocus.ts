@@ -107,10 +107,13 @@ export const getFocusSuggestions = query({
     // 2. Calculate muscle group volumes (last 7 days) for balance analysis
     const muscleGroupVolumes = new Map<MuscleGroup, number>();
 
+    // Build exercise Map for O(1) lookups (performance optimization)
+    const exerciseMap = new Map(exercises.map((ex) => [ex._id, ex]));
+
     for (const set of sets) {
       if (set.performedAt < sevenDaysAgo) break; // Sets are sorted desc
 
-      const exercise = exercises.find((ex) => ex._id === set.exerciseId);
+      const exercise = exerciseMap.get(set.exerciseId);
       if (!exercise) continue;
 
       // Get muscle groups from exercise record (AI-classified)

@@ -31,8 +31,14 @@ export function Dashboard() {
   const historyRef = useRef<HTMLDivElement>(null);
   const { unit } = useWeightUnit();
 
-  // Fetch data from Convex
-  const allSets = useQuery(api.sets.listSets, {});
+  // Calculate today's date range for filtered query
+  const { start, end } = getTodayRange();
+
+  // Fetch data from Convex - only today's sets (server-side filtering)
+  const todaysSets = useQuery(api.sets.listSetsForDateRange, {
+    startDate: start,
+    endDate: end,
+  });
   const exercises = useQuery(api.exercises.listExercises, {
     includeDeleted: true,
   });
@@ -47,7 +53,7 @@ export function Dashboard() {
   useEffect(() => {
     if (
       authReady &&
-      allSets !== undefined &&
+      todaysSets !== undefined &&
       exercises !== undefined &&
       !isHydrated
     ) {
@@ -56,19 +62,10 @@ export function Dashboard() {
         setIsHydrated(true);
       });
     }
-  }, [authReady, allSets, exercises, isHydrated]);
+  }, [authReady, todaysSets, exercises, isHydrated]);
 
   // Delete set mutation
   const deleteSet = useMutation(api.sets.deleteSet);
-
-  // Filter sets to today only (midnight to midnight in user's timezone)
-  const todaysSets = useMemo(() => {
-    if (!allSets) return undefined;
-    const { start, end } = getTodayRange();
-    return allSets.filter(
-      (set: any) => set.performedAt >= start && set.performedAt <= end
-    );
-  }, [allSets]);
 
   // Group today's sets by exercise for workout view
   const exerciseGroups = useMemo(
@@ -83,9 +80,10 @@ export function Dashboard() {
   );
 
   // Sort exercises by recency (most recently used first)
+  // Note: Uses todaysSets for recency - exercises used today appear first
   const exercisesByRecency = useMemo(
-    () => sortExercisesByRecency(exercises, allSets),
-    [exercises, allSets]
+    () => sortExercisesByRecency(exercises, todaysSets),
+    [exercises, todaysSets]
   );
 
   // Filter to active exercises only for QuickLogForm
@@ -173,7 +171,7 @@ export function Dashboard() {
 
   // Type guard - by this point, isHydrated is true, so both queries must be defined
   // This satisfies TypeScript's type narrowing
-  if (allSets === undefined || exercises === undefined) {
+  if (todaysSets === undefined || exercises === undefined) {
     return null; // Should never happen, but required for type safety
   }
 

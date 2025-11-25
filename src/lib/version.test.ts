@@ -69,14 +69,96 @@ describe("resolveVersion", () => {
     expect(resolveVersion(env)).toBe("not-a-sha-value");
   });
 
-  it("treats empty strings as absent and falls back to npm package version", () => {
+  it("treats empty strings as absent and falls back through priority chain", () => {
     const env = {
       SENTRY_RELEASE: "",
       VERCEL_GIT_COMMIT_SHA: "",
       NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: "",
-      npm_package_version: "0.3.1",
+      NEXT_PUBLIC_PACKAGE_VERSION: "0.3.1",
+      npm_package_version: "0.2.0",
     };
 
     expect(resolveVersion(env)).toBe("0.3.1");
+  });
+
+  describe("Empty String Handling", () => {
+    it("filters out empty string for SENTRY_RELEASE", () => {
+      const env = {
+        SENTRY_RELEASE: "",
+        NEXT_PUBLIC_PACKAGE_VERSION: "0.2.0",
+      };
+      expect(resolveVersion(env)).toBe("0.2.0");
+    });
+
+    it("filters out whitespace-only git SHAs", () => {
+      const env = {
+        VERCEL_GIT_COMMIT_SHA: "   ",
+        NEXT_PUBLIC_PACKAGE_VERSION: "0.2.0",
+      };
+      expect(resolveVersion(env)).toBe("0.2.0");
+    });
+
+    it("filters out whitespace in NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA", () => {
+      const env = {
+        NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: "  \t\n  ",
+        NEXT_PUBLIC_PACKAGE_VERSION: "0.2.0",
+      };
+      expect(resolveVersion(env)).toBe("0.2.0");
+    });
+
+    it("falls back through all empty strings to dev", () => {
+      const env = {
+        SENTRY_RELEASE: "",
+        VERCEL_GIT_COMMIT_SHA: "",
+        NEXT_PUBLIC_PACKAGE_VERSION: "",
+        npm_package_version: "",
+      };
+      expect(resolveVersion(env)).toBe("dev");
+    });
+  });
+
+  describe("NEXT_PUBLIC_PACKAGE_VERSION Priority", () => {
+    it("uses NEXT_PUBLIC_PACKAGE_VERSION as priority 3", () => {
+      const env = {
+        NEXT_PUBLIC_PACKAGE_VERSION: "0.3.0",
+        npm_package_version: "0.2.0",
+      };
+      expect(resolveVersion(env)).toBe("0.3.0");
+    });
+
+    it("prefers git SHA over NEXT_PUBLIC_PACKAGE_VERSION", () => {
+      const env = {
+        VERCEL_GIT_COMMIT_SHA: "abcdef1234567890",
+        NEXT_PUBLIC_PACKAGE_VERSION: "0.3.0",
+      };
+      expect(resolveVersion(env)).toBe("abcdef1");
+    });
+
+    it("prefers SENTRY_RELEASE over NEXT_PUBLIC_PACKAGE_VERSION", () => {
+      const env = {
+        SENTRY_RELEASE: "release-2.0.0",
+        NEXT_PUBLIC_PACKAGE_VERSION: "0.3.0",
+      };
+      expect(resolveVersion(env)).toBe("release-2.0.0");
+    });
+  });
+
+  describe("Production Environment Simulation", () => {
+    it("matches Vercel production environment (empty git vars)", () => {
+      const env = {
+        SENTRY_RELEASE: "",
+        VERCEL_GIT_COMMIT_SHA: "",
+        NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: "",
+        NEXT_PUBLIC_PACKAGE_VERSION: "0.1.0", // Injected at build
+      };
+      expect(resolveVersion(env)).toBe("0.1.0");
+    });
+
+    it("handles production with only NEXT_PUBLIC_PACKAGE_VERSION", () => {
+      const env = {
+        NEXT_PUBLIC_PACKAGE_VERSION: "1.2.3",
+      };
+      expect(resolveVersion(env)).toBe("1.2.3");
+    });
   });
 });

@@ -156,9 +156,12 @@ export const getRecoveryStatus = query({
       });
     }
 
+    // Build exercise Map for O(1) lookups (performance optimization)
+    const exerciseMapById = new Map(exercises.map((ex) => [ex._id, ex]));
+
     // Process each set
     for (const set of allSets) {
-      const exercise = exercises.find((ex) => ex._id === set.exerciseId);
+      const exercise = exerciseMapById.get(set.exerciseId);
       if (!exercise) continue; // Skip if exercise not found
 
       // Get muscle groups from exercise record (AI-classified)
