@@ -135,6 +135,7 @@ See `.env.example` for detailed deployment architecture documentation.
 - **Tailwind CSS** - Utility-first styling
 - **Convex** - Backend-as-a-service (database, real-time sync)
 - **Clerk** - Authentication and user management
+- **Changesets** - Versioning + changelog automation (no npm publish)
 
 ## Project Structure
 
@@ -156,6 +157,8 @@ pnpm dev          # Start Next.js dev server
 pnpm convex dev   # Start Convex dev server (in separate terminal)
 pnpm typecheck    # Run TypeScript checks
 pnpm lint         # Run ESLint
+pnpm changeset    # Add a changeset for any code change
+pnpm test         # Run unit tests
 ```
 
 ## MVP Features
@@ -167,3 +170,10 @@ pnpm lint         # Run ESLint
 - ✅ Mobile responsive
 
 See `BACKLOG.md` for post-MVP enhancements.
+
+## Release & Versioning Contract
+
+- Version precedence: `SENTRY_RELEASE` → git SHA (`VERCEL_GIT_COMMIT_SHA`/`NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA`, short) → `npm_package_version` → `dev`.
+- Build-time version is exposed as `NEXT_PUBLIC_APP_VERSION` and shown in the footer; health endpoint and Sentry use the same resolution.
+- To record a change: run `pnpm changeset` and commit the generated `.changeset/*.md`.
+- Release workflow (`.github/workflows/release.yml`) maintains a Release PR; merging it runs `pnpm changeset version` and `pnpm changeset tag` to bump versions and changelog (no npm publish).
