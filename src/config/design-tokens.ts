@@ -41,6 +41,7 @@ export const BRUTALIST_TYPOGRAPHY = {
   },
 
   sizes: {
+    // Marketing/Hero typography
     hero: "clamp(3rem, 12vw, 8rem)", // 48-128px
     display: "clamp(2rem, 6vw, 4rem)", // 32-64px
     h1: "2.5rem", // 40px
@@ -48,11 +49,28 @@ export const BRUTALIST_TYPOGRAPHY = {
     h3: "1.5rem", // 24px
     body: "1rem", // 16px
     small: "0.875rem", // 14px
+
+    // Stat/Metric typography (monospace numbers)
+    stat: {
+      hero: "2.25rem", // 36px - Dashboard totals, PR displays
+      large: "1.5rem", // 24px - Set weights, exercise stats
+      default: "1.125rem", // 18px - Reps, durations, secondary metrics
+      small: "0.875rem", // 14px - Historical data, timestamps
+    },
+
+    // Label typography (uppercase, tight tracking)
+    label: {
+      hero: "1rem", // 16px - Dashboard stat labels
+      large: "0.875rem", // 14px - Set card labels
+      default: "0.75rem", // 12px - Form labels, inline units
+      small: "0.75rem", // 12px - Timestamps, helper text
+    },
   },
 
   weights: {
     black: 900,
     bold: 700,
+    semibold: 600,
     medium: 500,
     regular: 400,
   },
@@ -62,6 +80,49 @@ export const BRUTALIST_TYPOGRAPHY = {
     normal: "0",
     wide: "0.05em",
     wider: "0.1em",
+  },
+
+  /**
+   * Type Pairings - Predefined combinations for specific contexts
+   * Use these for consistent metric displays across the app
+   */
+  pairings: {
+    // Dashboard hero stat card: Large number + uppercase label
+    dashboardStat: {
+      number: "font-mono text-4xl font-bold text-danger-red tabular-nums",
+      label:
+        "font-display text-base uppercase tracking-wider text-concrete-gray",
+    },
+
+    // Set card weight display: Large number + small unit
+    setWeight: {
+      number: "font-mono text-2xl font-semibold text-danger-red tabular-nums",
+      unit: "font-mono text-xs uppercase text-muted-foreground ml-1",
+    },
+
+    // Set card reps/duration: Default number + inline text
+    setMetric: {
+      number: "font-mono text-lg text-foreground tabular-nums",
+      text: "font-mono text-lg text-foreground",
+    },
+
+    // Analytics card metric: Large number + label
+    analyticsMetric: {
+      number: "font-mono text-2xl font-semibold text-danger-red tabular-nums",
+      label: "font-display text-sm uppercase tracking-wide text-concrete-gray",
+    },
+
+    // Form input focused number: Hero scale + danger-red
+    inputFocused: {
+      number:
+        "font-mono text-3xl font-bold text-danger-red tabular-nums transition-all duration-150",
+    },
+
+    // Historical list item: Small number + timestamp
+    historicalMetric: {
+      number: "font-mono text-sm text-muted-foreground tabular-nums",
+      timestamp: "font-mono text-xs text-muted-foreground",
+    },
   },
 } as const;
 
