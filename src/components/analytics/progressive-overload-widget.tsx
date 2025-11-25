@@ -229,13 +229,17 @@ export function ProgressiveOverloadWidget({
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "hsl(var(--popover))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "6px",
+                        border: "3px solid hsl(var(--border))",
+                        borderRadius: "0",
                         fontSize: "11px",
+                        boxShadow: "2px 2px 0 0 rgba(0,0,0,0.3)",
                       }}
                       labelStyle={{
                         color: "hsl(var(--popover-foreground))",
                         fontWeight: "600",
+                        fontFamily: "JetBrains Mono, monospace",
+                        textTransform: "uppercase",
+                        fontSize: "10px",
                       }}
                       formatter={(value: number, name: string) => {
                         if (name === "weight") {
