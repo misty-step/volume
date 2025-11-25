@@ -103,8 +103,10 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
         </div>
 
         <div className="flex items-center gap-2 ml-4">
-          <button
+          <motion.button
             onClick={onRepeat}
+            whileTap={{ rotate: 360 }}
+            transition={{ duration: 0.382, ease: [0.4, 0.0, 0.2, 1] }}
             className="p-2 text-danger-red hover:bg-danger-red/10 border-2 border-transparent hover:border-danger-red transition-colors focus:outline-none focus:ring-2 focus:ring-danger-red"
             aria-label="Repeat this set"
             title="Repeat this set"
@@ -112,7 +114,7 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
             data-testid={`set-repeat-btn-${set._id}`}
           >
             <RotateCcw className="h-5 w-5" />
-          </button>
+          </motion.button>
           <button
             onClick={handleDeleteClick}
             className="p-2 text-danger-red hover:bg-danger-red/10 border-2 border-transparent hover:border-danger-red transition-colors focus:outline-none focus:ring-2 focus:ring-danger-red"

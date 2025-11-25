@@ -144,9 +144,9 @@
 
 ### 2.3 Micro-Interaction Polish
 
-- [~] Add tap scale to BrutalistButton (0.97 on press)
-- [ ] Add border glow on input focus (chrome accent)
-- [ ] Add 360° rotate to SetCard repeat button on click
+- [x] Add tap scale to BrutalistButton (0.97 on press)
+- [x] Add border glow on input focus (chrome accent)
+- [~] Add 360° rotate to SetCard repeat button on click
 - [ ] Add shake animation to delete confirmation on cancel
 
 ### 2.4 Focus Ring Enhancement
