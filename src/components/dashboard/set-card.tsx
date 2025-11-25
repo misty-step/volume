@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { RotateCcw, Trash2 } from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
@@ -16,12 +17,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
-import { formatTimeAgo } from "@/lib/date-utils";
+import { formatTimeAgo, formatDuration } from "@/lib/date-utils";
 import { Exercise, Set } from "@/types/domain";
 import {
   numberDisplayClasses,
   labelDisplayClasses,
 } from "@/lib/typography-utils";
+import { brutalistMotion } from "@/lib/brutalist-motion";
 
 interface SetCardProps {
   set: Set;
@@ -36,13 +38,6 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
   const { unit: preferredUnit } = useWeightUnit();
   // Use the unit stored with the set, fallback to user preference for legacy sets
   const displayUnit = set.unit || preferredUnit;
-
-  // Format duration in seconds to mm:ss
-  const formatDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
 
   const handleDeleteClick = () => {
     setShowDeleteDialog(true);
@@ -61,7 +56,11 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
   };
 
   return (
-    <div
+    <motion.div
+      variants={brutalistMotion.mechanicalSlide}
+      initial="initial"
+      animate="animate"
+      exit="exit"
       className={`
         p-4 bg-background border-3 border-concrete-black dark:border-concrete-white
         hover:shadow-lift dark:hover:shadow-lift-dark
@@ -147,6 +146,6 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </motion.div>
   );
 }
