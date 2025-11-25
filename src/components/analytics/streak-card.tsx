@@ -1,7 +1,12 @@
 "use client";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
 import { Flame } from "lucide-react";
+import {
+  numberDisplayClasses,
+  labelDisplayClasses,
+} from "@/lib/typography-utils";
 
 interface StreakCardProps {
   currentStreak: number;
@@ -19,7 +24,7 @@ export function StreakCard({
   // Loading skeleton
   if (isLoading) {
     return (
-      <Card className="">
+      <BrutalistCard className="p-6">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Flame className="w-5 h-5" />
@@ -35,14 +40,14 @@ export function StreakCard({
             </div>
           </div>
         </CardContent>
-      </Card>
+      </BrutalistCard>
     );
   }
 
   // Empty state
   if (currentStreak === 0 && longestStreak === 0 && totalWorkouts === 0) {
     return (
-      <Card className="">
+      <BrutalistCard className="p-6">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Flame className="w-5 h-5" />
@@ -60,16 +65,16 @@ export function StreakCard({
             </p>
           </div>
         </CardContent>
-      </Card>
+      </BrutalistCard>
     );
   }
 
   return (
-    <Card className="">
+    <BrutalistCard className="p-6">
       <CardHeader>
         <div className="flex items-center gap-2">
           <Flame
-            className={`w-5 h-5 ${currentStreak > 0 ? "text-orange-500 dark:text-orange-400" : ""}`}
+            className={`w-5 h-5 ${currentStreak > 0 ? "text-safety-orange" : ""}`}
           />
           <CardTitle className="">Workout Streak</CardTitle>
         </div>
@@ -77,36 +82,34 @@ export function StreakCard({
       <CardContent>
         <div className="space-y-4">
           {/* Current Streak - Prominent Display */}
-          <div className="text-center p-4 bg-muted/50 border-2 border-border">
+          <div className="text-center p-4 bg-muted/50 border-3 border-concrete-black dark:border-concrete-white">
             <div className="flex items-center justify-center gap-2 mb-1">
-              <span className="text-4xl font-bold tabular-nums">
-                {currentStreak}
-              </span>
-              <span className="text-lg text-muted-foreground">
+              <span className={numberDisplayClasses.hero}>{currentStreak}</span>
+              <span className={labelDisplayClasses.large}>
                 day{currentStreak !== 1 ? "s" : ""}
               </span>
             </div>
-            <p className="text-sm font-medium">Current Streak</p>
+            <p className={labelDisplayClasses.large}>Current Streak</p>
           </div>
 
           {/* Secondary Stats */}
           <div className="grid grid-cols-2 gap-3">
             {/* Longest Streak */}
-            <div className="text-center p-3 border-2 border-border">
-              <div className="text-2xl font-bold tabular-nums mb-1">
+            <div className="text-center p-3 border-3 border-concrete-black dark:border-concrete-white">
+              <div className={`${numberDisplayClasses.large} mb-1`}>
                 {longestStreak}
               </div>
-              <div className="text-xs text-muted-foreground">Longest</div>
-              <div className="text-xs text-muted-foreground">Streak</div>
+              <div className={labelDisplayClasses.default}>Longest</div>
+              <div className={labelDisplayClasses.default}>Streak</div>
             </div>
 
             {/* Total Workouts */}
-            <div className="text-center p-3 border-2 border-border">
-              <div className="text-2xl font-bold tabular-nums mb-1">
+            <div className="text-center p-3 border-3 border-concrete-black dark:border-concrete-white">
+              <div className={`${numberDisplayClasses.large} mb-1`}>
                 {totalWorkouts}
               </div>
-              <div className="text-xs text-muted-foreground">Total</div>
-              <div className="text-xs text-muted-foreground">Workouts</div>
+              <div className={labelDisplayClasses.default}>Total</div>
+              <div className={labelDisplayClasses.default}>Workouts</div>
             </div>
           </div>
 
@@ -123,6 +126,6 @@ export function StreakCard({
           )}
         </div>
       </CardContent>
-    </Card>
+    </BrutalistCard>
   );
 }
