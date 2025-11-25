@@ -137,8 +137,8 @@
 
 ### 2.2 Chrome Accent System
 
-- [~] Add chromeHighlight/chromeShadow to design-tokens.ts
-- [ ] Apply chrome accents to input focus states
+- [x] Add chromeHighlight/chromeShadow to design-tokens.ts
+- [~] Apply chrome accents to input focus states
 - [ ] Apply chrome to button pressed states
 - [ ] Apply subtle chrome glow to card hover states
 

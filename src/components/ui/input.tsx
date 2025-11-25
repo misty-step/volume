@@ -9,7 +9,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
       <input
         type={type}
         className={cn(
-          "flex h-11 w-full border-2 border-input bg-transparent px-3 py-1 text-base transition-all duration-75 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-danger-red focus-visible:border-danger-red disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          "flex h-11 w-full border-2 border-input bg-transparent px-3 py-1 text-base transition-all duration-75 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-danger-red focus-visible:border-danger-red focus-visible:shadow-[0_0_0_1px_rgba(232,234,237,0.15)] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
           isNumber && "font-mono tabular-nums",
           className
         )}

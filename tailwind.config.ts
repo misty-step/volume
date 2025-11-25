@@ -59,6 +59,9 @@ export default {
         "danger-red": BRUTALIST_COLORS.dangerRed,
         "safety-orange": BRUTALIST_COLORS.safetyOrange,
         "metal-edge": BRUTALIST_COLORS.metalEdge,
+        // Chrome accent system
+        "chrome-highlight": BRUTALIST_COLORS.chromeHighlight,
+        "chrome-shadow": BRUTALIST_COLORS.chromeShadow,
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
