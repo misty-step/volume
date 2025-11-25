@@ -32,6 +32,106 @@ export const BRUTALIST_COLORS = {
   },
 } as const;
 
+/**
+ * Brutalist Typography System
+ *
+ * A comprehensive typography scale for workout tracking interfaces.
+ * Organized by usage context rather than arbitrary size names.
+ *
+ * # Core Principles
+ * 1. **Numeric Clarity**: All workout metrics use monospace for alignment
+ * 2. **Visual Hierarchy**: Size indicates importance, not decoration
+ * 3. **Contextual Vocabulary**: Names describe usage, not measurements
+ *
+ * # Typography Categories
+ *
+ * ## Marketing/Hero Typography
+ * Use for landing pages, marketing materials, and large hero sections.
+ * Font: Bebas Neue (display), Inter Tight (headings)
+ * Responsive sizing with clamp() for fluid scaling.
+ *
+ * ## Stat/Metric Typography
+ * Use for ALL numeric workout data (weights, reps, durations, PRs).
+ * Font: JetBrains Mono with tabular-nums for perfect column alignment.
+ * Color: danger-red for primary metrics, foreground for secondary.
+ *
+ * ## Label Typography
+ * Use for metric labels, units, and contextual information.
+ * Font: Bebas Neue (hero labels), JetBrains Mono (small labels)
+ * Always uppercase for industrial aesthetic.
+ *
+ * # When to Use Each Size
+ *
+ * ## stat.hero (36px)
+ * - Dashboard primary stats (total volume, PR count, streak days)
+ * - Analytics page highlights (monthly totals, all-time PRs)
+ * - Celebration moments (new PR achieved screen)
+ * ❌ Don't use for: Individual set weights, form inputs
+ *
+ * ## stat.large (24px)
+ * - Set card weight displays (most common use case)
+ * - Exercise detail page stats (best set, total volume)
+ * - Analytics card primary metrics
+ * ❌ Don't use for: Dashboard stats (too small), timestamps (too large)
+ *
+ * ## stat.default (18px)
+ * - Set card reps and durations
+ * - Form input unfocused state
+ * - Secondary analytics metrics (average weight, set count)
+ * ❌ Don't use for: Primary dashboard metrics, tiny historical data
+ *
+ * ## stat.small (14px)
+ * - Historical list items (set history, workout logs)
+ * - Inline timestamps
+ * - Tertiary metrics (percentile ranks, change indicators)
+ * ❌ Don't use for: Current workout logging, primary metrics
+ *
+ * ## label.hero (16px)
+ * - Dashboard stat card labels ("TOTAL VOLUME", "PERSONAL RECORDS")
+ * - Analytics section headers
+ * - Empty state primary messages
+ * ❌ Don't use for: Set card labels, form labels
+ *
+ * ## label.large (14px)
+ * - Set card labels ("REPS", "WEIGHT", "DURATION")
+ * - Exercise card metadata
+ * - Analytics card labels
+ * ❌ Don't use for: Dashboard, inline units
+ *
+ * ## label.default (12px)
+ * - Form field labels
+ * - Inline units ("kg", "lbs", "reps")
+ * - Helper text
+ * ❌ Don't use for: Primary labels, marketing content
+ *
+ * ## label.small (12px)
+ * - Timestamps ("2 hours ago")
+ * - Secondary metadata (deleted exercise indicators)
+ * - Tertiary contextual information
+ * ❌ Don't use for: Primary labels or units
+ *
+ * @example
+ * // Dashboard stat card
+ * <div>
+ *   <div className={BRUTALIST_TYPOGRAPHY.pairings.dashboardStat.number}>
+ *     2,450
+ *   </div>
+ *   <div className={BRUTALIST_TYPOGRAPHY.pairings.dashboardStat.label}>
+ *     TOTAL VOLUME
+ *   </div>
+ * </div>
+ *
+ * @example
+ * // Set card weight
+ * <div>
+ *   <span className={BRUTALIST_TYPOGRAPHY.pairings.setWeight.number}>
+ *     135
+ *   </span>
+ *   <span className={BRUTALIST_TYPOGRAPHY.pairings.setWeight.unit}>
+ *     lbs
+ *   </span>
+ * </div>
+ */
 export const BRUTALIST_TYPOGRAPHY = {
   fonts: {
     display: '"Bebas Neue", "Arial Black", sans-serif',
