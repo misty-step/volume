@@ -140,11 +140,11 @@
 - [x] Add chromeHighlight/chromeShadow to design-tokens.ts
 - [x] Apply chrome accents to input focus states
 - [x] Apply chrome to button pressed states
-- [~] Apply subtle chrome glow to card hover states
+- [x] Apply subtle chrome glow to card hover states
 
 ### 2.3 Micro-Interaction Polish
 
-- [ ] Add tap scale to BrutalistButton (0.97 on press)
+- [~] Add tap scale to BrutalistButton (0.97 on press)
 - [ ] Add border glow on input focus (chrome accent)
 - [ ] Add 360° rotate to SetCard repeat button on click
 - [ ] Add shake animation to delete confirmation on cancel

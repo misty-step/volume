@@ -186,7 +186,7 @@
 
   /* Industrial button press */
   .btn-press {
-    @apply active:scale-95 active:shadow-inner transition-transform duration-75;
+    @apply active:scale-[0.97] active:shadow-inner transition-transform duration-75;
   }
 
   /* Mechanical animation preset */
