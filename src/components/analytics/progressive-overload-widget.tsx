@@ -10,7 +10,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
 import { TrendingUp } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -64,7 +65,7 @@ export function ProgressiveOverloadWidget({
   // Loading skeleton
   if (isLoading) {
     return (
-      <Card className="">
+      <BrutalistCard className="p-6">
         <CardHeader>
           <div className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5" />
@@ -76,19 +77,19 @@ export function ProgressiveOverloadWidget({
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="space-y-2">
                 <div className="h-4 bg-muted w-32" />
-                <div className="h-20 bg-muted rounded" />
+                <div className="h-20 bg-muted" />
               </div>
             ))}
           </div>
         </CardContent>
-      </Card>
+      </BrutalistCard>
     );
   }
 
   // Empty state
   if (!progressionData || progressionData.length === 0) {
     return (
-      <Card className="">
+      <BrutalistCard className="p-6">
         <CardHeader>
           <div className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5" />
@@ -106,7 +107,7 @@ export function ProgressiveOverloadWidget({
             </p>
           </div>
         </CardContent>
-      </Card>
+      </BrutalistCard>
     );
   }
 
@@ -116,7 +117,7 @@ export function ProgressiveOverloadWidget({
 
   if (repProgressionData.length === 0) {
     return (
-      <Card className="">
+      <BrutalistCard className="p-6">
         <CardHeader>
           <div className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-safety-orange" />
@@ -135,12 +136,12 @@ export function ProgressiveOverloadWidget({
             </p>
           </div>
         </CardContent>
-      </Card>
+      </BrutalistCard>
     );
   }
 
   return (
-    <Card className="">
+    <BrutalistCard className="p-6">
       <CardHeader>
         <div className="flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-safety-orange" />
@@ -304,6 +305,6 @@ export function ProgressiveOverloadWidget({
           </p>
         )}
       </CardContent>
-    </Card>
+    </BrutalistCard>
   );
 }
