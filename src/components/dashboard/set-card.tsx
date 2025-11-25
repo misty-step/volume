@@ -104,7 +104,7 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
         <div className="flex items-center gap-2 ml-4">
           <button
             onClick={onRepeat}
-            className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="p-2 text-danger-red hover:bg-danger-red/10 border-2 border-transparent hover:border-danger-red transition-colors focus:outline-none focus:ring-2 focus:ring-danger-red"
             aria-label="Repeat this set"
             title="Repeat this set"
             type="button"
@@ -114,7 +114,7 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
           </button>
           <button
             onClick={handleDeleteClick}
-            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="p-2 text-danger-red hover:bg-danger-red/10 border-2 border-transparent hover:border-danger-red transition-colors focus:outline-none focus:ring-2 focus:ring-danger-red"
             aria-label="Delete this set"
             title="Delete this set"
             type="button"
