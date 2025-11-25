@@ -310,17 +310,36 @@ function resolveEnvironment(): string | undefined {
 /**
  * Resolve release identifier for Sentry.
  *
- * Tries: SENTRY_RELEASE > VERCEL_GIT_COMMIT_SHA > npm_package_version
+ * Tries: SENTRY_RELEASE > VERCEL_GIT_COMMIT_SHA > NEXT_PUBLIC_PACKAGE_VERSION > npm_package_version
+ *
+ * Note: Empty strings and whitespace-only values are treated as absent.
  *
  * @returns Release identifier
  */
 function resolveRelease(): string | undefined {
-  return (
-    process.env.SENTRY_RELEASE ||
-    process.env.VERCEL_GIT_COMMIT_SHA ||
-    process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ||
-    process.env.npm_package_version
-  );
+  // Helper to filter empty strings and whitespace
+  const getEnv = (key: string) => process.env[key]?.trim() || undefined;
+
+  const sentryRelease =
+    getEnv("SENTRY_RELEASE") || getEnv("NEXT_PUBLIC_SENTRY_RELEASE");
+  if (sentryRelease) {
+    return sentryRelease;
+  }
+
+  const gitSha =
+    getEnv("VERCEL_GIT_COMMIT_SHA") ||
+    getEnv("NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA");
+  if (gitSha) {
+    return gitSha.slice(0, 7);
+  }
+
+  // Use injected package version for Sentry release
+  const packageVersion = getEnv("NEXT_PUBLIC_PACKAGE_VERSION");
+  if (packageVersion) {
+    return packageVersion;
+  }
+
+  return getEnv("npm_package_version");
 }
 
 /**

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { resolveVersion } from "@/lib/version";
 
 export const dynamic = "force-dynamic";
 
@@ -12,10 +13,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   const timestamp = new Date().toISOString();
-  const version =
-    process.env.VERCEL_GIT_COMMIT_SHA ||
-    process.env.npm_package_version ||
-    "unknown";
+  const version = resolveVersion();
 
   // Check Convex connectivity (basic check - URL must be configured)
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
