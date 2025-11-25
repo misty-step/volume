@@ -1,5 +1,8 @@
 import type { Config } from "tailwindcss";
-import { BRUTALIST_COLORS } from "./src/config/design-tokens";
+import {
+  BRUTALIST_COLORS,
+  BRUTALIST_SHADOWS,
+} from "./src/config/design-tokens";
 
 export default {
   darkMode: ["class"],
@@ -107,6 +110,13 @@ export default {
         sm: "calc(var(--radius) - 4px)",
         brutalist: "2px",
         "brutalist-md": "4px",
+      },
+      boxShadow: {
+        lift: BRUTALIST_SHADOWS.lift,
+        "lift-dark": "4px 4px 0 0 rgba(255,255,255,0.2)",
+        press: BRUTALIST_SHADOWS.press,
+        heavy: BRUTALIST_SHADOWS.heavy,
+        dialog: BRUTALIST_SHADOWS.dialog,
       },
       keyframes: {
         "accordion-down": {

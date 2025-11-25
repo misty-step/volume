@@ -59,9 +59,10 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
   return (
     <div
       className={`
-        p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700
-        rounded-lg hover:shadow-md transition-all
-        ${isDeleting ? "opacity-50 pointer-events-none" : ""}
+        p-4 bg-background border-3 border-concrete-black dark:border-concrete-white
+        hover:shadow-lift dark:hover:shadow-lift-dark
+        transition-shadow
+        ${isDeleting && "opacity-50 pointer-events-none"}
       `}
       data-testid={`set-card-${set._id}`}
     >
