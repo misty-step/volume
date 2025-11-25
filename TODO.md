@@ -111,14 +111,14 @@
 
 ### Color Token Audit
 
-- [~] **Search and replace gray-\* colors**
+- [x] **Search and replace gray-\* colors**
   - Run: `grep -r "gray-[0-9]" src/components --include="*.tsx"`
   - Replace gray-200/300/400 with `concrete-gray` or `muted`
   - Replace gray-500/600/700 with `muted-foreground`
   - Replace gray-800/900 with `foreground`
   - Success: Zero hardcoded gray-\* colors, all use design tokens
 
-- [ ] **Search and replace blue-\* colors**
+- [x] **Search and replace blue-\* colors**
   - Run: `grep -r "blue-[0-9]" src/components --include="*.tsx"`
   - Replace blue-\* with `danger-red` for primary actions
   - Replace blue-\* with `primary` for links
