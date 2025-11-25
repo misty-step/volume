@@ -4,10 +4,9 @@ import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
 import { Trophy } from "lucide-react";
 import type { PRType } from "../../../convex/lib/pr_detection";
-import {
-  numberDisplayClasses,
-  labelDisplayClasses,
-} from "@/lib/typography-utils";
+import { motion } from "framer-motion";
+import { motionPresets } from "@/lib/brutalist-motion";
+import { BRUTALIST_TYPOGRAPHY } from "@/config/design-tokens";
 
 interface PRCardProps {
   prs: Array<{
@@ -135,10 +134,16 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
+        <motion.div
+          className="space-y-3"
+          variants={motionPresets.listStagger}
+          initial="initial"
+          animate="animate"
+        >
           {prs.slice(0, 5).map((pr, idx) => (
-            <div
+            <motion.div
               key={idx}
+              variants={motionPresets.cardEntrance}
               className="flex justify-between items-start gap-3 pb-3 border-b-3 border-concrete-gray last:border-b-0 last:pb-0"
             >
               <div className="flex-1 min-w-0">
@@ -152,23 +157,38 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
                     {pr.prType}
                   </span>
                 </div>
-                <p className={labelDisplayClasses.default}>
+                <p
+                  className={
+                    BRUTALIST_TYPOGRAPHY.pairings.historicalMetric.timestamp
+                  }
+                >
                   {formatRelativeTime(pr.performedAt)}
                 </p>
               </div>
               <div className="text-right">
-                <p className={numberDisplayClasses.large}>
+                <motion.p
+                  className={
+                    BRUTALIST_TYPOGRAPHY.pairings.analyticsMetric.number
+                  }
+                  variants={motionPresets.numberReveal}
+                  initial="initial"
+                  animate="animate"
+                >
                   {formatImprovement(pr.prType, pr.improvement, pr.weight)}
-                </p>
-                <p className={labelDisplayClasses.default}>
+                </motion.p>
+                <p
+                  className={
+                    BRUTALIST_TYPOGRAPHY.pairings.analyticsMetric.label
+                  }
+                >
                   {pr.currentValue}
                   {pr.prType === "weight" && " lbs"}
                   {pr.prType === "reps" && " reps"}
                 </p>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         {/* Show count of PRs */}
         {prs.length > 5 ? (
