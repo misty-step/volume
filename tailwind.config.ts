@@ -152,6 +152,11 @@ export default {
           "0%": { width: "0%" },
           "100%": { width: "100%" },
         },
+        shake: {
+          "0%, 100%": { transform: "translateX(0)" },
+          "10%, 30%, 50%, 70%, 90%": { transform: "translateX(-4px)" },
+          "20%, 40%, 60%, 80%": { transform: "translateX(4px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -160,6 +165,7 @@ export default {
         "mechanical-slide":
           "mechanical-slide 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)",
         "concrete-fill": "concrete-fill 1s cubic-bezier(0.4, 0.0, 0.2, 1)",
+        shake: "shake 0.382s cubic-bezier(0.4, 0.0, 0.2, 1)",
       },
     },
   },

@@ -35,12 +35,21 @@ interface SetCardProps {
 export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isShaking, setIsShaking] = useState(false);
   const { unit: preferredUnit } = useWeightUnit();
   // Use the unit stored with the set, fallback to user preference for legacy sets
   const displayUnit = set.unit || preferredUnit;
 
   const handleDeleteClick = () => {
     setShowDeleteDialog(true);
+  };
+
+  const handleCancelDelete = () => {
+    setIsShaking(true);
+    setTimeout(() => {
+      setIsShaking(false);
+      setShowDeleteDialog(false);
+    }, 382); // PRECISION_TIMING.FAST
   };
 
   const confirmDelete = async () => {
@@ -130,7 +139,7 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className={isShaking ? "animate-shake" : ""}>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Set</AlertDialogTitle>
             <AlertDialogDescription>
@@ -138,7 +147,9 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={handleCancelDelete}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               data-testid="confirm-delete-btn"
