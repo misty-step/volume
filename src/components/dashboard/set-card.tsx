@@ -69,7 +69,7 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <h4
-            className="font-semibold text-lg text-gray-900 dark:text-gray-100"
+            className="font-display text-xl uppercase tracking-wide text-foreground"
             data-testid={`set-exercise-name-${set._id}`}
           >
             {exercise?.name || "Unknown exercise"}
