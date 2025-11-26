@@ -6,6 +6,8 @@ import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { Exercise, Set } from "@/types/domain";
 import { ExerciseSetGroup } from "./exercise-set-group";
 import { groupSetsByExercise } from "@/lib/exercise-grouping";
+import { motion } from "framer-motion";
+import { motionPresets } from "@/lib/brutalist-motion";
 
 interface DayGroup {
   date: string;
@@ -60,7 +62,12 @@ export function ChronologicalGroupedSetHistory({
   }
 
   return (
-    <div className="space-y-3">
+    <motion.div
+      className="space-y-3"
+      variants={motionPresets.listStagger}
+      initial="initial"
+      animate="animate"
+    >
       {groupedSets.map((dayGroup) => {
         // Transform day's sets into exercise groups
         const exerciseGroups = groupSetsByExercise(
@@ -69,38 +76,47 @@ export function ChronologicalGroupedSetHistory({
         );
 
         return (
-          <Card key={dayGroup.date} className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base">
-                {dayGroup.displayDate} ({dayGroup.sets.length} set
-                {dayGroup.sets.length === 1 ? "" : "s"})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {exerciseGroups.map((group) => {
-                  const exercise = exerciseMap.get(group.exerciseId);
-                  if (!exercise) return null;
+          <motion.div key={dayGroup.date} variants={motionPresets.cardEntrance}>
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">
+                  {dayGroup.displayDate} ({dayGroup.sets.length} set
+                  {dayGroup.sets.length === 1 ? "" : "s"})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <motion.div
+                  className="space-y-3"
+                  variants={motionPresets.listStagger}
+                >
+                  {exerciseGroups.map((group) => {
+                    const exercise = exerciseMap.get(group.exerciseId);
+                    if (!exercise) return null;
 
-                  return (
-                    <ExerciseSetGroup
-                      key={group.exerciseId}
-                      exercise={exercise}
-                      sets={group.sets}
-                      totalVolume={group.totalVolume}
-                      totalReps={group.totalReps}
-                      preferredUnit={preferredUnit}
-                      onRepeat={onRepeat}
-                      onDelete={onDelete}
-                      showRepeat={showRepeat}
-                    />
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                    return (
+                      <motion.div
+                        key={group.exerciseId}
+                        variants={motionPresets.cardEntrance}
+                      >
+                        <ExerciseSetGroup
+                          exercise={exercise}
+                          sets={group.sets}
+                          totalVolume={group.totalVolume}
+                          totalReps={group.totalReps}
+                          preferredUnit={preferredUnit}
+                          onRepeat={onRepeat}
+                          onDelete={onDelete}
+                          showRepeat={showRepeat}
+                        />
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
         );
       })}
-    </div>
+    </motion.div>
   );
 }
