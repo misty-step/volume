@@ -113,7 +113,7 @@ export function ReportNavigator() {
             onClick={() => setReportIndex(reportIndex + 1)}
             disabled={!hasNext}
             className={`
-              flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded transition-colors
+              flex items-center gap-1 px-3 py-1.5 text-sm font-medium transition-colors
               ${
                 hasNext
                   ? "hover:bg-muted text-foreground"
@@ -134,7 +134,7 @@ export function ReportNavigator() {
             onClick={() => setReportIndex(reportIndex - 1)}
             disabled={!hasPrevious}
             className={`
-              flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded transition-colors
+              flex items-center gap-1 px-3 py-1.5 text-sm font-medium transition-colors
               ${
                 hasPrevious
                   ? "hover:bg-muted text-foreground"

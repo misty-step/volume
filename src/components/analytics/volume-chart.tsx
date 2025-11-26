@@ -31,7 +31,7 @@ export function VolumeChart({ data, isLoading = false }: VolumeChartProps) {
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-3">
-            <div className="h-64 bg-muted rounded" />
+            <div className="h-64 bg-muted" />
           </div>
         </CardContent>
       </Card>

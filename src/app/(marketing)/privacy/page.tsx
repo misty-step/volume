@@ -400,7 +400,7 @@ export default function PrivacyPolicy() {
               </section>
 
               {/* GDPR/CCPA Note */}
-              <section className="border-l-[3px] border-primary pl-6 bg-muted/20 p-6 rounded-r">
+              <section className="border-l-[3px] border-primary pl-6 bg-muted/20 p-6">
                 <h2 className="font-display text-xl uppercase tracking-tight mb-4">
                   Additional Rights for EU and California Users
                 </h2>

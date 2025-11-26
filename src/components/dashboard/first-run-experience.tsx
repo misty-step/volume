@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
+import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { handleMutationError } from "@/lib/error-handler";
 
 interface FirstRunExperienceProps {
@@ -58,7 +59,7 @@ export function FirstRunExperience({
   };
 
   return (
-    <Card>
+    <BrutalistCard className="p-6">
       <CardHeader>
         <CardTitle>Welcome to Volume</CardTitle>
       </CardHeader>
@@ -70,7 +71,7 @@ export function FirstRunExperience({
         </div>
 
         {/* Inline Exercise Creator */}
-        <div className="mb-6 p-4 border rounded-md">
+        <div className="mb-6 p-4 border-3 border-concrete-black dark:border-concrete-white">
           <div className="flex gap-2">
             <input
               ref={inputRef}
@@ -79,14 +80,14 @@ export function FirstRunExperience({
               onChange={(e) => setName(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Exercise name (e.g., Push-ups)"
-              className="flex-1 px-3 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+              className="flex-1 px-3 py-3 border-3 border-concrete-black dark:border-concrete-white focus:outline-none focus:ring-3 focus:ring-danger-red font-mono"
               disabled={isCreating}
             />
             <button
               type="button"
               onClick={() => handleCreateExercise(name)}
               disabled={!name.trim() || isCreating}
-              className="px-6 py-3 bg-primary text-primary-foreground font-bold rounded-md hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+              className="px-6 py-3 bg-primary text-primary-foreground font-bold border-2 border-border hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isCreating ? "..." : "Create"}
             </button>
@@ -105,7 +106,7 @@ export function FirstRunExperience({
                 type="button"
                 onClick={() => handleQuickCreate(exercise)}
                 disabled={isCreating}
-                className="px-4 py-3 text-sm border rounded-md hover:border-primary hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-3 text-sm border-2 border-input hover:border-primary hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {exercise}
               </button>
@@ -113,6 +114,6 @@ export function FirstRunExperience({
           </div>
         </div>
       </CardContent>
-    </Card>
+    </BrutalistCard>
   );
 }
