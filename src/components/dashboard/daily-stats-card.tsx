@@ -12,10 +12,9 @@ import {
 } from "@/components/ui/table";
 import { ExerciseStats } from "@/lib/stats-calculator";
 import { Dumbbell } from "lucide-react";
-import {
-  numberDisplayClasses,
-  labelDisplayClasses,
-} from "@/lib/typography-utils";
+import { motion } from "framer-motion";
+import { motionPresets } from "@/lib/brutalist-motion";
+import { BRUTALIST_TYPOGRAPHY } from "@/config/design-tokens";
 
 interface DailyStatsCardProps {
   exerciseStats: ExerciseStats[];
@@ -52,15 +51,29 @@ export function DailyStatsCard({ exerciseStats }: DailyStatsCardProps) {
                       <TableCell className="font-display uppercase">
                         {exercise.name}
                       </TableCell>
-                      <TableCell
-                        className={`text-right ${numberDisplayClasses.large}`}
-                      >
-                        {exercise.reps}
+                      <TableCell className="text-right">
+                        <motion.span
+                          className={
+                            BRUTALIST_TYPOGRAPHY.pairings.analyticsMetric.number
+                          }
+                          variants={motionPresets.numberReveal}
+                          initial="initial"
+                          animate="animate"
+                        >
+                          {exercise.reps}
+                        </motion.span>
                       </TableCell>
-                      <TableCell
-                        className={`text-right ${numberDisplayClasses.default}`}
-                      >
-                        {exercise.sets}
+                      <TableCell className="text-right">
+                        <motion.span
+                          className={
+                            BRUTALIST_TYPOGRAPHY.pairings.setMetric.number
+                          }
+                          variants={motionPresets.numberReveal}
+                          initial="initial"
+                          animate="animate"
+                        >
+                          {exercise.sets}
+                        </motion.span>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -69,29 +82,51 @@ export function DailyStatsCard({ exerciseStats }: DailyStatsCardProps) {
             </div>
 
             {/* Mobile: Card layout */}
-            <div className="md:hidden space-y-2">
+            <motion.div
+              className="md:hidden space-y-2"
+              variants={motionPresets.listStagger}
+              initial="initial"
+              animate="animate"
+            >
               {exerciseStats.map((exercise, idx) => (
-                <div
+                <motion.div
                   key={idx}
+                  variants={motionPresets.cardEntrance}
                   className="border-3 border-concrete-black dark:border-concrete-white p-3 bg-background hover:bg-muted/50 transition-colors"
                 >
                   <div className="font-display uppercase tracking-wide">
                     {exercise.name}
                   </div>
                   <div className="mt-1 flex items-baseline gap-2">
-                    <span className={numberDisplayClasses.large}>
+                    <motion.span
+                      className={
+                        BRUTALIST_TYPOGRAPHY.pairings.analyticsMetric.number
+                      }
+                      variants={motionPresets.numberReveal}
+                    >
                       {exercise.reps}
+                    </motion.span>
+                    <span
+                      className={BRUTALIST_TYPOGRAPHY.pairings.setMetric.text}
+                    >
+                      reps
                     </span>
-                    <span className={labelDisplayClasses.default}>reps</span>
                     <span className="text-concrete-gray">•</span>
-                    <span className={numberDisplayClasses.default}>
+                    <motion.span
+                      className={BRUTALIST_TYPOGRAPHY.pairings.setMetric.number}
+                      variants={motionPresets.numberReveal}
+                    >
                       {exercise.sets}
+                    </motion.span>
+                    <span
+                      className={BRUTALIST_TYPOGRAPHY.pairings.setMetric.text}
+                    >
+                      sets
                     </span>
-                    <span className={labelDisplayClasses.default}>sets</span>
                   </div>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </>
         ) : (
           <div className="py-8 text-center">
