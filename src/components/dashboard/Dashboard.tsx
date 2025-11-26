@@ -17,7 +17,7 @@ import { PageLayout } from "@/components/layout/page-layout";
 import { LAYOUT } from "@/lib/layout-constants";
 import { BrutalistCard } from "@/components/brutalist";
 import { motion } from "framer-motion";
-import { brutalistMotion } from "@/lib/brutalist-motion";
+import { motionPresets } from "@/lib/brutalist-motion";
 import { groupSetsByExercise } from "@/lib/exercise-grouping";
 import { sortExercisesByRecency } from "@/lib/exercise-sorting";
 import { getTodayRange } from "@/lib/date-utils";
@@ -133,12 +133,12 @@ export function Dashboard() {
       <PageLayout title="Dashboard">
         <motion.div
           className={LAYOUT.section.spacing}
-          variants={brutalistMotion.staggerContainer}
+          variants={motionPresets.listStagger}
           initial="initial"
           animate="animate"
         >
           {/* Form skeleton */}
-          <motion.div variants={brutalistMotion.weightDrop}>
+          <motion.div variants={motionPresets.cardEntrance}>
             <BrutalistCard className="p-6">
               <div className="space-y-4">
                 <div className="h-8 w-32 bg-concrete-gray animate-pulse" />
@@ -153,7 +153,7 @@ export function Dashboard() {
           </motion.div>
 
           {/* History skeleton */}
-          <motion.div variants={brutalistMotion.weightDrop}>
+          <motion.div variants={motionPresets.cardEntrance}>
             <BrutalistCard className="p-6">
               <div className="space-y-4">
                 <div className="h-8 w-48 bg-concrete-gray animate-pulse font-mono" />
@@ -198,12 +198,12 @@ export function Dashboard() {
         ) : (
           <motion.div
             className={LAYOUT.section.spacing}
-            variants={brutalistMotion.staggerContainer}
+            variants={motionPresets.listStagger}
             initial="initial"
             animate="animate"
           >
             {/* Quick Log Form - PRIME POSITION */}
-            <motion.div variants={brutalistMotion.weightDrop}>
+            <motion.div variants={motionPresets.cardEntrance}>
               <QuickLogForm
                 ref={formRef}
                 exercises={activeExercisesByRecency}
@@ -213,7 +213,7 @@ export function Dashboard() {
             </motion.div>
 
             {/* Today's Set History - Aggregated stats with drill-down */}
-            <motion.div variants={brutalistMotion.weightDrop}>
+            <motion.div variants={motionPresets.cardEntrance}>
               <GroupedSetHistory
                 ref={historyRef}
                 exerciseGroups={exerciseGroups}
