@@ -19,10 +19,7 @@ import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
 import { formatTimeAgo, formatDuration } from "@/lib/date-utils";
 import { Exercise, Set } from "@/types/domain";
-import {
-  numberDisplayClasses,
-  labelDisplayClasses,
-} from "@/lib/typography-utils";
+import { BRUTALIST_TYPOGRAPHY } from "@/config/design-tokens";
 import { motionPresets, PRECISION_TIMING } from "@/lib/brutalist-motion";
 
 interface SetCardProps {
@@ -88,25 +85,31 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
           </h4>
           <div className="mt-1 flex items-center gap-3">
             {set.duration !== undefined ? (
-              <span className={numberDisplayClasses.default}>
+              <span className={BRUTALIST_TYPOGRAPHY.pairings.setMetric.number}>
                 {formatDuration(set.duration)}
               </span>
             ) : (
-              <span className={numberDisplayClasses.default}>
+              <span className={BRUTALIST_TYPOGRAPHY.pairings.setMetric.number}>
                 {set.reps} reps
               </span>
             )}
             {set.weight && (
               <>
                 <span className="text-concrete-gray">•</span>
-                <span className={numberDisplayClasses.large}>{set.weight}</span>
-                <span className={`${labelDisplayClasses.default} ml-1`}>
+                <span
+                  className={BRUTALIST_TYPOGRAPHY.pairings.setWeight.number}
+                >
+                  {set.weight}
+                </span>
+                <span className={BRUTALIST_TYPOGRAPHY.pairings.setWeight.unit}>
                   {displayUnit}
                 </span>
               </>
             )}
           </div>
-          <p className={`mt-1 ${labelDisplayClasses.small}`}>
+          <p
+            className={`mt-1 ${BRUTALIST_TYPOGRAPHY.pairings.historicalMetric.timestamp}`}
+          >
             {formatTimeAgo(set.performedAt, "compact")}
           </p>
         </div>
