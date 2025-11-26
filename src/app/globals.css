@@ -50,6 +50,9 @@
     /* Focus ring system */
     --ring-width: 3px;
     --ring-width-subtle: 1px;
+
+    /* Chrome accent system */
+    --chrome-glow: rgba(232, 234, 237, 0.15);
   }
 
   .dark {

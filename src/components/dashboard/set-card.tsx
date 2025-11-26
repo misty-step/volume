@@ -18,12 +18,12 @@ import {
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
 import { formatTimeAgo, formatDuration } from "@/lib/date-utils";
-import { Exercise, Set } from "@/types/domain";
+import { Exercise, Set as WorkoutSet } from "@/types/domain";
 import { BRUTALIST_TYPOGRAPHY } from "@/config/design-tokens";
 import { motionPresets, PRECISION_TIMING } from "@/lib/brutalist-motion";
 
 interface SetCardProps {
-  set: Set;
+  set: WorkoutSet;
   exercise: Exercise | undefined;
   onRepeat: () => void;
   onDelete: () => void;
@@ -46,7 +46,7 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
     setTimeout(() => {
       setIsShaking(false);
       setShowDeleteDialog(false);
-    }, 382); // PRECISION_TIMING.FAST
+    }, PRECISION_TIMING.FAST * 1000);
   };
 
   const confirmDelete = async () => {

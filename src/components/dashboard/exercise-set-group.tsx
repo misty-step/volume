@@ -18,16 +18,16 @@ import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
 import { formatNumber } from "@/lib/number-utils";
 import { formatTimestamp, formatDuration } from "@/lib/date-utils";
-import { Exercise, Set, WeightUnit } from "@/types/domain";
+import { Exercise, Set as WorkoutSet, WeightUnit } from "@/types/domain";
 import { BRUTALIST_TYPOGRAPHY } from "@/config/design-tokens";
 
 interface ExerciseSetGroupProps {
   exercise: Exercise;
-  sets: Set[];
+  sets: WorkoutSet[];
   totalVolume: number;
   totalReps: number;
   preferredUnit: WeightUnit;
-  onRepeat: (set: Set) => void;
+  onRepeat: (set: WorkoutSet) => void;
   onDelete: (setId: Id<"sets">) => void;
   showRepeat?: boolean;
 }
@@ -44,9 +44,9 @@ export function ExerciseSetGroup({
 }: ExerciseSetGroupProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [deletingId, setDeletingId] = useState<Id<"sets"> | null>(null);
-  const [setToDelete, setSetToDelete] = useState<Set | null>(null);
+  const [setToDelete, setSetToDelete] = useState<WorkoutSet | null>(null);
 
-  const handleDeleteClick = (set: Set) => {
+  const handleDeleteClick = (set: WorkoutSet) => {
     setSetToDelete(set);
   };
 
