@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { PRECISION_TIMING } from "@/lib/brutalist-motion";
 
 interface BrutalistProgressProps {
   value: number; // 0-100
@@ -42,7 +43,7 @@ export function BrutalistProgress({
             initial={{ scaleY: 0 }}
             animate={{ scaleY: i < filledSegments ? 1 : 0 }}
             transition={{
-              duration: 0.2,
+              duration: PRECISION_TIMING.SNAP,
               delay: i * 0.05,
               ease: [0.4, 0.0, 0.2, 1],
             }}
@@ -63,7 +64,10 @@ export function BrutalistProgress({
         className={cn("h-full", variantColors[variant])}
         initial={{ width: 0 }}
         animate={{ width: `${percentage}%` }}
-        transition={{ duration: 0.5, ease: [0.4, 0.0, 0.2, 1] }}
+        transition={{
+          duration: PRECISION_TIMING.BASE,
+          ease: [0.4, 0.0, 0.2, 1],
+        }}
       />
     </div>
   );
