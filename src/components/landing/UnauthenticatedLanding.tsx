@@ -78,9 +78,9 @@ export function UnauthenticatedLanding() {
         <section className="relative p-8 lg:p-16 bg-concrete-white flex items-center justify-center">
           <motion.div
             className="w-full max-w-md space-y-8"
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            variants={motionPresets.cardEntrance}
+            initial="initial"
+            animate="animate"
           >
             {/* Primary CTA */}
             <div className="space-y-6">
