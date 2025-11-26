@@ -17,6 +17,8 @@ const BrutalistInput = React.forwardRef<HTMLInputElement, BrutalistInputProps>(
           "flex h-12 w-full border-3 bg-background px-4 py-3 font-mono text-lg tabular-nums",
           "placeholder:text-concrete-gray placeholder:opacity-50",
           "focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-danger-red",
+          "focus-visible:text-4xl focus-visible:font-bold focus-visible:text-danger-red",
+          "transition-all duration-200",
           "disabled:cursor-not-allowed disabled:opacity-50",
           error
             ? "border-danger-red"

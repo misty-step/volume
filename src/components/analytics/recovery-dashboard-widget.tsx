@@ -118,9 +118,9 @@ export function RecoveryDashboardWidget({
                 key={i}
                 className="animate-pulse p-4 border border-2 border-border space-y-2"
               >
-                <div className="h-4 bg-muted w-20 rounded" />
-                <div className="h-8 bg-muted w-12 rounded" />
-                <div className="h-3 bg-muted w-24 rounded" />
+                <div className="h-4 bg-muted w-20" />
+                <div className="h-8 bg-muted w-12" />
+                <div className="h-3 bg-muted w-24" />
               </div>
             ))}
           </div>

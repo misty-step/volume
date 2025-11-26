@@ -1,6 +1,7 @@
 "use client";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
 import {
   Table,
   TableHeader,
@@ -11,6 +12,9 @@ import {
 } from "@/components/ui/table";
 import { ExerciseStats } from "@/lib/stats-calculator";
 import { Dumbbell } from "lucide-react";
+import { motion } from "framer-motion";
+import { motionPresets } from "@/lib/brutalist-motion";
+import { BRUTALIST_TYPOGRAPHY } from "@/config/design-tokens";
 
 interface DailyStatsCardProps {
   exerciseStats: ExerciseStats[];
@@ -18,7 +22,7 @@ interface DailyStatsCardProps {
 
 export function DailyStatsCard({ exerciseStats }: DailyStatsCardProps) {
   return (
-    <Card className="shadow-sm">
+    <BrutalistCard className="p-6">
       <CardHeader>
         <CardTitle className="text-lg">{"Today's Progress"}</CardTitle>
       </CardHeader>
@@ -30,20 +34,46 @@ export function DailyStatsCard({ exerciseStats }: DailyStatsCardProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Exercise</TableHead>
-                    <TableHead className="text-right">Reps</TableHead>
-                    <TableHead className="text-right">Sets</TableHead>
+                    <TableHead className="font-display uppercase text-xs tracking-wider">
+                      Exercise
+                    </TableHead>
+                    <TableHead className="text-right font-display uppercase text-xs tracking-wider">
+                      Reps
+                    </TableHead>
+                    <TableHead className="text-right font-display uppercase text-xs tracking-wider">
+                      Sets
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {exerciseStats.map((exercise, idx) => (
                     <TableRow key={idx}>
-                      <TableCell>{exercise.name}</TableCell>
-                      <TableCell className="text-right font-bold tabular-nums">
-                        {exercise.reps}
+                      <TableCell className="font-display uppercase">
+                        {exercise.name}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {exercise.sets}
+                      <TableCell className="text-right">
+                        <motion.span
+                          className={
+                            BRUTALIST_TYPOGRAPHY.pairings.analyticsMetric.number
+                          }
+                          variants={motionPresets.numberReveal}
+                          initial="initial"
+                          animate="animate"
+                        >
+                          {exercise.reps}
+                        </motion.span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <motion.span
+                          className={
+                            BRUTALIST_TYPOGRAPHY.pairings.setMetric.number
+                          }
+                          variants={motionPresets.numberReveal}
+                          initial="initial"
+                          animate="animate"
+                        >
+                          {exercise.sets}
+                        </motion.span>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -52,23 +82,51 @@ export function DailyStatsCard({ exerciseStats }: DailyStatsCardProps) {
             </div>
 
             {/* Mobile: Card layout */}
-            <div className="md:hidden space-y-2">
+            <motion.div
+              className="md:hidden space-y-2"
+              variants={motionPresets.listStagger}
+              initial="initial"
+              animate="animate"
+            >
               {exerciseStats.map((exercise, idx) => (
-                <div
+                <motion.div
                   key={idx}
-                  className="border rounded-md p-3 bg-card hover:bg-muted/50 transition-colors"
+                  variants={motionPresets.cardEntrance}
+                  className="border-3 border-concrete-black dark:border-concrete-white p-3 bg-background hover:bg-muted/50 transition-colors"
                 >
-                  <div className="font-medium">{exercise.name}</div>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    <span className="font-bold tabular-nums">
-                      {exercise.reps}
-                    </span>{" "}
-                    reps • <span className="tabular-nums">{exercise.sets}</span>{" "}
-                    sets
+                  <div className="font-display uppercase tracking-wide">
+                    {exercise.name}
                   </div>
-                </div>
+                  <div className="mt-1 flex items-baseline gap-2">
+                    <motion.span
+                      className={
+                        BRUTALIST_TYPOGRAPHY.pairings.analyticsMetric.number
+                      }
+                      variants={motionPresets.numberReveal}
+                    >
+                      {exercise.reps}
+                    </motion.span>
+                    <span
+                      className={BRUTALIST_TYPOGRAPHY.pairings.setMetric.text}
+                    >
+                      reps
+                    </span>
+                    <span className="text-concrete-gray">•</span>
+                    <motion.span
+                      className={BRUTALIST_TYPOGRAPHY.pairings.setMetric.number}
+                      variants={motionPresets.numberReveal}
+                    >
+                      {exercise.sets}
+                    </motion.span>
+                    <span
+                      className={BRUTALIST_TYPOGRAPHY.pairings.setMetric.text}
+                    >
+                      sets
+                    </span>
+                  </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </>
         ) : (
           <div className="py-8 text-center">
@@ -77,6 +135,6 @@ export function DailyStatsCard({ exerciseStats }: DailyStatsCardProps) {
           </div>
         )}
       </CardContent>
-    </Card>
+    </BrutalistCard>
   );
 }

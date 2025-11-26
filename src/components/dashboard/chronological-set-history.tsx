@@ -32,7 +32,7 @@ import {
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
-import { formatTime } from "@/lib/date-utils";
+import { formatTime, formatDuration } from "@/lib/date-utils";
 import { Exercise, Set } from "@/types/domain";
 
 interface ChronologicalSetHistoryProps {
@@ -55,13 +55,6 @@ export function ChronologicalSetHistory({
   const [deletingId, setDeletingId] = useState<Id<"sets"> | null>(null);
   const [setToDelete, setSetToDelete] = useState<Set | null>(null);
   const { unit: preferredUnit } = useWeightUnit();
-
-  // Format duration in seconds to mm:ss
-  const formatDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
 
   const handleDeleteClick = (set: Set) => {
     setSetToDelete(set);
@@ -158,7 +151,7 @@ export function ChronologicalSetHistory({
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => onRepeat(set)}
-                              className="flex items-center gap-1 px-2 py-1 hover:bg-muted transition-colors rounded"
+                              className="flex items-center gap-1 px-2 py-1 hover:bg-muted transition-colors"
                               aria-label="Repeat this set"
                               title="Repeat this set"
                               type="button"

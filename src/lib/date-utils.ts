@@ -80,6 +80,23 @@ export function formatTimestamp(timestamp: number): string {
 }
 
 /**
+ * Format duration in seconds to mm:ss format
+ *
+ * @param seconds - Duration in seconds
+ * @returns Formatted duration string (e.g., "5:30")
+ *
+ * @example
+ * formatDuration(90) // => "1:30"
+ * formatDuration(330) // => "5:30"
+ * formatDuration(3665) // => "61:05"
+ */
+export function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+/**
  * Format style for relative time display
  * - "terminal": Uppercase verbose format ("5 MIN AGO", "2 HR AGO")
  * - "compact": Uppercase terse format ("5M AGO", "3H AGO"), switches to HH:MM after 24h

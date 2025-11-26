@@ -21,18 +21,18 @@ function getPriorityColor(priority: FocusSuggestion["priority"]): {
   switch (priority) {
     case "high":
       return {
-        bg: "bg-red-500/10 dark:bg-red-500/20",
-        text: "text-red-700 dark:text-red-300",
+        bg: "bg-danger-red/10 dark:bg-danger-red/20",
+        text: "text-danger-red dark:text-danger-red",
       };
     case "medium":
       return {
-        bg: "bg-yellow-500/10 dark:bg-yellow-500/20",
-        text: "text-yellow-700 dark:text-yellow-300",
+        bg: "bg-safety-orange/10 dark:bg-safety-orange/20",
+        text: "text-safety-orange dark:text-safety-orange",
       };
     case "low":
       return {
-        bg: "bg-gray-500/10 dark:bg-gray-500/20",
-        text: "text-gray-700 dark:text-gray-300",
+        bg: "bg-concrete-gray/10 dark:bg-concrete-gray/20",
+        text: "text-muted-foreground",
       };
   }
 }
@@ -65,8 +65,8 @@ export function FocusSuggestionsWidget({
                 <div className="flex items-start justify-between">
                   <div className="space-y-2 flex-1">
                     <div className="h-4 bg-muted w-32" />
-                    <div className="h-5 bg-muted w-48 rounded" />
-                    <div className="h-3 bg-muted w-40 rounded" />
+                    <div className="h-5 bg-muted w-48" />
+                    <div className="h-3 bg-muted w-40" />
                   </div>
                 </div>
               </div>

@@ -1,5 +1,8 @@
 import type { Config } from "tailwindcss";
-import { BRUTALIST_COLORS } from "./src/config/design-tokens";
+import {
+  BRUTALIST_COLORS,
+  BRUTALIST_SHADOWS,
+} from "./src/config/design-tokens";
 
 export default {
   darkMode: ["class"],
@@ -56,6 +59,9 @@ export default {
         "danger-red": BRUTALIST_COLORS.dangerRed,
         "safety-orange": BRUTALIST_COLORS.safetyOrange,
         "metal-edge": BRUTALIST_COLORS.metalEdge,
+        // Chrome accent system
+        "chrome-highlight": BRUTALIST_COLORS.chromeHighlight,
+        "chrome-shadow": BRUTALIST_COLORS.chromeShadow,
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
@@ -108,6 +114,13 @@ export default {
         brutalist: "2px",
         "brutalist-md": "4px",
       },
+      boxShadow: {
+        lift: BRUTALIST_SHADOWS.lift,
+        "lift-dark": "4px 4px 0 0 rgba(255,255,255,0.2)",
+        press: BRUTALIST_SHADOWS.press,
+        heavy: BRUTALIST_SHADOWS.heavy,
+        dialog: BRUTALIST_SHADOWS.dialog,
+      },
       keyframes: {
         "accordion-down": {
           from: {
@@ -139,6 +152,11 @@ export default {
           "0%": { width: "0%" },
           "100%": { width: "100%" },
         },
+        shake: {
+          "0%, 100%": { transform: "translateX(0)" },
+          "10%, 30%, 50%, 70%, 90%": { transform: "translateX(-4px)" },
+          "20%, 40%, 60%, 80%": { transform: "translateX(4px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -147,6 +165,7 @@ export default {
         "mechanical-slide":
           "mechanical-slide 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)",
         "concrete-fill": "concrete-fill 1s cubic-bezier(0.4, 0.0, 0.2, 1)",
+        shake: "shake 0.382s cubic-bezier(0.4, 0.0, 0.2, 1)",
       },
     },
   },

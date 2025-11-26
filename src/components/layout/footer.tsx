@@ -20,13 +20,13 @@ export function Footer() {
             <div className="flex flex-col gap-1.5 font-mono text-sm">
               <Link
                 href="/terms"
-                className="hover:text-primary transition-colors w-fit"
+                className="text-foreground hover:text-primary transition-colors w-fit"
               >
                 Terms of Service
               </Link>
               <Link
                 href="/privacy"
-                className="hover:text-primary transition-colors w-fit"
+                className="text-foreground hover:text-primary transition-colors w-fit"
               >
                 Privacy Policy
               </Link>
@@ -42,7 +42,7 @@ export function Footer() {
               href="https://mistystep.io"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono text-sm hover:text-primary transition-colors inline-flex items-center gap-1.5"
+              className="font-mono text-sm text-foreground hover:text-primary transition-colors inline-flex items-center gap-1.5"
             >
               A Misty Step Project
               <svg

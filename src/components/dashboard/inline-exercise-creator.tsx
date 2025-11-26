@@ -72,7 +72,7 @@ export function InlineExerciseCreator({
   };
 
   return (
-    <div className="rounded-md border bg-muted/80 p-4">
+    <div className="border-3 border-concrete-black dark:border-concrete-white bg-muted/80 p-4">
       <p className="mb-2 text-sm font-medium text-muted-foreground">
         Create New Exercise
       </p>

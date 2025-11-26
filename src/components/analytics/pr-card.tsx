@@ -1,8 +1,12 @@
 "use client";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
 import { Trophy } from "lucide-react";
 import type { PRType } from "../../../convex/lib/pr_detection";
+import { motion } from "framer-motion";
+import { motionPresets } from "@/lib/brutalist-motion";
+import { BRUTALIST_TYPOGRAPHY } from "@/config/design-tokens";
 
 interface PRCardProps {
   prs: Array<{
@@ -72,7 +76,7 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
   // Loading skeleton
   if (isLoading) {
     return (
-      <Card className="">
+      <BrutalistCard className="p-6">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5" />
@@ -85,21 +89,21 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
               <div key={i} className="flex justify-between items-center">
                 <div className="space-y-2">
                   <div className="h-4 bg-muted w-32" />
-                  <div className="h-3 bg-muted w-24 rounded" />
+                  <div className="h-3 bg-muted w-24" />
                 </div>
-                <div className="h-6 bg-muted w-16 rounded" />
+                <div className="h-6 bg-muted w-16" />
               </div>
             ))}
           </div>
         </CardContent>
-      </Card>
+      </BrutalistCard>
     );
   }
 
   // Empty state
   if (!prs || prs.length === 0) {
     return (
-      <Card className="">
+      <BrutalistCard className="p-6">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5" />
@@ -117,28 +121,34 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
             </p>
           </div>
         </CardContent>
-      </Card>
+      </BrutalistCard>
     );
   }
 
   return (
-    <Card className="">
+    <BrutalistCard className="p-6">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-yellow-600 dark:text-yellow-500" />
+          <Trophy className="w-5 h-5 text-safety-orange" />
           <CardTitle className="">Recent PRs</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
+        <motion.div
+          className="space-y-3"
+          variants={motionPresets.listStagger}
+          initial="initial"
+          animate="animate"
+        >
           {prs.slice(0, 5).map((pr, idx) => (
-            <div
+            <motion.div
               key={idx}
-              className="flex justify-between items-start gap-3 pb-3 border-b last:border-b-0 last:pb-0"
+              variants={motionPresets.cardEntrance}
+              className="flex justify-between items-start gap-3 pb-3 border-b-3 border-concrete-gray last:border-b-0 last:pb-0"
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="font-semibold text-sm truncate">
+                  <p className="font-display text-base uppercase tracking-wide truncate">
                     {pr.exerciseName}
                   </p>
                   <span
@@ -147,23 +157,38 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
                     {pr.prType}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p
+                  className={
+                    BRUTALIST_TYPOGRAPHY.pairings.historicalMetric.timestamp
+                  }
+                >
                   {formatRelativeTime(pr.performedAt)}
                 </p>
               </div>
               <div className="text-right">
-                <p className="font-bold text-sm text-primary">
+                <motion.p
+                  className={
+                    BRUTALIST_TYPOGRAPHY.pairings.analyticsMetric.number
+                  }
+                  variants={motionPresets.numberReveal}
+                  initial="initial"
+                  animate="animate"
+                >
                   {formatImprovement(pr.prType, pr.improvement, pr.weight)}
-                </p>
-                <p className="text-xs text-muted-foreground">
+                </motion.p>
+                <p
+                  className={
+                    BRUTALIST_TYPOGRAPHY.pairings.analyticsMetric.label
+                  }
+                >
                   {pr.currentValue}
                   {pr.prType === "weight" && " lbs"}
                   {pr.prType === "reps" && " reps"}
                 </p>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         {/* Show count of PRs */}
         {prs.length > 5 ? (
@@ -179,6 +204,6 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
           )
         )}
       </CardContent>
-    </Card>
+    </BrutalistCard>
   );
 }

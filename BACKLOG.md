@@ -16,15 +16,6 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Effort**: 2h | **Risk**: MEDIUM
 **Acceptance**: analytics.ts > 70% coverage; server-side safety guards verified.
 
-### [Testing] Adjust coverage thresholds to realistic targets
-
-**File**: vitest.config.ts
-**Perspectives**: architecture-guardian
-**Impact**: Coverage thresholds (70%) failing in CI. Blocks quality gates. Current reality: 35.86% lines.
-**Fix**: Lower to 50% lines/statements, 60% functions/branches. Exclude presentation components. Gradually increase.
-**Effort**: 10m | **Risk**: LOW
-**Acceptance**: `pnpm test:coverage` passes; CI unblocked.
-
 ### [Security] Fix backfill functions auth bypass
 
 **File**: convex/ai/reports.ts:849-851, 937-939
@@ -51,26 +42,6 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Fix**: `pnpm update @vitejs/plugin-react eslint @vitest/coverage-v8`
 **Effort**: 15m + testing | **Risk**: MEDIUM
 **Acceptance**: `pnpm audit` shows no high/critical vulnerabilities.
-
-### [Performance] Fix O(n) lookups in analytics queries ✅ IN PROGRESS
-
-**Status**: Moved to TODO.md on 2025-11-24 for immediate implementation
-**Files**: convex/analyticsFocus.ts:113, convex/analyticsRecovery.ts:161
-**Perspectives**: performance-pathfinder, complexity-archaeologist
-**Impact**: `exercises.find()` in loop creates O(n×m) complexity. With 1000+ sets, adds 200-500ms latency to Focus Suggestions and Recovery Dashboard.
-**Fix**: Build `Map<Id, Exercise>` before loop, use `exerciseById.get(set.exerciseId)`.
-**Effort**: 30m | **Speedup**: 5-10x for large datasets
-**Acceptance**: Analytics widgets load <100ms with 1000-set fixture.
-
-### [Performance] Add date-filtered query for Dashboard ✅ IN PROGRESS
-
-**Status**: Moved to TODO.md on 2025-11-24 for immediate implementation (renamed to listSetsForDateRange for flexibility)
-**File**: convex/sets.ts (new query), src/components/dashboard/Dashboard.tsx:35
-**Perspectives**: performance-pathfinder, user-experience-advocate
-**Impact**: Dashboard fetches ALL historical sets (500KB-5MB) then filters client-side for today. Users with 1000+ sets see multi-second load.
-**Fix**: Add `listSetsForDateRange` query with start/end date filters at DB level using `by_user_performed` index.
-**Effort**: 4-6h | **Speedup**: 10-50x payload reduction
-**Acceptance**: Dashboard network payload <50KB; loads <400ms with 10k-set fixture.
 
 ### [Architecture] Consolidate PR detection to single source
 
@@ -389,6 +360,62 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Why**: Hard-coded `text-purple-600`/`text-blue-500` bypass tokens. Tab pattern duplicated.
 **Approach**: Introduce shared `Tabs` and `Badge` components backed by Tailwind tokens.
 **Effort**: 0.5d | **Impact**: Consistent theming
+
+### [Aesthetic Elevation] Golden Ratio Motion System
+
+**Scope**: src/lib/brutalist-motion.ts, all Framer Motion animation components
+**Perspectives**: design-systems-architect, user-experience-advocate
+**Why**: Current animations use arbitrary durations (0.3s, 0.5s). Golden ratio timing (0.618s) creates natural rhythm and "calibrated" feel matching precision instrument identity.
+**Approach**: Add PRECISION_TIMING constants (snap: 0.1s, quick: 0.236s Fibonacci, golden: 0.618s, deliberate: 1.0s); update all motion variants to use golden ratio timing; apply to SetCard entrance, form focus transitions, Dashboard loading states.
+**Effort**: 2h | **Impact**: MEDIUM - Transforms motion from scattered to systematic, reinforces precision instrument aesthetic
+
+### [Aesthetic Elevation] Chrome Accent System
+
+**Scope**: src/config/design-tokens.ts, input/button/card components
+**Perspectives**: design-systems-architect
+**Why**: Pure black/white/red palette lacks material depth. Subtle chrome accents add mechanical polish without color aggression.
+**Approach**: Add chromeHighlight (#E5E7EB) and chromeShadow (#9CA3AF) to design tokens; apply to input focus states, button pressed states, card hover borders; test in light/dark mode.
+**Effort**: 1h | **Impact**: MEDIUM - Adds industrial metallic depth, differentiates from pure monochrome
+
+### [Aesthetic Elevation] Micro-Interaction Polish
+
+**Scope**: BrutalistButton, all interactive components
+**Perspectives**: design-systems-architect, user-experience-advocate
+**Why**: Interactions lack tactile feedback. Spring-like releases, icon animations, shake on cancel create "precision instrument" delight.
+**Approach**: Add tap/release variants to BrutalistButton (scale 0.97 on tap, spring release with 0.236s timing); 360° rotation on SetCard repeat button click; shake animation on delete confirmation cancel; border glow on form input focus.
+**Effort**: 2h | **Impact**: HIGH - Every interaction feels deliberate and responsive, builds emotional connection
+
+### [Aesthetic Elevation] Focus Ring Enhancement
+
+**Scope**: src/app/globals.css focus system
+**Perspectives**: design-systems-architect, user-experience-advocate
+**Why**: Current 3px focus rings need 2px offset for clarity. Number inputs should get thicker rings (precision tool metaphor).
+**Approach**: Add 2px ring offset to all focus-visible states with box-shadow offset gap; add 4px ring thickness for input[type="number"]; test keyboard navigation across all elements; verify WCAG AA contrast.
+**Effort**: 1h | **Impact**: MEDIUM - Focus states unmissable, number inputs get special treatment
+
+### [Aesthetic Elevation] Component Audit & Brutalist Conversion
+
+**Scope**: All components in src/components/ui/, src/components/dashboard/, src/components/analytics/
+**Perspectives**: design-systems-architect, architecture-guardian, maintainability-maven
+**Why**: EVERY component must use brutalist system. Zero defaults remain. Phase 1 fixes SetCard + analytics widgets; this completes systematic conversion.
+**Approach**: Search `grep -r "rounded-lg\|gray-[0-9]" src/components/`; convert ui/card.tsx to BrutalistCard wrapper, ui/button.tsx brutalist variant as default, ui/input.tsx sharp corners + 3px borders; test dark mode and focus states for each; document conversion patterns.
+**Effort**: 4h | **Impact**: HIGH - Zero unconscious defaults, complete visual cohesion, design system universally applied
+
+### [Aesthetic Elevation] Typography Scale Refinement
+
+**Scope**: src/config/design-tokens.ts typography system
+**Perspectives**: design-systems-architect, maintainability-maven
+**Why**: Current scale lacks stat/metric/label sizes. Type pairings not codified, causing "what size should this be?" guessing.
+**Approach**: Add stat (3rem/48px), metric (2.5rem/40px), label (0.75rem/12px) sizes to BRUTALIST_TYPOGRAPHY; add type pairings for statDisplay (number + label), workoutData (number + unit); export from typography-utils.ts; apply across analytics and workout displays.
+**Effort**: 2h | **Impact**: MEDIUM - Codified type patterns eliminate guessing, design system maturity
+
+### [Aesthetic Elevation] Motion Vocabulary Enforcement
+
+**Scope**: src/lib/brutalist-motion.ts, all animated components
+**Perspectives**: design-systems-architect, maintainability-maven
+**Why**: Motion patterns scattered, no reusable presets. Creating motion presets for common patterns (card entrance, list stagger, number reveal) makes motion systematic.
+**Approach**: Add motionPresets to brutalist-motion.ts: cardEntrance (0.618s golden ratio), listStagger (0.05s staggerChildren, 0.236s Fibonacci items), numberReveal (0.618s with overshoot easing); apply cardEntrance to all BrutalistCard, listStagger to SetCard lists, numberReveal to analytics stats; document preset usage.
+**Effort**: 2h | **Impact**: MEDIUM - Motion vocabulary systematic, copy/paste confidence, consistent feel
 
 ### [Product] Ship on-demand AI report trigger with usage feedback
 

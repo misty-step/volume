@@ -44,6 +44,7 @@ import { useQuickLogForm, QuickLogFormValues } from "@/hooks/useQuickLogForm";
 import { useLastSet } from "@/hooks/useLastSet";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDuration } from "@/lib/date-utils";
 
 interface QuickLogFormProps {
   exercises: Exercise[];
@@ -186,13 +187,6 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
         e.preventDefault();
         form.handleSubmit(onSubmit)();
       }
-    };
-
-    // Format duration in seconds to mm:ss
-    const formatDuration = (seconds: number): string => {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${mins}:${secs.toString().padStart(2, "0")}`;
     };
 
     return (

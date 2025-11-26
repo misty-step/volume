@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { RotateCcw, Trash2 } from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
@@ -16,11 +17,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
-import { formatTimeAgo } from "@/lib/date-utils";
-import { Exercise, Set } from "@/types/domain";
+import { formatTimeAgo, formatDuration } from "@/lib/date-utils";
+import { Exercise, Set as WorkoutSet } from "@/types/domain";
+import { BRUTALIST_TYPOGRAPHY } from "@/config/design-tokens";
+import { motionPresets, PRECISION_TIMING } from "@/lib/brutalist-motion";
 
 interface SetCardProps {
-  set: Set;
+  set: WorkoutSet;
   exercise: Exercise | undefined;
   onRepeat: () => void;
   onDelete: () => void;
@@ -29,19 +32,21 @@ interface SetCardProps {
 export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isShaking, setIsShaking] = useState(false);
   const { unit: preferredUnit } = useWeightUnit();
   // Use the unit stored with the set, fallback to user preference for legacy sets
   const displayUnit = set.unit || preferredUnit;
 
-  // Format duration in seconds to mm:ss
-  const formatDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
   const handleDeleteClick = () => {
     setShowDeleteDialog(true);
+  };
+
+  const handleCancelDelete = () => {
+    setIsShaking(true);
+    setTimeout(() => {
+      setIsShaking(false);
+      setShowDeleteDialog(false);
+    }, PRECISION_TIMING.FAST * 1000);
   };
 
   const confirmDelete = async () => {
@@ -57,58 +62,74 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
   };
 
   return (
-    <div
+    <motion.div
+      variants={motionPresets.cardEntrance}
+      initial="initial"
+      animate="animate"
+      exit="exit"
       className={`
-        p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700
-        rounded-lg hover:shadow-md transition-all
-        ${isDeleting ? "opacity-50 pointer-events-none" : ""}
+        p-4 bg-background border-3 border-concrete-black dark:border-concrete-white
+        hover:shadow-lift dark:hover:shadow-lift-dark
+        transition-shadow
+        ${isDeleting && "opacity-50 pointer-events-none"}
       `}
       data-testid={`set-card-${set._id}`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <h4
-            className="font-semibold text-lg text-gray-900 dark:text-gray-100"
+            className="font-display text-xl uppercase tracking-wide text-foreground"
             data-testid={`set-exercise-name-${set._id}`}
           >
             {exercise?.name || "Unknown exercise"}
           </h4>
-          <div className="mt-1 flex items-center gap-3 text-gray-600 dark:text-gray-300">
+          <div className="mt-1 flex items-center gap-3">
             {set.duration !== undefined ? (
-              <span className="font-medium">
+              <span className={BRUTALIST_TYPOGRAPHY.pairings.setMetric.number}>
                 {formatDuration(set.duration)}
               </span>
             ) : (
-              <span className="font-medium">{set.reps} reps</span>
+              <span className={BRUTALIST_TYPOGRAPHY.pairings.setMetric.number}>
+                {set.reps} reps
+              </span>
             )}
             {set.weight && (
               <>
-                <span className="text-gray-400 dark:text-gray-500">•</span>
-                <span>
-                  {set.weight} {displayUnit}
+                <span className="text-concrete-gray">•</span>
+                <span
+                  className={BRUTALIST_TYPOGRAPHY.pairings.setWeight.number}
+                >
+                  {set.weight}
+                </span>
+                <span className={BRUTALIST_TYPOGRAPHY.pairings.setWeight.unit}>
+                  {displayUnit}
                 </span>
               </>
             )}
           </div>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p
+            className={`mt-1 ${BRUTALIST_TYPOGRAPHY.pairings.historicalMetric.timestamp}`}
+          >
             {formatTimeAgo(set.performedAt, "compact")}
           </p>
         </div>
 
         <div className="flex items-center gap-2 ml-4">
-          <button
+          <motion.button
             onClick={onRepeat}
-            className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            whileTap={{ rotate: 360 }}
+            transition={{ duration: 0.382, ease: [0.4, 0.0, 0.2, 1] }}
+            className="p-2 text-danger-red hover:bg-danger-red/10 border-2 border-transparent hover:border-danger-red transition-colors focus:outline-none focus:ring-2 focus:ring-danger-red"
             aria-label="Repeat this set"
             title="Repeat this set"
             type="button"
             data-testid={`set-repeat-btn-${set._id}`}
           >
             <RotateCcw className="h-5 w-5" />
-          </button>
+          </motion.button>
           <button
             onClick={handleDeleteClick}
-            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="p-2 text-danger-red hover:bg-danger-red/10 border-2 border-transparent hover:border-danger-red transition-colors focus:outline-none focus:ring-2 focus:ring-danger-red"
             aria-label="Delete this set"
             title="Delete this set"
             type="button"
@@ -121,7 +142,7 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className={isShaking ? "animate-shake" : ""}>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Set</AlertDialogTitle>
             <AlertDialogDescription>
@@ -129,7 +150,9 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={handleCancelDelete}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               data-testid="confirm-delete-btn"
@@ -139,6 +162,6 @@ export function SetCard({ set, exercise, onRepeat, onDelete }: SetCardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </motion.div>
   );
 }
