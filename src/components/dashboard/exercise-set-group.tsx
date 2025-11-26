@@ -17,12 +17,9 @@ import {
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
 import { formatNumber } from "@/lib/number-utils";
-import { formatTimestamp } from "@/lib/date-utils";
+import { formatTimestamp, formatDuration } from "@/lib/date-utils";
 import { Exercise, Set, WeightUnit } from "@/types/domain";
-import {
-  numberDisplayClasses,
-  labelDisplayClasses,
-} from "@/lib/typography-utils";
+import { BRUTALIST_TYPOGRAPHY } from "@/config/design-tokens";
 
 interface ExerciseSetGroupProps {
   exercise: Exercise;
@@ -48,13 +45,6 @@ export function ExerciseSetGroup({
   const [isExpanded, setIsExpanded] = useState(false);
   const [deletingId, setDeletingId] = useState<Id<"sets"> | null>(null);
   const [setToDelete, setSetToDelete] = useState<Set | null>(null);
-
-  // Format duration in seconds to mm:ss
-  const formatDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
 
   const handleDeleteClick = (set: Set) => {
     setSetToDelete(set);
@@ -99,25 +89,35 @@ export function ExerciseSetGroup({
 
             {/* Stats Row */}
             <div className="pl-8 flex items-baseline gap-2">
-              <span className={labelDisplayClasses.default}>
+              <span className="font-mono text-xs uppercase text-muted-foreground">
                 {sets.length} SET{sets.length === 1 ? "" : "S"}
               </span>
               <span className="text-concrete-gray">•</span>
               {totalVolume > 0 ? (
                 <>
-                  <span className={numberDisplayClasses.large}>
+                  <span
+                    className={BRUTALIST_TYPOGRAPHY.pairings.setWeight.number}
+                  >
                     {formatNumber(Math.round(totalVolume))}
                   </span>
-                  <span className={labelDisplayClasses.default}>
+                  <span
+                    className={BRUTALIST_TYPOGRAPHY.pairings.setWeight.unit}
+                  >
                     {preferredUnit.toUpperCase()}
                   </span>
                 </>
               ) : (
                 <>
-                  <span className={numberDisplayClasses.large}>
+                  <span
+                    className={BRUTALIST_TYPOGRAPHY.pairings.setWeight.number}
+                  >
                     {totalReps}
                   </span>
-                  <span className={labelDisplayClasses.default}>REPS</span>
+                  <span
+                    className={BRUTALIST_TYPOGRAPHY.pairings.setWeight.unit}
+                  >
+                    REPS
+                  </span>
                 </>
               )}
             </div>
