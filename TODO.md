@@ -23,7 +23,7 @@
   Estimate: 30m
   ```
 
-- [ ] Implement rate limit helper (store + service + error + config)
+- [~] Implement rate limit helper (store + service + error + config)
 
   ```
   Files:
