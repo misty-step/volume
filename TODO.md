@@ -74,7 +74,7 @@
   Estimate: 45m
   ```
 
-- [ ] Gate `generateOnDemandReport` action; remove legacy check
+- [~] Gate `generateOnDemandReport` action; remove legacy check
 
   ```
   Files:
