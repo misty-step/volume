@@ -49,7 +49,7 @@
   Estimate: 1h 30m
   ```
 
-- [ ] Gate `createExercise` action with per-minute limit
+- [x] Gate `createExercise` action with per-minute limit
 
   ```
   Files:
