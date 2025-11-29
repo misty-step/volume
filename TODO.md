@@ -155,7 +155,7 @@ Spec: `TASK.md` (Type Safety Restoration). DESIGN.md not present. Scope excludes
   Estimate: 0.5h
   ```
 
-- [ ] Add Clerk window type extension
+- [~] Add Clerk window type extension
 
   ```
   Files:
