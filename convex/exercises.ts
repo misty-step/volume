@@ -7,7 +7,7 @@ import {
   validateExerciseName,
 } from "./lib/validate";
 import { classifyExercise } from "./ai/openai";
-import { assertRateLimit, getLimits } from "./lib/rateLimit";
+import { getLimits } from "./lib/rateLimit";
 
 /**
  * Create a new exercise (action-based)
@@ -30,10 +30,11 @@ export const createExercise = action({
       throw new Error("Unauthorized");
     }
 
-    // Rate limit: per-user exercise creation
+    // Rate limit: per-user exercise creation (via internal mutation for action context)
     const limits = getLimits();
     const exerciseLimit = limits["exercise:create"];
-    await assertRateLimit(ctx, identity.subject, {
+    await ctx.runMutation(internal.lib.rateLimit.checkRateLimitInternal, {
+      userId: identity.subject,
       scope: "exercise:create",
       limit: exerciseLimit.limit,
       windowMs: exerciseLimit.windowMs,

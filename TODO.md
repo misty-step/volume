@@ -143,7 +143,7 @@
   Estimate: 30m
   ```
 
-- [ ] Quality gate & verification
+- [x] Quality gate & verification
 
   ```
   Files:
@@ -157,9 +157,9 @@
   3) Spot-check Sentry/log output format manually in tests or logs.
 
   Success Criteria:
-  - [ ] All commands green.
-  - [ ] Coverage thresholds met.
-  - [ ] No PII in emitted logs during tests.
+  - [x] All commands green.
+  - [x] Coverage thresholds met (493 tests passing).
+  - [x] No PII in emitted logs during tests (userId hashed via djb2).
 
   Depends: All code tasks.
   Estimate: 30m

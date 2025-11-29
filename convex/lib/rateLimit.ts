@@ -1,6 +1,7 @@
-import crypto from "crypto";
+import { v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
-import type { MutationCtx, QueryCtx } from "../_generated/server";
+import type { MutationCtx } from "../_generated/server";
+import { internalMutation } from "../_generated/server";
 
 export type RateLimitScope = "exercise:create" | "aiReport:onDemand" | string;
 
@@ -43,7 +44,8 @@ export class RateLimitError extends Error {
   }
 }
 
-type Ctx = MutationCtx | QueryCtx;
+// Rate limiting requires write access; QueryCtx is not supported
+type Ctx = MutationCtx;
 
 type RateLimitRecord = {
   _id: Id<"rateLimits">;
@@ -55,9 +57,17 @@ type RateLimitRecord = {
   expiresAt: number;
 };
 
-/** Hash userId for logging without exposing PII */
+/**
+ * Simple hash of userId for logging without exposing PII.
+ * Uses djb2 algorithm - fast, deterministic, no Node dependencies.
+ */
 function hashUserId(userId: string): string {
-  return crypto.createHash("sha256").update(userId).digest("hex").slice(0, 8);
+  let hash = 5381;
+  for (let i = 0; i < userId.length; i++) {
+    hash = (hash << 5) + hash + userId.charCodeAt(i);
+    hash = hash & 0xffffffff; // Convert to 32-bit integer
+  }
+  return Math.abs(hash).toString(16).padStart(8, "0").slice(0, 8);
 }
 
 const DEFAULT_LIMITS: Record<
@@ -224,3 +234,29 @@ export async function pruneExpiredRateLimits(
 
   return expired.length;
 }
+
+/**
+ * Internal mutation for rate limit enforcement from actions.
+ *
+ * Actions (which lack direct ctx.db access) must call this mutation
+ * via ctx.runMutation() to enforce rate limits.
+ *
+ * @internal - Not exposed in public API; use assertRateLimit in mutations.
+ */
+export const checkRateLimitInternal = internalMutation({
+  args: {
+    userId: v.string(),
+    scope: v.string(),
+    limit: v.number(),
+    windowMs: v.number(),
+    exempt: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args): Promise<RateLimitResult> => {
+    return await assertRateLimit(ctx, args.userId, {
+      scope: args.scope,
+      limit: args.limit,
+      windowMs: args.windowMs,
+      exempt: args.exempt,
+    });
+  },
+});
