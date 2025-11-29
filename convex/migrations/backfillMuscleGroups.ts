@@ -28,7 +28,7 @@ import type { Doc } from "../_generated/dataModel";
 // Internal query to list all exercises (no auth required for migrations)
 export const listAllExercises = internalQuery({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<Doc<"exercises">[]> => {
     return await ctx.db.query("exercises").collect();
   },
 });
@@ -39,7 +39,7 @@ export const updateExerciseMuscleGroups = internalMutation({
     exerciseId: v.id("exercises"),
     muscleGroups: v.array(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<void> => {
     await ctx.db.patch(args.exerciseId, {
       muscleGroups: args.muscleGroups,
     });
@@ -61,7 +61,7 @@ export const backfillMuscleGroups = internalAction({
 
     // Fetch all exercises
     const exercises: Doc<"exercises">[] = await ctx.runQuery(
-      (internal as any).migrations.backfillMuscleGroups.listAllExercises
+      internal.migrations.backfillMuscleGroups.listAllExercises
     );
     console.log(`[Migration] Found ${exercises.length} total exercises`);
 
@@ -95,8 +95,7 @@ export const backfillMuscleGroups = internalAction({
         const muscleGroups = await classifyExercise(exercise.name);
 
         await ctx.runMutation(
-          (internal as any).migrations.backfillMuscleGroups
-            .updateExerciseMuscleGroups,
+          internal.migrations.backfillMuscleGroups.updateExerciseMuscleGroups,
           {
             exerciseId: exercise._id,
             muscleGroups,

@@ -93,7 +93,7 @@ Spec: `TASK.md` (Type Safety Restoration). DESIGN.md not present. Scope excludes
   Estimate: 0.5h
   ```
 
-- [ ] Convex types — exercises + backfill migration
+- [~] Convex types — exercises + backfill migration
 
   ```
   Files:
