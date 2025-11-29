@@ -100,7 +100,7 @@
   Estimate: 1h
   ```
 
-- [ ] Optional cleanup: add pruneExpired internal action
+- [~] Optional cleanup: add pruneExpired internal action
 
   ```
   Files:
