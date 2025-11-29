@@ -161,6 +161,12 @@ pnpm changeset    # Add a changeset for any code change
 pnpm test         # Run unit tests
 ```
 
+## Rate Limits (AI endpoints)
+
+- Exercise creation: 10 per minute per user (override with `RATE_LIMIT_EXERCISE_PER_MIN`).
+- On-demand AI reports: 5 per day per user (override with `RATE_LIMIT_REPORTS_PER_DAY`).
+- Cron/backfill/admin paths are exempt by default. Limits enforced in Convex via `rateLimits` table; errors include retry-after metadata.
+
 ## MVP Features
 
 - ✅ User authentication (Clerk)
