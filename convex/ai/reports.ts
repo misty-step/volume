@@ -9,6 +9,7 @@
 import { v } from "convex/values";
 import { query, action } from "../_generated/server";
 import { internal } from "../_generated/api";
+import { getLimits, type RateLimitResult } from "../lib/rateLimit";
 
 /**
  * Get latest AI report for authenticated user
@@ -98,22 +99,21 @@ export const generateOnDemandReport = action({
 
     const userId = identity.subject;
 
-    // Check rate limit via internal query
-    const reportsCount = await ctx.runQuery(
-      (internal as any).ai.data.checkRateLimit,
-      { userId }
-    );
-
-    // Rate limit: 5 reports per day
-    const DAILY_LIMIT = 5;
-    if (reportsCount >= DAILY_LIMIT) {
-      throw new Error(
-        `Daily limit reached (${reportsCount}/${DAILY_LIMIT}). Try again tomorrow.`
-      );
-    }
+    // Rate limit: daily cap per user (via internal mutation for action context)
+    const limits = getLimits();
+    const dailyLimit = limits["aiReport:onDemand"];
+    const rateLimitResult = (await ctx.runMutation(
+      internal.lib.rateLimit.checkRateLimitInternal,
+      {
+        userId,
+        scope: "aiReport:onDemand",
+        limit: dailyLimit.limit,
+        windowMs: dailyLimit.windowMs,
+      }
+    )) as RateLimitResult;
 
     console.log(
-      `[On-Demand] User ${userId} generating report (${reportsCount + 1}/${DAILY_LIMIT} today)`
+      `[On-Demand] User generating report (${dailyLimit.limit - rateLimitResult.remaining}/${dailyLimit.limit} today)`
     );
 
     // Generate report via internal action

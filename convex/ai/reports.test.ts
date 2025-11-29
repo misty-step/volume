@@ -22,6 +22,7 @@ import * as aiReports from "./reports";
 import * as aiData from "./data";
 import * as aiGenerate from "./generate";
 import * as generatedApi from "../_generated/api";
+import * as rateLimit from "../lib/rateLimit";
 
 // Mock the OpenAI generateAnalysis function
 vi.mock("./openai", () => ({
@@ -60,6 +61,7 @@ describe("AI Report Queries and Mutations", () => {
       "ai/data": () => Promise.resolve(aiData),
       "ai/generate": () => Promise.resolve(aiGenerate),
       "_generated/api": () => Promise.resolve(generatedApi),
+      "lib/rateLimit": () => Promise.resolve(rateLimit),
     });
 
     // Set OPENAI_API_KEY for tests
@@ -235,35 +237,34 @@ describe("AI Report Queries and Mutations", () => {
   });
 
   describe("generateOnDemandReport - Rate Limiting", () => {
-    test("should enforce daily limit of 5 reports", async () => {
-      // Create 5 reports generated today
-      const today = Date.now();
-      for (let i = 0; i < 5; i++) {
-        const week = new Date(`2024-01-${1 + i * 7}T00:00:00Z`).getTime();
-        await createTestReport(user1, week, today);
-      }
+    // Helper to seed rate limit counter directly in the rateLimits table
+    async function seedRateLimitCount(userId: string, count: number) {
+      const now = Date.now();
+      const windowMs = 86_400_000; // 24 hours (daily limit)
+      const windowStartMs = Math.floor(now / windowMs) * windowMs;
 
-      // Try to generate 6th report (should fail)
+      await t.run(async (ctx) => {
+        await ctx.db.insert("rateLimits", {
+          userId,
+          scope: "aiReport:onDemand",
+          windowStartMs,
+          windowMs,
+          count,
+          expiresAt: windowStartMs + windowMs * 30,
+        });
+      });
+    }
+
+    test("should enforce daily limit of 5 reports", async () => {
+      // Seed rate limit to 5 (at the limit)
+      await seedRateLimitCount(user1, 5);
+
+      // Try to generate report (should fail - already at limit)
       await expect(
         t
           .withIdentity({ subject: user1 })
           .action(aiApi.ai.reports.generateOnDemandReport, {})
-      ).rejects.toThrow("Daily limit reached (5/5)");
-    });
-
-    test("should not count reports from previous days", async () => {
-      // Create report from yesterday
-      const yesterday = Date.now() - 25 * 60 * 60 * 1000; // 25 hours ago
-      await createTestReport(user1, Date.now(), yesterday);
-
-      // Should still allow new report today (not counted toward limit)
-      // Note: This would require mocking the scheduler which is complex
-      // So we just verify the report from yesterday exists
-      const history = await t
-        .withIdentity({ subject: user1 })
-        .query(aiApi.ai.reports.getReportHistory, {});
-
-      expect(history.length).toBe(1);
+      ).rejects.toThrow("Rate limit exceeded");
     });
 
     test("should throw error when not authenticated", async () => {
@@ -273,28 +274,24 @@ describe("AI Report Queries and Mutations", () => {
     });
 
     test("rate limit should be per-user", async () => {
-      // Generate 5 reports for user 1 (at limit)
-      const today = Date.now();
-      for (let i = 0; i < 5; i++) {
-        const week = new Date(`2024-01-${1 + i * 7}T00:00:00Z`).getTime();
-        await createTestReport(user1, week, today);
-      }
+      // Seed rate limit for user 1 to 5 (at limit)
+      await seedRateLimitCount(user1, 5);
 
       // User 1 should be at limit
       await expect(
         t
           .withIdentity({ subject: user1 })
           .action(aiApi.ai.reports.generateOnDemandReport, {})
-      ).rejects.toThrow("Daily limit reached");
+      ).rejects.toThrow("Rate limit exceeded");
 
-      // User 2 should have no reports and be under limit
+      // User 2 should have no rate limit and be under limit
+      // Note: We cannot test actual generation without complex scheduler mocking
+      // But we verified user 1 is blocked while user 2 has no records
       const user2History = await t
         .withIdentity({ subject: user2 })
         .query(aiApi.ai.reports.getReportHistory, {});
 
       expect(user2History.length).toBe(0);
-      // Note: We cannot test actual generation without complex scheduler mocking
-      // But we verified user 2 has no reports and is separate from user 1's limit
     });
   });
 

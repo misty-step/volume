@@ -1,575 +1,402 @@
 # BACKLOG: Volume Workout Tracker
 
-Last groomed: 2025-11-18
+Last groomed: 2025-11-26
 Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-guardian, security-sentinel, performance-pathfinder, maintainability-maven, user-experience-advocate, product-visionary, design-systems-architect)
 
 ---
 
 ## Now (Sprint-Ready, <2 weeks)
 
-### [Testing] Add tests for analytics event system
+### [CRITICAL] Serial I/O in AI data query - 33% speedup
 
-**File**: src/lib/analytics.test.ts (expand existing)
-**Perspectives**: maintainability-maven, security-sentinel
-**Impact**: analytics.ts at 35.84% coverage. Type-safe event tracking, PII sanitization, user context management mostly untested.
-**Fix**: Tests for sanitizeEventProperties, trackEvent server/client paths, user context guards.
-**Effort**: 2h | **Risk**: MEDIUM
-**Acceptance**: analytics.ts > 70% coverage; server-side safety guards verified.
+**File**: convex/ai/data.ts:54-79
+**Perspectives**: performance-pathfinder
+**Impact**: AI report generation 150ms → 100ms (exercise query runs AFTER Promise.all)
+**Fix**: Move `exercises` query into Promise.all (runs parallel with sets queries)
+**Effort**: 5m | **Speedup**: 1.5x per report
+**Acceptance**: AI reports generate 33% faster
+
+### [CRITICAL] Type safety erosion - 40+ `any` instances
+
+**Files**: convex/exercises.ts:26, convex/crons.ts:75, src/hooks/useLastSet.ts:17
+**Perspectives**: maintainability-maven, complexity-archaeologist
+**Impact**: Lost autocomplete, compiler can't catch bugs, refactoring dangerous
+**Fix**: Replace `Promise<any>` → `Promise<Id<"exercises">>`, `(s: any)` → `(set: Set)`, remove `(internal as any)`
+**Effort**: 3h | **Impact**: CRITICAL - restore type safety
+**Acceptance**: Zero `any` in source code (excluding test fixtures)
+
+### [Security] Fix test endpoint production exposure
+
+**File**: src/app/api/test/reset/route.ts
+**Perspectives**: security-sentinel
+**Impact**: Data-wiping endpoint protected only by env check + shared secret. Environment misconfiguration → data loss.
+**Fix**: Exclude `/api/test/**` from production builds via `next.config.ts` or add IP allowlist
+**Effort**: 30m | **Risk**: MEDIUM
+**Acceptance**: Test endpoints 404 in production, available in dev/preview
 
 ### [Security] Fix backfill functions auth bypass
 
 **File**: convex/ai/reports.ts:849-851, 937-939
-**Perspectives**: security-sentinel, architecture-guardian
-**Impact**: `backfillWeeklyReports` and `backfillDailyReports` accept arbitrary `userId` parameter with no auth check. Attacker can generate reports for any user, burning OpenAI tokens and corrupting report history.
-**Fix**: Either convert to `internalAction` (admin-only) or add auth check verifying `userId === identity.subject`.
+**Perspectives**: security-sentinel
+**Impact**: `backfillWeeklyReports` accepts arbitrary `userId`, no auth check. Burn OpenAI tokens for any user.
+**Fix**: Convert to `internalAction` (admin-only) or add `userId === identity.subject` check
 **Effort**: 30m | **Risk**: MEDIUM
-**Acceptance**: Unauthenticated calls fail; authenticated calls only work for own userId.
-
-### [Security] Gate test-error route to non-production
-
-**File**: src/app/api/test-error/route.ts:1-35
-**Perspectives**: security-sentinel
-**Impact**: Test endpoint accessible in production allows triggering server errors, polluting Sentry with noise and wasting quota.
-**Fix**: Add `if (process.env.NODE_ENV === 'production') return new Response('Not found', { status: 404 });`
-**Effort**: 5m | **Risk**: MEDIUM
-**Acceptance**: Route returns 404 in production, works in development.
-
-### [Security] Update vulnerable dependencies
-
-**File**: package.json
-**Perspectives**: security-sentinel
-**Impact**: 3 CVEs in transitive dependencies - glob (command injection), vite (fs.deny bypass), js-yaml (prototype pollution).
-**Fix**: `pnpm update @vitejs/plugin-react eslint @vitest/coverage-v8`
-**Effort**: 15m + testing | **Risk**: MEDIUM
-**Acceptance**: `pnpm audit` shows no high/critical vulnerabilities.
-
-### [Architecture] Consolidate PR detection to single source
-
-**Files**: src/lib/pr-detection.ts:45-140, convex/lib/pr_detection.ts:33-128
-**Perspectives**: complexity-archaeologist, architecture-guardian, maintainability-maven
-**Impact**: ~95 lines of identical PR detection algorithm duplicated. Changes require editing both files, risk of divergence.
-**Fix**: Keep only backend version; client calls API for PR checks. Or extract to shared package.
-**Effort**: 2h | **Impact**: HIGH
-**Acceptance**: Single source of truth; grep finds checkForPR in one location only.
-
-### [Architecture] Consolidate streak calculation
-
-**Files**: src/lib/streak-calculator.ts:42-91, convex/lib/streak_calculator.ts:27-75
-**Perspectives**: complexity-archaeologist, architecture-guardian, maintainability-maven
-**Impact**: ~50 lines duplicated with potential timezone discrepancy (backend notes UTC limitation).
-**Fix**: Keep backend-only calculation; client queries for streak data instead of recalculating.
-**Effort**: 1.5h | **Impact**: HIGH
-**Acceptance**: Single streak calculation source; frontend imports from backend or queries.
-
-### [Architecture] Consolidate muscle group constants
-
-**Files**: convex/analyticsRecovery.ts:100-111,138-149, convex/analyticsFocus.ts:209-220
-**Perspectives**: complexity-archaeologist, maintainability-maven
-**Impact**: `allGroups` array appears 3x. Adding new muscle group requires 3+ file edits.
-**Fix**: Export `ALL_MUSCLE_GROUPS` from `convex/lib/constants.ts`, import everywhere.
-**Effort**: 30m | **Impact**: MEDIUM
-**Acceptance**: grep finds allGroups defined once, imported elsewhere.
-
-### [Design System] Fix SetCard brutalist styling
-
-**File**: src/components/dashboard/set-card.tsx:59-65
-**Perspectives**: design-systems-architect, user-experience-advocate
-**Impact**: Core user-facing component uses generic Tailwind (rounded-lg, gray-500) instead of brutalist design system. Visual inconsistency in workout logging flow.
-**Fix**: Replace with brutalist tokens: `bg-background`, `border-3 border-concrete-black`, sharp corners, semantic colors.
-**Effort**: 1h | **Impact**: HIGH
-**Acceptance**: SetCard visually matches other brutalist components.
-
-### [Design System] Centralize formatDuration utility
-
-**Files**: src/components/dashboard/set-card.tsx:37, exercise-set-group.tsx:49, quick-log-form.tsx:192, chronological-set-history.tsx:60
-**Perspectives**: design-systems-architect, maintainability-maven
-**Impact**: Same `formatDuration(seconds)` function copied 4+ times. DRY violation, risk of inconsistent formatting.
-**Fix**: Add to `src/lib/date-utils.ts`, import everywhere.
-**Effort**: 1h | **Impact**: MEDIUM
-**Acceptance**: Single formatDuration definition; all components import from date-utils.
-
-### [Design System] Fix FocusSuggestionsWidget colors
-
-**File**: src/components/analytics/focus-suggestions-widget.tsx:21-37
-**Perspectives**: design-systems-architect
-**Impact**: Uses red-500/yellow-500/gray-500 instead of brutalist palette (danger-red, safety-orange, concrete-gray).
-**Fix**: Update getPriorityColor to use design tokens.
-**Effort**: 30m | **Impact**: MEDIUM
-**Acceptance**: Widget uses only colors from BRUTALIST_COLORS.
-
-### [Infrastructure] Automated CSP Testing
-
-**Files**: src/tests/security/csp.test.ts (new)
-**Perspectives**: security-sentinel, architecture-guardian
-**Impact**: CSP configuration caused 2025-11-06 production outage. Manual verification is error-prone.
-**Fix**: Vitest tests parsing CSP from next.config.ts and middleware.ts, validating all required domains present.
-**Effort**: 3h | **Cost**: $0
-**Acceptance**: Tests catch CSP misconfigurations in CI before merge.
-
-### [Infrastructure] Configuration as Code for CSP
-
-**Files**: src/config/security.ts (new), next.config.ts, src/middleware.ts
-**Perspectives**: security-sentinel, architecture-guardian
-**Impact**: CSP domains defined in two places can drift. Custom domain (`clerk.volume.fitness`) was missed in wildcard patterns.
-**Fix**: Single source of truth `CSP_DOMAINS` object imported by both configs.
-**Effort**: 4h | **Cost**: $0
-**Acceptance**: CSP definition exists in one file only; both configs import it.
-
-### [Infrastructure] Add pre-push git hook
-
-**Files**: .husky/pre-push (new)
-**Perspectives**: architecture-guardian
-**Impact**: Type errors and broken tests only discovered in CI (5+ min wasted). No local validation before push.
-**Fix**: Add pre-push hook running `tsc --noEmit --incremental` + `vitest --run`. Catches failures locally in <30s.
-**Effort**: 20m | **Cost**: $0
-**Acceptance**: Push fails locally if type errors or test failures exist.
-
-### [Infrastructure] Parallelize CI pipeline
-
-**Files**: .github/workflows/ci.yml
-**Perspectives**: architecture-guardian
-**Impact**: CI runs type check → lint → test → build sequentially. First three are independent, wasting 1-2 minutes.
-**Fix**: Split into parallel jobs for type check, lint, test. Build depends on all three passing.
-**Effort**: 15m | **Cost**: $0
-**Acceptance**: CI completes 1-2 min faster; failures surface in parallel.
-
-### [Observability] Add actual Convex connectivity check to health endpoint
-
-**File**: src/app/api/health/route.ts
-**Perspectives**: architecture-guardian, user-experience-advocate
-**Impact**: Current health check only validates NEXT_PUBLIC_CONVEX_URL exists, not actual connectivity. False positives when Convex is down.
-**Fix**: Add lightweight Convex query (e.g., ping mutation) with timeout. Return 503 if unreachable.
-**Effort**: 30m | **Risk**: LOW
-**Acceptance**: Health endpoint returns 503 when Convex is actually unreachable.
-
-### [Testing] Add tests for malformed email patterns in PII sanitization
-
-**File**: src/lib/sentry.test.ts
-**Perspectives**: security-sentinel
-**Impact**: Edge cases like `user@`, `@domain.com`, `user@@domain.com` may not be properly handled by email regex.
-**Fix**: Add test cases for malformed patterns, ensure they're either properly redacted or passed through safely.
-**Effort**: 30m | **Risk**: LOW
-**Acceptance**: All edge cases documented with expected behavior.
-
-### [Docs] Add curl example to health endpoint documentation
-
-**File**: CLAUDE.md
-**Perspectives**: maintainability-maven
-**Impact**: Developers may not know how to test health endpoint locally. Missing example slows onboarding.
-**Fix**: Add `curl localhost:3000/api/health | jq` example to health endpoint section.
-**Effort**: 5m | **Risk**: LOW
-**Acceptance**: Quick-copy command in docs.
-
-### [Infrastructure] Fix Vercel build command for Convex
-
-**Files**: package.json, Vercel project settings
-**Perspectives**: architecture-guardian, security-sentinel
-**Impact**: Build command is `next build` but should be `npx convex deploy && next build`. Convex functions must deploy before Next.js build to generate correct types.
-**Fix**: Update build script or document manual Convex deploy workflow.
-**Effort**: 5m | **Risk**: MEDIUM
-**Acceptance**: Vercel builds succeed with fresh Convex types; no stale API errors.
-
----
-
-## Next (This Quarter, <3 months)
-
-### [Observability] Add structured logging with pino
-
-**Scope**: src/lib/logger.ts (new), replace console.log across codebase
-**Perspectives**: architecture-guardian, maintainability-maven
-**Why**: No structured logging - can't query logs, no trace correlation, logs disappear after 30 days in Vercel.
-**Approach**: Install pino, create logger utility with JSON output, log levels, request correlation IDs. Replace console.log usage.
-**Effort**: 2h | **Impact**: MEDIUM
-
-### [Observability] Investigate OpenTelemetry for distributed tracing
-
-**Scope**: Research @vercel/otel or spectacle integration
-**Perspectives**: performance-pathfinder, architecture-guardian
-**Why**: No distributed tracing beyond Sentry. Cannot track request flow across frontend → backend → Convex.
-**Approach**: Evaluate Vercel OTEL vs spectacle, test with Grafana Cloud free tier, assess value vs complexity.
-**Effort**: 3h (research) | **Impact**: MEDIUM
-
-### [Observability] Set up uptime monitoring service
-
-**Scope**: External monitoring configuration
-**Perspectives**: user-experience-advocate, architecture-guardian
-**Why**: No external visibility into production availability. Users discover outages before team.
-**Approach**: Sign up UptimeRobot/BetterUptime free tier, configure health endpoint monitoring, Slack alerts.
-**Effort**: 15m | **Impact**: LOW
-
-### [Observability] Create Grafana Cloud dashboard for traces
-
-**Scope**: Grafana Cloud free tier setup
-**Perspectives**: performance-pathfinder, architecture-guardian
-**Why**: No trace visualization. Sentry performance tab limited for detailed analysis.
-**Approach**: Set up Grafana Cloud free tier (10k series, 50GB traces), create latency percentile dashboards.
-**Effort**: 2h | **Impact**: LOW
-
-### [Testing] Expand QuickLogForm component tests
-
-**File**: src/components/dashboard/quick-log-form.test.tsx
-**Perspectives**: maintainability-maven, user-experience-advocate
-**Why**: Current tests are smoke tests only (157 lines). Form validation, error states, PR detection display untested.
-**Approach**: Add tests for validation errors, mutation failures, toast notifications, last set display.
-**Effort**: 2h | **Impact**: MEDIUM
-
-### [Testing] Add Dashboard component tests
-
-**File**: src/components/dashboard/Dashboard.test.tsx (new)
-**Perspectives**: maintainability-maven, user-experience-advocate
-**Why**: Main user-facing component at 0% coverage. Loading states, data display, navigation untested.
-**Approach**: Test loading skeleton, empty state, set display, exercise grouping.
-**Effort**: 2h | **Impact**: MEDIUM
-
-### [Testing] Integration tests for exercise creation flow
-
-**Scope**: Component + hook + mocked Convex integration
-**Perspectives**: architecture-guardian, maintainability-maven
-**Why**: No tests verify complete user flows across component boundaries.
-**Approach**: Test ExerciseManager create → toast → list update flow with mocked Convex.
-**Effort**: 3h | **Impact**: MEDIUM
-
-### [Testing] Integration tests for set logging flow
-
-**Scope**: QuickLogForm → useQuickLogForm → Convex
-**Perspectives**: architecture-guardian, maintainability-maven
-**Why**: Core app flow untested end-to-end at component level.
-**Approach**: Test form submission → mutation → PR detection → toast → history update.
-**Effort**: 3h | **Impact**: MEDIUM
-
-### [Testing] Document testing strategy
-
-**File**: CONTRIBUTING.md (new or update)
-**Perspectives**: maintainability-maven
-**Why**: No documentation on what to test, testing philosophy, or patterns to follow.
-**Approach**: Document test pyramid, when to write E2E vs unit, mocking patterns, coverage expectations.
-**Effort**: 1h | **Impact**: MEDIUM
-
-### [Testing] Add data-testid attributes for reliable E2E selectors
-
-**Files**: Multiple components (QuickLogForm, ExerciseSelector, SetCard, etc.)
-**Perspectives**: maintainability-maven, architecture-guardian
-**Why**: E2E tests use brittle text-based selectors ("Bench Press", "LOG SET"). Tests break when copy changes.
-**Approach**: Add data-testid to interactive elements, update E2E tests to use testid selectors.
-**Effort**: 2h | **Impact**: MEDIUM
-**Acceptance**: E2E tests use data-testid selectors; no text-based selectors for buttons/inputs.
-**Reference**: PR #34 review feedback
-
-### [Docs] Add docstrings to test infrastructure
-
-**Files**: src/test/setup.ts, src/test/utils.tsx, vitest.config.ts
-**Perspectives**: maintainability-maven
-**Why**: Test utilities have 0% docstring coverage. New developers can't understand test setup patterns.
-**Approach**: Add JSDoc to exported functions (render, mocks) explaining purpose and usage.
-**Effort**: 30m | **Impact**: LOW
-**Acceptance**: Core test utilities documented with examples.
-**Reference**: PR #34 review feedback
-
-### [Testing] Remove duplicate progressive overload test entry
-
-**File**: BACKLOG.md:362-367
-**Perspectives**: maintainability-maven
-**Why**: BACKLOG says "convex/analyticsProgressiveOverload.ts (no test file exists)" but it has 517 lines of tests!
-**Approach**: Remove stale entry, celebrate existing coverage.
-**Effort**: 5m | **Impact**: LOW
-
-### [Performance] Create composite analytics query
-
-**Scope**: convex/analytics.ts + analyticsFocus.ts + analyticsRecovery.ts + analyticsProgressiveOverload.ts
-**Perspectives**: performance-pathfinder, complexity-archaeologist, architecture-guardian
-**Why**: Analytics page fires 7 parallel queries, each fetching all user's sets independently. 7 database round-trips for same data.
-**Approach**: Create `getAnalyticsDashboard` that fetches sets once, computes all metrics in single pass, returns composite object.
-**Effort**: 3h | **Speedup**: 3-5x (single DB round-trip)
-
-### [Performance] Stream dashboard data instead of loading entire history
-
-**File**: src/components/dashboard/Dashboard.tsx:35; convex/sets.ts:31
-**Perspectives**: performance-pathfinder, user-experience-advocate, complexity-archaeologist
-**Why**: `useQuery(api.sets.listSets, {})` materializes every historical set on each render, then filters client-side. Users with 10k sets download >2 MB.
-**Approach**: Add Convex query with pagination cursors; update dashboard to consume paginated feed.
-**Effort**: 6h | **Impact**: Dashboard loads under 400ms with 10k-set fixture
-
-### [Security] Rate-limit OpenAI muscle classification
-
-**File**: convex/exercises.ts:22; convex/ai/openai.ts:328
-**Perspectives**: security-sentinel, performance-pathfinder, product-visionary
-**Why**: Authenticated users can script thousands of `createExercise` calls; each hits OpenAI, burning tokens (cost-based DoS).
-**Approach**: Track per-user exercise creations, enforce daily quota before invoking `classifyExercise`.
-**Effort**: 4h | **Risk**: HIGH
-
-### [Architecture] Decompose AI report pipeline into layered modules
-
-**Scope**: Refactor convex/ai/reports.ts (1,066 LOC across 17 exports)
-**Perspectives**: complexity-archaeologist, architecture-guardian, maintainability-maven, performance-pathfinder
-**Why**: God module mixes rate limiting, cron orchestration, analytics munging, logging, and persistence; every touch amplifies risk.
-**Approach**: Extract `reports-generate.ts`, `reports-queries.ts`, `reports-backfill.ts`; import from existing `streak_calculator.ts`.
-**Effort**: 4h | **Impact**: 1066 lines → 4 focused 200-line modules
-
-### [Architecture] Decompose QuickLogForm into focused components
-
-**File**: src/components/dashboard/quick-log-form.tsx (531 lines)
-**Perspectives**: complexity-archaeologist, architecture-guardian, maintainability-maven
-**Why**: Component handles form state, focus management, mode switching, PR detection, inline exercise creation, keyboard handling. Difficult to test individual behaviors.
-**Approach**: Extract `ExerciseCombobox`, `SetValueInputs`, `LastSetIndicator`; keep QuickLogForm as orchestrator.
-**Effort**: 4h | **Impact**: Better testability, maintainability
-
-### [Architecture] Standardize auth error patterns
-
-**Files**: All Convex mutation/query files
-**Perspectives**: architecture-guardian, maintainability-maven, security-sentinel
-**Why**: Mixed patterns - some return empty arrays, some throw errors. Developers unsure which to use; can't distinguish "no data" from "not authenticated".
-**Approach**: Standardize on throwing errors for unauthenticated access; consider Convex middleware wrapper.
-**Effort**: 1h | **Impact**: Consistent security model
-
-### [UX] Add undo to all delete operations
-
-**Files**: src/components/dashboard/set-card.tsx:51, exercise-set-group.tsx:65, chronological-set-history.tsx:76
-**Perspectives**: user-experience-advocate
-**Why**: QuickLogForm has undo toast for deletes, but everywhere else doesn't. Users can accidentally delete sets with no recovery.
-**Approach**: Add undo toast pattern matching QuickLogForm implementation.
-**Effort**: 2h | **Value**: HIGH - prevents accidental data loss
+**Acceptance**: Unauthenticated calls fail, authenticated users can only backfill own reports
 
 ### [UX] Fix silent mutation errors in history page
 
 **File**: src/app/(app)/history/page.tsx:47-49
 **Perspectives**: user-experience-advocate
-**Why**: When delete fails (network error), user sees no feedback. They think deletion worked but set remains.
-**Approach**: Wrap in try-catch with `handleMutationError`.
-**Effort**: 5m | **Value**: HIGH - prevents data loss confusion
+**Impact**: Delete fails (network error), user sees NO feedback, set remains, confusion when refreshes
+**Fix**: Wrap deleteSetMutation in try-catch with `handleMutationError`
+**Effort**: 5m | **Value**: HIGH
+**Acceptance**: Delete errors show toast with recovery guidance
 
-### [UX] Create EmptyState component
+### [UX] Improve validation error messages
 
-**Scope**: Standardize 10+ empty state patterns across analytics widgets
+**File**: convex/lib/validate.ts:12, 32
+**Perspectives**: user-experience-advocate, maintainability-maven
+**Impact**: Vague errors "must be whole number 1-1000" - no context on WHY or recovery
+**Fix**: Add context: "can't do half a rep", "leave weight empty for bodyweight", "check your entry"
+**Effort**: 30m | **Value**: HIGH
+**Acceptance**: Users self-correct instead of getting stuck
+
+### [UX] Add loading state for AI exercise classification
+
+**Files**: src/components/dashboard/inline-exercise-creator.tsx:112, first-run-experience.tsx:42
+**Perspectives**: user-experience-advocate
+**Impact**: AI classification 2-5s, button shows "Creating..." but NO visual feedback, users abandon
+**Fix**: Add spinner + progress text "AI analyzing muscle groups... 2-3 seconds"
+**Effort**: 15m | **Value**: HIGH
+**Acceptance**: Users understand delay, don't think app is frozen
+
+### [Architecture] Consolidate PR detection to single source
+
+**Files**: src/lib/pr-detection.ts:45-140, convex/lib/pr_detection.ts:33-128
+**Perspectives**: complexity-archaeologist, architecture-guardian, maintainability-maven
+**Impact**: ~95 lines duplicated, risk of divergence when algorithm changes
+**Fix**: Backend-only calculation, client queries for PRs (or extract shared package)
+**Effort**: 2h | **Impact**: HIGH
+**Acceptance**: Single checkForPR implementation
+
+### [Architecture] Consolidate streak calculation
+
+**Files**: src/lib/streak-calculator.ts:42-91, convex/lib/streak_calculator.ts:27-75
+**Perspectives**: complexity-archaeologist, architecture-guardian
+**Impact**: ~50 lines duplicated, timezone discrepancy risk (backend UTC limitation noted)
+**Fix**: Backend-only calculation, client queries for streak data
+**Effort**: 1.5h | **Impact**: HIGH
+**Acceptance**: Single source, timezone handling consistent
+
+### [Design System] Extract AnalyticsCard wrapper
+
+**Files**: 6 analytics widgets with identical card header structure
+**Perspectives**: design-systems-architect, complexity-archaeologist
+**Impact**: 60+ lines of boilerplate (BrutalistCard + CardHeader pattern) duplicated 6x
+**Fix**: Create `<AnalyticsCard title icon>` wrapper, migrate 6 analytics cards
+**Effort**: 2h | **Impact**: MEDIUM
+**Acceptance**: Single analytics card structure, 10 lines → 3 lines per usage
+
+### [Design System] Standardize skeleton loading states
+
+**Files**: 9 components with custom loading skeletons
 **Perspectives**: design-systems-architect, user-experience-advocate
-**Why**: Different text sizes, spacing, detail levels across empty states. Inconsistent UX messaging.
-**Approach**: Extract `EmptyState` component with icon, title, description, optional action.
+**Impact**: 200+ lines of inconsistent loading patterns (bg-concrete-gray/20 vs bg-muted)
+**Fix**: Create `<AnalyticsCardSkeleton rows>` library, migrate 9 components
 **Effort**: 3h | **Impact**: MEDIUM
+**Acceptance**: Visual consistency, 23 lines → 1 line per loading state
 
-### [UX] Create standardized skeleton components
+### [Docs] Document business rule rationale
 
-**Scope**: 8+ different loading skeleton implementations
-**Perspectives**: design-systems-architect, user-experience-advocate
-**Why**: Each component implements own skeleton with varying styles. Inconsistent loading UX.
-**Approach**: Create `CardSkeleton`, `ListSkeleton`, `FormSkeleton` using design tokens.
-**Effort**: 5h | **Impact**: HIGH - consistent loading patterns
+**Files**: src/lib/pr-detection.ts:110, convex/lib/validate.ts:11, convex/crons.ts:84
+**Perspectives**: maintainability-maven
+**Impact**: Magic numbers (1000 reps max, 100 users/cron, weight>volume>reps priority) lack context
+**Fix**: Add JSDoc explaining WHY - research, user testing, DoS prevention, calculation basis
+**Effort**: 2h | **Impact**: CRITICAL
+**Acceptance**: 15+ magic numbers have rationale comments
 
-### [Design System] Extract tab + badge primitives
+---
 
-**Scope**: src/components/analytics/report-navigator.tsx:74, ai-insights-card.tsx:95
-**Perspectives**: design-systems-architect, maintainability-maven
-**Why**: Hard-coded `text-purple-600`/`text-blue-500` bypass tokens. Tab pattern duplicated.
-**Approach**: Introduce shared `Tabs` and `Badge` components backed by Tailwind tokens.
-**Effort**: 0.5d | **Impact**: Consistent theming
+## Next (This Quarter, <3 months)
 
-### [Aesthetic Elevation] Golden Ratio Motion System
+### [PRODUCT - EXISTENTIAL] Freemium Monetization
 
-**Scope**: src/lib/brutalist-motion.ts, all Framer Motion animation components
-**Perspectives**: design-systems-architect, user-experience-advocate
-**Why**: Current animations use arbitrary durations (0.3s, 0.5s). Golden ratio timing (0.618s) creates natural rhythm and "calibrated" feel matching precision instrument identity.
-**Approach**: Add PRECISION_TIMING constants (snap: 0.1s, quick: 0.236s Fibonacci, golden: 0.618s, deliberate: 1.0s); update all motion variants to use golden ratio timing; apply to SetCard entrance, form focus transitions, Dashboard loading states.
-**Effort**: 2h | **Impact**: MEDIUM - Transforms motion from scattered to systematic, reinforces precision instrument aesthetic
+**Scope**: Premium tier with AI reports + advanced analytics
+**Perspectives**: product-visionary
+**Business Case**:
 
-### [Aesthetic Elevation] Chrome Accent System
+- Current: $0 revenue, AI costs $100/mo unsustainable
+- Strong.app: $99/year for AI coaching
+- Hevy: $90/year for analytics
+- Conversion target: 10-15% of users → $12k/year at 1000 users
+  **Implementation**:
+- Free: 5 exercises, 30d history, manual logging, basic PRs/streaks
+- Pro ($7-9/mo or $60-80/yr): Unlimited exercises, AI reports, progressive overload, recovery, CSV export
+- Stripe integration, feature gates, billing UI
+  **Effort**: 5d | **Strategic Value**: CRITICAL - enables sustainability
+  **Acceptance**: Payment flow works, features properly gated, 100 paid users = OpenAI cost break-even
 
-**Scope**: src/config/design-tokens.ts, input/button/card components
-**Perspectives**: design-systems-architect
-**Why**: Pure black/white/red palette lacks material depth. Subtle chrome accents add mechanical polish without color aggression.
-**Approach**: Add chromeHighlight (#E5E7EB) and chromeShadow (#9CA3AF) to design tokens; apply to input focus states, button pressed states, card hover borders; test in light/dark mode.
-**Effort**: 1h | **Impact**: MEDIUM - Adds industrial metallic depth, differentiates from pure monochrome
+### [PRODUCT - EXISTENTIAL] PWA with Offline-First Architecture
 
-### [Aesthetic Elevation] Micro-Interaction Polish
-
-**Scope**: BrutalistButton, all interactive components
-**Perspectives**: design-systems-architect, user-experience-advocate
-**Why**: Interactions lack tactile feedback. Spring-like releases, icon animations, shake on cancel create "precision instrument" delight.
-**Approach**: Add tap/release variants to BrutalistButton (scale 0.97 on tap, spring release with 0.236s timing); 360° rotation on SetCard repeat button click; shake animation on delete confirmation cancel; border glow on form input focus.
-**Effort**: 2h | **Impact**: HIGH - Every interaction feels deliberate and responsive, builds emotional connection
-
-### [Aesthetic Elevation] Focus Ring Enhancement
-
-**Scope**: src/app/globals.css focus system
-**Perspectives**: design-systems-architect, user-experience-advocate
-**Why**: Current 3px focus rings need 2px offset for clarity. Number inputs should get thicker rings (precision tool metaphor).
-**Approach**: Add 2px ring offset to all focus-visible states with box-shadow offset gap; add 4px ring thickness for input[type="number"]; test keyboard navigation across all elements; verify WCAG AA contrast.
-**Effort**: 1h | **Impact**: MEDIUM - Focus states unmissable, number inputs get special treatment
-
-### [Aesthetic Elevation] Component Audit & Brutalist Conversion
-
-**Scope**: All components in src/components/ui/, src/components/dashboard/, src/components/analytics/
-**Perspectives**: design-systems-architect, architecture-guardian, maintainability-maven
-**Why**: EVERY component must use brutalist system. Zero defaults remain. Phase 1 fixes SetCard + analytics widgets; this completes systematic conversion.
-**Approach**: Search `grep -r "rounded-lg\|gray-[0-9]" src/components/`; convert ui/card.tsx to BrutalistCard wrapper, ui/button.tsx brutalist variant as default, ui/input.tsx sharp corners + 3px borders; test dark mode and focus states for each; document conversion patterns.
-**Effort**: 4h | **Impact**: HIGH - Zero unconscious defaults, complete visual cohesion, design system universally applied
-
-### [Aesthetic Elevation] Typography Scale Refinement
-
-**Scope**: src/config/design-tokens.ts typography system
-**Perspectives**: design-systems-architect, maintainability-maven
-**Why**: Current scale lacks stat/metric/label sizes. Type pairings not codified, causing "what size should this be?" guessing.
-**Approach**: Add stat (3rem/48px), metric (2.5rem/40px), label (0.75rem/12px) sizes to BRUTALIST_TYPOGRAPHY; add type pairings for statDisplay (number + label), workoutData (number + unit); export from typography-utils.ts; apply across analytics and workout displays.
-**Effort**: 2h | **Impact**: MEDIUM - Codified type patterns eliminate guessing, design system maturity
-
-### [Aesthetic Elevation] Motion Vocabulary Enforcement
-
-**Scope**: src/lib/brutalist-motion.ts, all animated components
-**Perspectives**: design-systems-architect, maintainability-maven
-**Why**: Motion patterns scattered, no reusable presets. Creating motion presets for common patterns (card entrance, list stagger, number reveal) makes motion systematic.
-**Approach**: Add motionPresets to brutalist-motion.ts: cardEntrance (0.618s golden ratio), listStagger (0.05s staggerChildren, 0.236s Fibonacci items), numberReveal (0.618s with overshoot easing); apply cardEntrance to all BrutalistCard, listStagger to SetCard lists, numberReveal to analytics stats; document preset usage.
-**Effort**: 2h | **Impact**: MEDIUM - Motion vocabulary systematic, copy/paste confidence, consistent feel
-
-### [Product] Ship on-demand AI report trigger with usage feedback
-
-**Scope**: Wire up `api.ai.reports.generateOnDemandReport` in UI
-**Perspectives**: product-visionary, user-experience-advocate, security-sentinel
-**Why**: Users wait for cron runs; backend already has quotas. Missing retention hook and premium upsell opportunity.
-**Approach**: Add CTA in ReportNavigator, display quota meter, reuse toast patterns.
-**Effort**: 1d | **Impact**: Increases engagement
-
-### [Product] Rest timer with smart suggestions
-
-**Scope**: New feature - timer between sets
+**Scope**: Progressive Web App with offline queue
 **Perspectives**: product-visionary, user-experience-advocate
-**Why**: Timer keeps app open between sets. AI can suggest rest based on exercise type/intensity.
-**Approach**: Timer component with presets, AI suggestion, push notifications.
-**Effort**: 3-4d | **Strategic Value**: HIGH - engagement and differentiation
+**Competitive Gap**: Strong/Hevy have native apps + offline, Volume web-only
+**Impact**: 60% fitness usage in gyms (spotty WiFi), users lose sets on network fail
+**Implementation**:
 
-### [Product] Notes/RPE on sets
+- Service Worker for offline capability
+- IndexedDB mutation queue (log sets offline)
+- Background sync on network return
+- Install prompt, push notifications
+  **Effort**: 8-10d | **Strategic Value**: CRITICAL - required for gym use case
+  **Moat**: Offline-first technical barrier, competitors need 12+ months
+  **Acceptance**: Sets log offline, sync when online, no data loss
 
-**Scope**: Add notes field to sets schema
+### [PRODUCT - EXISTENTIAL] Workout Templates & Routine Scheduling
+
+**Scope**: Pre-built programs + custom routine scheduling
 **Perspectives**: product-visionary, user-experience-advocate
-**Why**: Table stakes feature for self-coaching. Better context for AI reports.
-**Approach**: Add `notes` field, optional text input in QuickLogForm.
-**Effort**: 1-2d | **Strategic Value**: MEDIUM
+**Onboarding Impact**: Blank slate anxiety → 30-40% first-week churn
+**Competitive Parity**: Strong (templates), JEFIT (1000+ routines), Hevy (routine builder)
+**Implementation**:
 
-### [Performance] Add date filtering to getRecentPRs query
+- Free templates: 5-10 beginner (Starting Strength, StrongLifts, PPL)
+- Pro templates: 50+ intermediate/advanced
+- Custom routines: Save as template, schedule Mon/Wed/Fri
+- AI suggestions based on goals + equipment
+  **Effort**: 10-12d | **Strategic Value**: CRITICAL - solves onboarding churn
+  **Conversion Impact**: 30-40% reduction in first-week churn
+  **Acceptance**: New user → template → first workout in <30s
 
-**File**: convex/analytics.ts:316-320
+### [Performance] Composite analytics query - 4x speedup
+
+**Files**: convex/analytics.ts + 3 analytics widgets
 **Perspectives**: performance-pathfinder
-**Why**: Currently fetches ALL user sets, then filters in-memory for recent period. With 1000+ sets, transfers unnecessary data.
-**Approach**: Add `.filter((q) => q.gte(q.field("performedAt"), cutoffDate))` to initial query to reduce dataset at source.
-**Effort**: 30m | **Impact**: 50% reduction in data fetched for users with 1000+ sets
-**Note**: Implement only if users still report analytics slowness after current Dashboard/O(n) fixes
+**Impact**: Analytics page 400-600ms → 100-150ms (4 separate queries → 1 aggregated query)
+**Fix**: Create `getAnalyticsDashboard` that fetches sets once, computes all metrics, returns composite
+**Effort**: 3h | **Speedup**: 4x on Analytics page
+**Acceptance**: Single DB round-trip, payload 75% smaller
 
-### [Performance] Frontend bundle splitting for analytics libraries
+### [Performance] PR detection O(n²) → O(n) optimization
 
-**Files**: src/components/analytics/volume-chart.tsx, activity-heatmap.tsx
-**Perspectives**: performance-pathfinder, user-experience-advocate
-**Why**: Heavy libraries loaded on every page: recharts (~100KB), react-activity-calendar (~50KB), framer-motion (~50KB). Increases initial bundle by 200KB.
-**Approach**: Dynamic imports for analytics-specific libraries: `const { BarChart } = await import('recharts');`
-**Effort**: 2h | **Impact**: 150-200KB bundle reduction, faster initial page load
-**Trade-off**: Slight delay when first loading Analytics page
+**File**: convex/analytics.ts:303-380 (getRecentPRs)
+**Perspectives**: performance-pathfinder
+**Impact**: 50,000 iterations → 50 iterations (fetches ALL sets, filters in-memory for every recent set)
+**Fix**: Pre-compute historical max per exercise, compare current vs max (O(1) lookup)
+**Effort**: 2h | **Speedup**: 10x (200-500ms → 20-50ms)
+**Acceptance**: Analytics PRs calculate in <50ms
 
-### [Performance] Reduce redundant analytics scans
+### [Infrastructure] Add Lefthook quality gates
 
-**Scope**: convex/ai/reports.ts:76, convex/analytics.ts:315
-**Perspectives**: performance-pathfinder, maintainability-maven
-**Why**: Three full-table scans per report plus whole-history PR detection. Will thrash Convex as data grows.
-**Approach**: Build shared materialized aggregates, reuse across analytics + AI.
-**Effort**: 1.5d | **Impact**: Cuts report generation time ~60%
-
-### [Maintainability] Fix excessive `any` types
-
-**Files**: convex/exercises.ts:26,51, convex/ai/reports.ts (multiple), Dashboard.tsx:69,81
-**Perspectives**: maintainability-maven
-**Why**: Bypasses TypeScript, hides runtime errors. New developers can't understand data shapes.
-**Approach**: Use proper Convex generated types, `Id<"exercises">` etc.
-**Effort**: 2h | **Benefit**: HIGH - compile-time error catching
-
-### [Maintainability] Document magic number thresholds
-
-**Files**: convex/analyticsRecovery.ts:48-52, convex/analyticsProgressiveOverload.ts:34,50-52
-**Perspectives**: maintainability-maven
-**Why**: Recovery thresholds (2/7 days) and trend thresholds (6 workouts, 5%) unexplained. Affects UX significantly.
-**Approach**: Add constants with JSDoc explaining rationale (e.g., muscle protein synthesis research).
-**Effort**: 30m | **Benefit**: HIGH - informed tuning decisions
-
-### [Infrastructure] Staging Environment Setup
-
-**Scope**: Dedicated staging with production-like config
-**Perspectives**: security-sentinel, architecture-guardian, user-experience-advocate
-**Why**: Preview environments can't validate production-specific configs (custom domains, live integrations).
-**Approach**: Vercel staging project, Convex staging deployment, mirror production domain patterns.
-**Effort**: 1.5d | **Cost**: ~$20/month
-
-### [Infrastructure] Add Gitleaks pre-commit hook
-
-**Files**: .husky/pre-commit, .gitleaks.toml (new)
-**Perspectives**: security-sentinel
-**Why**: No secrets scanning currently. Risk of committing API keys, tokens, or credentials.
-**Approach**: Add Gitleaks to pre-commit hook, configure to scan staged files only.
-**Effort**: 30m | **Cost**: $0
-**Acceptance**: Commit fails if secrets detected; `.env.local` patterns properly ignored.
-
-### [Infrastructure] Add Trivy vulnerability scanning to CI
-
-**Files**: .github/workflows/ci.yml
-**Perspectives**: security-sentinel
-**Why**: npm audit runs manually only. No automated CVE detection in CI.
-**Approach**: Add Trivy action scanning dependencies, containers, misconfigs. Alert on HIGH/CRITICAL only.
-**Effort**: 20m | **Cost**: $0
-**Acceptance**: CI fails on HIGH/CRITICAL vulnerabilities; LOW/MEDIUM logged but don't block.
-
-### [Infrastructure] Add Changesets for changelog automation
-
-**Files**: .changeset/config.json (new), package.json scripts
+**Files**: .lefthook.yml (new), migrate from Husky
 **Perspectives**: architecture-guardian
-**Why**: No CHANGELOG.md, no release tracking, manual version bumps. No visibility into what changed between deployments.
-**Approach**: Init Changesets, add `pnpm changeset` workflow, generate changelog on version bump.
-**Effort**: 1h | **Cost**: $0
-**Acceptance**: PRs require changeset file; releases auto-generate CHANGELOG entries.
+**Gap**: BLOCKS FRIDAY DEPLOYS - no pre-push test execution, build verification, coverage thresholds
+**Impact**: Tests fail in CI after push (wasted time), broken builds reach remote
+**Fix**: Lefthook pre-push: typecheck + test + build + audit (parallel execution)
+**Effort**: 2h | **Impact**: Prevents 90% of CI failures
+**Acceptance**: Push fails locally if tests/build fail, <30s feedback
 
-### [Infrastructure] Add env var validation script
+### [Infrastructure] Implement Pino structured logging
 
-**Files**: scripts/validate-env.sh (new)
-**Perspectives**: architecture-guardian, security-sentinel
-**Why**: Environment parity issues cause "works locally, fails in Vercel" bugs. No comparison between local and production vars.
-**Approach**: Script comparing required vars across `.env.local`, Vercel preview, and Vercel production. Run in pre-push hook.
-**Effort**: 30m | **Cost**: $0
-**Acceptance**: Push warns if critical env vars missing from Vercel; lists discrepancies.
+**Files**: lib/logger.ts (new), migrate 30+ console.log calls
+**Perspectives**: architecture-guardian, maintainability-maven
+**Gap**: No correlation IDs, log levels, JSON formatting, context enrichment
+**Impact**: Production debugging 10x faster with structured logs
+**Fix**: Create Pino logger with PII redaction, migrate console.log/warn/error
+**Effort**: 4h | **Impact**: HIGH
+**Acceptance**: Queryable JSON logs, correlation IDs, zero console.log in source
+
+### [Infrastructure] Raise coverage thresholds
+
+**File**: vitest.config.ts:27-32
+**Perspectives**: architecture-guardian
+**Current**: lines 30%, functions 20%, branches 10% (TOO LOW - allows massive regression)
+**Fix**: lines 80%, functions 70%, branches 60%
+**Effort**: 30m config + fix failing coverage | **Impact**: Prevents coverage decay
+**Acceptance**: CI enforces realistic thresholds
+
+### [Product] Rest Timer with AI Suggestions
+
+**Scope**: Smart rest timer with auto-start + AI duration
+**Perspectives**: product-visionary, user-experience-advocate
+**Differentiation**: Strong/Hevy have manual timers, Volume has AI-suggested rest
+**Implementation**:
+
+- Auto-starts after set
+- AI suggests: Heavy compound 3-5min, accessory 60-90s, bodyweight 30-60s
+- Learns from user patterns
+- Push notifications when timer ends
+  **Effort**: 3-4d | **Strategic Value**: HIGH - unique differentiator
+  **Engagement Impact**: 5-10min session → 30-45min (app becomes workout companion), +40% DAU
+  **Acceptance**: Timer auto-starts, AI suggestions accurate, notifications work
+
+### [Product] RPE + Notes on Sets
+
+**Scope**: Optional RPE (1-10 scale) + freeform notes per set
+**Perspectives**: product-visionary, user-experience-advocate
+**Competitive Parity**: Strong, Hevy, JEFIT all have RPE + notes (table stakes)
+**Implementation**:
+
+- Schema: Add `rpe` (optional number), `notes` (optional string) to sets
+- UI: Inline RPE picker, notes textarea in QuickLogForm
+- AI enrichment: "Squat RPE 9+ for 3 weeks - consider deload"
+  **Effort**: 1-2d | **Strategic Value**: HIGH
+  **Retention**: Power users can't migrate without RPE data
+  **Acceptance**: Sets optionally include RPE + notes, AI uses in analysis
+
+### [Product] Wearable Sync (Apple Health, Google Fit)
+
+**Scope**: Bidirectional sync with health platforms
+**Perspectives**: product-visionary
+**Gap**: No ecosystem integration, can't participate in Apple Health
+**Implementation**:
+
+- Export: Push workouts, calories, active minutes to Health
+- Import: Heart rate, sleep, step count
+- AI enrichment: "6.5h sleep avg → consider rest day before PRs"
+  **Effort**: 6-8d (HealthKit 4d, Google Fit 4d) | **Strategic Value**: HIGH
+  **TAM Expansion**: Health-conscious users (30% of fitness market)
+  **Acceptance**: Workouts sync to Health, sleep data imports
+
+### [Product] Social Sharing - Workout Cards
+
+**Scope**: Export workout as shareable brutalist image
+**Perspectives**: product-visionary
+**Viral Mechanics**: Strava 40% signups from shares, Duolingo streak sharing top growth channel
+**Implementation**:
+
+- Server-side image gen (Satori): Exercise volume bars, PRs in danger-red, streak, "Tracked with Volume" branding
+- One-tap share to Instagram/Twitter
+  **Effort**: 4-5d | **Strategic Value**: MEDIUM-HIGH
+  **Conversion**: 3-5% of shares → signups (industry benchmark), $0 CAC
+  **Acceptance**: Share generates beautiful card, branding visible, social meta tags work
+
+### [UX] Offline support for workout logging
+
+**Scope**: Service Worker cache + optimistic queue
+**Perspectives**: user-experience-advocate
+**Impact**: Gym basement WiFi fails → mutation fails → no feedback, data loss confusion
+**Fix**: Detect offline, queue mutations, show "saved offline, will sync" toast
+**Effort**: 8h | **Value**: Table stakes for gym apps
+**Acceptance**: Sets log offline, sync when online, user informed of status
+
+### [UX] Add undo to all delete operations
+
+**Files**: set-card.tsx:51, exercise-set-group.tsx:65, chronological-set-history.tsx:76
+**Perspectives**: user-experience-advocate
+**Impact**: QuickLogForm has undo toast, other components don't. Accidental delete = data loss.
+**Fix**: Add undo toast pattern to 3 delete locations
+**Effort**: 2h | **Value**: HIGH
+**Acceptance**: All deletes show undo toast for 5s recovery window
+
+### [UX] Built-in timer for duration exercises
+
+**File**: src/components/dashboard/duration-input.tsx
+**Perspectives**: user-experience-advocate
+**Impact**: Plank users switch to timer app, lose count, frustrated
+**Fix**: Add live timer with Start/Stop, auto-fills duration on stop
+**Effort**: 3h | **Value**: Users stay in-app
+**Acceptance**: Timer counts up, fills duration input, no app switching
+
+### [UX] Bulk delete for sets
+
+**File**: src/app/(app)/history/page.tsx
+**Perspectives**: user-experience-advocate
+**Impact**: 10 warmup sets logged by mistake → 10 individual deletes (50 clicks)
+**Fix**: Checkbox selection mode + bulk delete button
+**Effort**: 3h | **Value**: 50 clicks → 3 clicks
+**Acceptance**: Select multiple sets, delete in batch with single confirmation
+
+### [Design System] Migrate to OKLCH color space
+
+**Files**: globals.css, design-tokens.ts, tailwind.config.ts
+**Perspectives**: design-systems-architect
+**Current**: HSL color space (perceptual non-uniformity, unpredictable tints/shades)
+**Fix**: OKLCH (perceptually uniform, easier contrast, simpler shade generation)
+**Effort**: 3h | **Impact**: Better color foundation
+**Browser Support**: 95%+ (Chrome 111+, Safari 15.4+, Firefox 113+)
+**Acceptance**: 9 core colors in OKLCH, WCAG contrast validated
+
+### [Maintainability] Create error handling ADR
+
+**Scope**: Standardize 3 different error patterns
+**Perspectives**: maintainability-maven
+**Impact**: Devs unsure when to throw vs handleMutationError vs reportError
+**Fix**: ADR documenting: Backend throws, Frontend uses handleMutationError, Critical paths reportError + throw
+**Effort**: 1h ADR + 2h consistency fixes | **Impact**: Uniform error handling
+**Acceptance**: docs/adr/003-error-handling.md exists, examples updated
+
+### [Testing] Add type-level tests for hooks
+
+**File**: src/hooks/useLastSet.test-d.ts (new)
+**Perspectives**: maintainability-maven
+**Impact**: useLastSet uses `any`, no compile-time type safety verification
+**Fix**: Add `tsd` tests verifying return types, autocomplete works
+**Effort**: 30m | **Impact**: Prevent type safety regression
+**Acceptance**: Type-level tests catch `any` violations
+
+### [Docs] Add API contract documentation
+
+**Files**: convex/exercises.ts:75, convex/sets.ts, src/lib/pr-detection.ts
+**Perspectives**: maintainability-maven
+**Impact**: Missing error conditions, side effects, edge cases (auto-restore, case-insensitive duplicate)
+**Fix**: Comprehensive JSDoc with examples for 20+ public functions
+**Effort**: 3h | **Impact**: CRITICAL - self-documenting API
+**Acceptance**: All exported functions have JSDoc with error conditions + examples
 
 ---
 
 ## Soon (Exploring, 3-6 months)
 
-- **[Product] Routine templates & scheduling** – Pre-built workouts for new users, critical onboarding unlock. Foundation for premium content.
-- **[Product] Social sharing (Phase 1)** – Export workout summary as shareable image. Viral growth starter.
-- **[UX] Offline-first quick log** – Service Worker cache + optimistic queue. Table stakes for gym usage.
-- **[UX] Search/filter in exercise list** – Power users with many exercises need search capability.
-- **[Architecture] Domain service for PR detection** – Move shared logic to pure module for reuse and deterministic tests.
-- **[Architecture] Create opaque ID types** – Decouple frontend from Convex `Id<>` types for backend flexibility.
-- **[Infrastructure] Structured logging with Pino** – Replace console.log with structured context, levels, correlation IDs.
-- **[Infrastructure] Performance measurement infrastructure** – Deferred from 2025-11 performance optimization. Backend timing utilities (`convex/lib/instrumentation.ts`), frontend PerformanceMonitor (`src/lib/performance.ts`), production analytics events. Implement only if performance degrades over time or new bottlenecks emerge requiring profiling data. Effort: 8-12h.
-- **[Documentation] Component library JSDoc** – Document all public components with usage examples.
-- **[Performance] Move exercise sorting to backend** – `sortExercisesByRecency` scans all sets on every render.
-- **[Testing] Visual regression baseline** – Playwright screenshots for key pages, catch unintended UI changes.
-- **[Testing] Accessibility audit with axe** – axe-playwright integration, WCAG compliance, keyboard navigation.
-- **[Testing] Performance baseline with Lighthouse CI** – Track Core Web Vitals, catch performance regressions in CI.
-- **[Testing] Contract tests for Convex schema** – Validate frontend types match backend schema, catch breaking changes.
+- **[Product] Coaching Dashboard (B2B)** - Coach view for trainers managing 10-50 clients. $50-200/mo market, opens B2B revenue (10x ARPU). Effort: 20-25d.
+- **[Product] Supersets & Circuit Training** - Link exercises, track AMRAP circuits. Serves CrossFit/functional fitness (20% market). Effort: 3-4d.
+- **[Performance] Frontend bundle splitting** - Dynamic import recharts/framer-motion. 150-200KB bundle reduction. Effort: 2h.
+- **[Performance] Move exercise sorting to backend** - `sortExercisesByRecency` scans all sets on render. Effort: 1h.
+- **[Architecture] Domain service for PR detection** - Pure module for shared logic, deterministic tests. Effort: 3h.
+- **[Architecture] Decompose crons.ts** - 480 lines → 5 focused modules (daily/weekly/monthly/timezone/index). Effort: 3h.
+- **[Infrastructure] Staging environment** - Vercel staging + Convex staging, mirror prod domain patterns. Effort: 1.5d, Cost: ~$20/mo.
+- **[Infrastructure] Add Gitleaks pre-commit hook** - Secrets scanning, prevent API key commits. Effort: 30m.
+- **[Infrastructure] Add Changesets** - Changelog automation, semantic versioning, release tracking. Effort: 1h.
+- **[Infrastructure] CSP hardening** - Investigate Convex SDK eval requirement, implement nonce-based CSP. Effort: 6h.
+- **[Testing] E2E tests for critical flows** - Playwright smoke tests (auth, log workout, delete set). Effort: 4h.
+- **[Testing] Visual regression baseline** - Playwright screenshots, catch unintended UI changes. Effort: 3h.
+- **[Testing] Accessibility audit with axe** - axe-playwright, WCAG compliance, keyboard nav. Effort: 2h.
+- **[Design System] Storybook setup** - Visual component docs, variant exploration. Effort: 1d + 2h per component.
+- **[Docs] Terminology standardization** - Document Set vs Workout vs Session in domain model. Effort: 1.5h.
+- **[UX] Search/filter in exercise list** - Power users with 50+ exercises need search. Effort: 1h.
+- **[UX] Keyboard shortcuts documentation** - Help modal showing Enter/Escape/Tab shortcuts. Effort: 2h.
 
 ---
 
 ## Later (Someday/Maybe, 6+ months)
 
-- **[Platform] Native mobile companion** – React Native or PWA improvements
-- **[Platform] Apple Watch / Wear OS** – Log sets without phone, 2x engagement
-- **[Integration] Apple Health / Google Fit sync** – Data portability, ecosystem participation
-- **[Product] Premium tier** – Gate advanced analytics, unlimited history, export
-- **[Product] Social features (Full)** – Friends, feeds, challenges
-- **[Product] Superset/circuit support** – Link exercises for compound movements
-- **[Innovation] AI form coach via video** – Computer vision for form feedback
-- **[Innovation] Predictive program optimization** – Auto-adjust volume based on recovery
+- **[Platform] Native Mobile Apps** - React Native or native iOS/Android if PWA insufficient
+- **[Platform] Apple Watch / Wear OS** - Log sets without phone, 2x engagement
+- **[Innovation] Video Form Check with AI** - Computer vision pose estimation, form feedback. Premium $20/mo tier.
+- **[Integration] Apple Health / Google Fit full sync** - Bidirectional data portability
+- **[Product] Social features (Full)** - Friends, feeds, challenges (beyond just sharing)
+- **[Product] Superset/circuit support** - Link exercises for compound movements
+- **[Innovation] Predictive program optimization** - Auto-adjust volume based on recovery AI
 
 ---
 
 ## Learnings
 
-**From 2025-11-24 performance optimization sprint:**
+**From 2025-11-26 comprehensive grooming (8 perspectives):**
 
-- **Quick wins strategy validated**: User feedback indicated performance as critical blocker. Skipped measurement infrastructure, went straight to proven bottlenecks: Dashboard query filtering + Analytics O(n) Map optimizations. Expected 10-50x speedup.
+- **Type safety erosion pattern**: 40+ `any` instances concentrated in Convex internal API calls. Fixable with proper type imports, but shows tactical debt from rushing features. Need strategic investment in type infrastructure.
 
-- **Performance Council approach**: Simultaneous analysis through Gregg (measurement), Hickey (simplification), Knuth (critical 3%) lenses identified true hot paths vs assumed bottlenecks. Dashboard (80% of traffic) was being ignored while BACKLOG focused on analytics cold paths.
+- **Deployment confidence gap**: Missing Lefthook + Pino = can't deploy Friday 5pm. Infrastructure gaps are CRITICAL blockers, not nice-to-have polish. Prioritize deployment confidence over feature velocity.
 
-- **Items moved to active work**: Lines 55-71 (O(n) lookups, listSetsForToday) moved from BACKLOG to TODO.md for immediate implementation. Remaining performance enhancements (getRecentPRs filtering, bundle splitting, measurement infrastructure) kept in BACKLOG for post-launch evaluation.
+- **Deep module excellence**: analytics.ts (478 lines, 4 exports), sentry.ts (402 lines, 1 export) are textbook Ousterhout patterns. Use as templates for new abstractions. Simple interface + complex implementation = high module value.
+
+- **Monetization is existential**: $0 revenue, $100/mo AI costs unsustainable. Product quality doesn't matter if business model broken. Freemium tier NOW, not "later when we have more users."
+
+- **Offline-first is table stakes**: 60% gym usage, spotty WiFi. Can't compete with Strong/Hevy without offline mode. PWA architecture required for core use case, not platform expansion.
+
+- **Design system maturity**: Brutalist design system is best-in-class (200+ lines JSDoc, contextual token naming, zero hardcoded values). Strong visual identity differentiates from generic SaaS. Preserve at all costs.
+
+- **Security severity prioritization**: Rate limiting > dependency updates > test endpoint gating. Cost-based DoS (AI spam) more critical than theoretical CVEs in dev dependencies. Prioritize business impact over CVSS scores.
 
 **From 2025-11-18 grooming session:**
 
@@ -600,5 +427,3 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 - **E2E missing entirely**: Zero Playwright tests. Critical flows (auth, logging workout) untested end-to-end. Smoke tests catch surprising number of bugs.
 
 - **PII handling untested**: sentry.ts at 8.76%, analytics.ts at 35.84%. Security-critical code should be test-first.
-
-- **BACKLOG stale entry**: Progressive overload listed as "no tests" but has 517 lines of tests. Audit before trusting documentation.

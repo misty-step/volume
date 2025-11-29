@@ -7,6 +7,7 @@ import {
   validateExerciseName,
 } from "./lib/validate";
 import { classifyExercise } from "./ai/openai";
+import { getLimits } from "./lib/rateLimit";
 
 /**
  * Create a new exercise (action-based)
@@ -28,6 +29,16 @@ export const createExercise = action({
     if (!identity) {
       throw new Error("Unauthorized");
     }
+
+    // Rate limit: per-user exercise creation (via internal mutation for action context)
+    const limits = getLimits();
+    const exerciseLimit = limits["exercise:create"];
+    await ctx.runMutation(internal.lib.rateLimit.checkRateLimitInternal, {
+      userId: identity.subject,
+      scope: "exercise:create",
+      limit: exerciseLimit.limit,
+      windowMs: exerciseLimit.windowMs,
+    });
 
     // Validate and normalize exercise name
     const normalizedName = validateExerciseName(args.name);

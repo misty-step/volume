@@ -96,4 +96,15 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_week", ["userId", "weekStartDate"])
     .index("by_user_type_date", ["userId", "reportType", "weekStartDate"]),
+
+  rateLimits: defineTable({
+    userId: v.string(),
+    scope: v.string(),
+    windowStartMs: v.number(),
+    windowMs: v.number(),
+    count: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_user_scope_window", ["userId", "scope", "windowStartMs"])
+    .index("by_expires", ["expiresAt"]),
 });
