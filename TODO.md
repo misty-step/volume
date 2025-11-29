@@ -113,7 +113,7 @@ Spec: `TASK.md` (Type Safety Restoration). DESIGN.md not present. Scope excludes
   Estimate: 0.25h
   ```
 
-- [ ] Frontend types — analytics views
+- [~] Frontend types — analytics views
 
   ```
   Files:

@@ -7,6 +7,7 @@ import { api } from "../../../convex/_generated/api";
 import { AIInsightsCard } from "./ai-insights-card";
 import type { AIReport } from "./ai-insights-card";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import type { Doc } from "../../../convex/_generated/dataModel";
 
 type ReportType = "daily" | "weekly" | "monthly";
 
@@ -40,13 +41,13 @@ export function ReportNavigator() {
   }, [userId, currentUser]);
 
   // Fetch ALL reports for navigation
-  const allReports = useQuery((api as any).ai.reports.getReportHistory, {
+  const allReports = useQuery(api.ai.reports.getReportHistory, {
     limit: 100,
-  });
+  }) as Doc<"aiReports">[] | undefined;
 
   // Filter reports by selected type
   const reportsForType =
-    allReports?.filter((r: any) => r.reportType === selectedType) || [];
+    allReports?.filter((r) => r.reportType === selectedType) || [];
 
   // Current report to display
   const currentReport = reportsForType[reportIndex] || null;
@@ -62,11 +63,9 @@ export function ReportNavigator() {
 
   // Count reports by type
   const reportCounts = {
-    daily: allReports?.filter((r: any) => r.reportType === "daily").length || 0,
-    weekly:
-      allReports?.filter((r: any) => r.reportType === "weekly").length || 0,
-    monthly:
-      allReports?.filter((r: any) => r.reportType === "monthly").length || 0,
+    daily: allReports?.filter((r) => r.reportType === "daily").length || 0,
+    weekly: allReports?.filter((r) => r.reportType === "weekly").length || 0,
+    monthly: allReports?.filter((r) => r.reportType === "monthly").length || 0,
   };
 
   const tabs: Array<{ type: ReportType; label: string }> = [
@@ -150,7 +149,7 @@ export function ReportNavigator() {
       )}
 
       {/* Report Display */}
-      <AIInsightsCard report={currentReport as AIReport | null} />
+      <AIInsightsCard report={(currentReport as AIReport | null) ?? null} />
     </div>
   );
 }
