@@ -74,10 +74,10 @@ export function Dashboard() {
   );
 
   // Build exercise Map for O(1) lookups (fixes BACKLOG #11)
-  const exerciseMap: Map<Id<"exercises">, Exercise> = useMemo(
-    () => new Map((exercises ?? []).map((ex: any) => [ex._id, ex])),
-    [exercises]
-  );
+  const exerciseMap: Map<Id<"exercises">, Exercise> = useMemo(() => {
+    if (!exercises) return new Map();
+    return new Map(exercises.map((ex) => [ex._id, ex]));
+  }, [exercises]);
 
   // Sort exercises by recency (most recently used first)
   // Note: Uses todaysSets for recency - exercises used today appear first

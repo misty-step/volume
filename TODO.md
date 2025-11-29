@@ -134,7 +134,7 @@ Spec: `TASK.md` (Type Safety Restoration). DESIGN.md not present. Scope excludes
   Estimate: 0.5h
   ```
 
-- [ ] Frontend types — history/dashboard + hook
+- [~] Frontend types — history/dashboard + hook
 
   ```
   Files:
