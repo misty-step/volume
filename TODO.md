@@ -122,7 +122,7 @@
   Estimate: 30m
   ```
 
-- [~] Documentation and ADR
+- [x] Documentation and ADR
 
   ```
   Files:
