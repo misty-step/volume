@@ -9,7 +9,32 @@
 import { v } from "convex/values";
 import { query, action } from "../_generated/server";
 import { internal } from "../_generated/api";
+import type { Doc, Id } from "../_generated/dataModel";
 import { getLimits, type RateLimitResult } from "../lib/rateLimit";
+
+type ReportDoc = Doc<"aiReports">;
+type ReportId = Id<"aiReports">;
+type BackfillWeekError = { week: string; error: string };
+type BackfillDayError = { date: string; error: string };
+
+interface BackfillSummaryBase {
+  success: true;
+  userId: string;
+  generated: number;
+  skipped: number;
+  failed: number;
+  durationSeconds: number;
+}
+
+interface WeeklyBackfillSummary extends BackfillSummaryBase {
+  totalWeeks: number;
+  errors: BackfillWeekError[];
+}
+
+interface DailyBackfillSummary extends BackfillSummaryBase {
+  totalDays: number;
+  errors: BackfillDayError[];
+}
 
 /**
  * Get latest AI report for authenticated user
@@ -26,7 +51,7 @@ export const getLatestReport = query({
       v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly"))
     ),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<ReportDoc | null> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       return null;
@@ -62,7 +87,7 @@ export const getReportHistory = query({
   args: {
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<ReportDoc[]> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       return [];
@@ -90,7 +115,7 @@ export const getReportHistory = query({
  */
 export const generateOnDemandReport = action({
   args: {},
-  handler: async (ctx): Promise<any> => {
+  handler: async (ctx): Promise<ReportId> => {
     // Verify authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -102,7 +127,10 @@ export const generateOnDemandReport = action({
     // Rate limit: daily cap per user (via internal mutation for action context)
     const limits = getLimits();
     const dailyLimit = limits["aiReport:onDemand"];
-    const rateLimitResult = (await ctx.runMutation(
+    if (!dailyLimit) {
+      throw new Error("Rate limit configuration missing for aiReport:onDemand");
+    }
+    const rateLimitResult: RateLimitResult = await ctx.runMutation(
       internal.lib.rateLimit.checkRateLimitInternal,
       {
         userId,
@@ -110,7 +138,7 @@ export const generateOnDemandReport = action({
         limit: dailyLimit.limit,
         windowMs: dailyLimit.windowMs,
       }
-    )) as RateLimitResult;
+    );
 
     console.log(
       `[On-Demand] User generating report (${dailyLimit.limit - rateLimitResult.remaining}/${dailyLimit.limit} today)`
@@ -119,7 +147,7 @@ export const generateOnDemandReport = action({
     // Generate report via internal action
     try {
       const reportId = await ctx.runAction(
-        (internal as any).ai.generate.generateReport,
+        internal.ai.generate.generateReport,
         {
           userId,
         }
@@ -148,7 +176,7 @@ export const generateOnDemandReport = action({
  */
 export const backfillWeeklyReports = action({
   args: { userId: v.string() },
-  handler: async (ctx, args): Promise<any> => {
+  handler: async (ctx, args): Promise<WeeklyBackfillSummary> => {
     const { userId } = args;
 
     // Security check
@@ -167,7 +195,11 @@ export const backfillWeeklyReports = action({
     const startTime = Date.now();
 
     // Past 5 weeks with known workout data (from analysis)
-    const weeks = [
+    const weeks: Array<{
+      date: string;
+      timestamp: number;
+      expectedSets: number;
+    }> = [
       { date: "2025-10-27", timestamp: 1761523200000, expectedSets: 82 },
       { date: "2025-10-20", timestamp: 1760918400000, expectedSets: 61 },
       { date: "2025-10-13", timestamp: 1760313600000, expectedSets: 44 },
@@ -178,7 +210,7 @@ export const backfillWeeklyReports = action({
     let successCount = 0;
     let skippedCount = 0;
     let errorCount = 0;
-    const errors: Array<{ week: string; error: string }> = [];
+    const errors: BackfillWeekError[] = [];
 
     let weekIndex = 0;
     for (const week of weeks) {
@@ -188,7 +220,7 @@ export const backfillWeeklyReports = action({
         );
 
         const reportId = await ctx.runAction(
-          (internal as any).ai.generate.generateReport,
+          internal.ai.generate.generateReport,
           {
             userId,
             reportType: "weekly",
@@ -270,7 +302,7 @@ export const backfillDailyReports = action({
     userId: v.string(),
     daysBack: v.optional(v.number()),
   },
-  handler: async (ctx, args): Promise<any> => {
+  handler: async (ctx, args): Promise<DailyBackfillSummary> => {
     const { userId, daysBack = 14 } = args;
 
     // Security check
@@ -290,7 +322,7 @@ export const backfillDailyReports = action({
     let successCount = 0;
     let skippedCount = 0;
     let errorCount = 0;
-    const errors: Array<{ date: string; error: string }> = [];
+    const errors: BackfillDayError[] = [];
 
     // Generate reports for each day going back from today
     for (let i = 0; i < daysBack; i++) {
@@ -299,7 +331,10 @@ export const backfillDailyReports = action({
       date.setHours(0, 0, 0, 0);
 
       const dayStart = date.getTime();
-      const dateStr = date.toISOString().split("T")[0];
+      const [dateStr] = date.toISOString().split("T");
+      if (!dateStr) {
+        throw new Error("Unable to format date string for daily backfill");
+      }
 
       try {
         console.log(
@@ -307,7 +342,7 @@ export const backfillDailyReports = action({
         );
 
         const reportId = await ctx.runAction(
-          (internal as any).ai.generate.generateReport,
+          internal.ai.generate.generateReport,
           {
             userId,
             reportType: "daily",

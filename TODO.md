@@ -54,7 +54,7 @@ Spec: `TASK.md` (Type Safety Restoration). DESIGN.md not present. Scope excludes
   Estimate: 0.75h
   ```
 
-- [ ] Convex types — ai/reports
+- [x] Convex types — ai/reports
 
   ```
   Files:
