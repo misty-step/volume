@@ -74,7 +74,7 @@ Spec: `TASK.md` (Type Safety Restoration). DESIGN.md not present. Scope excludes
   Estimate: 0.75h
   ```
 
-- [ ] Convex types — crons
+- [x] Convex types — crons
 
   ```
   Files:
