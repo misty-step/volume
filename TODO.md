@@ -1,172 +1,201 @@
-## TODO: Rate Limit AI Endpoints (Convex)
+# TODO — Type Safety Restoration
 
-- [x] Add `rateLimits` table to schema
+Spec: `TASK.md` (Type Safety Restoration). DESIGN.md not present. Scope excludes test fixtures and runtime changes.
 
-  ```
-  Files:
-  - convex/schema.ts
+## Spec Analysis
 
-  Goal: Define `rateLimits` table with indexes `by_user_scope_window` and `by_expires` to persist windowed counters.
+- Modules: Convex backend (`ai/generate.ts`, `ai/reports.ts`, `crons.ts`, `exercises.ts`, `migrations/backfillMuscleGroups.ts`); frontend analytics/history (`report-navigator.tsx`, `analytics/page.tsx`, `history/page.tsx`, `Dashboard.tsx`, `useLastSet.ts`); tooling (`tsconfig.json`, `src/types/global.d.ts`).
+- Dependencies: Convex `_generated/api` + `_generated/dataModel`; Clerk global; Next.js App Router; existing tests via `pnpm test`.
+- Integration Points: `internal.*` Convex calls; `useQuery(api...)` invocations; shared Doc/Id types.
+- Patterns: Use `Doc<"table">` and `Id<"table">`; remove `(internal as any)`; explicit action return types; import `api` instead of `(api as any)`.
+- Risks: strict flags expose real bugs; mismatched action return shapes; Convex generated types stale (rerun `pnpm convex dev` if needed).
+- Not in scope: feature changes, API surface changes, altering tests beyond typing.
 
-  Approach:
-  1) Add table fields {userId, scope, windowStartMs, windowMs, count, expiresAt}.
-  2) Add indexes as per DESIGN.md.
-  3) Ensure optionality/typing matches Convex expectations; regenerate types via `pnpm convex dev` if needed.
+## Tasks
 
-  Success Criteria:
-  - [ ] Schema typechecks.
-  - [ ] Convex codegen reflects new table without errors.
-
-  Tests:
-  - Typecheck: `pnpm typecheck` (Convex types updated).
-
-  Estimate: 30m
-  ```
-
-- [x] Implement rate limit helper (store + service + error + config)
+- [x] Harden TypeScript config
 
   ```
   Files:
-  - convex/lib/rateLimit.ts (new)
-
-  Goal: Provide `assertRateLimit` with fixed-window logic, env-configurable limits, exemptions, structured logging, Sentry breadcrumb on deny.
-
+  - tsconfig.json
+  Goal: enable strict flags per TASK §Phase 1.
   Approach:
-  1) Define types (RateLimitScope, RateLimitConfig, RateLimitError).
-  2) Implement storage helpers (fetch/upsert/increment) using `rateLimits` table.
-  3) Implement `assertRateLimit` per pseudocode; include userId hashing for logs; add Sentry breadcrumb/tag on deny.
-  4) Implement config reader for env overrides with sane defaults; export limits map.
-
+  1. Add compilerOptions: strict, noUncheckedIndexedAccess, noImplicitReturns, noFallthroughCasesInSwitch, forceConsistentCasingInFileNames.
+  2. Keep path aliases/excludes unchanged.
+  3. Run quick `pnpm typecheck` dry-run to surface downstream fixes.
   Success Criteria:
-  - [ ] `assertRateLimit` returns remaining/resetAt on allow; throws RateLimitError on deny.
-  - [ ] Logging uses hashed userId; no PII in messages.
-  - [ ] Env overrides respected when set; defaults applied when absent.
-
+  - Flags present in tsconfig and honored by tsc.
+  - No new config errors beyond expected code fixes.
   Tests:
-  - Unit (convex-test): allow path, deny path, window reset, env override, exempt path.
-
-  Depends: Add `rateLimits` table to schema.
-  Estimate: 1h 30m
+  - pnpm typecheck (after downstream fixes).
+  Depends: none
+  Estimate: 0.25h
   ```
 
-- [x] Gate `createExercise` action with per-minute limit
+- [ ] Convex types — ai/generate
 
   ```
   Files:
-  - convex/exercises.ts
-  - convex/lib/rateLimit.ts (imports)
-
-  Goal: Enforce `exercise:create` limit (default 10/min, env-overridable) before OpenAI classification.
-
+  - convex/ai/generate.ts
+  Goal: remove 15 `any` usages; add explicit action return types; drop `(internal as any)`.
   Approach:
-  1) Import limits map + assertRateLimit.
-  2) Invoke guard at start of action using authenticated userId.
-  3) Keep existing validation/classification flow intact; ensure errors surface cleanly.
-
+  1. Import Id/Doc types from _generated/dataModel and api/internal helpers from _generated/api.
+  2. Type action args/returns; ensure handlers return typed payloads (e.g., Id<"reports"> or shaped objects per implementation).
+  3. Replace internal calls with typed `internal.ai...` and fix ctx.run* signatures.
+  4. Add helper types if repeated (keep module deep, no pass-throughs).
   Success Criteria:
-  - [ ] 11th request in same minute throws RateLimitError with retry-after data.
-  - [ ] Normal flow unchanged when under limit.
-
+  - Zero `any` in file.
+  - Internal calls compile without casts.
+  - Action return types align with actual return values.
   Tests:
-  - convex-test: fire 10 requests → succeed; 11th → rate-limit error; after advancing time past window → succeeds.
-
-  Depends: Implement rate limit helper.
-  Estimate: 45m
+  - pnpm typecheck.
+  - pnpm test --filter generate? (if present), otherwise rely on typecheck.
+  Depends: Harden TypeScript config
+  Estimate: 0.75h
   ```
 
-- [x] Gate `generateOnDemandReport` action; remove legacy check
+- [ ] Convex types — ai/reports
 
   ```
   Files:
   - convex/ai/reports.ts
-  - convex/ai/data.ts (delete or retire checkRateLimit)
-  - convex/lib/rateLimit.ts (imports)
-
-  Goal: Enforce `aiReport:onDemand` limit (default 5/day, env-overridable) and eliminate redundant `checkRateLimit`.
-
+  Goal: remove 8 `any`; add explicit return types for report actions/queries; fix internal calls.
   Approach:
-  1) Replace current rate-limit query with `assertRateLimit`.
-  2) Remove/stop exporting `checkRateLimit` from ai/data.ts if unused.
-  3) Keep dedupe logic in `generateReport` untouched.
-
+  1. Import Doc/Id and api/internal types.
+  2. Type handlers' args/returns (use interfaces for complex report results where needed).
+  3. Replace `(internal as any)` patterns; ensure ctx.runAction/runQuery signatures correct.
   Success Criteria:
-  - [ ] 6th request in same day throws RateLimitError with retry-after.
-  - [ ] Existing dedupe still prevents duplicate reports.
-
+  - Zero `any` left.
+  - All handlers have explicit Promise<...> return types matching actual objects.
+  - Typecheck clean for file.
   Tests:
-  - Update/add convex-test in ai/reports.test.ts for daily cap and dedupe behavior.
-
-  Depends: Implement rate limit helper.
-  Estimate: 1h
+  - pnpm typecheck.
+  Depends: Harden TypeScript config
+  Estimate: 0.75h
   ```
 
-- [x] Optional cleanup: add pruneExpired internal action
+- [ ] Convex types — crons
 
   ```
   Files:
-  - convex/lib/rateLimit.ts (prune function) or convex/crons.ts
-
-  Goal: Provide a maintenance hook to delete expired rate-limit rows using `by_expires` index.
-
+  - convex/crons.ts
+  Goal: remove 12 `any`; type scheduled/internal calls.
   Approach:
-  1) Implement internal mutation/action `pruneExpiredRateLimits` scanning by_expires < now (batched).
-  2) Log deleted count; keep disabled by default unless invoked manually/cron.
-
+  1. Import internal types; replace `(internal as any)`.
+  2. Add return types to cron handlers where missing.
+  3. Ensure args typed with Id/Doc or specific shapes.
   Success Criteria:
-  - [ ] Function deletes only expired rows; no active window removed. (validation pending due to test runner issue)
-
+  - No `any` usage.
+  - Cron registrations compile with typed internal references.
   Tests:
-  - convex-test: seed expired + active rows; prune removes expired, leaves active.
-
-  Depends: Add `rateLimits` table; rate limit helper.
-  Estimate: 30m
+  - pnpm typecheck.
+  Depends: Harden TypeScript config
+  Estimate: 0.5h
   ```
 
-- [x] Documentation and ADR
+- [ ] Convex types — exercises + backfill migration
 
   ```
   Files:
-  - docs/adr/ADR-00xx-rate-limits.md (new, MADR Light)
-  - README.md or DESIGN_SYSTEM.md (brief note on env vars & rate limits)
-
-  Goal: Capture decision record and surface env/config + usage to developers.
-
+  - convex/exercises.ts
+  - convex/migrations/backfillMuscleGroups.ts
+  Goal: remove 4 `any` total; ensure action/query returns use Id/Doc.
   Approach:
-  1) Write ADR referencing alternatives and chosen fixed-window design.
-  2) Add short README section for new env vars and migration note (run `pnpm convex dev`).
-
+  1. Swap manual `any` with Doc/Id types from _generated/dataModel.
+  2. Fix any `(internal as any)` occurrences.
+  3. Confirm migration handlers return void/ids explicitly.
   Success Criteria:
-  - [ ] ADR status = proposed (or accepted once merged).
-  - [ ] Env vars documented with defaults.
-
-  Depends: Core design done (no code dependency).
-  Estimate: 30m
+  - Zero `any` across both files.
+  - Actions/queries have explicit Promise return types.
+  Tests:
+  - pnpm typecheck.
+  Depends: Harden TypeScript config
+  Estimate: 0.25h
   ```
 
-- [x] Quality gate & verification
+- [ ] Frontend types — analytics views
 
+  ```
+  Files:
+  - src/components/analytics/report-navigator.tsx
+  - src/app/(app)/analytics/page.tsx
+  Goal: remove 6+2 `any`; correct api path usage; type query data.
+  Approach:
+  1. Import `api` from `@/../convex/_generated/api` and Doc/Id from dataModel.
+  2. Replace `(api as any)` with typed `api.ai.reports.*`.
+  3. Type filter/map callbacks with Doc<"reports">/Doc<"sets"> as appropriate; avoid inline `any`.
+  Success Criteria:
+  - No `any` in both files.
+  - useQuery/useAction calls type-safe without casts.
+  Tests:
+  - pnpm typecheck.
+  - Optional: pnpm test --run (if suites exist) for analytics components.
+  Depends: Convex types (internal signatures stable)
+  Estimate: 0.5h
+  ```
+
+- [ ] Frontend types — history/dashboard + hook
+
+  ```
+  Files:
+  - src/app/(app)/history/page.tsx
+  - src/components/dashboard/Dashboard.tsx
+  - src/hooks/useLastSet.ts
+  Goal: remove remaining frontend `any`; type set filtering and props.
+  Approach:
+  1. Use Doc<"sets"> for array filters/maps; add minimal helper types if needed.
+  2. Ensure props/state use explicit types; avoid implicit any.
+  3. Keep hook API stable; no runtime logic change.
+  Success Criteria:
+  - Zero `any` across files.
+  - Hook and components compile under strict flags.
+  Tests:
+  - pnpm typecheck.
+  Depends: Harden TypeScript config
+  Estimate: 0.5h
+  ```
+
+- [ ] Add Clerk window type extension
+
+  ```
+  Files:
+  - src/types/global.d.ts (new)
+  Goal: declare optional `window.Clerk` with Clerk type.
+  Approach:
+  1. Create global.d.ts per TASK §Phase 4 snippet.
+  2. Ensure tsconfig includes `src/types` in `typeRoots`/`include` (adjust only if needed).
+  Success Criteria:
+  - Global type recognized; no implicit any for window.Clerk.
+  Tests:
+  - pnpm typecheck.
+  Depends: Harden TypeScript config
+  Estimate: 0.25h
+  ```
+
+- [ ] Verification + regression guard
   ```
   Files:
   - n/a (commands)
-
-  Goal: Ensure patch meets standards and passes checks.
-
+  Goal: prove zero `any` and no regressions.
   Approach:
-  1) Run `pnpm lint`, `pnpm typecheck`, `pnpm test` (or focused convex-test suite).
-  2) Verify coverage for new helper ≥90% and overall patch ≥80%.
-  3) Spot-check Sentry/log output format manually in tests or logs.
-
+  1. Run pnpm typecheck.
+  2. Run pnpm test --run.
+  3. Run pnpm build.
+  4. Run `grep -r "\: any" src/ convex/ --include="*.ts" --include="*.tsx" | grep -v ".test."` to confirm zero `any`.
   Success Criteria:
-  - [x] All commands green.
-  - [x] Coverage thresholds met (493 tests passing).
-  - [x] No PII in emitted logs during tests (userId hashed via djb2).
-
-  Depends: All code tasks.
-  Estimate: 30m
+  - All commands succeed.
+  - Grep returns empty.
+  Tests:
+  - Commands above.
+  Depends: all tasks
+  Estimate: 0.5h
   ```
 
-## Boundaries / Not Building
+## Critical Path
 
-- No client-side UI changes or localization; frontend handles generic message + retry-after.
-- No per-IP/session throttling unless future abuse observed.
-- No external rate-limit service (Redis/Upstash) introduction.
+1. Harden TypeScript config → 2) Convex types — ai/generate → 3) Convex types — ai/reports → 4) Convex types — crons → 5) Convex types — exercises + backfill migration → 6) Frontend types — analytics views → 7) Frontend types — history/dashboard + hook → 8) Add Clerk window type extension → 9) Verification.
+
+## Notes / Backlog
+
+- If strict flags surface runtime bugs, fix inline within tasks; do not relax flags.
+- If Convex generated types stale, rerun `pnpm convex dev` (manual step).
