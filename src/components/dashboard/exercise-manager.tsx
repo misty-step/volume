@@ -215,11 +215,11 @@ export function ExerciseManager({ exercises, sets }: ExerciseManagerProps) {
             <AlertDialogDescription>
               {exerciseToDelete && (
                 <>
-                  {setCountByExercise[exerciseToDelete._id] > 0 ? (
+                  {(setCountByExercise[exerciseToDelete._id] ?? 0) > 0 ? (
                     <>
                       Delete &quot;{exerciseToDelete.name}&quot;? This exercise
-                      has {setCountByExercise[exerciseToDelete._id]} set
-                      {setCountByExercise[exerciseToDelete._id] === 1
+                      has {setCountByExercise[exerciseToDelete._id] ?? 0} set
+                      {(setCountByExercise[exerciseToDelete._id] ?? 0) === 1
                         ? ""
                         : "s"}
                       . Deleting will remove it from your exercise list.

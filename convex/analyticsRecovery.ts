@@ -186,10 +186,12 @@ export const getRecoveryStatus = query({
           metrics.volumeLast7Days += volume;
 
           // Track distinct workout dates for frequency
-          const workoutDate = new Date(set.performedAt)
+          const [workoutDate] = new Date(set.performedAt)
             .toISOString()
-            .split("T")[0];
-          metrics.workoutDatesLast7Days.add(workoutDate);
+            .split("T");
+          if (workoutDate) {
+            metrics.workoutDatesLast7Days.add(workoutDate);
+          }
         }
       }
     }
@@ -207,7 +209,10 @@ export const getRecoveryStatus = query({
       } else {
         // Calculate days since last trained
         const lastTrainedDateObj = new Date(metrics.lastTrainedTimestamp);
-        lastTrainedDate = lastTrainedDateObj.toISOString().split("T")[0];
+        const [lastTrainedDateStr] = lastTrainedDateObj
+          .toISOString()
+          .split("T");
+        lastTrainedDate = lastTrainedDateStr ?? null;
 
         const daysDiff = now - metrics.lastTrainedTimestamp;
         daysSince = Math.floor(daysDiff / (24 * 60 * 60 * 1000));

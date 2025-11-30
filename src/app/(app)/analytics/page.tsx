@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import type { Doc } from "../../../../convex/_generated/dataModel";
 import { PageLayout } from "@/components/layout/page-layout";
 import { ActivityHeatmap } from "@/components/analytics/activity-heatmap";
 import { PRCard } from "@/components/analytics/pr-card";
@@ -13,6 +12,12 @@ import { ProgressiveOverloadWidget } from "@/components/analytics/progressive-ov
 import { RecoveryDashboardWidget } from "@/components/analytics/recovery-dashboard-widget";
 import { FocusSuggestionsWidget } from "@/components/analytics/focus-suggestions-widget";
 import { Dumbbell } from "lucide-react";
+
+type WorkoutFrequency = {
+  date: string;
+  setCount: number;
+  totalVolume: number;
+};
 
 export default function AnalyticsPage() {
   // Fetch analytics data using Convex queries
@@ -26,9 +31,11 @@ export default function AnalyticsPage() {
   // Filter heatmap data to start at first workout date (not Jan 1st)
   const filteredFrequencyData = useMemo(() => {
     if (!frequencyData || !firstWorkoutDate) return frequencyData;
-    return frequencyData.filter(
-      (day: { date: number }) => day.date >= firstWorkoutDate
-    );
+    const firstDateTs = Number(firstWorkoutDate);
+    return frequencyData.filter((day: WorkoutFrequency) => {
+      const dayTimestamp = new Date(day.date).getTime();
+      return dayTimestamp >= firstDateTs;
+    });
   }, [frequencyData, firstWorkoutDate]);
 
   // Determine loading state (any query undefined = still loading)
@@ -39,8 +46,7 @@ export default function AnalyticsPage() {
 
   // Count days with workout activity for new user detection
   const workoutDaysCount = frequencyData
-    ? frequencyData.filter((day: { setCount: number }) => day.setCount > 0)
-        .length
+    ? frequencyData.filter((day: WorkoutFrequency) => day.setCount > 0).length
     : 0;
 
   // Show empty state for users with <7 days of data

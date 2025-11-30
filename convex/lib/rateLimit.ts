@@ -89,20 +89,17 @@ export function getLimits(): Record<
   RateLimitScope,
   { limit: number; windowMs: number }
 > {
+  const exerciseDefaults = DEFAULT_LIMITS["exercise:create"]!;
+  const reportDefaults = DEFAULT_LIMITS["aiReport:onDemand"]!;
+
   return {
     "exercise:create": {
-      limit: parseEnvInt(
-        "RATE_LIMIT_EXERCISE_PER_MIN",
-        DEFAULT_LIMITS["exercise:create"].limit
-      ),
-      windowMs: DEFAULT_LIMITS["exercise:create"].windowMs,
+      limit: parseEnvInt("RATE_LIMIT_EXERCISE_PER_MIN", exerciseDefaults.limit),
+      windowMs: exerciseDefaults.windowMs,
     },
     "aiReport:onDemand": {
-      limit: parseEnvInt(
-        "RATE_LIMIT_REPORTS_PER_DAY",
-        DEFAULT_LIMITS["aiReport:onDemand"].limit
-      ),
-      windowMs: DEFAULT_LIMITS["aiReport:onDemand"].windowMs,
+      limit: parseEnvInt("RATE_LIMIT_REPORTS_PER_DAY", reportDefaults.limit),
+      windowMs: reportDefaults.windowMs,
     },
   };
 }

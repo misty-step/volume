@@ -172,7 +172,7 @@ Spec: `TASK.md` (Type Safety Restoration). DESIGN.md not present. Scope excludes
   Estimate: 0.25h
   ```
 
-- [ ] Verification + regression guard
+- [~] Verification + regression guard
   ```
   Files:
   - n/a (commands)

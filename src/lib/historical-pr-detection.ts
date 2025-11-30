@@ -45,6 +45,7 @@ export function detectHistoricalPRs(sets: Set[]): PRMap {
 
   for (let i = 0; i < setsOldestFirst.length; i++) {
     const currentSet = setsOldestFirst[i];
+    if (!currentSet) continue;
     const previousSets = setsOldestFirst.slice(0, i); // All sets before this one
 
     const prResult = checkForPR(currentSet, previousSets);

@@ -1,127 +1,272 @@
-# PRD: Rate Limit AI Endpoints (Convex)
+# Type Safety Restoration
 
-## 1) Executive Summary
+## Executive Summary
 
-- Problem: Authenticated users can spam AI-backed endpoints (exercise creation + on-demand reports) causing runaway OpenAI spend and DB churn.
-- Solution: Per-user fixed-window rate limits enforced in Convex via a dedicated `rateLimits` table + shared helper, covering 10 exercise creates/min and 5 AI reports/day; clear client errors; logging + alerting.
-- User value: Prevents cost/abuse while keeping legitimate usage fast; communicates limits explicitly so users know when to retry.
-- Success metrics: <0.1% of AI requests exceed budget after rollout; 100% of rate-limit hits logged; no increase in p95 latency >5ms for protected endpoints; false-positive blocks <2%.
+**Problem**: 50+ `any` type usages have accumulated across the codebase, eroding TypeScript's ability to catch bugs at compile time. The compiler can't verify correctness, autocomplete is degraded, and refactoring is dangerous.
 
-## 2) User Context & Outcomes
+**Solution**: Systematically replace all `any` with proper types using Convex's `Doc<>` and `Id<>` patterns, add explicit return types to actions, and enable stricter TypeScript compiler options to prevent future regression.
 
-- Personas: logged-in lifters adding exercises (AI classification) and requesting AI workout reports.
-- Pain removed: spammers can’t burn budget; regular users see predictable, descriptive limits instead of silent failures.
-- Desired outcomes: (a) bound per-user AI cost; (b) keep normal flow unblocked; (c) support transparent retry timing in UI copy.
+**User Value**: Safer refactoring, better IDE support, bugs caught at compile time instead of runtime.
 
-## 3) Requirements
+**Success Criteria**: Zero `any` in source code, stricter tsconfig, typecheck passes.
+
+---
+
+## Requirements
 
 ### Functional
 
-- Enforce per-user rate limits:
-  - `exercise:create` (Convex action) ≤10 requests per 60s window (env-overridable).
-  - `aiReport:onDemand` (Convex action) ≤5 requests per 24h window (env-overridable).
-- Scope: user-triggered actions only; cron/backfill/admin paths are exempt by default (opt-in flag available).
-- On limit breach, return a structured error with retry-after metadata and UX-friendly copy suitable for UI toasts.
-- Logging: each deny + first hit per window logs scope, userId hash, windowStart, count; Sentry breadcrumb on deny.
-- Configurability: thresholds/window defined in one module with env overrides (e.g., `RATE_LIMIT_EXERCISE_PER_MIN`, `RATE_LIMIT_REPORTS_PER_DAY`); sane defaults for local/dev.
+- Remove all `any` type annotations from source code (excluding test fixtures)
+- Add proper return types to all Convex actions
+- Fix `(internal as any)` pattern to use proper Convex types
+- Add Window type extension for Clerk global
 
-### Non-functional
+### Non-Functional
 
-- Atomic within a single mutation/action; no race-based double-counts.
-- Additional latency per check <5ms P50 inside Convex action.
-- Storage bounded: stale windows auto-cleaned/TTL so table doesn’t grow unbounded.
-- Works under concurrent requests; deterministic outcome (no over-allow).
-- Error messages avoid PII; ready for future localization without backend change.
+- Typecheck must pass after all changes
+- No runtime behavior changes
+- Maintain existing test coverage
 
-### Infrastructure requirements
+---
 
-- Quality gates: update Convex schema, unit tests (convex-test), keep `pnpm lint`, `pnpm typecheck`, `pnpm test` green.
-- Observability: Sentry error reporting already present—emit rate-limit errors with safe metadata; structured `console.log` for allow/deny.
-- Design consistency: follow existing Convex module layout (`convex/lib/*`, actions under `convex/`); no UI strings hard-coded in backend.
-- Security: only authenticated users can consume AI; no PII in logs; secrets remain in Convex env; avoid leaking raw user IDs in client errors.
+## Architecture Decision
 
-## 4) Architecture Decision
+### Selected Approach: Direct Type Replacement with Convex Patterns
 
-### Chosen approach: Fixed-window per-scope rows in `rateLimits` table
+Use Convex's built-in type utilities (`Doc<"table">`, `Id<"table">`) consistently, add explicit return types, and enable stricter compiler options.
 
-- Helper `assertRateLimit(ctx, { userId, scope, windowMs, limit, exempt?: boolean })` encapsulates logic; actions call it before invoking OpenAI.
-- Implementation: compute `windowStart = floor(Date.now()/windowMs)*windowMs`; fetch latest row for user+scope; if same window and count>=limit → throw; else patch/increment; else insert new row.
-- TTL/cleanup: set `expiresAt = windowStart + windowMs * 30` for GC; index by `expiresAt` for maintenance (optional cron cleanup).
-- Why: tiny interface (one helper), predictable math, O(1) lookups, minimal schema change, low migration risk.
-- Per-IP/session throttling: deferred; monitor Sentry for abuse and add scope types if needed.
+**Rationale**:
 
-### Alternatives (scored: user value 40%, simplicity 30%, explicitness 20%, risk 10%)
+- Convex already generates proper types in `_generated/dataModel`
+- `Doc<"sets">` is cleaner than manual interface duplication
+- Strict compiler options prevent future regression
 
-| Approach                                       | Score/10 | Kept/Rejected | Rationale                                                                                   |
-| ---------------------------------------------- | -------- | ------------- | ------------------------------------------------------------------------------------------- |
-| A) Fixed-window table per scope (chosen)       | 8.6      | Kept          | High user value, simple, explicit thresholds, low infra risk.                               |
-| B) Event log + sliding window query            | 7.2      | Rejected      | Precise but heavier queries, larger storage, more code; overkill for coarse limits.         |
-| C) External rate-limit service (Upstash/Redis) | 6.0      | Rejected      | Adds new dependency, env/config drift risk, extra latency; little benefit at current scale. |
+### Alternatives Considered
 
-### Module boundaries
+| Approach                             | Value  | Simplicity | Why Not                         |
+| ------------------------------------ | ------ | ---------- | ------------------------------- |
+| **Runtime type validation (Zod)**    | High   | Low        | Overkill for compile-time issue |
+| **Gradual migration with `unknown`** | Medium | Medium     | Prolongs technical debt         |
+| **Selected: Direct replacement**     | High   | High       | Cleanest solution               |
 
-- New deep module `convex/lib/rateLimit.ts` (or similar) hides storage shape; public surface: `assertRateLimit` and `recordUsage`.
-- Data store `rateLimits` is internal; callers see only helper signature + error format.
-- Actions (`exercises.createExercise`, `ai/reports.generateOnDemandReport`) depend on helper, not table internals.
+---
 
-## 5) Data & API Contracts
+## Implementation Phases
 
-- **Table `rateLimits`**
-  - Fields: `userId: string`, `scope: "exercise:create" | "aiReport:onDemand" | string`, `windowStartMs: number`, `windowMs: number`, `count: number`, `expiresAt: number`.
-  - Indexes: `by_user_scope_window` (`userId`, `scope`, `windowStartMs`), `by_expires` (`expiresAt`) for cleanup.
-- **Helper return/throw**
-  - On allow: `{ remaining: limit - count, resetAt: windowStartMs + windowMs }`.
-  - On deny: throw `Error("Rate limit exceeded: <scope> (<count>/<limit>), retry after <iso>")` (UX-friendly message, no raw userId).
-- **Configuration**
-  - Env overrides: `RATE_LIMIT_EXERCISE_PER_MIN`, `RATE_LIMIT_REPORTS_PER_DAY`, `RATE_LIMIT_ENABLED_SCOPES` (optional), with defaults baked into helper.
-- **Action integration**
-  - `createExercise` action: call helper before `classifyExercise`; include normalized name in logs (no PII).
-  - `generateOnDemandReport` action: replace current `checkRateLimit` query with helper; keep dedupe logic intact.
-  - Cron/backfill/admin: pass `exempt: true` (skips counting).
-- **Cleanup**
-  - Optional internal cron/mutation `rateLimits.pruneExpired` filtering by `by_expires`; not on critical path.
+### Phase 1: TypeScript Config Hardening (15 min)
 
-## 6) Implementation Phases
+Add to `tsconfig.json`:
 
-- Phase 0: Lock thresholds (env defaults) and exemptions (cron/backfill/admin true). ADR required (new table + policy).
-- Phase 1: Add `rateLimits` table to `convex/schema.ts`; implement `convex/lib/rateLimit.ts` with env config parsing; unit tests for helper (convex-test).
-- Phase 2: Wire `assertRateLimit` into `exercises.createExercise`; add tests for per-user minute window + reset.
-- Phase 3: Wire into `ai/reports.generateOnDemandReport`; remove/retire old `ai/data.checkRateLimit`; update tests for daily cap.
-- Phase 4: Observability/hardening—Sentry breadcrumb on deny, structured logs, doc updates (`README`, maybe `DESIGN_SYSTEM`/backend section).
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true
+  }
+}
+```
 
-## 7) Testing & Observability
+**Note**: `exactOptionalPropertyTypes` and `noPropertyAccessFromIndexSignature` are too aggressive for this codebase.
 
-- Strategy: convex-test unit coverage for helper edge cases + action integrations; Vitest for existing report tests; lint/typecheck gates.
-- Telemetry: log allow/deny with scope/user hash/windowStart; send Sentry warning for denies (rate limit tag), redacting userId; Sentry is the single alerting surface (email/Slack configured there).
-- Performance: measure added latency in tests (mock timer) to ensure <5ms overhead.
-- **Test Scenarios**
-  ### Happy Path
-  - [ ] User creates exercise under limit; count increments; downstream AI still runs.
-  - [ ] User generates on-demand report within daily quota; report saved.
-  ### Edge Cases
-  - [ ] Window reset after 60s permits new exercise burst.
-  - [ ] Concurrent requests from same user respect limit (no over-allow).
-  - [ ] Different users isolated (no shared counters).
-  - [ ] Cron/backfill actions skip limit when flagged.
-  ### Error Conditions
-  - [ ] Exceed exercise limit returns rate-limit error with retry time.
-  - [ ] Exceed report limit returns error; existing dedupe still works.
-  - [ ] Missing `userId` (unauthenticated) still blocked before helper (no table writes).
-  - [ ] Expired rows pruned; storage doesn’t grow unbounded.
+### Phase 2: Convex Backend Types (~90 min)
 
-## 8) Risks & Mitigations
+**Pattern for internal function calls:**
 
-| Risk                                 | Likelihood | Impact | Mitigation                                                      | Owner |
-| ------------------------------------ | ---------- | ------ | --------------------------------------------------------------- | ----- |
-| Race conditions allow >limit         | Low        | Medium | Single mutation per call; read-modify-write on latest row only. | Eng   |
-| Table bloat from stale windows       | Med        | Low    | TTL via `expiresAt`; optional prune job.                        | Eng   |
-| Cron/backfill accidentally throttled | Med        | High   | Scope guard; skip helper for internal cron paths; tests cover.  | Eng   |
-| User confusion from error copy       | Med        | Medium | Friendly message + retry-after; surface in UI toast.            | PM    |
-| Time drift affects windows           | Low        | Low    | Use server time only; ignore client timestamps.                 | Eng   |
+```typescript
+// Before
+await ctx.runQuery((internal as any).ai.data.checkExistingReport, args);
 
-## 9) Open Questions / Assumptions
+// After
+await ctx.runQuery(internal.ai.data.checkExistingReport, args);
+```
 
-- Per-IP/session throttling deferred; add if Sentry shows shared-account abuse.
-- UI copy localization handled in frontend; backend supplies structured message + retry-after only.
+**Pattern for action return types:**
 
-ADR Required: Yes (new data model + policy). Place in `/docs/adr/` during implementation.
+```typescript
+// Before
+handler: async (ctx, args): Promise<any> => {
+
+// After
+handler: async (ctx, args): Promise<Id<"exercises">> => {
+```
+
+**Files to fix:**
+
+- `convex/exercises.ts` (2 instances)
+- `convex/crons.ts` (12 instances)
+- `convex/ai/generate.ts` (15 instances)
+- `convex/ai/reports.ts` (8 instances)
+- `convex/migrations/backfillMuscleGroups.ts` (2 instances)
+
+### Phase 3: Frontend Types (~45 min)
+
+**Pattern for query callbacks:**
+
+```typescript
+import { Doc } from "../../convex/_generated/dataModel";
+
+// Before
+allSets.filter((s: any) => s.exerciseId === exerciseId);
+
+// After
+allSets.filter((s: Doc<"sets">) => s.exerciseId === exerciseId);
+```
+
+**Pattern for API path fix:**
+
+```typescript
+// Before
+const allReports = useQuery((api as any).ai.reports.getReportHistory, {});
+
+// After
+import { api } from "../../../convex/_generated/api";
+const allReports = useQuery(api.ai.reports.getReportHistory, {});
+```
+
+**Files to fix:**
+
+- `src/hooks/useLastSet.ts` (1 instance)
+- `src/components/analytics/report-navigator.tsx` (6 instances)
+- `src/app/(app)/analytics/page.tsx` (2 instances)
+- `src/app/(app)/history/page.tsx` (1 instance)
+- `src/components/dashboard/Dashboard.tsx` (1 instance)
+
+### Phase 4: E2E Type Extension (~15 min)
+
+Create `src/types/global.d.ts`:
+
+```typescript
+import type { Clerk } from "@clerk/clerk-js";
+
+declare global {
+  interface Window {
+    Clerk?: Clerk;
+  }
+}
+
+export {};
+```
+
+### Phase 5: Verification (~15 min)
+
+1. Run `pnpm typecheck` - must pass
+2. Run `pnpm test --run` - must pass
+3. Run `pnpm build` - must succeed
+4. Verify zero `any` in source: `grep -r ": any" src/ convex/ --include="*.ts" --include="*.tsx" | grep -v ".test." | grep -v "node_modules"`
+
+---
+
+## Type Patterns Reference
+
+### Convex Document Types
+
+```typescript
+import { Doc, Id } from "../convex/_generated/dataModel";
+
+// Full document with all fields
+type Set = Doc<"sets">;
+
+// Just the ID
+type SetId = Id<"sets">;
+```
+
+### Action Return Types
+
+```typescript
+// Simple ID return
+handler: async (ctx, args): Promise<Id<"exercises">> => { ... }
+
+// Complex object return
+interface ReportResult {
+  success: boolean;
+  processed: number;
+  succeeded: number;
+  failed: number;
+  durationSeconds: number;
+  errors: Array<{ userId: string; error: string }>;
+}
+handler: async (ctx): Promise<ReportResult> => { ... }
+```
+
+### Array Filter/Map with Types
+
+```typescript
+// Use Doc<> for query results
+const exerciseSets = allSets.filter((s: Doc<"sets">) => s.exerciseId === exerciseId);
+
+// Use inline type for transformed data
+const volume = volumeData.map((set: { exerciseId: string; reps?: number; weight?: number }) => ...);
+```
+
+---
+
+## Test Scenarios
+
+### Happy Path
+
+- [ ] All `any` removed from source files
+- [ ] Typecheck passes with stricter config
+- [ ] All tests pass
+- [ ] Build succeeds
+
+### Edge Cases
+
+- [ ] Internal function calls compile without `as any`
+- [ ] Action return types match actual returns
+- [ ] Query results properly typed in callbacks
+- [ ] API nested paths resolve correctly
+
+### Regression Prevention
+
+- [ ] `noUncheckedIndexedAccess` catches array access issues
+- [ ] `noImplicitReturns` catches missing returns
+- [ ] Future `any` usage caught by strict mode
+
+---
+
+## Risks & Mitigation
+
+| Risk                                            | Likelihood | Impact | Mitigation                       |
+| ----------------------------------------------- | ---------- | ------ | -------------------------------- |
+| Type mismatch reveals actual bugs               | Low        | Medium | Fix bugs as discovered           |
+| `noUncheckedIndexedAccess` breaks existing code | Medium     | Low    | Add explicit checks where needed |
+| Convex internal types don't match usage         | Low        | Medium | Check generated types first      |
+
+---
+
+## Dependencies & Assumptions
+
+**Dependencies:**
+
+- Convex `_generated/dataModel` types are accurate
+- Convex `_generated/api` includes all internal functions
+
+**Assumptions:**
+
+- Test file `any` usage is acceptable (per original spec)
+- Runtime behavior unchanged (types only)
+
+---
+
+## Effort Estimate
+
+| Phase             | Time     |
+| ----------------- | -------- |
+| TypeScript config | 15 min   |
+| Convex backend    | 90 min   |
+| Frontend          | 45 min   |
+| E2E global        | 15 min   |
+| Verification      | 15 min   |
+| **Total**         | ~3 hours |
+
+---
+
+## Key Decisions
+
+1. **Strict config choice**: Enable `noUncheckedIndexedAccess` but not `exactOptionalPropertyTypes` (too aggressive)
+2. **Type source**: Use Convex's `Doc<>` over manual interfaces (single source of truth)
+3. **Test files**: Leave `as any` in test fixtures (per spec, reduces scope)
+4. **Return types**: Define interfaces for complex returns, use `Id<>` for simple ones
