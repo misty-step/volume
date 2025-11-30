@@ -93,7 +93,7 @@ Spec: `TASK.md` (Type Safety Restoration). DESIGN.md not present. Scope excludes
   Estimate: 0.5h
   ```
 
-- [~] Convex types — exercises + backfill migration
+- [x] Convex types — exercises + backfill migration
 
   ```
   Files:
@@ -113,7 +113,7 @@ Spec: `TASK.md` (Type Safety Restoration). DESIGN.md not present. Scope excludes
   Estimate: 0.25h
   ```
 
-- [~] Frontend types — analytics views
+- [x] Frontend types — analytics views
 
   ```
   Files:
@@ -134,7 +134,7 @@ Spec: `TASK.md` (Type Safety Restoration). DESIGN.md not present. Scope excludes
   Estimate: 0.5h
   ```
 
-- [~] Frontend types — history/dashboard + hook
+- [x] Frontend types — history/dashboard + hook
 
   ```
   Files:
@@ -155,7 +155,7 @@ Spec: `TASK.md` (Type Safety Restoration). DESIGN.md not present. Scope excludes
   Estimate: 0.5h
   ```
 
-- [~] Add Clerk window type extension
+- [x] Add Clerk window type extension
 
   ```
   Files:
@@ -190,6 +190,10 @@ Spec: `TASK.md` (Type Safety Restoration). DESIGN.md not present. Scope excludes
   Depends: all tasks
   Estimate: 0.5h
   ```
+  Status:
+  - `pnpm typecheck` ✅
+  - `pnpm test --run` ✅ (needed optional dep @rollup/rollup-darwin-x64)
+  - `pnpm build` ❌ blocked offline: next/font could not fetch Google Fonts (fonts.googleapis.com unreachable in sandbox)
 
 ## Critical Path
 
