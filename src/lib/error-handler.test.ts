@@ -183,6 +183,18 @@ describe("getUserFriendlyMessage (via handleMutationError)", () => {
     );
   });
 
+  it("passes through duration validation errors", () => {
+    const error = new Error(
+      "Duration must be between 1 and 86400 seconds (24 hours)—restart the timer and try again."
+    );
+    handleMutationError(error, "Test");
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "Duration must be between 1 and 86400 seconds (24 hours)—restart the timer and try again.",
+      expect.any(Object)
+    );
+  });
+
   it("passes through exercise name errors", () => {
     const error = new Error("Exercise name cannot be empty");
     handleMutationError(error, "Test");

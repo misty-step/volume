@@ -48,7 +48,8 @@ function getUserFriendlyMessage(errorMessage: string): string {
     errorMessage.includes("Reps must") ||
     errorMessage.includes("Weight must") ||
     errorMessage.includes("Unit must") ||
-    errorMessage.includes("Exercise name")
+    errorMessage.includes("Exercise name") ||
+    errorMessage.includes("Duration must")
   ) {
     return errorMessage;
   }
