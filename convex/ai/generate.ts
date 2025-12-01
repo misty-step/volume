@@ -1,8 +1,20 @@
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
+import type { Doc, Id } from "../_generated/dataModel";
 import { generateAnalysis } from "./openai";
 import type { AnalyticsMetrics } from "./prompts";
+
+type SetDoc = Doc<"sets">;
+type ExerciseDoc = Doc<"exercises">;
+type ReportId = Id<"aiReports">;
+
+interface WorkoutData {
+  volumeData: SetDoc[];
+  recentPRs: SetDoc[];
+  allSets: SetDoc[];
+  exercises: ExerciseDoc[];
+}
 
 /**
  * Calculate Monday 00:00 UTC for a given date
@@ -80,7 +92,9 @@ function calculateDateRange(
  * @param sets - All user sets sorted by performedAt
  * @returns Number of consecutive days with workouts (including today if active)
  */
-function calculateCurrentStreak(sets: Array<{ performedAt: number }>): number {
+function calculateCurrentStreak(
+  sets: Array<Pick<SetDoc, "performedAt">>
+): number {
   if (sets.length === 0) return 0;
 
   const workoutDays = Array.from(
@@ -89,21 +103,27 @@ function calculateCurrentStreak(sets: Array<{ performedAt: number }>): number {
     )
   ).sort();
 
+  const lastWorkout = workoutDays.at(-1);
+  if (!lastWorkout) return 0;
+
   const today = new Date().toISOString().split("T")[0];
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0];
 
   // Check if streak is active (today or yesterday)
-  const lastWorkout = workoutDays[workoutDays.length - 1];
   if (lastWorkout !== today && lastWorkout !== yesterday) {
     return 0;
   }
 
   let streak = 1;
   for (let i = workoutDays.length - 2; i >= 0; i--) {
-    const current = new Date(workoutDays[i]);
-    const next = new Date(workoutDays[i + 1]);
+    const currentDay = workoutDays[i];
+    const nextDay = workoutDays[i + 1];
+    if (!currentDay || !nextDay) break;
+
+    const current = new Date(currentDay);
+    const next = new Date(nextDay);
     const diffDays = Math.floor(
       (next.getTime() - current.getTime()) / (24 * 60 * 60 * 1000)
     );
@@ -124,7 +144,9 @@ function calculateCurrentStreak(sets: Array<{ performedAt: number }>): number {
  * @param sets - All user sets
  * @returns Maximum consecutive days with workouts ever achieved
  */
-function calculateLongestStreak(sets: Array<{ performedAt: number }>): number {
+function calculateLongestStreak(
+  sets: Array<Pick<SetDoc, "performedAt">>
+): number {
   if (sets.length === 0) return 0;
 
   const workoutDays = Array.from(
@@ -133,12 +155,18 @@ function calculateLongestStreak(sets: Array<{ performedAt: number }>): number {
     )
   ).sort();
 
+  if (workoutDays.length === 0) return 0;
+
   let maxStreak = 1;
   let currentStreak = 1;
 
   for (let i = 1; i < workoutDays.length; i++) {
-    const prev = new Date(workoutDays[i - 1]);
-    const curr = new Date(workoutDays[i]);
+    const prevDay = workoutDays[i - 1];
+    const currDay = workoutDays[i];
+    if (!prevDay || !currDay) break;
+
+    const prev = new Date(prevDay);
+    const curr = new Date(currDay);
     const diffDays = Math.floor(
       (curr.getTime() - prev.getTime()) / (24 * 60 * 60 * 1000)
     );
@@ -184,7 +212,7 @@ export const generateReport = internalAction({
     ),
     weekStartDate: v.optional(v.number()),
   },
-  handler: async (ctx, args): Promise<string> => {
+  handler: async (ctx, args): Promise<ReportId> => {
     const { userId } = args;
     const reportType = args.reportType || "weekly";
     const weekStartDate = args.weekStartDate ?? getWeekStartDate();
@@ -194,8 +222,8 @@ export const generateReport = internalAction({
     );
 
     // Check for existing report (deduplication)
-    const existingReportId: string | null = await ctx.runQuery(
-      (internal as any).ai.data.checkExistingReport,
+    const existingReportId = await ctx.runQuery(
+      internal.ai.data.checkExistingReport,
       { userId, reportType, weekStartDate }
     );
 
@@ -213,12 +241,14 @@ export const generateReport = internalAction({
     );
 
     // Fetch workout data via internal query
-    const { volumeData, recentPRs, allSets, exercises } = await ctx.runQuery(
-      (internal as any).ai.data.getWorkoutData,
-      { userId, startDate, endDate }
-    );
+    const { volumeData, recentPRs, allSets, exercises }: WorkoutData =
+      await ctx.runQuery(internal.ai.data.getWorkoutData, {
+        userId,
+        startDate,
+        endDate,
+      });
 
-    const exerciseMap = new Map(exercises.map((ex: any) => [ex._id, ex.name]));
+    const exerciseMap = new Map(exercises.map((ex) => [ex._id, ex.name]));
 
     // Aggregate volume by exercise and type (weighted vs bodyweight)
     // Key format: "exerciseId|weighted" or "exerciseId|bodyweight"
@@ -232,7 +262,7 @@ export const generateReport = internalAction({
       }
     >();
 
-    for (const set of volumeData as any[]) {
+    for (const set of volumeData) {
       const exerciseName = exerciseMap.get(set.exerciseId);
       if (!exerciseName) continue;
 
@@ -240,7 +270,8 @@ export const generateReport = internalAction({
       if (set.reps === undefined) continue;
 
       // Determine if THIS SET is weighted or bodyweight
-      const isBodyweight = !set.weight || set.weight === 0;
+      const weight = set.weight ?? 0;
+      const isBodyweight = weight === 0;
       const exerciseIdStr = String(set.exerciseId);
       const key = `${exerciseIdStr}|${isBodyweight ? "bodyweight" : "weighted"}`;
 
@@ -254,7 +285,7 @@ export const generateReport = internalAction({
       // Calculate volume based on set type
       const volume = isBodyweight
         ? set.reps // Bodyweight = just reps
-        : set.reps * set.weight; // Weighted = reps × weight
+        : set.reps * weight; // Weighted = reps × weight
 
       volumeByExerciseType.set(key, {
         exerciseName: String(current.exerciseName),
@@ -274,20 +305,21 @@ export const generateReport = internalAction({
       }));
 
     // Calculate PRs with proper type handling for bodyweight vs weighted exercises
-    const prs = (recentPRs as any[])
+    const prs = recentPRs
       .filter(
-        (set: any) => set.performedAt >= startDate && set.performedAt < endDate
+        (set) => set.performedAt >= startDate && set.performedAt < endDate
       )
       // Filter out duration-only sets (no reps means it's a duration-based exercise)
-      .filter((set: any) => set.reps !== undefined)
-      .map((set: any) => {
+      .filter((set) => set.reps !== undefined)
+      .map((set) => {
         // Determine if THIS SET is weighted or bodyweight
-        const isBodyweight = !set.weight || set.weight === 0;
+        const weight = set.weight ?? 0;
+        const isBodyweight = weight === 0;
 
         return {
           exerciseName: String(exerciseMap.get(set.exerciseId) || "Unknown"),
           prType: isBodyweight ? ("reps" as const) : ("weight" as const),
-          improvement: isBodyweight ? set.reps : Number(set.weight),
+          improvement: isBodyweight ? (set.reps ?? 0) : weight,
           performedAt: Number(set.performedAt),
         };
       })
@@ -296,18 +328,14 @@ export const generateReport = internalAction({
 
     // Calculate streak stats
     const workoutDays = new Set(
-      (allSets as any[]).map(
-        (s: any) => new Date(s.performedAt).toISOString().split("T")[0]
-      )
+      allSets.map((s) => new Date(s.performedAt).toISOString().split("T")[0])
     );
-    const currentStreak = calculateCurrentStreak(allSets as any[]);
-    const longestStreak = calculateLongestStreak(allSets as any[]);
+    const currentStreak = calculateCurrentStreak(allSets);
+    const longestStreak = calculateLongestStreak(allSets);
 
     // Calculate frequency metrics
     const workoutDaysInWeek = new Set(
-      (volumeData as any[]).map(
-        (s: any) => new Date(s.performedAt).toISOString().split("T")[0]
-      )
+      volumeData.map((s) => new Date(s.performedAt).toISOString().split("T")[0])
     ).size;
     const restDays = 7 - workoutDaysInWeek;
     const avgSetsPerDay =
@@ -342,8 +370,8 @@ export const generateReport = internalAction({
     );
 
     // Store report in database via internal mutation
-    const reportId: string = await ctx.runMutation(
-      (internal as any).ai.data.saveReport,
+    const reportId: ReportId = await ctx.runMutation(
+      internal.ai.data.saveReport,
       {
         userId,
         reportType,

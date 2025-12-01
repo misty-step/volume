@@ -12,6 +12,7 @@
 import { cronJobs } from "convex/server";
 import { internal } from "./_generated/api";
 import { internalQuery, internalAction } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import { v } from "convex/values";
 
 /**
@@ -25,7 +26,7 @@ import { v } from "convex/values";
  */
 export const getActiveUserIds = internalQuery({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<string[]> => {
     const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
 
     const recentSets = await ctx.db
@@ -65,14 +66,25 @@ export const getActiveUserIds = internalQuery({
  */
 export const generateWeeklyReports = internalAction({
   args: {},
-  handler: async (ctx): Promise<any> => {
+  handler: async (
+    ctx
+  ): Promise<{
+    success: boolean;
+    activeUsers?: number;
+    processed?: number;
+    succeeded?: number;
+    failed?: number;
+    durationSeconds: number | string;
+    errors?: Array<{ userId: string; error: string }>;
+    error?: string;
+  }> => {
     console.log("[Cron] Starting weekly AI report generation...");
     const startTime = Date.now();
 
     try {
       // Query active users (workout in last 14 days)
       const activeUserIds = await ctx.runQuery(
-        (internal as any).crons.getActiveUserIds,
+        internal.crons.getActiveUserIds,
         {}
       );
 
@@ -100,7 +112,7 @@ export const generateWeeklyReports = internalAction({
         try {
           console.log(`[Cron] Generating report for user: ${userId}`);
 
-          await ctx.runAction((internal as any).ai.generate.generateReport, {
+          await ctx.runAction(internal.ai.generate.generateReport, {
             userId,
             // weekStartDate will default to current week in generateReport
           });
@@ -199,7 +211,10 @@ function getLocalHourFromUTC(utcHour: number, timezone: string): number {
  */
 export const getEligibleUsersForDailyReports = internalQuery({
   args: { currentHourUTC: v.number() },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx,
+    args
+  ): Promise<Array<{ userId: string; timezone: string }>> => {
     // Get all users with dailyReportsEnabled = true
     const users = await ctx.db
       .query("users")
@@ -280,7 +295,16 @@ function getPreviousDayStartInTimezone(timezone: string): number {
  */
 export const generateDailyReports = internalAction({
   args: {},
-  handler: async (ctx): Promise<any> => {
+  handler: async (
+    ctx
+  ): Promise<{
+    success: boolean;
+    processed: number;
+    succeeded: number;
+    failed: number;
+    durationSeconds: number;
+    errors: Array<{ userId: string; error: string }>;
+  }> => {
     console.log("[Cron] Starting daily AI report generation...");
     const startTime = Date.now();
 
@@ -288,7 +312,7 @@ export const generateDailyReports = internalAction({
 
     // Get eligible users for this hour
     const eligibleUsers = await ctx.runQuery(
-      (internal as any).crons.getEligibleUsersForDailyReports,
+      internal.crons.getEligibleUsersForDailyReports,
       { currentHourUTC }
     );
 
@@ -307,7 +331,7 @@ export const generateDailyReports = internalAction({
         // This is the report date.
         const reportDate = getPreviousDayStartInTimezone(timezone);
 
-        await ctx.runAction((internal as any).ai.generate.generateReport, {
+        await ctx.runAction(internal.ai.generate.generateReport, {
           userId,
           reportType: "daily",
           weekStartDate: reportDate, // Pass canonical day start for deduplication
@@ -351,7 +375,7 @@ export const generateDailyReports = internalAction({
  */
 export const getActiveUsersWithMonthlyReports = internalQuery({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<string[]> => {
     const users = await ctx.db
       .query("users")
       .filter((q) => q.eq(q.field("monthlyReportsEnabled"), true))
@@ -383,13 +407,22 @@ export const getActiveUsersWithMonthlyReports = internalQuery({
  */
 export const generateMonthlyReports = internalAction({
   args: {},
-  handler: async (ctx): Promise<any> => {
+  handler: async (
+    ctx
+  ): Promise<{
+    success: boolean;
+    processed: number;
+    succeeded: number;
+    failed: number;
+    durationSeconds: number;
+    errors: Array<{ userId: string; error: string }>;
+  }> => {
     console.log("[Cron] Starting monthly AI report generation...");
     const startTime = Date.now();
 
     // Get all users with monthlyReportsEnabled = true
     const users = await ctx.runQuery(
-      (internal as any).crons.getActiveUsersWithMonthlyReports,
+      internal.crons.getActiveUsersWithMonthlyReports,
       {}
     );
 
@@ -404,7 +437,7 @@ export const generateMonthlyReports = internalAction({
 
     for (const userId of users) {
       try {
-        await ctx.runAction((internal as any).ai.generate.generateReport, {
+        await ctx.runAction(internal.ai.generate.generateReport, {
           userId,
           reportType: "monthly",
         });
@@ -452,7 +485,7 @@ const crons = cronJobs();
 crons.hourly(
   "generate-daily-reports",
   { minuteUTC: 0 },
-  (internal as any).crons.generateDailyReports
+  internal.crons.generateDailyReports
 );
 
 // Weekly reports: Run every Sunday at 9 PM UTC
@@ -463,7 +496,7 @@ crons.weekly(
     minuteUTC: 0,
     dayOfWeek: "sunday",
   },
-  (internal as any).crons.generateWeeklyReports
+  internal.crons.generateWeeklyReports
 );
 
 // Monthly reports: Run on 1st day of month at midnight UTC
@@ -474,7 +507,7 @@ crons.monthly(
     hourUTC: 0,
     minuteUTC: 0,
   },
-  (internal as any).crons.generateMonthlyReports
+  internal.crons.generateMonthlyReports
 );
 
 export default crons;

@@ -144,10 +144,12 @@ export const getProgressiveOverloadData = query({
       for (const set of sets) {
         // Only include rep-based sets in progressive overload tracking
         if (set.reps !== undefined) {
-          const date = new Date(set.performedAt).toISOString().split("T")[0];
-          const workout = workoutsByDate.get(date) || [];
+          const [date] = new Date(set.performedAt).toISOString().split("T");
+          if (!date) continue;
+          const dateKey = date as string;
+          const workout = workoutsByDate.get(dateKey) || [];
           workout.push({ reps: set.reps, weight: set.weight });
-          workoutsByDate.set(date, workout);
+          workoutsByDate.set(dateKey, workout);
         }
       }
 

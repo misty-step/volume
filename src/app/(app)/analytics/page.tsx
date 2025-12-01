@@ -13,6 +13,12 @@ import { RecoveryDashboardWidget } from "@/components/analytics/recovery-dashboa
 import { FocusSuggestionsWidget } from "@/components/analytics/focus-suggestions-widget";
 import { Dumbbell } from "lucide-react";
 
+type WorkoutFrequency = {
+  date: string;
+  setCount: number;
+  totalVolume: number;
+};
+
 export default function AnalyticsPage() {
   // Fetch analytics data using Convex queries
   const frequencyData = useQuery(api.analytics.getWorkoutFrequency, {
@@ -25,7 +31,11 @@ export default function AnalyticsPage() {
   // Filter heatmap data to start at first workout date (not Jan 1st)
   const filteredFrequencyData = useMemo(() => {
     if (!frequencyData || !firstWorkoutDate) return frequencyData;
-    return frequencyData.filter((day: any) => day.date >= firstWorkoutDate);
+    const firstDateTs = Number(firstWorkoutDate);
+    return frequencyData.filter((day: WorkoutFrequency) => {
+      const dayTimestamp = new Date(day.date).getTime();
+      return dayTimestamp >= firstDateTs;
+    });
   }, [frequencyData, firstWorkoutDate]);
 
   // Determine loading state (any query undefined = still loading)
@@ -36,7 +46,7 @@ export default function AnalyticsPage() {
 
   // Count days with workout activity for new user detection
   const workoutDaysCount = frequencyData
-    ? frequencyData.filter((day: any) => day.setCount > 0).length
+    ? frequencyData.filter((day: WorkoutFrequency) => day.setCount > 0).length
     : 0;
 
   // Show empty state for users with <7 days of data

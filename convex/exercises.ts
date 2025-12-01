@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { action, internalMutation, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type { Doc, Id } from "./_generated/dataModel";
 import {
   requireAuth,
   requireOwnership,
@@ -24,7 +25,7 @@ export const createExercise = action({
   args: {
     name: v.string(),
   },
-  handler: async (ctx, args): Promise<any> => {
+  handler: async (ctx, args): Promise<Id<"exercises">> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error("Unauthorized");
@@ -33,6 +34,9 @@ export const createExercise = action({
     // Rate limit: per-user exercise creation (via internal mutation for action context)
     const limits = getLimits();
     const exerciseLimit = limits["exercise:create"];
+    if (!exerciseLimit) {
+      throw new Error("Rate limit configuration missing for exercise:create");
+    }
     await ctx.runMutation(internal.lib.rateLimit.checkRateLimitInternal, {
       userId: identity.subject,
       scope: "exercise:create",
@@ -59,7 +63,7 @@ export const createExercise = action({
     }
 
     // Call internal mutation for database operations
-    const exerciseId: any = await ctx.runMutation(
+    const exerciseId = await ctx.runMutation(
       internal.exercises.createExerciseInternal,
       {
         userId: identity.subject,
@@ -89,7 +93,7 @@ export const createExerciseInternal = internalMutation({
     name: v.string(),
     muscleGroups: v.array(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Id<"exercises">> => {
     // Check for duplicate (including soft-deleted) - case-insensitive
     const allUserExercises = await ctx.db
       .query("exercises")
@@ -146,13 +150,13 @@ export const listExercises = query({
   args: {
     includeDeleted: v.optional(v.boolean()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Doc<"exercises">[]> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       return [];
     }
 
-    let exercises;
+    let exercises: Doc<"exercises">[];
 
     if (args.includeDeleted) {
       // Include all exercises (active + deleted)

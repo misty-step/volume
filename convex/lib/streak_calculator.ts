@@ -31,10 +31,10 @@ export function calculateCurrentStreak(sets: SetData[]): number {
   const uniqueDays = new globalThis.Set<string>();
 
   for (const set of sets) {
-    const dayKey = startOfDay(new Date(set.performedAt))
+    const [dayKey] = startOfDay(new Date(set.performedAt))
       .toISOString()
-      .split("T")[0]; // YYYY-MM-DD
-    uniqueDays.add(dayKey);
+      .split("T"); // YYYY-MM-DD
+    if (dayKey) uniqueDays.add(dayKey);
   }
 
   // Convert to sorted array (newest first)
@@ -89,10 +89,10 @@ export function calculateLongestStreak(sets: SetData[]): number {
   const uniqueDays = new globalThis.Set<string>();
 
   for (const set of sets) {
-    const dayKey = startOfDay(new Date(set.performedAt))
+    const [dayKey] = startOfDay(new Date(set.performedAt))
       .toISOString()
-      .split("T")[0];
-    uniqueDays.add(dayKey);
+      .split("T");
+    if (dayKey) uniqueDays.add(dayKey);
   }
 
   // Convert to sorted array (oldest first for forward scanning)
@@ -104,8 +104,12 @@ export function calculateLongestStreak(sets: SetData[]): number {
   let currentStreak = 1;
 
   for (let i = 1; i < sortedDays.length; i++) {
-    const prevDay = new Date(sortedDays[i - 1] + "T00:00:00");
-    const currentDay = new Date(sortedDays[i] + "T00:00:00");
+    const prevKey = sortedDays[i - 1];
+    const currentKey = sortedDays[i];
+    if (!prevKey || !currentKey) continue;
+
+    const prevDay = new Date(prevKey + "T00:00:00");
+    const currentDay = new Date(currentKey + "T00:00:00");
     const gap = differenceInCalendarDays(currentDay, prevDay);
 
     if (gap === 1) {
@@ -133,10 +137,10 @@ export function calculateTotalWorkouts(sets: SetData[]): number {
   const uniqueDays = new globalThis.Set<string>();
 
   for (const set of sets) {
-    const dayKey = startOfDay(new Date(set.performedAt))
+    const [dayKey] = startOfDay(new Date(set.performedAt))
       .toISOString()
-      .split("T")[0];
-    uniqueDays.add(dayKey);
+      .split("T");
+    if (dayKey) uniqueDays.add(dayKey);
   }
 
   return uniqueDays.size;

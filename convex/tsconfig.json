@@ -6,5 +6,12 @@
     "types": ["node"]
   },
   "include": ["."],
-  "exclude": ["_generated"]
+  "exclude": [
+    "_generated",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "test/**"
+  ]
 }

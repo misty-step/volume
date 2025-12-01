@@ -13,11 +13,9 @@ export function useLastSet(exerciseId: string | null) {
 
   const lastSet = useMemo(() => {
     if (!exerciseId || !allSets) return null;
-    const exerciseSets = allSets.filter(
-      (s: any) => s.exerciseId === exerciseId
-    );
+    const exerciseSets = allSets.filter((s) => s.exerciseId === exerciseId);
     if (exerciseSets.length === 0) return null;
-    return exerciseSets[0]; // Already sorted by performedAt desc
+    return exerciseSets[0] ?? null; // Already sorted by performedAt desc
   }, [exerciseId, allSets]);
 
   return { lastSet, formatTimeAgo };

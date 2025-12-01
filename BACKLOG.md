@@ -7,6 +7,10 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 
 ## Now (Sprint-Ready, <2 weeks)
 
+### [PRODUCT] Move from ad-hoc exercises per user to a curated set of high quality exercises
+
+- each exercise should be well named, have instructions, have required gear, have muscle groups they work, and have one or more images / graphics showing form
+
 ### [CRITICAL] Serial I/O in AI data query - 33% speedup
 
 **File**: convex/ai/data.ts:54-79

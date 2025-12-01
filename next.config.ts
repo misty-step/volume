@@ -18,6 +18,19 @@ const nextConfig: NextConfig = {
     // Inject package.json version at build time for production fallback
     NEXT_PUBLIC_PACKAGE_VERSION: packageVersion,
   },
+  async redirects() {
+    // Block test endpoints in production builds
+    if (process.env.NODE_ENV === "production") {
+      return [
+        {
+          source: "/api/test/:path*",
+          destination: "/404",
+          permanent: false,
+        },
+      ];
+    }
+    return [];
+  },
   async headers() {
     return [
       {

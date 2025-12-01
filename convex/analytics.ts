@@ -185,7 +185,8 @@ export const getWorkoutFrequency = query({
 
     for (const set of sets) {
       const setDate = new Date(set.performedAt);
-      const dayKey = setDate.toISOString().split("T")[0]; // YYYY-MM-DD
+      const [dayKey] = setDate.toISOString().split("T"); // YYYY-MM-DD
+      if (!dayKey) continue;
 
       const current = dailyData.get(dayKey) || { setCount: 0, totalVolume: 0 };
       // Only count volume for rep-based exercises
@@ -204,7 +205,8 @@ export const getWorkoutFrequency = query({
     endDate.setHours(0, 0, 0, 0);
 
     while (currentDate <= endDate) {
-      const dayKey = currentDate.toISOString().split("T")[0];
+      const [dayKey] = currentDate.toISOString().split("T");
+      if (!dayKey) break;
       const data = dailyData.get(dayKey) || { setCount: 0, totalVolume: 0 };
 
       result.push({

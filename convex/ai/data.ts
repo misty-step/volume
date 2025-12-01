@@ -51,7 +51,7 @@ export const getWorkoutData = internalQuery({
   handler: async (ctx, args) => {
     const { userId, startDate, endDate } = args;
 
-    const [volumeData, recentPRs, allSets] = await Promise.all([
+    const [volumeData, recentPRs, allSets, exercises] = await Promise.all([
       // Volume by exercise
       ctx.db
         .query("sets")
@@ -76,13 +76,13 @@ export const getWorkoutData = internalQuery({
         .query("sets")
         .withIndex("by_user_performed", (q) => q.eq("userId", userId))
         .collect(),
-    ]);
 
-    // Get exercises for name lookup
-    const exercises = await ctx.db
-      .query("exercises")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+      // Get exercises for name lookup
+      ctx.db
+        .query("exercises")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+    ]);
 
     return {
       volumeData,

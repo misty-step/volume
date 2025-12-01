@@ -29,10 +29,10 @@ export default function HistoryPage() {
   });
 
   // Build exercise Map for O(1) lookups
-  const exerciseMap: Map<Id<"exercises">, Exercise> = useMemo(
-    () => new Map((exercises ?? []).map((ex: any) => [ex._id, ex])),
-    [exercises]
-  );
+  const exerciseMap: Map<Id<"exercises">, Exercise> = useMemo(() => {
+    if (!exercises) return new Map();
+    return new Map(exercises.map((ex) => [ex._id, ex]));
+  }, [exercises]);
 
   // Delete mutation
   const deleteSetMutation = useMutation(api.sets.deleteSet);

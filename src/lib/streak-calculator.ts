@@ -46,10 +46,10 @@ export function calculateStreak(sets: Set[]): number {
   const uniqueDays = new globalThis.Set<string>();
 
   for (const set of sets) {
-    const dayKey = startOfDay(new Date(set.performedAt))
+    const [dayKey] = startOfDay(new Date(set.performedAt))
       .toISOString()
-      .split("T")[0]; // YYYY-MM-DD
-    uniqueDays.add(dayKey);
+      .split("T"); // YYYY-MM-DD
+    if (dayKey) uniqueDays.add(dayKey);
   }
 
   // Convert to sorted array (newest first)
