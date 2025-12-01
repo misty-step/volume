@@ -11,11 +11,6 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 
 - each exercise should be well named, have instructions, have required gear, have muscle groups they work, and have one or more images / graphics showing form
 
-### [PRODUCT] Tighten up design / ui / ux to be mobile-first
-
-- a lot of stuff is more optimized for web
-- the today page, logging sets, etc should all be super clean and easy on mobile
-
 ### [PRODUCT] Make daily and weekly and monthly AI reports higher quality
 
 - need to be more actionable
