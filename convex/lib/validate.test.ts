@@ -15,8 +15,8 @@ describe("validateReps", () => {
   });
 
   it("rejects decimals", () => {
-    expect(() => validateReps(5.5)).toThrow("whole number");
-    expect(() => validateReps(10.1)).toThrow("whole number");
+    expect(() => validateReps(5.5)).toThrow(/whole number/i);
+    expect(() => validateReps(10.1)).toThrow(/no half reps/i);
   });
 
   it("rejects out-of-bounds values", () => {
@@ -47,8 +47,8 @@ describe("validateWeight", () => {
   });
 
   it("rejects values below 0.1", () => {
-    expect(() => validateWeight(0)).toThrow("between 0.1 and 10000");
-    expect(() => validateWeight(0.05)).toThrow("between 0.1 and 10000");
+    expect(() => validateWeight(0)).toThrow(/between 0.1 and 10000/);
+    expect(() => validateWeight(0.05)).toThrow(/leave weight empty/i);
   });
 
   it("rejects values above 10000", () => {
@@ -140,8 +140,10 @@ describe("validateExerciseName", () => {
   });
 
   it("rejects empty strings", () => {
-    expect(() => validateExerciseName("")).toThrow("cannot be empty");
-    expect(() => validateExerciseName("   ")).toThrow("cannot be empty");
+    expect(() => validateExerciseName("")).toThrow(/cannot be empty/);
+    expect(() => validateExerciseName("   ")).toThrow(
+      /add at least two letters/i
+    );
   });
 
   it("rejects too short names", () => {
