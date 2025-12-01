@@ -11,14 +11,17 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 
 - each exercise should be well named, have instructions, have required gear, have muscle groups they work, and have one or more images / graphics showing form
 
-### [CRITICAL] Serial I/O in AI data query - 33% speedup
+### [PRODUCT] Tighten up design / ui / ux to be mobile-first
 
-**File**: convex/ai/data.ts:54-79
-**Perspectives**: performance-pathfinder
-**Impact**: AI report generation 150ms → 100ms (exercise query runs AFTER Promise.all)
-**Fix**: Move `exercises` query into Promise.all (runs parallel with sets queries)
-**Effort**: 5m | **Speedup**: 1.5x per report
-**Acceptance**: AI reports generate 33% faster
+- a lot of stuff is more optimized for web
+- the today page, logging sets, etc should all be super clean and easy on mobile
+
+### [PRODUCT] Make daily and weekly and monthly AI reports higher quality
+
+- need to be more actionable
+- insights up top
+- summary and analysis
+- recommendations
 
 ### [Security] Fix test endpoint production exposure
 
@@ -28,33 +31,6 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Fix**: Exclude `/api/test/**` from production builds via `next.config.ts` or add IP allowlist
 **Effort**: 30m | **Risk**: MEDIUM
 **Acceptance**: Test endpoints 404 in production, available in dev/preview
-
-### [Security] Fix backfill functions auth bypass
-
-**File**: convex/ai/reports.ts:849-851, 937-939
-**Perspectives**: security-sentinel
-**Impact**: `backfillWeeklyReports` accepts arbitrary `userId`, no auth check. Burn OpenAI tokens for any user.
-**Fix**: Convert to `internalAction` (admin-only) or add `userId === identity.subject` check
-**Effort**: 30m | **Risk**: MEDIUM
-**Acceptance**: Unauthenticated calls fail, authenticated users can only backfill own reports
-
-### [UX] Fix silent mutation errors in history page
-
-**File**: src/app/(app)/history/page.tsx:47-49
-**Perspectives**: user-experience-advocate
-**Impact**: Delete fails (network error), user sees NO feedback, set remains, confusion when refreshes
-**Fix**: Wrap deleteSetMutation in try-catch with `handleMutationError`
-**Effort**: 5m | **Value**: HIGH
-**Acceptance**: Delete errors show toast with recovery guidance
-
-### [UX] Improve validation error messages
-
-**File**: convex/lib/validate.ts:12, 32
-**Perspectives**: user-experience-advocate, maintainability-maven
-**Impact**: Vague errors "must be whole number 1-1000" - no context on WHY or recovery
-**Fix**: Add context: "can't do half a rep", "leave weight empty for bodyweight", "check your entry"
-**Effort**: 30m | **Value**: HIGH
-**Acceptance**: Users self-correct instead of getting stuck
 
 ### [UX] Add loading state for AI exercise classification
 

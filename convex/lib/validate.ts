@@ -9,7 +9,9 @@ import type { QueryCtx, MutationCtx } from "../_generated/server";
  */
 export function validateReps(reps: number): void {
   if (!Number.isInteger(reps) || reps <= 0 || reps > 1000) {
-    throw new Error("Reps must be a whole number between 1 and 1000");
+    throw new Error(
+      "Reps must be a whole number between 1 and 1000 (no half reps—round to the nearest whole rep)."
+    );
   }
 }
 
@@ -29,7 +31,9 @@ export function validateWeight(weight: number | undefined): number | undefined {
   }
 
   if (!isFinite(weight) || weight < 0.1 || weight > 10000) {
-    throw new Error("Weight must be between 0.1 and 10000");
+    throw new Error(
+      "Weight must be between 0.1 and 10000—leave weight empty for bodyweight instead of entering 0."
+    );
   }
 
   // Round to 2 decimal places
@@ -50,7 +54,9 @@ export function validateUnit(
 ): void {
   if (weight !== undefined) {
     if (!unit || (unit !== "lbs" && unit !== "kg")) {
-      throw new Error("Unit must be 'lbs' or 'kg' when weight is provided");
+      throw new Error(
+        "Unit must be 'lbs' or 'kg' when weight is provided—choose a unit or clear the weight."
+      );
     }
   }
 }
@@ -73,13 +79,17 @@ export function validateDuration(
   }
 
   if (!isFinite(duration) || duration <= 0 || duration > 86400) {
-    throw new Error("Duration must be between 1 and 86400 seconds (24 hours)");
+    throw new Error(
+      "Duration must be between 1 and 86400 seconds (24 hours)—restart the timer and try again."
+    );
   }
 
   // Round to nearest second and ensure it stays within bounds
   const rounded = Math.round(duration);
   if (rounded < 1) {
-    throw new Error("Duration must be between 1 and 86400 seconds (24 hours)");
+    throw new Error(
+      "Duration must be between 1 and 86400 seconds (24 hours)—restart the timer and try again."
+    );
   }
   return rounded;
 }
@@ -97,11 +107,13 @@ export function validateExerciseName(name: string): string {
   const trimmed = name.trim();
 
   if (trimmed.length === 0) {
-    throw new Error("Exercise name cannot be empty");
+    throw new Error("Exercise name cannot be empty—add at least two letters.");
   }
 
   if (trimmed.length < 2 || trimmed.length > 100) {
-    throw new Error("Exercise name must be 2-100 characters");
+    throw new Error(
+      "Exercise name must be 2-100 characters; shorten or extend it."
+    );
   }
 
   return trimmed;
