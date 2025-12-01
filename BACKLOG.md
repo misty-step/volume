@@ -20,15 +20,6 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Effort**: 5m | **Speedup**: 1.5x per report
 **Acceptance**: AI reports generate 33% faster
 
-### [CRITICAL] Type safety erosion - 40+ `any` instances
-
-**Files**: convex/exercises.ts:26, convex/crons.ts:75, src/hooks/useLastSet.ts:17
-**Perspectives**: maintainability-maven, complexity-archaeologist
-**Impact**: Lost autocomplete, compiler can't catch bugs, refactoring dangerous
-**Fix**: Replace `Promise<any>` → `Promise<Id<"exercises">>`, `(s: any)` → `(set: Set)`, remove `(internal as any)`
-**Effort**: 3h | **Impact**: CRITICAL - restore type safety
-**Acceptance**: Zero `any` in source code (excluding test fixtures)
-
 ### [Security] Fix test endpoint production exposure
 
 **File**: src/app/api/test/reset/route.ts
