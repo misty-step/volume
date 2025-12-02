@@ -55,7 +55,7 @@
   Time: 30min
   ```
 
-- [ ] Create Stepper component
+- [x] Create Stepper component
 
   ```
   Files:
