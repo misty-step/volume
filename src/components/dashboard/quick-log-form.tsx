@@ -152,6 +152,30 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
     // Get last set and time formatter
     const { lastSet, formatTimeAgo } = useLastSet(selectedExerciseId);
 
+    // Prefill reps/weight/duration when selecting an exercise with history
+    useEffect(() => {
+      if (!selectedExerciseId || !lastSet) return;
+
+      const hasUserInput =
+        form.getValues("reps") !== undefined ||
+        form.getValues("duration") !== undefined ||
+        form.getValues("weight") !== undefined;
+
+      if (hasUserInput) return;
+
+      if (lastSet.duration !== undefined) {
+        form.setValue("duration", lastSet.duration);
+        form.setValue("reps", undefined);
+        setIsDurationMode(true);
+      } else {
+        form.setValue("reps", lastSet.reps);
+        form.setValue("duration", undefined);
+        setIsDurationMode(false);
+      }
+
+      form.setValue("weight", lastSet.weight ?? undefined);
+    }, [form, lastSet, selectedExerciseId]);
+
     // Expose repeatSet method to parent via ref
     useImperativeHandle(ref, () => ({
       repeatSet: (set: Set) => {

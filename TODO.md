@@ -80,7 +80,7 @@
   Time: 1.5hr
   ```
 
-- [ ] Add pre-fill logic directly in QuickLogForm
+- [x] Add pre-fill logic directly in QuickLogForm
 
   ```
   Files: src/components/dashboard/quick-log-form.tsx

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "../../test/utils";
+import userEvent from "@testing-library/user-event";
 import { QuickLogForm } from "./quick-log-form";
 import type { Exercise } from "@/types/domain";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -142,5 +143,35 @@ describe("QuickLogForm", () => {
     render(<QuickLogForm exercises={mockExercises} />);
 
     expect(screen.getByText(/weight \(kg\)/i)).toBeInTheDocument();
+  });
+
+  it("prefills reps and weight from last set after selecting exercise", async () => {
+    const mockSets = [
+      {
+        _id: "set-last" as any,
+        _creationTime: 1000,
+        userId: "user1",
+        exerciseId: "ex1abc123" as any,
+        reps: 8,
+        weight: 155,
+        unit: "lbs",
+        performedAt: Date.now() - 120000,
+      },
+    ];
+    vi.mocked(useQuery).mockReturnValue(mockSets);
+
+    render(<QuickLogForm exercises={mockExercises} />);
+
+    const exerciseSelect = screen.getByTestId("quick-log-exercise-select");
+    await userEvent.click(exerciseSelect);
+
+    const option = await screen.findByTestId("exercise-option-ex1abc123");
+    await userEvent.click(option);
+
+    const repsInput = await screen.findByLabelText(/reps/i);
+    const weightInput = await screen.findByLabelText(/weight/i);
+
+    expect(repsInput).toHaveValue(8);
+    expect(weightInput).toHaveValue(155);
   });
 });
