@@ -129,7 +129,7 @@
   Time: 30min
   ```
 
-- [ ] Update form label typography
+- [x] Update form label typography
 
   ```
   Files: src/components/dashboard/quick-log-form.tsx:284, 389, 424, 455
@@ -140,7 +140,7 @@
   Time: 15min
   ```
 
-- [ ] Update mode toggle button size
+- [x] Update mode toggle button size
   ```
   Files: src/components/dashboard/quick-log-form.tsx:241-265
   Approach: Change size="sm" to size="default" on Reps/Duration buttons

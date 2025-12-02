@@ -258,7 +258,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                 <BrutalistButton
                   type="button"
                   variant={!isDurationMode ? "danger" : "outline"}
-                  size="sm"
+                  size="default"
                   onClick={() => {
                     setIsDurationMode(false);
                     form.setValue("duration", undefined);
@@ -270,7 +270,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                 <BrutalistButton
                   type="button"
                   variant={isDurationMode ? "danger" : "outline"}
-                  size="sm"
+                  size="default"
                   onClick={() => {
                     setIsDurationMode(true);
                     form.setValue("reps", undefined);
@@ -298,7 +298,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                             isDurationMode ? "md:col-span-5" : "md:col-span-6"
                           }
                         >
-                          <FormLabel className="font-mono text-xs uppercase tracking-wider">
+                          <FormLabel className="font-mono text-sm uppercase tracking-wider">
                             Exercise *
                           </FormLabel>
                           <Popover
@@ -403,7 +403,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                       name="reps"
                       render={({ field }) => (
                         <FormItem className="md:col-span-3">
-                          <FormLabel className="font-mono text-xs uppercase tracking-wider">
+                          <FormLabel className="font-mono text-sm uppercase tracking-wider">
                             Reps *
                           </FormLabel>
                           <FormControl>
@@ -435,7 +435,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                       name="duration"
                       render={({ field }) => (
                         <FormItem className="md:col-span-4">
-                          <FormLabel className="font-mono text-xs uppercase tracking-wider">
+                          <FormLabel className="font-mono text-sm uppercase tracking-wider">
                             Duration *
                           </FormLabel>
                           <FormControl>
@@ -466,7 +466,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                     name="weight"
                     render={({ field }) => (
                       <FormItem className="md:col-span-3">
-                        <FormLabel className="font-mono text-xs uppercase tracking-wider">
+                        <FormLabel className="font-mono text-sm uppercase tracking-wider">
                           Weight ({unit})
                         </FormLabel>
                         <FormControl>
