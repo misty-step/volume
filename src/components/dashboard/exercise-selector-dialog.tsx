@@ -31,6 +31,7 @@ export interface ExerciseSelectorDialogProps {
   selectedId: string | null;
   onSelect: (exerciseId: string) => void;
   onCreateNew: () => void;
+  isSubmitting?: boolean;
 }
 
 const triggerButton = (
@@ -48,7 +49,7 @@ const triggerButton = (
       !selectedExercise && "text-muted-foreground"
     )}
     disabled={isSubmitting}
-    data-testid="exercise-selector-trigger"
+    data-testid="quick-log-exercise-select"
   >
     {selectedExercise?.name || "SELECT..."}
     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -113,6 +114,7 @@ export function ExerciseSelectorDialog({
   selectedId,
   onSelect,
   onCreateNew,
+  isSubmitting = false,
 }: ExerciseSelectorDialogProps) {
   const isMobile = useMobileViewport();
   const selectedExercise = useMemo(
@@ -124,7 +126,7 @@ export function ExerciseSelectorDialog({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogTrigger asChild>
-          {triggerButton(selectedExercise, open, false)}
+          {triggerButton(selectedExercise, open, isSubmitting)}
         </DialogTrigger>
         <DialogContent
           className={cn(
@@ -160,7 +162,7 @@ export function ExerciseSelectorDialog({
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
-        {triggerButton(selectedExercise, open, false)}
+        {triggerButton(selectedExercise, open, isSubmitting)}
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         {commandList(exercises, selectedId, onSelect, onCreateNew, () =>

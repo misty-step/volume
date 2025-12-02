@@ -14,20 +14,6 @@ import {
   Stepper,
 } from "@/components/brutalist";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Check, ChevronsUpDown } from "lucide-react";
-import {
   Form,
   FormField,
   FormItem,
@@ -44,6 +30,8 @@ import { useLastSet } from "@/hooks/useLastSet";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/date-utils";
+import { ExerciseSelectorDialog } from "./exercise-selector-dialog";
+import { useMobileViewport } from "@/hooks/useMobileViewport";
 
 interface QuickLogFormProps {
   exercises: Exercise[];
@@ -150,6 +138,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
 
     // Get last set and time formatter
     const { lastSet, formatTimeAgo } = useLastSet(selectedExerciseId);
+    const isMobile = useMobileViewport();
 
     // Smart weight step calculation based on current value and unit
     const getWeightStep = (current: number) => {
@@ -287,25 +276,20 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                   <FormField
                     control={form.control}
                     name="exerciseId"
-                    render={({ field }) => {
-                      const selectedExercise = exercises.find(
-                        (ex) => ex._id === field.value
-                      );
-
-                      return (
-                        <FormItem
-                          className={
-                            isDurationMode ? "md:col-span-5" : "md:col-span-6"
-                          }
-                        >
-                          <FormLabel className="font-mono text-sm uppercase tracking-wider">
-                            Exercise *
-                          </FormLabel>
-                          <Popover
+                    render={({ field }) => (
+                      <FormItem
+                        className={
+                          isDurationMode ? "md:col-span-5" : "md:col-span-6"
+                        }
+                      >
+                        <FormLabel className="font-mono text-sm uppercase tracking-wider">
+                          Exercise *
+                        </FormLabel>
+                        <FormControl>
+                          <ExerciseSelectorDialog
                             open={comboboxOpen}
                             onOpenChange={(open) => {
                               setComboboxOpen(open);
-                              // When combobox closes and exercise is selected, focus appropriate input based on mode
                               if (!open && field.value) {
                                 focusElement(
                                   isDurationMode
@@ -314,86 +298,31 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                                 );
                               }
                             }}
-                          >
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <BrutalistButton
-                                  type="button"
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={comboboxOpen}
-                                  className={cn(
-                                    "w-full h-12 justify-between font-mono normal-case",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                  disabled={form.formState.isSubmitting}
-                                  data-testid="quick-log-exercise-select"
-                                >
-                                  {selectedExercise?.name || "SELECT..."}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </BrutalistButton>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                              <Command>
-                                <CommandInput placeholder="Type to search..." />
-                                <CommandList>
-                                  <CommandEmpty>
-                                    No exercises found.
-                                  </CommandEmpty>
-                                  <CommandGroup>
-                                    {exercises.map((exercise) => (
-                                      <CommandItem
-                                        key={exercise._id}
-                                        value={exercise.name}
-                                        onSelect={() => {
-                                          field.onChange(exercise._id);
-                                          setComboboxOpen(false);
-                                          // Focus appropriate input based on mode after popover closes
-                                          setTimeout(
-                                            () =>
-                                              focusElement(
-                                                isDurationMode
-                                                  ? durationInputRef
-                                                  : repsInputRef
-                                              ),
-                                            FOCUS_DELAY_MS
-                                          );
-                                        }}
-                                        data-testid={`exercise-option-${exercise._id}`}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            field.value === exercise._id
-                                              ? "opacity-100"
-                                              : "opacity-0"
-                                          )}
-                                        />
-                                        {exercise.name}
-                                      </CommandItem>
-                                    ))}
-                                    <CommandItem
-                                      value="CREATE_NEW"
-                                      onSelect={() => {
-                                        setShowInlineCreator(true);
-                                        setComboboxOpen(false);
-                                        field.onChange("");
-                                      }}
-                                      className="border-t"
-                                      data-testid="quick-log-create-new"
-                                    >
-                                      + Create New
-                                    </CommandItem>
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      );
-                    }}
+                            exercises={exercises}
+                            selectedId={field.value || null}
+                            onSelect={(id) => {
+                              field.onChange(id);
+                              setComboboxOpen(false);
+                              setTimeout(
+                                () =>
+                                  focusElement(
+                                    isDurationMode
+                                      ? durationInputRef
+                                      : repsInputRef
+                                  ),
+                                FOCUS_DELAY_MS
+                              );
+                            }}
+                            onCreateNew={() => {
+                              setShowInlineCreator(true);
+                              setComboboxOpen(false);
+                              field.onChange("");
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
 
                   {/* Reps or Duration input based on mode */}
@@ -498,12 +427,18 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
               </div>
 
               {/* Submit button anchored below entire form */}
-              <div className="pt-6 md:flex md:justify-end">
+              <div
+                className={cn(
+                  "pt-6 md:flex md:justify-end",
+                  isMobile &&
+                    "fixed bottom-0 left-0 right-0 z-20 p-4 bg-background border-t-3 border-concrete-black dark:border-concrete-white pb-safe"
+                )}
+              >
                 <BrutalistButton
                   type="submit"
                   variant="danger"
                   size="lg"
-                  className="w-full md:w-64"
+                  className={cn("w-full md:w-64", isMobile && "w-full")}
                   disabled={form.formState.isSubmitting}
                   data-testid="quick-log-submit-btn"
                 >

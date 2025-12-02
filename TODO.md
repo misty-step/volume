@@ -178,7 +178,7 @@
   Time: 1.5hr
   ```
 
-- [ ] Integrate ExerciseSelectorDialog into QuickLogForm
+- [x] Integrate ExerciseSelectorDialog into QuickLogForm
 
   ```
   Files: src/components/dashboard/quick-log-form.tsx:269-380
