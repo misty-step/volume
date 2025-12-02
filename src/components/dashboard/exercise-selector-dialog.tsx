@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import {
   Command,
@@ -61,16 +61,36 @@ const commandList = (
   selectedId: string | null,
   onSelect: (exerciseId: string) => void,
   onCreateNew: () => void,
-  close: () => void
+  close: () => void,
+  searchValue: string,
+  onSearchChange: (value: string) => void
 ) => (
   <Command>
     <CommandInput
       placeholder="Search exercises..."
       autoFocus
+      value={searchValue}
+      onValueChange={onSearchChange}
       data-testid="exercise-search"
     />
     <CommandList>
-      <CommandEmpty>No exercises found.</CommandEmpty>
+      <CommandEmpty>
+        <div className="flex flex-col gap-3 p-3">
+          <span className="text-sm text-muted-foreground">
+            No exercises found.
+          </span>
+          <BrutalistButton
+            variant="outline"
+            onClick={() => {
+              close();
+              onCreateNew();
+            }}
+            data-testid="exercise-create-empty"
+          >
+            Create “{searchValue || "New Exercise"}”
+          </BrutalistButton>
+        </div>
+      </CommandEmpty>
       <CommandGroup>
         {exercises.map((exercise) => (
           <CommandItem
@@ -117,6 +137,11 @@ export function ExerciseSelectorDialog({
   isSubmitting = false,
 }: ExerciseSelectorDialogProps) {
   const isMobile = useMobileViewport();
+  const [searchValue, setSearchValue] = useState("");
+  const handleOpenChange = (next: boolean) => {
+    if (!next) setSearchValue("");
+    onOpenChange(next);
+  };
   const selectedExercise = useMemo(
     () => exercises.find((ex) => ex._id === selectedId),
     [exercises, selectedId]
@@ -124,7 +149,7 @@ export function ExerciseSelectorDialog({
 
   if (isMobile) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>
           {triggerButton(selectedExercise, open, isSubmitting)}
         </DialogTrigger>
@@ -150,8 +175,14 @@ export function ExerciseSelectorDialog({
             </DialogClose>
           </div>
           <div className="flex-1 overflow-y-auto p-4">
-            {commandList(exercises, selectedId, onSelect, onCreateNew, () =>
-              onOpenChange(false)
+            {commandList(
+              exercises,
+              selectedId,
+              onSelect,
+              onCreateNew,
+              () => handleOpenChange(false),
+              searchValue,
+              setSearchValue
             )}
           </div>
         </DialogContent>
@@ -160,13 +191,19 @@ export function ExerciseSelectorDialog({
   }
 
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         {triggerButton(selectedExercise, open, isSubmitting)}
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-        {commandList(exercises, selectedId, onSelect, onCreateNew, () =>
-          onOpenChange(false)
+        {commandList(
+          exercises,
+          selectedId,
+          onSelect,
+          onCreateNew,
+          () => handleOpenChange(false),
+          searchValue,
+          setSearchValue
         )}
       </PopoverContent>
     </Popover>

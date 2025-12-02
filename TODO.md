@@ -192,7 +192,7 @@
   Time: 30min
   ```
 
-- [ ] Implement sticky submit button on mobile
+- [x] Implement sticky submit button on mobile
 
   ```
   Files: src/components/dashboard/quick-log-form.tsx:489-507
@@ -223,7 +223,7 @@
   Time: 30min
   ```
 
-- [ ] Add empty search recovery path
+- [x] Add empty search recovery path
   ```
   Files: src/components/dashboard/exercise-selector-dialog.tsx
   Approach: CommandEmpty shows "Create [query]" button

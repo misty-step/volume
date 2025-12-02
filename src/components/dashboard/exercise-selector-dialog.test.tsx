@@ -69,7 +69,7 @@ describe("ExerciseSelectorDialog", () => {
       <ControlledSelector onSelect={onSelect} onCreateNew={onCreateNew} />
     );
 
-    await userEvent.click(screen.getByTestId("exercise-selector-trigger"));
+    await userEvent.click(screen.getByTestId("quick-log-exercise-select"));
     const option = await screen.findByTestId("exercise-option-ex-1");
     await userEvent.click(option);
 
@@ -86,11 +86,31 @@ describe("ExerciseSelectorDialog", () => {
       <ControlledSelector onSelect={onSelect} onCreateNew={onCreateNew} />
     );
 
-    await userEvent.click(screen.getByTestId("exercise-selector-trigger"));
+    await userEvent.click(screen.getByTestId("quick-log-exercise-select"));
     expect(await screen.findByText(/select exercise/i)).toBeInTheDocument();
 
     await userEvent.click(screen.getByTestId("exercise-create-new"));
     expect(onCreateNew).toHaveBeenCalled();
     expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("shows create button when search has no results", async () => {
+    mockedUseMobileViewport.mockReturnValue(false);
+    const onCreateNew = vi.fn();
+
+    render(
+      <ControlledSelector onSelect={() => {}} onCreateNew={onCreateNew} />
+    );
+
+    await userEvent.click(screen.getByTestId("quick-log-exercise-select"));
+    const search = screen.getByTestId("exercise-search");
+    await userEvent.clear(search);
+    await userEvent.type(search, "Nonexistent");
+
+    const createEmpty = await screen.findByTestId("exercise-create-empty");
+    expect(createEmpty).toHaveTextContent("Create “Nonexistent”");
+
+    await userEvent.click(createEmpty);
+    expect(onCreateNew).toHaveBeenCalled();
   });
 });
