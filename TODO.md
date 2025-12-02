@@ -37,7 +37,7 @@
 
 ## Phase 1: Smart Defaults + Steppers
 
-- [ ] Create useMobileViewport hook
+- [x] Create useMobileViewport hook
 
   ```
   Files:
