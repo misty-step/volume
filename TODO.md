@@ -22,7 +22,7 @@
   Time: 15min
   ```
 
-- [ ] Add network timeout with "Saving in background" toast
+- [x] Add network timeout with "Saving in background" toast
   ```
   Files: src/hooks/useQuickLogForm.ts
   Approach: Wrap logSet mutation with Promise.race + 10s timeout

@@ -75,14 +75,31 @@ export function useQuickLogForm({
   );
 
   const onSubmit = async (values: QuickLogFormValues) => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
-      const setId = await logSet({
+      const logSetPromise = logSet({
         exerciseId: values.exerciseId as Id<"exercises">,
         reps: values.reps,
         weight: values.weight,
         unit: values.weight ? values.unit : undefined,
         duration: values.duration,
       });
+
+      const raceResult = await Promise.race([
+        logSetPromise,
+        new Promise<"timeout">((resolve) => {
+          timeoutId = setTimeout(() => resolve("timeout"), 10_000);
+        }),
+      ]);
+
+      const setId =
+        raceResult === "timeout"
+          ? await logSetPromise
+          : (raceResult as Id<"sets">);
+
+      if (raceResult === "timeout") {
+        toast.info("Saving in background...");
+      }
 
       // Check for PR before showing success toast (only for rep-based exercises)
       let isPR = false;
@@ -137,6 +154,10 @@ export function useQuickLogForm({
       onSuccess?.();
     } catch (error) {
       handleMutationError(error, "Log Set");
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     }
   };
 

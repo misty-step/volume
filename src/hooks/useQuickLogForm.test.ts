@@ -9,6 +9,7 @@ import * as convexReact from "convex/react";
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
+    info: vi.fn(),
   },
 }));
 
@@ -302,6 +303,49 @@ describe("useQuickLogForm", () => {
       expect(mockOnSuccess).not.toHaveBeenCalled();
       expect(toast.success).not.toHaveBeenCalled();
     });
+  });
+
+  it("shows background toast after 10s timeout and still completes", async () => {
+    vi.useFakeTimers();
+
+    let resolveLogSet: (value: string) => void = () => {};
+    mockLogSet.mockReturnValue(
+      new Promise<string>((resolve) => {
+        resolveLogSet = resolve;
+      })
+    );
+
+    const { result } = renderHook(() =>
+      useQuickLogForm({
+        unit: "lbs",
+        exercises: mockExercises,
+        onSetLogged: mockOnSetLogged,
+        onSuccess: mockOnSuccess,
+      })
+    );
+
+    result.current.form.setValue("exerciseId", "exercise-timeout");
+    result.current.form.setValue("reps", 10);
+
+    const submitPromise = result.current.onSubmit(
+      result.current.form.getValues()
+    );
+
+    vi.advanceTimersByTime(9_999);
+    expect(toast.info).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1);
+    expect(toast.info).toHaveBeenCalledWith("Saving in background...");
+
+    resolveLogSet("set-timeout");
+    await submitPromise;
+
+    await waitFor(() => {
+      expect(mockOnSetLogged).toHaveBeenCalledWith("set-timeout");
+      expect(toast.success).toHaveBeenCalled();
+    });
+
+    vi.useRealTimers();
   });
 
   it("exposes isSubmitting state from form", () => {
