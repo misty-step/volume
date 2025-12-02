@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "../../test/utils";
+import { render, screen, within } from "../../test/utils";
 import userEvent from "@testing-library/user-event";
 import { QuickLogForm } from "./quick-log-form";
 import type { Exercise } from "@/types/domain";
@@ -65,9 +65,9 @@ describe("QuickLogForm", () => {
   it("renders all form fields", () => {
     render(<QuickLogForm exercises={mockExercises} />);
 
-    expect(screen.getByLabelText(/exercise/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/reps/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/weight/i)).toBeInTheDocument(); // Weight input
+    expect(screen.getByTestId("quick-log-exercise-select")).toBeInTheDocument();
+    expect(screen.getByTestId("reps-stepper")).toBeInTheDocument();
+    expect(screen.getByTestId("weight-stepper")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /LOG SET/i })
     ).toBeInTheDocument();
@@ -77,12 +77,15 @@ describe("QuickLogForm", () => {
     render(<QuickLogForm exercises={mockExercises} />);
 
     // Form should initialize with useQuickLogForm defaults
-    const repsInput = screen.getByLabelText(/reps/i) as HTMLInputElement;
-    const weightInput = screen.getByLabelText(/weight/i) as HTMLInputElement;
+    const repsValue = within(screen.getByTestId("reps-stepper")).getByTestId(
+      "stepper-value"
+    );
+    const weightValue = within(
+      screen.getByTestId("weight-stepper")
+    ).getByTestId("stepper-value");
 
-    // Empty form on initial render
-    expect(repsInput.value).toBe("");
-    expect(weightInput.value).toBe("");
+    expect(repsValue).toHaveTextContent("1");
+    expect(weightValue).toHaveTextContent("0 lbs");
   });
 
   it("integrates with useLastSet hook", () => {
@@ -168,10 +171,14 @@ describe("QuickLogForm", () => {
     const option = await screen.findByTestId("exercise-option-ex1abc123");
     await userEvent.click(option);
 
-    const repsInput = await screen.findByLabelText(/reps/i);
-    const weightInput = await screen.findByLabelText(/weight/i);
+    const repsValue = within(screen.getByTestId("reps-stepper")).getByTestId(
+      "stepper-value"
+    );
+    const weightValue = within(
+      screen.getByTestId("weight-stepper")
+    ).getByTestId("stepper-value");
 
-    expect(repsInput).toHaveValue(8);
-    expect(weightInput).toHaveValue(155);
+    expect(repsValue).toHaveTextContent("8");
+    expect(weightValue).toHaveTextContent("155 lbs");
   });
 });

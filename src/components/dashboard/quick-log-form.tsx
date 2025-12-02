@@ -6,13 +6,12 @@ import {
   useImperativeHandle,
   forwardRef,
   useEffect,
-  KeyboardEvent,
 } from "react";
 import { Id } from "../../../convex/_generated/dataModel";
 import {
   BrutalistCard,
   BrutalistButton,
-  BrutalistInput,
+  Stepper,
 } from "@/components/brutalist";
 import {
   Popover,
@@ -152,6 +151,18 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
     // Get last set and time formatter
     const { lastSet, formatTimeAgo } = useLastSet(selectedExerciseId);
 
+    // Smart weight step calculation based on current value and unit
+    const getWeightStep = (current: number) => {
+      if (unit === "kg") {
+        if (current < 25) return 1;
+        if (current < 75) return 2.5;
+        return 5;
+      }
+      if (current < 50) return 2.5;
+      if (current < 150) return 5;
+      return 10;
+    };
+
     // Prefill reps/weight/duration when selecting an exercise with history
     useEffect(() => {
       if (!selectedExerciseId || !lastSet) return;
@@ -194,24 +205,6 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
         form.setValue("weight", set.weight ?? undefined);
       },
     }));
-
-    // Handle Enter key in reps input - focus weight or submit
-    const handleRepsKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        if (weightInputRef.current) {
-          weightInputRef.current.focus();
-        }
-      }
-    };
-
-    // Handle Enter key in weight input - submit form
-    const handleWeightKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        form.handleSubmit(onSubmit)();
-      }
-    };
 
     return (
       <BrutalistCard className="p-6">
@@ -414,26 +407,23 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                             Reps *
                           </FormLabel>
                           <FormControl>
-                            <BrutalistInput
-                              {...field}
-                              ref={repsInputRef}
-                              type="number"
-                              inputMode="numeric"
-                              min="1"
-                              onKeyDown={handleRepsKeyDown}
-                              onChange={(e) =>
-                                field.onChange(
-                                  e.target.value
-                                    ? parseFloat(e.target.value)
-                                    : undefined
-                                )
-                              }
-                              value={field.value ?? ""}
-                              placeholder="0"
-                              className="w-full"
-                              disabled={form.formState.isSubmitting}
-                              data-testid="quick-log-reps-input"
-                            />
+                            <div data-testid="reps-stepper">
+                              <input
+                                type="hidden"
+                                id="reps"
+                                value={field.value ?? ""}
+                                readOnly
+                              />
+                              <Stepper
+                                label="Reps"
+                                value={field.value}
+                                min={1}
+                                max={1000}
+                                onChange={field.onChange}
+                                disabled={form.formState.isSubmitting}
+                                className="w-full"
+                              />
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -480,27 +470,25 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                           Weight ({unit})
                         </FormLabel>
                         <FormControl>
-                          <BrutalistInput
-                            {...field}
-                            ref={weightInputRef}
-                            type="number"
-                            inputMode="decimal"
-                            step="0.5"
-                            min="0"
-                            onKeyDown={handleWeightKeyDown}
-                            onChange={(e) =>
-                              field.onChange(
-                                e.target.value
-                                  ? parseFloat(e.target.value)
-                                  : undefined
-                              )
-                            }
-                            value={field.value ?? ""}
-                            placeholder="0"
-                            className="w-full"
-                            disabled={form.formState.isSubmitting}
-                            data-testid="quick-log-weight-input"
-                          />
+                          <div data-testid="weight-stepper">
+                            <input
+                              type="hidden"
+                              id="weight"
+                              value={field.value ?? ""}
+                              readOnly
+                            />
+                            <Stepper
+                              label="Weight"
+                              value={field.value}
+                              min={0}
+                              max={2000}
+                              getStep={getWeightStep}
+                              formatValue={(v) => `${v} ${unit}`}
+                              onChange={field.onChange}
+                              disabled={form.formState.isSubmitting}
+                              className="w-full"
+                            />
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

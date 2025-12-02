@@ -101,7 +101,7 @@
   Time: 30min
   ```
 
-- [ ] Integrate Stepper into QuickLogForm (reps input)
+- [x] Integrate Stepper into QuickLogForm (reps input)
 
   ```
   Files: src/components/dashboard/quick-log-form.tsx:383-417
@@ -115,7 +115,7 @@
   Time: 30min
   ```
 
-- [ ] Integrate Stepper into QuickLogForm (weight input)
+- [x] Integrate Stepper into QuickLogForm (weight input)
 
   ```
   Files: src/components/dashboard/quick-log-form.tsx:450-484
