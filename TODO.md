@@ -154,7 +154,7 @@
 
 ## Phase 2: Thumb-Zone + Polish
 
-- [ ] Create ExerciseSelectorDialog component
+- [x] Create ExerciseSelectorDialog component
 
   ```
   Files:
