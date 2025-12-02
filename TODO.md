@@ -208,7 +208,7 @@
   Time: 30min
   ```
 
-- [ ] Add AnimatePresence to set card history
+- [x] Add AnimatePresence to set card history
 
   ```
   Files: src/components/dashboard/grouped-set-history.tsx:89-106

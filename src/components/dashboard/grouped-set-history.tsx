@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Id } from "../../../convex/_generated/dataModel";
 import { BrutalistCard } from "@/components/brutalist";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
@@ -87,23 +88,33 @@ export const GroupedSetHistory = forwardRef<
         {totalSets} SET{totalSets === 1 ? "" : "S"}
       </p>
       <div className="space-y-3">
-        {exerciseGroups.map((group) => {
-          const exercise = exerciseMap.get(group.exerciseId);
-          if (!exercise) return null;
+        <AnimatePresence mode="popLayout">
+          {exerciseGroups.map((group) => {
+            const exercise = exerciseMap.get(group.exerciseId);
+            if (!exercise) return null;
 
-          return (
-            <ExerciseSetGroup
-              key={group.exerciseId}
-              exercise={exercise}
-              sets={group.sets}
-              totalVolume={group.totalVolume}
-              totalReps={group.totalReps}
-              preferredUnit={preferredUnit}
-              onRepeat={onRepeat}
-              onDelete={onDelete}
-            />
-          );
-        })}
+            return (
+              <motion.div
+                key={group.exerciseId}
+                layoutId={`exercise-group-${group.exerciseId}`}
+                initial={{ opacity: 0, scale: 0.8, y: -20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              >
+                <ExerciseSetGroup
+                  exercise={exercise}
+                  sets={group.sets}
+                  totalVolume={group.totalVolume}
+                  totalReps={group.totalReps}
+                  preferredUnit={preferredUnit}
+                  onRepeat={onRepeat}
+                  onDelete={onDelete}
+                />
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
       </div>
     </BrutalistCard>
   );
