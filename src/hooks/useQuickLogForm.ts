@@ -114,6 +114,7 @@ export function useQuickLogForm({
       // Show success toast with undo action (skip if PR celebration shown)
       if (!isPR) {
         toast.success("Set logged!", {
+          duration: 10000,
           action: onUndo
             ? {
                 label: "Undo",
