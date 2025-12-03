@@ -7,7 +7,7 @@ import { BrutalistCard } from "@/components/brutalist";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { Exercise, Set } from "@/types/domain";
 import { ExerciseSetGroup } from "./exercise-set-group";
-import { Dumbbell } from "lucide-react";
+import { Dumbbell, ChevronDown, ChevronUp } from "lucide-react";
 
 interface ExerciseGroup {
   exerciseId: Id<"exercises">;
@@ -22,13 +22,22 @@ interface GroupedSetHistoryProps {
   onRepeat: (set: Set) => void;
   onDelete: (setId: Id<"sets">) => void;
   isLoading?: boolean;
+  /** Mobile layout: form is below, so empty state points down */
+  isMobile?: boolean;
 }
 
 export const GroupedSetHistory = forwardRef<
   HTMLDivElement,
   GroupedSetHistoryProps
 >(function GroupedSetHistory(
-  { exerciseGroups, exerciseMap, onRepeat, onDelete, isLoading = false },
+  {
+    exerciseGroups,
+    exerciseMap,
+    onRepeat,
+    onDelete,
+    isLoading = false,
+    isMobile = false,
+  },
   ref
 ) {
   const { unit: preferredUnit } = useWeightUnit();
@@ -54,19 +63,42 @@ export const GroupedSetHistory = forwardRef<
 
   // Empty state - user has no sets logged today
   if (exerciseGroups.length === 0) {
+    // Mobile: minimal empty state, no card wrapper
+    if (isMobile) {
+      return (
+        <div
+          ref={ref}
+          className="flex flex-col items-center justify-center flex-1 gap-4 text-center py-12"
+        >
+          <Dumbbell
+            className="w-16 h-16 text-concrete-gray/30"
+            strokeWidth={1.5}
+          />
+          <p className="font-mono text-sm text-muted-foreground">
+            No sets logged yet.
+          </p>
+          <ChevronDown className="h-6 w-6 animate-bounce text-safety-orange" />
+        </div>
+      );
+    }
+
+    // Desktop: card wrapper with header
     return (
       <BrutalistCard ref={ref} className="p-6">
         <h2 className="font-display text-2xl uppercase tracking-wide mb-6">
           Today
         </h2>
-        <div className="py-12 text-center">
-          <Dumbbell className="w-16 h-16 mx-auto text-concrete-gray mb-6" />
-          <p className="font-mono text-sm uppercase tracking-wide text-concrete-gray mb-2">
-            No sets logged yet
-          </p>
-          <p className="font-display text-xl uppercase tracking-wide">
-            Start logging above
-          </p>
+        <div className="flex flex-col items-center justify-center gap-4 py-12">
+          <Dumbbell
+            className="w-20 h-20 text-concrete-gray/40"
+            strokeWidth={1.5}
+          />
+          <div className="text-center space-y-1">
+            <p className="font-mono text-sm text-muted-foreground">
+              No sets logged yet. Start above.
+            </p>
+          </div>
+          <ChevronUp className="h-6 w-6 animate-bounce text-safety-orange" />
         </div>
       </BrutalistCard>
     );
@@ -77,6 +109,52 @@ export const GroupedSetHistory = forwardRef<
     0
   );
 
+  // Shared exercise groups content
+  const exerciseGroupsContent = (
+    <AnimatePresence mode="popLayout">
+      {exerciseGroups.map((group) => {
+        const exercise = exerciseMap.get(group.exerciseId);
+        if (!exercise) return null;
+
+        return (
+          <motion.div
+            key={group.exerciseId}
+            layoutId={`exercise-group-${group.exerciseId}`}
+            initial={{ opacity: 0, scale: 0.8, y: -20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          >
+            <ExerciseSetGroup
+              exercise={exercise}
+              sets={group.sets}
+              totalVolume={group.totalVolume}
+              totalReps={group.totalReps}
+              preferredUnit={preferredUnit}
+              onRepeat={onRepeat}
+              onDelete={onDelete}
+            />
+          </motion.div>
+        );
+      })}
+    </AnimatePresence>
+  );
+
+  // Mobile: no card wrapper, compact header
+  if (isMobile) {
+    return (
+      <div ref={ref}>
+        <p className="font-mono text-xs uppercase tracking-wider text-concrete-gray mb-4">
+          {exerciseGroups.length} exercise{exerciseGroups.length !== 1 && "s"}
+          {" • "}
+          {totalSets} set{totalSets !== 1 && "s"}
+        </p>
+        <div className="space-y-3">{exerciseGroupsContent}</div>
+      </div>
+    );
+  }
+
+  // Desktop: card wrapper with full header
   return (
     <BrutalistCard ref={ref} className="p-6">
       <h2 className="font-display text-2xl uppercase tracking-wide mb-2">
@@ -87,35 +165,7 @@ export const GroupedSetHistory = forwardRef<
         {" • "}
         {totalSets} SET{totalSets === 1 ? "" : "S"}
       </p>
-      <div className="space-y-3">
-        <AnimatePresence mode="popLayout">
-          {exerciseGroups.map((group) => {
-            const exercise = exerciseMap.get(group.exerciseId);
-            if (!exercise) return null;
-
-            return (
-              <motion.div
-                key={group.exerciseId}
-                layoutId={`exercise-group-${group.exerciseId}`}
-                initial={{ opacity: 0, scale: 0.8, y: -20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              >
-                <ExerciseSetGroup
-                  exercise={exercise}
-                  sets={group.sets}
-                  totalVolume={group.totalVolume}
-                  totalReps={group.totalReps}
-                  preferredUnit={preferredUnit}
-                  onRepeat={onRepeat}
-                  onDelete={onDelete}
-                />
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </div>
+      <div className="space-y-3">{exerciseGroupsContent}</div>
     </BrutalistCard>
   );
 });

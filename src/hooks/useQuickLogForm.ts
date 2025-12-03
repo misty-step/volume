@@ -66,7 +66,7 @@ export function useQuickLogForm({
   // Watch selected exercise for PR detection
   const selectedExerciseId = form.watch("exerciseId");
 
-  // Fetch previous sets for selected exercise (for PR detection)
+  // Fetch previous sets for selected exercise (for PR detection + ghost pre-fill)
   const previousSets = useQuery(
     api.sets.listSets,
     selectedExerciseId
@@ -120,6 +120,14 @@ export function useQuickLogForm({
 
         if (prResult) {
           isPR = true;
+          // Trigger screen flash effect for visceral PR impact
+          if (typeof document !== "undefined") {
+            document.body.classList.add("animate-pr-flash");
+            setTimeout(
+              () => document.body.classList.remove("animate-pr-flash"),
+              300
+            );
+          }
           // Find exercise name for celebration message
           const exercise = exercises.find((e) => e._id === values.exerciseId);
           if (exercise) {

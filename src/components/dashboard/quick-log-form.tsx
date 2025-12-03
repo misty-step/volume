@@ -6,12 +6,13 @@ import {
   useImperativeHandle,
   forwardRef,
   useEffect,
+  KeyboardEvent,
 } from "react";
 import { Id } from "../../../convex/_generated/dataModel";
 import {
   BrutalistCard,
   BrutalistButton,
-  Stepper,
+  BrutalistInput,
 } from "@/components/brutalist";
 import {
   Form,
@@ -45,13 +46,11 @@ export interface QuickLogFormHandle {
 
 /**
  * Delay to ensure DOM updates complete before focusing input.
- * 50ms allows Radix Popover close animation to finish and
- * React to update the DOM with the selected exercise.
- *
- * Note: Could use requestAnimationFrame instead, but fixed
- * delay is more predictable and less complex.
+ * 100ms allows Radix Dialog/Popover close animation to finish
+ * and React to update the DOM with the selected exercise.
+ * Increased from 50ms for better reliability on mobile devices.
  */
-const FOCUS_DELAY_MS = 50;
+const FOCUS_DELAY_MS = 100;
 
 const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
   function QuickLogForm({ exercises, onSetLogged, onUndo }, ref) {
@@ -140,42 +139,6 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
     const { lastSet, formatTimeAgo } = useLastSet(selectedExerciseId);
     const isMobile = useMobileViewport();
 
-    // Smart weight step calculation based on current value and unit
-    const getWeightStep = (current: number) => {
-      if (unit === "kg") {
-        if (current < 25) return 1;
-        if (current < 75) return 2.5;
-        return 5;
-      }
-      if (current < 50) return 2.5;
-      if (current < 150) return 5;
-      return 10;
-    };
-
-    // Prefill reps/weight/duration when selecting an exercise with history
-    useEffect(() => {
-      if (!selectedExerciseId || !lastSet) return;
-
-      const hasUserInput =
-        form.getValues("reps") !== undefined ||
-        form.getValues("duration") !== undefined ||
-        form.getValues("weight") !== undefined;
-
-      if (hasUserInput) return;
-
-      if (lastSet.duration !== undefined) {
-        form.setValue("duration", lastSet.duration);
-        form.setValue("reps", undefined);
-        setIsDurationMode(true);
-      } else {
-        form.setValue("reps", lastSet.reps);
-        form.setValue("duration", undefined);
-        setIsDurationMode(false);
-      }
-
-      form.setValue("weight", lastSet.weight ?? undefined);
-    }, [form, lastSet, selectedExerciseId]);
-
     // Expose repeatSet method to parent via ref
     useImperativeHandle(ref, () => ({
       repeatSet: (set: Set) => {
@@ -195,281 +158,268 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
       },
     }));
 
-    return (
-      <BrutalistCard className="p-6">
-        <h2 className="font-display text-2xl uppercase tracking-wide mb-6">
-          Log Set
-        </h2>
-        <div className="space-y-4">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              {/* Last Set Indicator */}
-              {lastSet && (
-                <div className="mb-4 p-4 border-3 border-concrete-gray dark:border-concrete-gray bg-background flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <p className="font-mono text-sm uppercase tracking-wide">
-                    <span className="text-safety-orange">LAST:</span>{" "}
-                    {exercises.find((e) => e._id === selectedExerciseId)?.name}{" "}
-                    •{" "}
-                    {lastSet.duration !== undefined
-                      ? `${formatDuration(lastSet.duration)}`
-                      : `${lastSet.reps} REPS`}
-                    {lastSet.weight != null &&
-                      ` @ ${lastSet.weight} ${lastSet.unit || unit}`}{" "}
-                    • {formatTimeAgo(lastSet.performedAt).toUpperCase()}
-                  </p>
-                  <BrutalistButton
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (lastSet.duration !== undefined) {
-                        form.setValue("duration", lastSet.duration);
-                        form.setValue("reps", undefined);
-                        setIsDurationMode(true);
-                        focusElement(durationInputRef);
-                      } else {
-                        form.setValue("reps", lastSet.reps);
-                        form.setValue("duration", undefined);
-                        setIsDurationMode(false);
-                        focusElement(repsInputRef);
+    // Handle Enter key in reps input - focus weight or submit
+    const handleRepsKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (weightInputRef.current) {
+          weightInputRef.current.focus();
+        }
+      }
+    };
+
+    // Handle Enter key in weight input - submit form
+    const handleWeightKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        form.handleSubmit(onSubmit)();
+      }
+    };
+
+    // Shared form content
+    const formContent = (
+      <div className="space-y-4">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            {/* Mode Toggle */}
+            <div className="mb-4 flex items-center gap-3">
+              <BrutalistButton
+                type="button"
+                variant={!isDurationMode ? "danger" : "outline"}
+                size="default"
+                onClick={() => {
+                  setIsDurationMode(false);
+                  form.setValue("duration", undefined);
+                  focusElement(repsInputRef);
+                }}
+              >
+                Reps
+              </BrutalistButton>
+              <BrutalistButton
+                type="button"
+                variant={isDurationMode ? "danger" : "outline"}
+                size="default"
+                onClick={() => {
+                  setIsDurationMode(true);
+                  form.setValue("reps", undefined);
+                  focusElement(durationInputRef);
+                }}
+              >
+                Duration
+              </BrutalistButton>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end">
+                {/* Exercise Selector - Combobox with search */}
+                <FormField
+                  control={form.control}
+                  name="exerciseId"
+                  render={({ field }) => (
+                    <FormItem
+                      className={
+                        isDurationMode ? "md:col-span-5" : "md:col-span-6"
                       }
-                      form.setValue("weight", lastSet.weight ?? undefined);
-                    }}
-                    className="sm:ml-2 shrink-0"
-                  >
-                    Use
-                  </BrutalistButton>
-                </div>
-              )}
-
-              {/* Mode Toggle */}
-              <div className="mb-4 flex items-center gap-3">
-                <BrutalistButton
-                  type="button"
-                  variant={!isDurationMode ? "danger" : "outline"}
-                  size="default"
-                  onClick={() => {
-                    setIsDurationMode(false);
-                    form.setValue("duration", undefined);
-                    focusElement(repsInputRef);
-                  }}
-                >
-                  Reps
-                </BrutalistButton>
-                <BrutalistButton
-                  type="button"
-                  variant={isDurationMode ? "danger" : "outline"}
-                  size="default"
-                  onClick={() => {
-                    setIsDurationMode(true);
-                    form.setValue("reps", undefined);
-                    focusElement(durationInputRef);
-                  }}
-                >
-                  Duration
-                </BrutalistButton>
-              </div>
-
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end">
-                  {/* Exercise Selector - Combobox with search */}
-                  <FormField
-                    control={form.control}
-                    name="exerciseId"
-                    render={({ field }) => (
-                      <FormItem
-                        className={
-                          isDurationMode ? "md:col-span-5" : "md:col-span-6"
-                        }
-                      >
-                        <FormLabel className="font-mono text-sm uppercase tracking-wider">
-                          Exercise *
-                        </FormLabel>
-                        <FormControl>
-                          <ExerciseSelectorDialog
-                            open={comboboxOpen}
-                            onOpenChange={(open) => {
-                              setComboboxOpen(open);
-                              if (!open && field.value) {
+                    >
+                      <FormLabel className="font-mono text-sm uppercase tracking-wider">
+                        Exercise *
+                      </FormLabel>
+                      <FormControl>
+                        <ExerciseSelectorDialog
+                          open={comboboxOpen}
+                          onOpenChange={(open) => {
+                            setComboboxOpen(open);
+                            if (!open && field.value) {
+                              focusElement(
+                                isDurationMode ? durationInputRef : repsInputRef
+                              );
+                            }
+                          }}
+                          exercises={exercises}
+                          selectedId={field.value || null}
+                          onSelect={(id) => {
+                            field.onChange(id);
+                            setComboboxOpen(false);
+                            setTimeout(
+                              () =>
                                 focusElement(
                                   isDurationMode
                                     ? durationInputRef
                                     : repsInputRef
-                                );
-                              }
-                            }}
-                            exercises={exercises}
-                            selectedId={field.value || null}
-                            onSelect={(id) => {
-                              field.onChange(id);
-                              setComboboxOpen(false);
-                              setTimeout(
-                                () =>
-                                  focusElement(
-                                    isDurationMode
-                                      ? durationInputRef
-                                      : repsInputRef
-                                  ),
-                                FOCUS_DELAY_MS
-                              );
-                            }}
-                            onCreateNew={() => {
-                              setShowInlineCreator(true);
-                              setComboboxOpen(false);
-                              field.onChange("");
-                            }}
+                                ),
+                              FOCUS_DELAY_MS
+                            );
+                          }}
+                          onCreateNew={() => {
+                            setShowInlineCreator(true);
+                            setComboboxOpen(false);
+                            field.onChange("");
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Reps or Duration input based on mode */}
+                {!isDurationMode ? (
+                  <FormField
+                    control={form.control}
+                    name="reps"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-3">
+                        <FormLabel className="font-mono text-sm uppercase tracking-wider">
+                          Reps *
+                        </FormLabel>
+                        <FormControl>
+                          <BrutalistInput
+                            {...field}
+                            ref={repsInputRef}
+                            type="number"
+                            inputMode="numeric"
+                            min="1"
+                            onKeyDown={handleRepsKeyDown}
+                            onChange={(e) =>
+                              field.onChange(
+                                e.target.value
+                                  ? parseFloat(e.target.value)
+                                  : undefined
+                              )
+                            }
+                            value={field.value ?? ""}
+                            placeholder="0"
+                            className="w-full"
+                            disabled={form.formState.isSubmitting}
+                            data-testid="quick-log-reps-input"
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-
-                  {/* Reps or Duration input based on mode */}
-                  {!isDurationMode ? (
-                    <FormField
-                      control={form.control}
-                      name="reps"
-                      render={({ field }) => (
-                        <FormItem className="md:col-span-3">
-                          <FormLabel className="font-mono text-sm uppercase tracking-wider">
-                            Reps *
-                          </FormLabel>
-                          <FormControl>
-                            <div data-testid="reps-stepper">
-                              <input
-                                type="hidden"
-                                id="reps"
-                                value={field.value ?? ""}
-                                readOnly
-                              />
-                              <Stepper
-                                label="Reps"
-                                value={field.value}
-                                min={1}
-                                max={1000}
-                                onChange={field.onChange}
-                                disabled={form.formState.isSubmitting}
-                                className="w-full"
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  ) : (
-                    <FormField
-                      control={form.control}
-                      name="duration"
-                      render={({ field }) => (
-                        <FormItem className="md:col-span-4">
-                          <FormLabel className="font-mono text-sm uppercase tracking-wider">
-                            Duration *
-                          </FormLabel>
-                          <FormControl>
-                            <DurationInput
-                              ref={durationInputRef}
-                              value={field.value}
-                              onChange={field.onChange}
-                              disabled={form.formState.isSubmitting}
-                              onEnter={() => {
-                                if (weightInputRef.current) {
-                                  weightInputRef.current.focus();
-                                } else {
-                                  form.handleSubmit(onSubmit)();
-                                }
-                              }}
-                              data-testid="quick-log-duration-input"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                  {/* Weight Input */}
+                ) : (
                   <FormField
                     control={form.control}
-                    name="weight"
+                    name="duration"
                     render={({ field }) => (
-                      <FormItem className="md:col-span-3">
+                      <FormItem className="md:col-span-4">
                         <FormLabel className="font-mono text-sm uppercase tracking-wider">
-                          Weight ({unit})
+                          Duration *
                         </FormLabel>
                         <FormControl>
-                          <div data-testid="weight-stepper">
-                            <input
-                              type="hidden"
-                              id="weight"
-                              value={field.value ?? ""}
-                              readOnly
-                            />
-                            <Stepper
-                              label="Weight"
-                              value={field.value}
-                              min={0}
-                              max={2000}
-                              getStep={getWeightStep}
-                              formatValue={(v) => `${v} ${unit}`}
-                              onChange={field.onChange}
-                              disabled={form.formState.isSubmitting}
-                              className="w-full"
-                            />
-                          </div>
+                          <DurationInput
+                            ref={durationInputRef}
+                            value={field.value}
+                            onChange={field.onChange}
+                            disabled={form.formState.isSubmitting}
+                            onEnter={() => {
+                              if (weightInputRef.current) {
+                                weightInputRef.current.focus();
+                              } else {
+                                form.handleSubmit(onSubmit)();
+                              }
+                            }}
+                            data-testid="quick-log-duration-input"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
-              </div>
-
-              {/* Submit button anchored below entire form */}
-              <div
-                className={cn(
-                  "pt-6 md:flex md:justify-end",
-                  isMobile &&
-                    "fixed bottom-0 left-0 right-0 z-20 p-4 bg-background border-t-3 border-concrete-black dark:border-concrete-white pb-safe"
                 )}
-              >
-                <BrutalistButton
-                  type="submit"
-                  variant="danger"
-                  size="lg"
-                  className={cn("w-full md:w-64", isMobile && "w-full")}
-                  disabled={form.formState.isSubmitting}
-                  data-testid="quick-log-submit-btn"
-                >
-                  {form.formState.isSubmitting ? (
-                    <>
-                      <Loader2 className="animate-spin" />
-                      Logging...
-                    </>
-                  ) : (
-                    "Log Set"
-                  )}
-                </BrutalistButton>
-              </div>
-            </form>
-          </Form>
 
-          {/* Inline Exercise Creator (rendered outside the log form to avoid nested forms) */}
-          {showInlineCreator && (
-            <InlineExerciseCreator
-              onCreated={(exerciseId) => {
-                form.setValue("exerciseId", exerciseId);
-                setShowInlineCreator(false);
-                focusElement(isDurationMode ? durationInputRef : repsInputRef);
-              }}
-              onCancel={() => {
-                setShowInlineCreator(false);
-                focusElement(isDurationMode ? durationInputRef : repsInputRef);
-              }}
-            />
-          )}
-        </div>
+                {/* Weight Input */}
+                <FormField
+                  control={form.control}
+                  name="weight"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-3">
+                      <FormLabel className="font-mono text-sm uppercase tracking-wider">
+                        Weight ({unit})
+                      </FormLabel>
+                      <FormControl>
+                        <BrutalistInput
+                          {...field}
+                          ref={weightInputRef}
+                          type="number"
+                          inputMode="decimal"
+                          step="0.5"
+                          min="0"
+                          onKeyDown={handleWeightKeyDown}
+                          onChange={(e) =>
+                            field.onChange(
+                              e.target.value
+                                ? parseFloat(e.target.value)
+                                : undefined
+                            )
+                          }
+                          value={field.value ?? ""}
+                          placeholder="0"
+                          className="w-full"
+                          disabled={form.formState.isSubmitting}
+                          data-testid="quick-log-weight-input"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Submit button - parent handles sticky positioning on mobile */}
+            <div className="pt-6 md:flex md:justify-end">
+              <BrutalistButton
+                type="submit"
+                variant="danger"
+                size="lg"
+                className="w-full md:w-64"
+                disabled={form.formState.isSubmitting}
+                data-testid="quick-log-submit-btn"
+              >
+                {form.formState.isSubmitting ? (
+                  <>
+                    <Loader2 className="animate-spin" />
+                    Logging...
+                  </>
+                ) : (
+                  "Log Set"
+                )}
+              </BrutalistButton>
+            </div>
+          </form>
+        </Form>
+
+        {/* Inline Exercise Creator (rendered outside the log form to avoid nested forms) */}
+        {showInlineCreator && (
+          <InlineExerciseCreator
+            onCreated={(exerciseId) => {
+              form.setValue("exerciseId", exerciseId);
+              setShowInlineCreator(false);
+              focusElement(isDurationMode ? durationInputRef : repsInputRef);
+            }}
+            onCancel={() => {
+              setShowInlineCreator(false);
+              focusElement(isDurationMode ? durationInputRef : repsInputRef);
+            }}
+          />
+        )}
+      </div>
+    );
+
+    // Mobile: no card wrapper, no header - parent handles positioning
+    if (isMobile) {
+      return formContent;
+    }
+
+    // Desktop: card wrapper with header
+    return (
+      <BrutalistCard className="p-6">
+        <h2 className="font-display text-2xl uppercase tracking-wide mb-6">
+          Log Set
+        </h2>
+        {formContent}
       </BrutalistCard>
     );
   }

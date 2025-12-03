@@ -9,6 +9,7 @@
  */
 
 import type * as ai_data from "../ai/data.js";
+import type * as ai_dateUtils from "../ai/dateUtils.js";
 import type * as ai_generate from "../ai/generate.js";
 import type * as ai_openai from "../ai/openai.js";
 import type * as ai_prompts from "../ai/prompts.js";
@@ -36,6 +37,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "ai/data": typeof ai_data;
+  "ai/dateUtils": typeof ai_dateUtils;
   "ai/generate": typeof ai_generate;
   "ai/openai": typeof ai_openai;
   "ai/prompts": typeof ai_prompts;

@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogTrigger,
   DialogClose,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Popover,
@@ -63,9 +64,10 @@ const commandList = (
   onCreateNew: () => void,
   close: () => void,
   searchValue: string,
-  onSearchChange: (value: string) => void
+  onSearchChange: (value: string) => void,
+  options?: { commandClassName?: string; listClassName?: string }
 ) => (
-  <Command>
+  <Command className={options?.commandClassName}>
     <CommandInput
       placeholder="Search exercises..."
       autoFocus
@@ -73,7 +75,7 @@ const commandList = (
       onValueChange={onSearchChange}
       data-testid="exercise-search"
     />
-    <CommandList>
+    <CommandList className={options?.listClassName}>
       <CommandEmpty>
         <div className="flex flex-col gap-3 p-3">
           <span className="text-sm text-muted-foreground">
@@ -156,13 +158,14 @@ export function ExerciseSelectorDialog({
         <DialogContent
           className={cn(
             "fixed inset-0 z-50 flex max-w-none translate-x-0 translate-y-0 flex-col border-t-3 border-concrete-black dark:border-concrete-white bg-background p-0 shadow-none",
-            "data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom pb-safe"
+            "data-[state=open]:animate-sheet-slide-up data-[state=closed]:animate-sheet-slide-down pb-safe",
+            "[&>button:last-child]:hidden" // Hide default DialogContent close button (we have custom header)
           )}
         >
           <div className="flex items-center justify-between border-b-3 border-concrete-black dark:border-concrete-white p-4">
-            <span className="font-display text-lg uppercase tracking-wide">
+            <DialogTitle className="font-display text-lg uppercase tracking-wide">
               Select Exercise
-            </span>
+            </DialogTitle>
             <DialogClose asChild>
               <BrutalistButton
                 variant="ghost"
@@ -174,7 +177,7 @@ export function ExerciseSelectorDialog({
               </BrutalistButton>
             </DialogClose>
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-hidden flex flex-col p-4">
             {commandList(
               exercises,
               selectedId,
@@ -182,7 +185,16 @@ export function ExerciseSelectorDialog({
               onCreateNew,
               () => handleOpenChange(false),
               searchValue,
-              setSearchValue
+              setSearchValue,
+              {
+                commandClassName: cn(
+                  "flex flex-col h-full",
+                  // Brutalist input styling: 3px border, no focus ring
+                  "[&_[cmdk-input-wrapper]]:border-b-3 [&_[cmdk-input-wrapper]]:border-concrete-black dark:[&_[cmdk-input-wrapper]]:border-concrete-white",
+                  "[&_[cmdk-input-wrapper]_*:focus-visible]:ring-0 [&_[cmdk-input-wrapper]_*:focus-visible]:ring-offset-0"
+                ),
+                listClassName: "max-h-none flex-1 overflow-y-auto",
+              }
             )}
           </div>
         </DialogContent>

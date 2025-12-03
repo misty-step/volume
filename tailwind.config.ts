@@ -157,6 +157,20 @@ export default {
           "10%, 30%, 50%, 70%, 90%": { transform: "translateX(-4px)" },
           "20%, 40%, 60%, 80%": { transform: "translateX(4px)" },
         },
+        // Sheet animations (mobile dialogs)
+        "sheet-slide-up": {
+          "0%": { transform: "translateY(100%)", opacity: "0.9" },
+          "100%": { transform: "translateY(0)", opacity: "1" },
+        },
+        "sheet-slide-down": {
+          "0%": { transform: "translateY(0)", opacity: "1" },
+          "100%": { transform: "translateY(100%)", opacity: "0.9" },
+        },
+        // PR celebration flash
+        "pr-flash": {
+          "0%, 100%": { filter: "invert(0)" },
+          "50%": { filter: "invert(1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -166,6 +180,12 @@ export default {
           "mechanical-slide 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)",
         "concrete-fill": "concrete-fill 1s cubic-bezier(0.4, 0.0, 0.2, 1)",
         shake: "shake 0.382s cubic-bezier(0.4, 0.0, 0.2, 1)",
+        // Sheet animations with golden ratio timing
+        "sheet-slide-up":
+          "sheet-slide-up 0.4s cubic-bezier(0.21, 0.47, 0.32, 0.98)",
+        "sheet-slide-down": "sheet-slide-down 0.25s cubic-bezier(0.4, 0, 1, 1)",
+        // PR celebration flash (brief screen invert)
+        "pr-flash": "pr-flash 0.3s ease-in-out",
       },
     },
   },

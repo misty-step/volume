@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "../../test/utils";
+import { render, screen } from "../../test/utils";
 import userEvent from "@testing-library/user-event";
 import { QuickLogForm } from "./quick-log-form";
 import type { Exercise } from "@/types/domain";
@@ -18,9 +18,6 @@ vi.mock("sonner", () => ({
 vi.mock("@/lib/error-handler", () => ({
   handleMutationError: vi.fn(),
 }));
-
-// Mock scrollIntoView for Radix Select
-Element.prototype.scrollIntoView = vi.fn();
 
 describe("QuickLogForm", () => {
   const mockLogSet = vi.fn();
@@ -66,8 +63,8 @@ describe("QuickLogForm", () => {
     render(<QuickLogForm exercises={mockExercises} />);
 
     expect(screen.getByTestId("quick-log-exercise-select")).toBeInTheDocument();
-    expect(screen.getByTestId("reps-stepper")).toBeInTheDocument();
-    expect(screen.getByTestId("weight-stepper")).toBeInTheDocument();
+    expect(screen.getByTestId("quick-log-reps-input")).toBeInTheDocument();
+    expect(screen.getByTestId("quick-log-weight-input")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /LOG SET/i })
     ).toBeInTheDocument();
@@ -77,15 +74,16 @@ describe("QuickLogForm", () => {
     render(<QuickLogForm exercises={mockExercises} />);
 
     // Form should initialize with useQuickLogForm defaults
-    const repsValue = within(screen.getByTestId("reps-stepper")).getByTestId(
-      "stepper-value"
-    );
-    const weightValue = within(
-      screen.getByTestId("weight-stepper")
-    ).getByTestId("stepper-value");
+    const repsInput = screen.getByTestId(
+      "quick-log-reps-input"
+    ) as HTMLInputElement;
+    const weightInput = screen.getByTestId(
+      "quick-log-weight-input"
+    ) as HTMLInputElement;
 
-    expect(repsValue).toHaveTextContent("1");
-    expect(weightValue).toHaveTextContent("0 lbs");
+    // Empty form on initial render
+    expect(repsInput.value).toBe("");
+    expect(weightInput.value).toBe("");
   });
 
   it("integrates with useLastSet hook", () => {
@@ -148,37 +146,6 @@ describe("QuickLogForm", () => {
     expect(screen.getByText(/weight \(kg\)/i)).toBeInTheDocument();
   });
 
-  it("prefills reps and weight from last set after selecting exercise", async () => {
-    const mockSets = [
-      {
-        _id: "set-last" as any,
-        _creationTime: 1000,
-        userId: "user1",
-        exerciseId: "ex1abc123" as any,
-        reps: 8,
-        weight: 155,
-        unit: "lbs",
-        performedAt: Date.now() - 120000,
-      },
-    ];
-    vi.mocked(useQuery).mockReturnValue(mockSets);
-
-    render(<QuickLogForm exercises={mockExercises} />);
-
-    const exerciseSelect = screen.getByTestId("quick-log-exercise-select");
-    await userEvent.click(exerciseSelect);
-
-    const option = await screen.findByTestId("exercise-option-ex1abc123");
-    await userEvent.click(option);
-
-    const repsValue = within(screen.getByTestId("reps-stepper")).getByTestId(
-      "stepper-value"
-    );
-    const weightValue = within(
-      screen.getByTestId("weight-stepper")
-    ).getByTestId("stepper-value");
-
-    expect(repsValue).toHaveTextContent("8");
-    expect(weightValue).toHaveTextContent("155 lbs");
-  });
+  // Note: Ghost prefill feature was removed - form fields stay empty until user enters values
+  // This simplifies the UX since the LAST set card was also removed
 });
