@@ -18,10 +18,7 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage --run",
     "test:e2e": "playwright test",
-    "sync:prod": "./scripts/pull-prod-data.sh",
-    "changeset": "changeset",
-    "version": "changeset version",
-    "tag": "changeset tag"
+    "sync:prod": "./scripts/pull-prod-data.sh"
   },
   "packageManager": "pnpm@10.17.1",
   "dependencies": {
@@ -63,8 +60,9 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.29.7",
     "@clerk/testing": "^1.13.19",
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
     "@next/bundle-analyzer": "^15.5.6",
     "@playwright/test": "^1.57.0",
     "@sentry/cli": "^2.58.2",
