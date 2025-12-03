@@ -29,7 +29,7 @@ test("Critical Path: Create Exercise and Log Set", async ({ page }) => {
     await page.getByTestId("quick-log-exercise-select").click();
 
     // Select "Create New"
-    await page.getByTestId("quick-log-create-new").click();
+    await page.getByTestId("exercise-create-new").click();
 
     // Enter unique name
     await page.getByTestId("create-exercise-name-input").fill(exerciseName);
