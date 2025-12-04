@@ -2,11 +2,17 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { GhostSetDisplay } from "./ghost-set-display";
 import * as useLastSetModule from "@/hooks/useLastSet";
+import { WeightUnitProvider } from "@/contexts/WeightUnitContext";
 
 // Mock the useLastSet hook
 vi.mock("@/hooks/useLastSet", () => ({
   useLastSet: vi.fn(),
 }));
+
+// Wrapper component for tests
+const TestWrapper = ({ children }: { children: React.ReactNode }) => (
+  <WeightUnitProvider>{children}</WeightUnitProvider>
+);
 
 describe("GhostSetDisplay", () => {
   it("renders nothing when no exerciseId provided", () => {
@@ -15,7 +21,9 @@ describe("GhostSetDisplay", () => {
       formatTimeAgo: vi.fn(),
     });
 
-    const { container } = render(<GhostSetDisplay exerciseId={null} />);
+    const { container } = render(<GhostSetDisplay exerciseId={null} />, {
+      wrapper: TestWrapper,
+    });
     expect(container.firstChild).toBeNull();
   });
 
@@ -25,7 +33,9 @@ describe("GhostSetDisplay", () => {
       formatTimeAgo: vi.fn(),
     });
 
-    const { container } = render(<GhostSetDisplay exerciseId="exercise123" />);
+    const { container } = render(<GhostSetDisplay exerciseId="exercise123" />, {
+      wrapper: TestWrapper,
+    });
     expect(container.firstChild).toBeNull();
   });
 
@@ -44,16 +54,21 @@ describe("GhostSetDisplay", () => {
       formatTimeAgo: mockFormatTimeAgo,
     });
 
-    render(<GhostSetDisplay exerciseId="exercise123" />);
+    render(<GhostSetDisplay exerciseId="exercise123" />, {
+      wrapper: TestWrapper,
+    });
 
-    // Check for label
+    // Check for labels
     expect(screen.getByText("Last Set")).toBeInTheDocument();
+    expect(screen.getByText("Try Next")).toBeInTheDocument();
 
-    // Check for weight
-    expect(screen.getByText("135")).toBeInTheDocument();
+    // Check for last set data (chartreuse color)
+    expect(screen.getAllByText("135")).toHaveLength(2); // Last set + suggestion
+    expect(screen.getByText("10")).toBeInTheDocument(); // Last set reps
 
-    // Check for reps
-    expect(screen.getByText("10")).toBeInTheDocument();
+    // Check for suggestion data
+    expect(screen.getByText("11")).toBeInTheDocument(); // Suggested reps (+1)
+    expect(screen.getByText("+1 rep")).toBeInTheDocument(); // Strategy badge
 
     // Check for time ago
     expect(screen.getByText("2h ago")).toBeInTheDocument();
@@ -73,7 +88,9 @@ describe("GhostSetDisplay", () => {
       formatTimeAgo: mockFormatTimeAgo,
     });
 
-    render(<GhostSetDisplay exerciseId="exercise123" />);
+    render(<GhostSetDisplay exerciseId="exercise123" />, {
+      wrapper: TestWrapper,
+    });
 
     // Check for duration formatted as MM:SS
     expect(screen.getByText("1:30")).toBeInTheDocument();
@@ -96,7 +113,9 @@ describe("GhostSetDisplay", () => {
       formatTimeAgo: mockFormatTimeAgo,
     });
 
-    render(<GhostSetDisplay exerciseId="exercise123" />);
+    render(<GhostSetDisplay exerciseId="exercise123" />, {
+      wrapper: TestWrapper,
+    });
 
     // Should show reps without weight
     expect(screen.getByText("15")).toBeInTheDocument();

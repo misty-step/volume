@@ -258,10 +258,24 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                 />
               </div>
 
-              {/* Ghost Set Display - Show last set inline */}
+              {/* Ghost Set Display - Show last set inline + suggestions */}
               {form.watch("exerciseId") && (
                 <div className="mt-3">
-                  <GhostSetDisplay exerciseId={form.watch("exerciseId")} />
+                  <GhostSetDisplay
+                    exerciseId={form.watch("exerciseId")}
+                    onSuggestionAvailable={(suggestion) => {
+                      // Auto-populate form with suggestion
+                      if (suggestion.reps !== undefined) {
+                        form.setValue("reps", suggestion.reps);
+                      }
+                      if (suggestion.weight !== undefined) {
+                        form.setValue("weight", suggestion.weight);
+                      }
+                      if (suggestion.duration !== undefined) {
+                        form.setValue("duration", suggestion.duration);
+                      }
+                    }}
+                  />
                 </div>
               )}
 
