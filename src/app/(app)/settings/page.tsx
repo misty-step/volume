@@ -11,7 +11,8 @@ import { SettingsListItem } from "@/components/ui/settings-list-item";
 import { Button } from "@/components/ui/button";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { PageLayout } from "@/components/layout/page-layout";
-import { Plus } from "lucide-react";
+import { Plus, ExternalLink, Mail } from "lucide-react";
+import { clientVersion } from "@/lib/version";
 
 export default function SettingsPage() {
   const [showCreator, setShowCreator] = useState(false);
@@ -98,6 +99,34 @@ export default function SettingsPage() {
                 </Button>
               </div>
             }
+          />
+        </SettingsList>
+      </SettingsSection>
+
+      {/* About Section */}
+      <SettingsSection title="ABOUT">
+        <SettingsList>
+          <SettingsListItem
+            title="Volume"
+            subtitle={`Version ${clientVersion}`}
+          />
+          <SettingsListItem
+            title="A Misty Step Project"
+            icon={<ExternalLink className="w-4 h-4" />}
+            onClick={() => {
+              const link = document.createElement("a");
+              link.href = "https://mistystep.io";
+              link.target = "_blank";
+              link.rel = "noopener noreferrer";
+              link.click();
+            }}
+          />
+          <SettingsListItem
+            title="Feedback & Support"
+            icon={<Mail className="w-4 h-4" />}
+            onClick={() => {
+              window.location.href = "mailto:hello@mistystep.io";
+            }}
           />
         </SettingsList>
       </SettingsSection>

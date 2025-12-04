@@ -21,7 +21,11 @@ Vitest with `jsdom` and Testing Library covers unit tests; name suites `<feature
 
 ## Commit & Pull Request Guidelines
 
-Commits follow the Conventional Commits pattern in history (`refactor(ui): …`, `fix(convex): …`). Each PR should supply a short summary, link related issues, document schema or environment changes, and include screenshots for UI updates. Husky runs lint-staged on commit and surfaces Convex warnings; rerun `pnpm dev` before pushing to ensure both servers stay in sync.
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/) format, enforced by commitlint git hook. Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`. Format: `<type>: <description>` (e.g., `fix: restore autofocus on mobile`). Each PR should supply a short summary, link related issues, document schema or environment changes, and include screenshots for UI updates. Husky runs lint-staged on commit and surfaces Convex warnings; rerun `pnpm dev` before pushing to ensure both servers stay in sync.
+
+## Release Management
+
+This project uses release-please for automated versioning. When commits merge to `master`, release-please creates/updates a Release PR with changelog and version bump. Merging the Release PR creates a GitHub release with tags. See CLAUDE.md "Release Management" section for detailed workflow.
 
 ## Environment & Sync Tips
 

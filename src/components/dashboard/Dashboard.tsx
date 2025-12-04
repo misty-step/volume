@@ -17,6 +17,8 @@ import { PageLayout } from "@/components/layout/page-layout";
 import { LAYOUT } from "@/lib/layout-constants";
 import { BrutalistCard } from "@/components/brutalist";
 import { motion } from "framer-motion";
+import { useMobileViewport } from "@/hooks/useMobileViewport";
+import { cn } from "@/lib/utils";
 import { motionPresets } from "@/lib/brutalist-motion";
 import { groupSetsByExercise } from "@/lib/exercise-grouping";
 import { sortExercisesByRecency } from "@/lib/exercise-sorting";
@@ -30,6 +32,7 @@ export function Dashboard() {
   const formRef = useRef<QuickLogFormHandle>(null);
   const historyRef = useRef<HTMLDivElement>(null);
   const { unit } = useWeightUnit();
+  const isMobile = useMobileViewport();
 
   // Calculate today's date range for filtered query
   const { start, end } = getTodayRange();
@@ -191,11 +194,48 @@ export function Dashboard() {
 
   return (
     <>
-      <PageLayout title="Today">
+      <PageLayout title={isMobile ? undefined : "Today"} fullHeight={isMobile}>
         {exercises.length === 0 ? (
           /* First Run Experience - Show when no exercises exist */
           <FirstRunExperience onExerciseCreated={handleFirstExerciseCreated} />
+        ) : isMobile ? (
+          /* Mobile Layout: History scrolls only when needed, form fixed above nav */
+          <div className="flex flex-col h-full overflow-hidden">
+            {/* History section - scrolls only when content overflows */}
+            <motion.div
+              className="flex-1 overflow-y-auto pb-48"
+              variants={motionPresets.cardEntrance}
+              initial="initial"
+              animate="animate"
+            >
+              <GroupedSetHistory
+                ref={historyRef}
+                exerciseGroups={exerciseGroups}
+                exerciseMap={exerciseMap}
+                onRepeat={handleRepeatSet}
+                onDelete={handleDeleteSet}
+                isLoading={!isHydrated}
+                isMobile={isMobile}
+              />
+            </motion.div>
+
+            {/* Quick Log Form - fixed above nav with breathing room + shadow for depth */}
+            <motion.div
+              className="fixed bottom-20 left-0 right-0 z-20 bg-background border-t-3 border-concrete-black dark:border-concrete-white p-4 pb-4 shadow-[0_-4px_20px_rgba(0,0,0,0.15)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.4)]"
+              variants={motionPresets.cardEntrance}
+              initial="initial"
+              animate="animate"
+            >
+              <QuickLogForm
+                ref={formRef}
+                exercises={activeExercisesByRecency}
+                onSetLogged={handleSetLogged}
+                onUndo={handleUndo}
+              />
+            </motion.div>
+          </div>
         ) : (
+          /* Desktop Layout: Original card-based stacked layout */
           <motion.div
             className={LAYOUT.section.spacing}
             variants={motionPresets.listStagger}

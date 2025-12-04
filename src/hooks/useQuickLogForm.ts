@@ -66,7 +66,7 @@ export function useQuickLogForm({
   // Watch selected exercise for PR detection
   const selectedExerciseId = form.watch("exerciseId");
 
-  // Fetch previous sets for selected exercise (for PR detection)
+  // Fetch previous sets for selected exercise (for PR detection + ghost pre-fill)
   const previousSets = useQuery(
     api.sets.listSets,
     selectedExerciseId
@@ -75,14 +75,50 @@ export function useQuickLogForm({
   );
 
   const onSubmit = async (values: QuickLogFormValues) => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
-      const setId = await logSet({
+      const logSetPromise = logSet({
         exerciseId: values.exerciseId as Id<"exercises">,
         reps: values.reps,
         weight: values.weight,
         unit: values.weight ? values.unit : undefined,
         duration: values.duration,
       });
+
+      const raceResult = await Promise.race([
+        logSetPromise,
+        new Promise<"timeout">((resolve) => {
+          timeoutId = setTimeout(() => resolve("timeout"), 10_000);
+        }),
+      ]);
+
+      // Handle timeout: return immediately, let mutation complete in background
+      if (raceResult === "timeout") {
+        toast.info("Saving in background...");
+
+        // Fire-and-forget: handle completion asynchronously
+        logSetPromise
+          .then((setId) => {
+            onSetLogged?.(setId);
+            toast.success("Set saved!", { duration: 3000 });
+          })
+          .catch((error) => {
+            handleMutationError(error, "Log Set (background)");
+          });
+
+        // Reset form and return immediately so user can continue
+        form.reset({
+          exerciseId: values.exerciseId,
+          reps: undefined,
+          weight: undefined,
+          unit: values.unit,
+          duration: undefined,
+        });
+        onSuccess?.();
+        return; // Don't block - form is now free
+      }
+
+      const setId = raceResult as Id<"sets">;
 
       // Check for PR before showing success toast (only for rep-based exercises)
       let isPR = false;
@@ -103,6 +139,14 @@ export function useQuickLogForm({
 
         if (prResult) {
           isPR = true;
+          // Trigger screen flash effect for visceral PR impact
+          if (typeof document !== "undefined") {
+            document.body.classList.add("animate-pr-flash");
+            setTimeout(
+              () => document.body.classList.remove("animate-pr-flash"),
+              300
+            );
+          }
           // Find exercise name for celebration message
           const exercise = exercises.find((e) => e._id === values.exerciseId);
           if (exercise) {
@@ -114,6 +158,7 @@ export function useQuickLogForm({
       // Show success toast with undo action (skip if PR celebration shown)
       if (!isPR) {
         toast.success("Set logged!", {
+          duration: 10000,
           action: onUndo
             ? {
                 label: "Undo",
@@ -136,6 +181,10 @@ export function useQuickLogForm({
       onSuccess?.();
     } catch (error) {
       handleMutationError(error, "Log Set");
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     }
   };
 

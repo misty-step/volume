@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "../../test/utils";
+import userEvent from "@testing-library/user-event";
 import { QuickLogForm } from "./quick-log-form";
 import type { Exercise } from "@/types/domain";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -17,9 +18,6 @@ vi.mock("sonner", () => ({
 vi.mock("@/lib/error-handler", () => ({
   handleMutationError: vi.fn(),
 }));
-
-// Mock scrollIntoView for Radix Select
-Element.prototype.scrollIntoView = vi.fn();
 
 describe("QuickLogForm", () => {
   const mockLogSet = vi.fn();
@@ -64,9 +62,9 @@ describe("QuickLogForm", () => {
   it("renders all form fields", () => {
     render(<QuickLogForm exercises={mockExercises} />);
 
-    expect(screen.getByLabelText(/exercise/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/reps/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/weight/i)).toBeInTheDocument(); // Weight input
+    expect(screen.getByTestId("quick-log-exercise-select")).toBeInTheDocument();
+    expect(screen.getByTestId("quick-log-reps-input")).toBeInTheDocument();
+    expect(screen.getByTestId("quick-log-weight-input")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /LOG SET/i })
     ).toBeInTheDocument();
@@ -76,8 +74,12 @@ describe("QuickLogForm", () => {
     render(<QuickLogForm exercises={mockExercises} />);
 
     // Form should initialize with useQuickLogForm defaults
-    const repsInput = screen.getByLabelText(/reps/i) as HTMLInputElement;
-    const weightInput = screen.getByLabelText(/weight/i) as HTMLInputElement;
+    const repsInput = screen.getByTestId(
+      "quick-log-reps-input"
+    ) as HTMLInputElement;
+    const weightInput = screen.getByTestId(
+      "quick-log-weight-input"
+    ) as HTMLInputElement;
 
     // Empty form on initial render
     expect(repsInput.value).toBe("");
@@ -143,4 +145,7 @@ describe("QuickLogForm", () => {
 
     expect(screen.getByText(/weight \(kg\)/i)).toBeInTheDocument();
   });
+
+  // Note: Ghost prefill feature was removed - form fields stay empty until user enters values
+  // This simplifies the UX since the LAST set card was also removed
 });

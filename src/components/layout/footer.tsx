@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { clientVersion } from "@/lib/version";
 
 export function Footer() {
@@ -8,33 +7,12 @@ export function Footer() {
   const version = clientVersion;
 
   return (
-    <footer className="border-t-[3px] border-border mt-auto bg-background">
+    <footer className="hidden md:block border-t-[3px] border-border mt-auto bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-        {/* Grid layout - 4 columns on desktop, stack on mobile */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-8">
-          {/* Legal Section */}
-          <div className="space-y-2">
-            <h3 className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-              Legal
-            </h3>
-            <div className="flex flex-col gap-1.5 font-mono text-sm">
-              <Link
-                href="/terms"
-                className="text-foreground hover:text-primary transition-colors w-fit"
-              >
-                Terms of Service
-              </Link>
-              <Link
-                href="/privacy"
-                className="text-foreground hover:text-primary transition-colors w-fit"
-              >
-                Privacy Policy
-              </Link>
-            </div>
-          </div>
-
+        {/* Grid layout - 3 columns on desktop */}
+        <div className="grid grid-cols-3 gap-8">
           {/* Company Section */}
-          <div className="space-y-2 pt-4 md:pt-0 border-t-[3px] md:border-t-0 border-border">
+          <div className="space-y-2">
             <h3 className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
               Company
             </h3>
@@ -62,7 +40,7 @@ export function Footer() {
           </div>
 
           {/* Support Section */}
-          <div className="space-y-2 pt-4 md:pt-0 border-t-[3px] md:border-t-0 border-border">
+          <div className="space-y-2">
             <h3 className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
               Support
             </h3>
@@ -75,7 +53,7 @@ export function Footer() {
           </div>
 
           {/* Copyright Section */}
-          <div className="space-y-2 pt-4 md:pt-0 border-t-[3px] md:border-t-0 border-border">
+          <div className="space-y-2">
             <h3 className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
               &nbsp;
             </h3>

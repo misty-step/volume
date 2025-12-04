@@ -464,6 +464,81 @@ Separate dev and prod deployments provide:
 ✅ **DO**: Run full test suite before deploying
 ✅ **DO**: Deploy from `master` branch or approved PR branches only
 
+## Release Management
+
+This project uses **release-please** for automated changelog generation and version management.
+
+### How It Works
+
+1. **Conventional Commits**: All commits must follow the [Conventional Commits](https://www.conventionalcommits.org/) format
+2. **Automatic Release PR**: When you push to `master`, release-please automatically creates/updates a Release PR
+3. **Changelog Generation**: The Release PR includes an updated `CHANGELOG.md` and version bump
+4. **Merge to Release**: Merging the Release PR creates a GitHub release with tags
+
+### Conventional Commit Format
+
+```
+<type>: <description>
+
+[optional body]
+
+[optional footer]
+```
+
+**Allowed types**:
+
+- `feat`: New feature (triggers minor version bump)
+- `fix`: Bug fix (triggers patch version bump)
+- `docs`: Documentation only
+- `style`: Formatting, missing semi colons, etc.
+- `refactor`: Code change that neither fixes a bug nor adds a feature
+- `perf`: Performance improvement
+- `test`: Adding tests
+- `chore`: Updating build tasks, package manager configs, etc.
+
+**Breaking changes**: Add `BREAKING CHANGE:` in the footer to trigger a major version bump.
+
+### Example Commits
+
+```bash
+# Feature (minor bump)
+git commit -m "feat: add exercise selector dialog for mobile"
+
+# Bug fix (patch bump)
+git commit -m "fix: restore type safety in useLastSet hook"
+
+# Breaking change (major bump)
+git commit -m "feat: redesign authentication flow
+
+BREAKING CHANGE: old session tokens are no longer compatible"
+```
+
+### Commit Message Validation
+
+A git hook validates commit messages automatically. If your commit is rejected:
+
+1. Check that your message follows the format: `<type>: <description>`
+2. Ensure the type is one of the allowed types above
+3. Keep the description concise and lowercase
+
+### Release Workflow
+
+1. **Make changes**: Develop features/fixes on feature branches
+2. **Use conventional commits**: All commits must follow the format above
+3. **Create PR**: Open a PR against `master`
+4. **Merge PR**: After CI passes and review approval, merge to `master`
+5. **Automated Release PR**: release-please creates/updates a Release PR automatically
+6. **Review Release PR**: Check the generated changelog and version bump
+7. **Merge Release PR**: Merging creates a GitHub release and tags the commit
+
+### Manual Version Override
+
+If you need to override the version bump (rarely needed):
+
+1. Edit the Release PR's `CHANGELOG.md` and `package.json` directly
+2. Commit the changes to the Release PR branch
+3. Merge when ready
+
 ## Development Notes
 
 - **Turbopack**: Development uses `--turbopack` flag for faster builds

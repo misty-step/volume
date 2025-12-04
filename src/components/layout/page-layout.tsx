@@ -18,6 +18,12 @@ interface PageLayoutProps {
    * Set to false for full-width pages (rare)
    */
   maxWidth?: boolean;
+
+  /**
+   * Whether to make the layout take full viewport height (default: false)
+   * Useful for mobile layouts with sticky bottom elements
+   */
+  fullHeight?: boolean;
 }
 
 /**
@@ -45,12 +51,13 @@ export function PageLayout({
   children,
   title,
   maxWidth = true,
+  fullHeight = false,
 }: PageLayoutProps) {
   return (
     <main
       className={`flex-1 w-full flex flex-col ${LAYOUT.page.padding} ${
         maxWidth ? LAYOUT.page.maxWidth : ""
-      }`}
+      } ${fullHeight ? "min-h-[calc(100dvh-64px)] pb-0 overflow-hidden" : ""}`}
     >
       {title && (
         <h1
@@ -59,7 +66,11 @@ export function PageLayout({
           {title}
         </h1>
       )}
-      <div className={LAYOUT.page.spacing}>{children}</div>
+      <div
+        className={`${LAYOUT.page.spacing} ${fullHeight ? "flex-1 flex flex-col" : ""}`}
+      >
+        {children}
+      </div>
     </main>
   );
 }
