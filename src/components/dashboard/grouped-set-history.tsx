@@ -5,13 +5,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Id } from "../../../convex/_generated/dataModel";
 import { BrutalistCard } from "@/components/brutalist";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
-import { Exercise, Set } from "@/types/domain";
+import { Exercise, Set as WorkoutSet } from "@/types/domain";
 import { ExerciseSetGroup } from "./exercise-set-group";
 import { Dumbbell, ChevronDown, ChevronUp } from "lucide-react";
 
 interface ExerciseGroup {
   exerciseId: Id<"exercises">;
-  sets: Set[];
+  sets: WorkoutSet[];
   totalVolume: number;
   totalReps: number;
 }
@@ -19,7 +19,7 @@ interface ExerciseGroup {
 interface GroupedSetHistoryProps {
   exerciseGroups: ExerciseGroup[];
   exerciseMap: Map<Id<"exercises">, Exercise>;
-  onRepeat: (set: Set) => void;
+  onRepeat: (set: WorkoutSet) => void;
   onDelete: (setId: Id<"sets">) => void;
   isLoading?: boolean;
   /** Mobile layout: form is below, so empty state points down */

@@ -113,12 +113,20 @@ export default function SettingsPage() {
           <SettingsListItem
             title="A Misty Step Project"
             icon={<ExternalLink className="w-4 h-4" />}
-            onClick={() => window.open("https://mistystep.io", "_blank")}
+            onClick={() => {
+              const link = document.createElement("a");
+              link.href = "https://mistystep.io";
+              link.target = "_blank";
+              link.rel = "noopener noreferrer";
+              link.click();
+            }}
           />
           <SettingsListItem
             title="Feedback & Support"
             icon={<Mail className="w-4 h-4" />}
-            onClick={() => window.open("mailto:hello@mistystep.io")}
+            onClick={() => {
+              window.location.href = "mailto:hello@mistystep.io";
+            }}
           />
         </SettingsList>
       </SettingsSection>

@@ -490,11 +490,11 @@ This project uses **release-please** for automated changelog generation and vers
 - `feat`: New feature (triggers minor version bump)
 - `fix`: Bug fix (triggers patch version bump)
 - `docs`: Documentation only
-- `style`: Formatting, missing semi colons, etc
+- `style`: Formatting, missing semi colons, etc.
 - `refactor`: Code change that neither fixes a bug nor adds a feature
 - `perf`: Performance improvement
 - `test`: Adding tests
-- `chore`: Updating build tasks, package manager configs, etc
+- `chore`: Updating build tasks, package manager configs, etc.
 
 **Breaking changes**: Add `BREAKING CHANGE:` in the footer to trigger a major version bump.
 

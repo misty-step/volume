@@ -7,6 +7,12 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 
 ## Now (Sprint-Ready, <2 weeks)
 
+### [PRODUCT] Tighten up analytics
+
+- a few very well defined useful analytics components
+  - eg frequency: good for frequency of workouts in general, sets specifically, muscle groups more specifically, exact exercises, etc
+  - ai reports as distinct from other analytics widgets / components
+
 ### [PRODUCT] Move from ad-hoc exercises per user to a curated set of high quality exercises
 
 - each exercise should be well named, have instructions, have required gear, have muscle groups they work, and have one or more images / graphics showing form
@@ -259,6 +265,66 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Fix**: Add undo toast pattern to 3 delete locations
 **Effort**: 2h | **Value**: HIGH
 **Acceptance**: All deletes show undo toast for 5s recovery window
+
+### [Accessibility] Remove empty heading in footer
+
+**File**: src/components/layout/footer.tsx:56-63
+**Perspectives**: user-experience-advocate
+**Source**: PR #51 review (coderabbitai)
+**Impact**: Empty `<h3>` with `&nbsp;` confuses screen readers that announce heading with no label.
+**Fix**: Remove decorative heading or use `aria-hidden="true"` wrapper
+**Effort**: 10m | **Value**: A11y compliance
+**Acceptance**: Screen readers don't announce empty heading
+
+### [Architecture] Extract header height to layout-constants.ts
+
+**File**: src/components/layout/page-layout.tsx:54
+**Perspectives**: maintainability-maven
+**Source**: PR #51 review (coderabbitai)
+**Impact**: 64px calculation hardcoded, risks divergence from `h-16` class in nav.tsx
+**Fix**: Add `nav.height: "h-16"` to LAYOUT in layout-constants.ts, reference in page-layout.tsx
+**Effort**: 15m | **Value**: Single source of truth
+**Acceptance**: Header height defined once, used everywhere
+
+### [UX] Remove redundant focus call in ExerciseSelectorDialog
+
+**File**: src/components/dashboard/quick-log-form.tsx:228-263
+**Perspectives**: maintainability-maven
+**Source**: PR #51 review (coderabbitai)
+**Impact**: Both `onOpenChange` and `onSelect` trigger `focusElement`, causing redundant focus calls
+**Fix**: Remove focus call from `onOpenChange`, rely solely on `onSelect` delayed focus
+**Effort**: 10m | **Value**: Cleaner code, more predictable behavior
+**Acceptance**: Focus fires once per selection, not twice
+
+### [Architecture] Pass isMobile prop consistently to GroupedSetHistory
+
+**File**: src/components/dashboard/Dashboard.tsx:257-264
+**Perspectives**: maintainability-maven
+**Source**: PR #51 review (coderabbitai)
+**Impact**: Mobile path passes `isMobile={isMobile}`, desktop path omits it (relies on default)
+**Fix**: Explicitly pass `isMobile={false}` in desktop render path
+**Effort**: 5m | **Value**: Consistency, explicit over implicit
+**Acceptance**: Both render paths explicitly pass isMobile prop
+
+### [Cleanup] Clear PR flash timeout on unmount
+
+**File**: src/hooks/useQuickLogForm.ts:123-130
+**Perspectives**: maintainability-maven
+**Source**: PR #51 review (coderabbitai)
+**Impact**: setTimeout for PR flash class removal not cleared on component unmount (minor memory leak)
+**Fix**: Use ref to track and clear timeout in cleanup
+**Effort**: 15m | **Value**: Proper cleanup hygiene
+**Acceptance**: No orphaned timeouts after unmount
+
+### [Testing] Complete background toast timeout test
+
+**File**: src/hooks/useQuickLogForm.test.ts:310-353
+**Perspectives**: maintainability-maven
+**Source**: PR #51 review (coderabbitai)
+**Impact**: Skipped test for "background toast after 10s timeout" behavior
+**Fix**: Implement test now that hook returns early on timeout (test should pass with new behavior)
+**Effort**: 30m | **Value**: Test coverage for critical timeout path
+**Acceptance**: Test unskipped and passing
 
 ### [UX] Built-in timer for duration exercises
 

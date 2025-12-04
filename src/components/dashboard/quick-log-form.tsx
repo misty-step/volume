@@ -27,7 +27,6 @@ import { DurationInput } from "./duration-input";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { Exercise, Set } from "@/types/domain";
 import { useQuickLogForm, QuickLogFormValues } from "@/hooks/useQuickLogForm";
-import { useLastSet } from "@/hooks/useLastSet";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/date-utils";
@@ -132,11 +131,6 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
       });
     };
 
-    // Watch selected exercise for last set query
-    const selectedExerciseId = form.watch("exerciseId");
-
-    // Get last set and time formatter
-    const { lastSet, formatTimeAgo } = useLastSet(selectedExerciseId);
     const isMobile = useMobileViewport();
 
     // Expose repeatSet method to parent via ref

@@ -15,7 +15,7 @@
 
 **Data Flow**:
 
-```
+```text
 User selects exercise
   → useLastSet fetches last set
   → useFormPrefill auto-populates reps/weight
@@ -482,7 +482,7 @@ component ExerciseSelectorDialog({ open, onOpenChange, exercises, onSelect }):
 
 ## File Organization
 
-```
+```text
 src/
   components/
     brutalist/
@@ -701,7 +701,7 @@ describe('QuickLogForm mobile UX', () => {
 
 **Stepper Layout**:
 
-```
+```text
 ┌─────────────────────────────────┐
 │  [−]    135    [+]              │
 │  48px  tabular  48px            │
@@ -710,7 +710,7 @@ describe('QuickLogForm mobile UX', () => {
 
 **Mobile Dialog**:
 
-```
+```text
 ┌─────────────────────────────────┐
 │  SELECT EXERCISE           [×]  │ ← Header
 ├─────────────────────────────────┤
@@ -728,7 +728,7 @@ describe('QuickLogForm mobile UX', () => {
 
 **Sticky Submit (Mobile)**:
 
-```
+```text
 ┌─────────────────────────────────┐
 │  [Form content scrolls]         │
 │                                 │

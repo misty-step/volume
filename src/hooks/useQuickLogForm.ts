@@ -92,14 +92,33 @@ export function useQuickLogForm({
         }),
       ]);
 
-      const setId =
-        raceResult === "timeout"
-          ? await logSetPromise
-          : (raceResult as Id<"sets">);
-
+      // Handle timeout: return immediately, let mutation complete in background
       if (raceResult === "timeout") {
         toast.info("Saving in background...");
+
+        // Fire-and-forget: handle completion asynchronously
+        logSetPromise
+          .then((setId) => {
+            onSetLogged?.(setId);
+            toast.success("Set saved!", { duration: 3000 });
+          })
+          .catch((error) => {
+            handleMutationError(error, "Log Set (background)");
+          });
+
+        // Reset form and return immediately so user can continue
+        form.reset({
+          exerciseId: values.exerciseId,
+          reps: undefined,
+          weight: undefined,
+          unit: values.unit,
+          duration: undefined,
+        });
+        onSuccess?.();
+        return; // Don't block - form is now free
       }
+
+      const setId = raceResult as Id<"sets">;
 
       // Check for PR before showing success toast (only for rep-based exercises)
       let isPR = false;

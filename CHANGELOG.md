@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Build version display**: Added semantic version display in footer (replaces "vdev" in production)
 
-- **Changesets automation**: Set up automated changelog generation and version management
+- **Release automation (release-please)**: Set up automated changelog generation and version management
 
 ### Changed
 
