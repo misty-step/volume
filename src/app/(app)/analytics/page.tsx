@@ -12,12 +12,10 @@ import { ProgressiveOverloadWidget } from "@/components/analytics/progressive-ov
 import { RecoveryDashboardWidget } from "@/components/analytics/recovery-dashboard-widget";
 import { FocusSuggestionsWidget } from "@/components/analytics/focus-suggestions-widget";
 import { Dumbbell } from "lucide-react";
-
-type WorkoutFrequency = {
-  date: string;
-  setCount: number;
-  totalVolume: number;
-};
+import {
+  filterFrequencyFromFirstWorkout,
+  type WorkoutFrequency,
+} from "@/lib/analytics-utils";
 
 export default function AnalyticsPage() {
   // Fetch analytics data using Convex queries
@@ -29,14 +27,16 @@ export default function AnalyticsPage() {
   const firstWorkoutDate = useQuery(api.users.getFirstWorkoutDate, {});
 
   // Filter heatmap data to start at first workout date (not Jan 1st)
-  const filteredFrequencyData = useMemo(() => {
-    if (!frequencyData || !firstWorkoutDate) return frequencyData;
-    const firstDateTs = Number(firstWorkoutDate);
-    return frequencyData.filter((day: WorkoutFrequency) => {
-      const dayTimestamp = new Date(day.date).getTime();
-      return dayTimestamp >= firstDateTs;
-    });
-  }, [frequencyData, firstWorkoutDate]);
+  const filteredFrequencyData = useMemo(
+    () =>
+      frequencyData
+        ? filterFrequencyFromFirstWorkout(
+            frequencyData,
+            firstWorkoutDate ?? null
+          )
+        : frequencyData,
+    [frequencyData, firstWorkoutDate]
+  );
 
   // Determine loading state (any query undefined = still loading)
   const isLoading =
