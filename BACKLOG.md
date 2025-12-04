@@ -7,12 +7,6 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 
 ## Now (Sprint-Ready, <2 weeks)
 
-### [PRODUCT] Tighten up analytics
-
-- a few very well defined useful analytics components
-  - eg frequency: good for frequency of workouts in general, sets specifically, muscle groups more specifically, exact exercises, etc
-  - ai reports as distinct from other analytics widgets / components
-
 ### [PRODUCT] Move from ad-hoc exercises per user to a curated set of high quality exercises
 
 - each exercise should be well named, have instructions, have required gear, have muscle groups they work, and have one or more images / graphics showing form

@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/date-utils";
 import { ExerciseSelectorDialog } from "./exercise-selector-dialog";
 import { useMobileViewport } from "@/hooks/useMobileViewport";
+import { GhostSetDisplay } from "./ghost-set-display";
 
 interface QuickLogFormProps {
   exercises: Exercise[];
@@ -255,7 +256,16 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                     </FormItem>
                   )}
                 />
+              </div>
 
+              {/* Ghost Set Display - Show last set inline */}
+              {form.watch("exerciseId") && (
+                <div className="mt-3">
+                  <GhostSetDisplay exerciseId={form.watch("exerciseId")} />
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end">
                 {/* Reps or Duration input based on mode */}
                 {!isDurationMode ? (
                   <FormField
