@@ -56,11 +56,6 @@ export function ReportNavigator() {
   const hasNext = reportIndex < reportsForType.length - 1;
   const hasPrevious = reportIndex > 0;
 
-  // Reset index when switching tabs
-  useEffect(() => {
-    setReportIndex(0);
-  }, [selectedType]);
-
   // Count reports by type
   const reportCounts = {
     daily: allReports?.filter((r) => r.reportType === "daily").length || 0,
@@ -85,7 +80,10 @@ export function ReportNavigator() {
           return (
             <button
               key={tab.type}
-              onClick={() => setSelectedType(tab.type)}
+              onClick={() => {
+                setSelectedType(tab.type);
+                setReportIndex(0);
+              }}
               className={`
                 px-4 py-2 text-sm font-medium font-mono uppercase tracking-wide transition-colors
                 border-b-3 -mb-px

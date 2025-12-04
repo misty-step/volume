@@ -13,7 +13,7 @@ App router code lives under `src/app`, with shared UI in `src/components/{dashbo
 
 ## Coding Style & Naming Conventions
 
-Prettier (tab width 2, double quotes, trailing commas) governs formatting, and lint-staged runs Prettier plus `next lint --fix` on staged changes. Keep React components in PascalCase files (`ThemeProvider.tsx`), export hooks with `use` prefixes, and co-locate tests or feature-specific styles beside their sources. Tailwind classes should follow the existing layout → spacing → color ordering.
+Prettier (tab width 2, double quotes, trailing commas) governs formatting, and lint-staged runs Prettier plus `eslint --fix --max-warnings=0` on staged changes. Keep React components in PascalCase files (`ThemeProvider.tsx`), export hooks with `use` prefixes, and co-locate tests or feature-specific styles beside their sources. Tailwind classes should follow the existing layout → spacing → color ordering.
 
 ## Testing Guidelines
 

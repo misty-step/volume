@@ -18,6 +18,7 @@ export function useMobileViewport(breakpoint = 768) {
       setIsMobile(event.matches);
     };
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMobile(mediaQuery.matches);
     mediaQuery.addEventListener("change", handleChange);
 

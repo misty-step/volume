@@ -46,6 +46,7 @@ export const DurationInput = forwardRef<HTMLInputElement, DurationInputProps>(
     const secondsId = `${baseId}-seconds`;
 
     // Mirror controlled seconds value into the two display fields
+    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
       if (value === undefined || Number.isNaN(value)) {
         setMinutesValue("");
@@ -57,6 +58,7 @@ export const DurationInput = forwardRef<HTMLInputElement, DurationInputProps>(
       setMinutesValue(mins > 0 ? String(mins) : "");
       setSecondsValue(secs > 0 ? String(secs) : "");
     }, [value]);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     useImperativeHandle(ref, () => minutesRef.current as HTMLInputElement);
 
