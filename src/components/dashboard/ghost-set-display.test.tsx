@@ -54,9 +54,20 @@ describe("GhostSetDisplay", () => {
       formatTimeAgo: mockFormatTimeAgo,
     });
 
-    render(<GhostSetDisplay exerciseId="exercise123" />, {
-      wrapper: TestWrapper,
-    });
+    render(
+      <GhostSetDisplay
+        exerciseId="exercise123"
+        suggestion={{
+          reps: 11,
+          weight: 135,
+          reasoning: "+1 rep progression",
+          strategy: "increase-reps",
+        }}
+      />,
+      {
+        wrapper: TestWrapper,
+      }
+    );
 
     // Check for labels
     expect(screen.getByText("Last Set")).toBeInTheDocument();

@@ -3,7 +3,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLastSet } from "@/hooks/useLastSet";
-import { suggestNextSet } from "@/lib/set-suggestion-engine";
 import { PERFORMANCE_COLORS } from "@/config/design-tokens";
 import { cn } from "@/lib/utils";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
@@ -11,12 +10,14 @@ import { TrendingUp } from "lucide-react";
 
 interface GhostSetDisplayProps {
   exerciseId: string | null;
-  className?: string;
-  onSuggestionAvailable?: (suggestion: {
+  suggestion?: {
     reps?: number;
     weight?: number;
     duration?: number;
-  }) => void;
+    reasoning: string;
+    strategy: string;
+  } | null;
+  className?: string;
 }
 
 /**
@@ -32,25 +33,11 @@ interface GhostSetDisplayProps {
  */
 export function GhostSetDisplay({
   exerciseId,
+  suggestion,
   className,
-  onSuggestionAvailable,
 }: GhostSetDisplayProps) {
   const { lastSet, formatTimeAgo } = useLastSet(exerciseId);
   const { unit } = useWeightUnit();
-
-  // Generate suggestion based on last set
-  const suggestion = lastSet ? suggestNextSet(lastSet, unit) : null;
-
-  // Notify parent when suggestion changes
-  React.useEffect(() => {
-    if (suggestion && onSuggestionAvailable) {
-      onSuggestionAvailable({
-        reps: suggestion.reps,
-        weight: suggestion.weight,
-        duration: suggestion.duration,
-      });
-    }
-  }, [suggestion, onSuggestionAvailable]);
 
   return (
     <AnimatePresence mode="wait">

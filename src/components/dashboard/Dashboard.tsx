@@ -16,7 +16,7 @@ import { handleMutationError } from "@/lib/error-handler";
 import { PageLayout } from "@/components/layout/page-layout";
 import { LAYOUT } from "@/lib/layout-constants";
 import { BrutalistCard } from "@/components/brutalist";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useMobileViewport } from "@/hooks/useMobileViewport";
 import { cn } from "@/lib/utils";
 import { motionPresets } from "@/lib/brutalist-motion";
@@ -24,6 +24,7 @@ import { groupSetsByExercise } from "@/lib/exercise-grouping";
 import { sortExercisesByRecency } from "@/lib/exercise-sorting";
 import { getTodayRange } from "@/lib/date-utils";
 import type { Exercise, Set as WorkoutSet } from "@/types/domain";
+import { Plus, X } from "lucide-react";
 
 export function Dashboard() {
   const { isLoaded: isClerkLoaded, userId } = useAuth();
@@ -33,6 +34,7 @@ export function Dashboard() {
   const historyRef = useRef<HTMLDivElement>(null);
   const { unit } = useWeightUnit();
   const isMobile = useMobileViewport();
+  const [formOpen, setFormOpen] = useState(false);
 
   // Calculate today's date range for filtered query
   const { start, end } = getTodayRange();
@@ -109,8 +111,13 @@ export function Dashboard() {
     formRef.current?.repeatSet(set);
   };
 
-  // Handle set logged - scroll to history
+  // Handle set logged - scroll to history (mobile: also close modal)
   const handleSetLogged = () => {
+    // Mobile: close form modal after successful log
+    if (isMobile) {
+      setFormOpen(false);
+    }
+
     // 100ms delay ensures React finishes rendering the newly logged set
     // in the history section before scrolling to it
     setTimeout(() => {
@@ -199,11 +206,11 @@ export function Dashboard() {
           /* First Run Experience - Show when no exercises exist */
           <FirstRunExperience onExerciseCreated={handleFirstExerciseCreated} />
         ) : isMobile ? (
-          /* Mobile Layout: History scrolls only when needed, form fixed above nav */
+          /* Mobile Layout: FAB + Modal (history fully visible when form closed) */
           <div className="flex flex-col h-full overflow-hidden">
-            {/* History section - scrolls only when content overflows */}
+            {/* History section - full screen access when form modal closed */}
             <motion.div
-              className="flex-1 overflow-y-auto pb-48"
+              className="flex-1 overflow-y-auto pb-20"
               variants={motionPresets.cardEntrance}
               initial="initial"
               animate="animate"
@@ -219,20 +226,79 @@ export function Dashboard() {
               />
             </motion.div>
 
-            {/* Quick Log Form - fixed above nav with breathing room + shadow for depth */}
-            <motion.div
-              className="fixed bottom-20 left-0 right-0 z-20 bg-background border-t-3 border-concrete-black dark:border-concrete-white p-4 pb-4 shadow-[0_-4px_20px_rgba(0,0,0,0.15)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.4)]"
-              variants={motionPresets.cardEntrance}
-              initial="initial"
-              animate="animate"
+            {/* FAB - Floating Action Button (bottom-right, above nav) */}
+            <motion.button
+              onClick={() => setFormOpen(true)}
+              className={cn(
+                "fixed bottom-24 right-4 z-30",
+                "w-16 h-16 rounded-full",
+                "bg-danger-red border-3 border-concrete-black",
+                "flex items-center justify-center",
+                "shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",
+                "active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]",
+                "active:translate-x-[2px] active:translate-y-[2px]",
+                "transition-all duration-75"
+              )}
+              whileTap={{ scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3, duration: 0.3 }}
             >
-              <QuickLogForm
-                ref={formRef}
-                exercises={activeExercisesByRecency}
-                onSetLogged={handleSetLogged}
-                onUndo={handleUndo}
-              />
-            </motion.div>
+              <Plus className="w-8 h-8 text-white" strokeWidth={3} />
+            </motion.button>
+
+            {/* Modal - slides up from bottom like garage door */}
+            <AnimatePresence>
+              {formOpen && (
+                <>
+                  {/* Backdrop with concrete texture */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={() => setFormOpen(false)}
+                    className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm"
+                  />
+
+                  {/* Modal content - mechanical slide-up animation */}
+                  <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{
+                      type: "spring",
+                      damping: 30,
+                      stiffness: 300,
+                    }}
+                    className={cn(
+                      "fixed bottom-0 left-0 right-0 z-50",
+                      "bg-background border-t-3 border-concrete-black dark:border-concrete-white",
+                      "max-h-[90vh] overflow-y-auto",
+                      "pb-safe"
+                    )}
+                  >
+                    {/* Close button - top-right corner */}
+                    <button
+                      onClick={() => setFormOpen(false)}
+                      className="absolute top-4 right-4 z-10 p-2 text-safety-orange hover:text-danger-red transition-colors"
+                    >
+                      <X className="w-6 h-6" strokeWidth={3} />
+                    </button>
+
+                    {/* Form */}
+                    <div className="p-6 pt-12 pb-28">
+                      <QuickLogForm
+                        ref={formRef}
+                        exercises={activeExercisesByRecency}
+                        onSetLogged={handleSetLogged}
+                        onUndo={handleUndo}
+                      />
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
         ) : (
           /* Desktop Layout: Original card-based stacked layout */

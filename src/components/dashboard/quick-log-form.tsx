@@ -35,6 +35,8 @@ import { useMobileViewport } from "@/hooks/useMobileViewport";
 import { GhostSetDisplay } from "./ghost-set-display";
 import { PRPreviewBadge } from "./pr-preview-badge";
 import { usePreviewPR } from "@/hooks/usePreviewPR";
+import { useLastSet } from "@/hooks/useLastSet";
+import { suggestNextSet } from "@/lib/set-suggestion-engine";
 
 interface QuickLogFormProps {
   exercises: Exercise[];
@@ -85,6 +87,10 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
       unit,
     });
 
+    // Calculate suggestion in parent (moved from GhostSetDisplay to fix infinite loop)
+    const { lastSet } = useLastSet(form.watch("exerciseId"));
+    const suggestion = lastSet ? suggestNextSet(lastSet, unit) : null;
+
     // Watch for changes in form values to clear opposing fields
     useEffect(() => {
       const subscription = form.watch((value, { name }) => {
@@ -98,6 +104,34 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
       });
       return () => subscription.unsubscribe();
     }, [form]);
+
+    // Auto-populate form when suggestion changes (only empty fields)
+    useEffect(() => {
+      if (suggestion && form.watch("exerciseId")) {
+        const currentReps = form.watch("reps");
+        const currentWeight = form.watch("weight");
+        const currentDuration = form.watch("duration");
+
+        if (suggestion.reps !== undefined && currentReps === undefined) {
+          form.setValue("reps", suggestion.reps);
+        }
+        if (suggestion.weight !== undefined && currentWeight === undefined) {
+          form.setValue("weight", suggestion.weight);
+        }
+        if (
+          suggestion.duration !== undefined &&
+          currentDuration === undefined
+        ) {
+          form.setValue("duration", suggestion.duration);
+        }
+      }
+    }, [
+      suggestion?.reps,
+      suggestion?.weight,
+      suggestion?.duration,
+      suggestion,
+      form,
+    ]);
 
     /*
      * Autofocus Flow:
@@ -274,18 +308,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                 <div className="mt-3">
                   <GhostSetDisplay
                     exerciseId={form.watch("exerciseId")}
-                    onSuggestionAvailable={(suggestion) => {
-                      // Auto-populate form with suggestion
-                      if (suggestion.reps !== undefined) {
-                        form.setValue("reps", suggestion.reps);
-                      }
-                      if (suggestion.weight !== undefined) {
-                        form.setValue("weight", suggestion.weight);
-                      }
-                      if (suggestion.duration !== undefined) {
-                        form.setValue("duration", suggestion.duration);
-                      }
-                    }}
+                    suggestion={suggestion}
                   />
                 </div>
               )}
