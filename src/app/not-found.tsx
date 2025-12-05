@@ -1,3 +1,5 @@
+"use client";
+
 import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
 import { BrutalistButton } from "@/components/brutalist/BrutalistButton";
 import { motion } from "framer-motion";
