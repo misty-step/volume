@@ -92,6 +92,9 @@ importers:
       react-activity-calendar:
         specifier: ^2.7.15
         version: 2.7.15(react@19.2.0)
+      react-body-highlighter:
+        specifier: ^2.0.5
+        version: 2.0.5(react@19.2.0)
       react-dom:
         specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
@@ -4486,6 +4489,12 @@ packages:
     resolution: {integrity: sha512-sPO4tDJp+sRbV8F/LhUZ/woHmi4dg0Phd+Kt1Jw0orSfGfEqGCm7fFXiTIAvuuAwpwxqPEYEnfNzOLEfUrdg1A==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
+
+  react-body-highlighter@2.0.5:
+    resolution: {integrity: sha512-yt37177vKIc+8TGxQw//G/3ah2aw/3E0g1oDt4N+46fMLVZ9BSelhc9S7kiwEkJRvYc3RyUSr9453uMJnvtxRg==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      react: '>=16'
 
   react-dom@19.2.0:
     resolution: {integrity: sha512-UlbRu4cAiGaIewkPyiRGJk0imDN2T3JjieT6spoL2UeSf5od4n5LB/mQ4ejmxhCFT1tYe8IvaFulzynWovsEFQ==}
@@ -9950,6 +9959,10 @@ snapshots:
   react-activity-calendar@2.7.15(react@19.2.0):
     dependencies:
       date-fns: 4.1.0
+      react: 19.2.0
+
+  react-body-highlighter@2.0.5(react@19.2.0):
+    dependencies:
       react: 19.2.0
 
   react-dom@19.2.0(react@19.2.0):
