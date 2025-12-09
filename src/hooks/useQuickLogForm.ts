@@ -157,8 +157,13 @@ export function useQuickLogForm({
 
       // Show success toast with undo action (skip if PR celebration shown)
       if (!isPR) {
+        // Haptic feedback on mobile
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+          navigator.vibrate(50); // Short, sharp vibration
+        }
+
         toast.success("Set logged!", {
-          duration: 10000,
+          duration: 3000, // 3s instead of 10s - quick confirmation
           action: onUndo
             ? {
                 label: "Undo",

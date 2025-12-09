@@ -168,7 +168,7 @@ describe("useQuickLogForm", () => {
       expect(mockOnSuccess).toHaveBeenCalled();
       expect(toast.success).toHaveBeenCalledWith(
         "Set logged!",
-        expect.objectContaining({ duration: 10000 })
+        expect.objectContaining({ duration: 3000 })
       );
     });
   });
@@ -201,7 +201,7 @@ describe("useQuickLogForm", () => {
       expect(mockOnSetLogged).toHaveBeenCalledWith("set456");
       expect(toast.success).toHaveBeenCalledWith(
         "Set logged!",
-        expect.objectContaining({ duration: 10000 })
+        expect.objectContaining({ duration: 3000 })
       );
     });
   });

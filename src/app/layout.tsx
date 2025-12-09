@@ -5,9 +5,9 @@ import { ConvexClientProvider } from "./ConvexClientProvider";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { WeightUnitProvider } from "@/contexts/WeightUnitContext";
-import { Toaster } from "sonner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AnalyticsWrapper } from "@/components/analytics-wrapper";
+import { ToasterProvider } from "@/components/toaster-provider";
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -70,7 +70,7 @@ export default function RootLayout({
               <ConvexClientProvider>{children}</ConvexClientProvider>
             </WeightUnitProvider>
           </ThemeProvider>
-          <Toaster position="bottom-right" />
+          <ToasterProvider />
           <AnalyticsWrapper />
           <SpeedInsights />
         </body>

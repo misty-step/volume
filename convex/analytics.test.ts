@@ -399,6 +399,101 @@ describe("Analytics Queries", () => {
     });
   });
 
+  describe("getDashboardAnalytics (composite)", () => {
+    test("returns all analytics data in a single query", async () => {
+      const benchPress = await createExercise("Bench Press");
+
+      const now = Date.now();
+      const oneDayAgo = now - 1 * 24 * 60 * 60 * 1000;
+      const twoDaysAgo = now - 2 * 24 * 60 * 60 * 1000;
+
+      // Log sets across multiple days
+      await logSet(benchPress, 10, 135, twoDaysAgo);
+      await logSet(benchPress, 12, 140, oneDayAgo);
+      await logSet(benchPress, 8, 145, now); // Weight PR
+
+      const dashboard = await t
+        .withIdentity({ subject: user1Subject, name: "User 1" })
+        .query(api.analytics.getDashboardAnalytics, {});
+
+      // Should return all analytics components
+      expect(dashboard).toHaveProperty("frequency");
+      expect(dashboard).toHaveProperty("streakStats");
+      expect(dashboard).toHaveProperty("recentPRs");
+      expect(dashboard).toHaveProperty("recovery");
+      expect(dashboard).toHaveProperty("focusSuggestions");
+      expect(dashboard).toHaveProperty("progressiveOverload");
+      expect(dashboard).toHaveProperty("firstWorkoutDate");
+
+      // Verify streak calculation
+      expect(dashboard.streakStats.totalWorkouts).toBeGreaterThanOrEqual(3);
+
+      // Verify PRs detected
+      expect(dashboard.recentPRs.length).toBeGreaterThan(0);
+
+      // Verify first workout date format
+      expect(dashboard.firstWorkoutDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+
+    test("returns default values for new user with no data", async () => {
+      const dashboard = await t
+        .withIdentity({ subject: user1Subject, name: "User 1" })
+        .query(api.analytics.getDashboardAnalytics, {});
+
+      expect(dashboard.streakStats.currentStreak).toBe(0);
+      expect(dashboard.streakStats.totalWorkouts).toBe(0);
+      expect(dashboard.recentPRs).toEqual([]);
+      expect(dashboard.firstWorkoutDate).toBeNull();
+      expect(dashboard.focusSuggestions).toEqual([]);
+    });
+
+    test("isolates data per user", async () => {
+      // User 1 exercise
+      const user1Exercise = await createExercise("Bench Press");
+      await logSet(user1Exercise, 10, 135);
+
+      // User 2 exercise
+      const user2Exercise = await t
+        .withIdentity({ subject: user2Subject, name: "User 2" })
+        .action(api.exercises.createExercise, { name: "Squats" });
+
+      await t
+        .withIdentity({ subject: user2Subject, name: "User 2" })
+        .mutation(api.sets.logSet, {
+          exerciseId: user2Exercise,
+          reps: 12,
+          weight: 225,
+          unit: "lbs",
+        });
+
+      // User 1 dashboard
+      const user1Dashboard = await t
+        .withIdentity({ subject: user1Subject, name: "User 1" })
+        .query(api.analytics.getDashboardAnalytics, {});
+
+      // User 2 dashboard
+      const user2Dashboard = await t
+        .withIdentity({ subject: user2Subject, name: "User 2" })
+        .query(api.analytics.getDashboardAnalytics, {});
+
+      // Each user should only see their own data
+      expect(user1Dashboard.streakStats.totalWorkouts).toBe(1);
+      expect(user2Dashboard.streakStats.totalWorkouts).toBe(1);
+
+      // PR exercise names should be different
+      expect(user1Dashboard.recentPRs[0].exerciseName).toBe("Bench Press");
+      expect(user2Dashboard.recentPRs[0].exerciseName).toBe("Squats");
+    });
+
+    test("returns unauthenticated defaults for missing identity", async () => {
+      const dashboard = await t.query(api.analytics.getDashboardAnalytics, {});
+
+      expect(dashboard.streakStats.currentStreak).toBe(0);
+      expect(dashboard.frequency).toEqual([]);
+      expect(dashboard.recentPRs).toEqual([]);
+    });
+  });
+
   describe("getRecentPRs", () => {
     test("detects weight PRs", async () => {
       const benchPress = await createExercise("Bench Press");

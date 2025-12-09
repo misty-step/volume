@@ -32,6 +32,9 @@ import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/date-utils";
 import { ExerciseSelectorDialog } from "./exercise-selector-dialog";
 import { useMobileViewport } from "@/hooks/useMobileViewport";
+import { GhostSetDisplay } from "./ghost-set-display";
+import { useLastSet } from "@/hooks/useLastSet";
+import { suggestNextSet } from "@/lib/set-suggestion-engine";
 
 interface QuickLogFormProps {
   exercises: Exercise[];
@@ -73,6 +76,10 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
       },
     });
 
+    // Calculate suggestion in parent (moved from GhostSetDisplay to fix infinite loop)
+    const { lastSet } = useLastSet(form.watch("exerciseId"));
+    const suggestion = lastSet ? suggestNextSet(lastSet, unit) : null;
+
     // Watch for changes in form values to clear opposing fields
     useEffect(() => {
       const subscription = form.watch((value, { name }) => {
@@ -86,6 +93,24 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
       });
       return () => subscription.unsubscribe();
     }, [form]);
+
+    // Auto-populate form when suggestion changes (only empty fields)
+    // Uses form.getValues() instead of form.watch() to avoid stale closure issues
+    useEffect(() => {
+      if (suggestion && form.getValues("exerciseId")) {
+        const { reps, weight, duration } = form.getValues();
+
+        if (suggestion.reps !== undefined && reps === undefined) {
+          form.setValue("reps", suggestion.reps);
+        }
+        if (suggestion.weight !== undefined && weight === undefined) {
+          form.setValue("weight", suggestion.weight);
+        }
+        if (suggestion.duration !== undefined && duration === undefined) {
+          form.setValue("duration", suggestion.duration);
+        }
+      }
+    }, [suggestion, form]);
 
     /*
      * Autofocus Flow:
@@ -255,7 +280,19 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                     </FormItem>
                   )}
                 />
+              </div>
 
+              {/* Ghost Set Display - Show last set inline + suggestions */}
+              {form.watch("exerciseId") && (
+                <div className="mt-3">
+                  <GhostSetDisplay
+                    exerciseId={form.watch("exerciseId")}
+                    suggestion={suggestion}
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end">
                 {/* Reps or Duration input based on mode */}
                 {!isDurationMode ? (
                   <FormField

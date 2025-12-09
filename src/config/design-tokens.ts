@@ -11,7 +11,7 @@ export const BRUTALIST_COLORS = {
 
   // Accent colors
   dangerRed: "#C41E3A", // Emergency button red
-  safetyOrange: "#FF6B00", // Industrial/construction orange
+  safetyOrange: "#FF6B00", // Industrial/construction orange (deprecated)
   metalEdge: "#D1D5DB", // Chrome highlight
 
   // Chrome accent system (metallic highlights/shadows for precision instrument feel)
@@ -29,6 +29,68 @@ export const BRUTALIST_COLORS = {
     metalEdge: "210 10% 85%",
     chromeHighlight: "220 13% 91%",
     chromeShadow: "220 9% 65%",
+  },
+} as const;
+
+/**
+ * Performance Dashboard Aesthetic
+ * High-contrast, data-focused design for analytics and tracking
+ */
+export const PERFORMANCE_COLORS = {
+  // Base palette (dark mode optimized)
+  base: {
+    black: "#0A0A0A", // Rich black (slightly warm)
+    surface: "#141414", // Card/container background
+    elevated: "#1A1A1A", // Elevated surfaces (modals, popovers)
+    border: "#262626", // Subtle borders
+    borderStrong: "#404040", // Strong borders for emphasis
+  },
+
+  // Text hierarchy
+  text: {
+    primary: "#FFFFFF", // High contrast headings/data
+    secondary: "#A3A3A3", // Labels, secondary text
+    tertiary: "#737373", // Helper text, timestamps
+    inverse: "#0A0A0A", // Text on accent backgrounds
+  },
+
+  // Accent system (chartreuse/lime for active data)
+  accent: {
+    primary: "#D4FF00", // Electric chartreuse for PRs, active states
+    primaryMuted: "#B8E600", // Slightly muted for hover states
+    primaryDim: "rgba(212, 255, 0, 0.15)", // Background tint
+    primaryGlow: "rgba(212, 255, 0, 0.25)", // Glow effect
+  },
+
+  // Status colors
+  status: {
+    success: "#10B981", // Green for completed goals
+    warning: "#F59E0B", // Amber for warnings
+    error: "#EF4444", // Red for errors/failures
+    info: "#3B82F6", // Blue for informational
+  },
+
+  // Data visualization
+  chart: {
+    primary: "#D4FF00", // Main data line/bar
+    secondary: "#8B5CF6", // Secondary data (purple)
+    tertiary: "#06B6D4", // Tertiary data (cyan)
+    grid: "#262626", // Chart grid lines
+    label: "#737373", // Chart axis labels
+  },
+
+  // HSL for CSS variables
+  hsl: {
+    black: "0 0% 4%",
+    surface: "0 0% 8%",
+    elevated: "0 0% 10%",
+    border: "0 0% 15%",
+    borderStrong: "0 0% 25%",
+    textPrimary: "0 0% 100%",
+    textSecondary: "0 0% 64%",
+    textTertiary: "0 0% 45%",
+    accentPrimary: "73 100% 50%",
+    accentPrimaryMuted: "68 100% 45%",
   },
 } as const;
 

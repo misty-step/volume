@@ -10,7 +10,8 @@ vi.mock("convex/react", () => ({
 }));
 
 describe("useLastSet", () => {
-  const mockSets: Set[] = [
+  // Test data organized by exercise for clearer mocking
+  const exercise1Sets: Set[] = [
     {
       _id: "set1" as any,
       _creationTime: 1000,
@@ -19,17 +20,7 @@ describe("useLastSet", () => {
       reps: 10,
       weight: 135,
       unit: "lbs",
-      performedAt: Date.now() - 60000, // 1 minute ago
-    },
-    {
-      _id: "set2" as any,
-      _creationTime: 2000,
-      userId: "user1",
-      exerciseId: "exercise2" as any,
-      reps: 20,
-      weight: undefined,
-      unit: undefined,
-      performedAt: Date.now() - 3600000, // 1 hour ago
+      performedAt: Date.now() - 60000, // 1 minute ago (most recent)
     },
     {
       _id: "set3" as any,
@@ -43,15 +34,49 @@ describe("useLastSet", () => {
     },
   ];
 
+  const exercise2Sets: Set[] = [
+    {
+      _id: "set2" as any,
+      _creationTime: 2000,
+      userId: "user1",
+      exerciseId: "exercise2" as any,
+      reps: 20,
+      weight: undefined,
+      unit: undefined,
+      performedAt: Date.now() - 3600000, // 1 hour ago
+    },
+  ];
+
+  /**
+   * Helper to mock useQuery based on the exerciseId passed.
+   * The hook now passes exerciseId directly to the query, so we simulate
+   * the server-side filtering behavior.
+   */
+  const mockQueryByExercise = () => {
+    vi.mocked(convexReact.useQuery).mockImplementation((_queryFn, args) => {
+      // When "skip" is passed (null exerciseId), return undefined
+      if (args === "skip") return undefined;
+      // When args has an exerciseId, return filtered sets
+      if (args && typeof args === "object" && "exerciseId" in args) {
+        const exId = args.exerciseId as string;
+        if (exId === "exercise1") return exercise1Sets;
+        if (exId === "exercise2") return exercise2Sets;
+        return []; // No matches for unknown exerciseId
+      }
+      return [];
+    });
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("returns null when no exercise selected", () => {
-    vi.mocked(convexReact.useQuery).mockReturnValue(mockSets);
+    mockQueryByExercise();
 
     const { result } = renderHook(() => useLastSet(null));
 
+    // useQuery returns undefined when "skip" is passed
     expect(result.current.lastSet).toBeNull();
   });
 
@@ -72,27 +97,29 @@ describe("useLastSet", () => {
   });
 
   it("returns most recent set for exercise", () => {
-    vi.mocked(convexReact.useQuery).mockReturnValue(mockSets);
+    mockQueryByExercise();
 
     const { result } = renderHook(() => useLastSet("exercise1"));
 
     // Should return set1 (most recent for exercise1)
-    expect(result.current.lastSet).toEqual(mockSets[0]);
-    expect(result.current.lastSet?.performedAt).toBe(mockSets[0].performedAt);
+    expect(result.current.lastSet).toEqual(exercise1Sets[0]);
+    expect(result.current.lastSet?.performedAt).toBe(
+      exercise1Sets[0].performedAt
+    );
   });
 
   it("filters sets by exerciseId correctly", () => {
-    vi.mocked(convexReact.useQuery).mockReturnValue(mockSets);
+    mockQueryByExercise();
 
     const { result } = renderHook(() => useLastSet("exercise2"));
 
     // Should return set2 (only set for exercise2)
-    expect(result.current.lastSet).toEqual(mockSets[1]);
+    expect(result.current.lastSet).toEqual(exercise2Sets[0]);
     expect(result.current.lastSet?.exerciseId).toBe("exercise2");
   });
 
   it("handles sets without weight", () => {
-    vi.mocked(convexReact.useQuery).mockReturnValue(mockSets);
+    mockQueryByExercise();
 
     const { result } = renderHook(() => useLastSet("exercise2"));
 
@@ -101,7 +128,7 @@ describe("useLastSet", () => {
   });
 
   it("returns null when no sets match exerciseId", () => {
-    vi.mocked(convexReact.useQuery).mockReturnValue(mockSets);
+    mockQueryByExercise();
 
     const { result } = renderHook(() => useLastSet("nonexistent"));
 
@@ -169,7 +196,7 @@ describe("useLastSet", () => {
   });
 
   it("recalculates lastSet when exerciseId changes", () => {
-    vi.mocked(convexReact.useQuery).mockReturnValue(mockSets);
+    mockQueryByExercise();
 
     const { result, rerender } = renderHook(
       ({ exerciseId }) => useLastSet(exerciseId),
@@ -187,27 +214,26 @@ describe("useLastSet", () => {
   });
 
   it("recalculates lastSet when sets data changes", () => {
-    vi.mocked(convexReact.useQuery).mockReturnValue(mockSets);
+    // Initial mock returns exercise1Sets
+    vi.mocked(convexReact.useQuery).mockReturnValue(exercise1Sets);
 
     const { result, rerender } = renderHook(() => useLastSet("exercise1"));
 
     const initialSet = result.current.lastSet;
+    expect(initialSet?._id).toBe("set1");
 
-    // Simulate new data from server
-    const newSets = [
-      {
-        _id: "set4" as any,
-        _creationTime: 4000,
-        userId: "user1",
-        exerciseId: "exercise1" as any,
-        reps: 12,
-        weight: 145,
-        unit: "lbs",
-        performedAt: Date.now() - 1000, // Just now
-      },
-      ...mockSets,
-    ];
-    vi.mocked(convexReact.useQuery).mockReturnValue(newSets);
+    // Simulate new data from server (new most recent set)
+    const newSet: Set = {
+      _id: "set4" as any,
+      _creationTime: 4000,
+      userId: "user1",
+      exerciseId: "exercise1" as any,
+      reps: 12,
+      weight: 145,
+      unit: "lbs",
+      performedAt: Date.now() - 1000, // Just now
+    };
+    vi.mocked(convexReact.useQuery).mockReturnValue([newSet, ...exercise1Sets]);
 
     rerender();
 
