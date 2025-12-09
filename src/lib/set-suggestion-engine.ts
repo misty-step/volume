@@ -31,9 +31,6 @@ const SUGGESTION_CONFIG = {
 
   // Minimum reps to suggest (safety floor)
   minReps: 1,
-
-  // Maximum reps to suggest (avoid fatigue rep ranges)
-  maxReps: 20,
 } as const;
 
 export interface SetSuggestion {
@@ -165,17 +162,7 @@ function suggestRepProgression(
 
   // Bodyweight exercises - always increase reps
   if (isBodyweight) {
-    const suggestedReps = Math.min(currentReps + 1, SUGGESTION_CONFIG.maxReps);
-
-    if (suggestedReps === currentReps) {
-      // Hit max reps - maintain
-      return {
-        reps: currentReps,
-        reasoning: `Great work! Maintain ${currentReps} reps`,
-        strategy: "maintain",
-        isPotentialPR: false,
-      };
-    }
+    const suggestedReps = currentReps + 1;
 
     return {
       reps: suggestedReps,

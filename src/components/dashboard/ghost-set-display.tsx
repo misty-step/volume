@@ -36,8 +36,13 @@ export function GhostSetDisplay({
   suggestion,
   className,
 }: GhostSetDisplayProps) {
-  const { lastSet, formatTimeAgo } = useLastSet(exerciseId);
+  const { lastSet, history, formatTimeAgo } = useLastSet(exerciseId);
   const { unit } = useWeightUnit();
+
+  // Filter out the very last set from history to avoid duplication, take next 3
+  const previousHistory = (history ?? [])
+    .filter((s) => s._id !== lastSet?._id)
+    .slice(0, 3);
 
   return (
     <AnimatePresence mode="wait">
@@ -49,13 +54,10 @@ export function GhostSetDisplay({
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.2, ease: [0.4, 0.0, 0.2, 1] }}
           className={cn(
-            "relative overflow-hidden rounded-md border px-4 py-3",
+            "relative overflow-hidden rounded-md border",
+            "bg-muted/30 dark:bg-[#141414] border-border dark:border-[#262626]",
             className
           )}
-          style={{
-            backgroundColor: PERFORMANCE_COLORS.base.surface,
-            borderColor: PERFORMANCE_COLORS.base.border,
-          }}
         >
           {/* Subtle glow accent on left edge */}
           <div
@@ -66,83 +68,87 @@ export function GhostSetDisplay({
             }}
           />
 
-          <div className="flex items-center justify-between gap-4">
-            {/* Label */}
-            <div
-              className="font-mono text-xs uppercase tracking-wider"
-              style={{ color: PERFORMANCE_COLORS.text.tertiary }}
-            >
-              Last Set
-            </div>
-
-            {/* Data Display */}
-            <div className="flex items-center gap-3">
-              {/* Weight × Reps */}
-              <div className="flex items-baseline gap-1.5">
-                {lastSet.weight !== undefined && lastSet.weight !== null && (
-                  <>
-                    <span
-                      className="font-mono text-lg font-semibold tabular-nums"
-                      style={{ color: PERFORMANCE_COLORS.accent.primary }}
-                    >
-                      {lastSet.weight}
-                    </span>
-                    <span
-                      className="font-mono text-xs"
-                      style={{ color: PERFORMANCE_COLORS.text.secondary }}
-                    >
-                      ×
-                    </span>
-                  </>
-                )}
-
-                {lastSet.reps !== undefined && (
-                  <span
-                    className="font-mono text-lg font-semibold tabular-nums"
-                    style={{ color: PERFORMANCE_COLORS.accent.primary }}
-                  >
-                    {lastSet.reps}
-                  </span>
-                )}
-
-                {lastSet.duration !== undefined && (
-                  <span
-                    className="font-mono text-lg font-semibold tabular-nums"
-                    style={{ color: PERFORMANCE_COLORS.accent.primary }}
-                  >
-                    {Math.floor(lastSet.duration / 60)}:
-                    {String(lastSet.duration % 60).padStart(2, "0")}
-                  </span>
-                )}
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between gap-4">
+              {/* Label */}
+              <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                Last Set
               </div>
 
-              {/* Time Ago */}
-              <span
-                className="font-mono text-xs tabular-nums"
-                style={{ color: PERFORMANCE_COLORS.text.tertiary }}
-              >
-                {formatTimeAgo(lastSet.performedAt)}
-              </span>
+              {/* Data Display */}
+              <div className="flex items-center gap-3">
+                {/* Weight × Reps */}
+                <div className="flex items-baseline gap-1.5">
+                  {lastSet.weight !== undefined && lastSet.weight !== null && (
+                    <>
+                      <span className="font-mono text-lg font-semibold tabular-nums text-foreground dark:text-[#D4FF00]">
+                        {lastSet.weight}
+                      </span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        ×
+                      </span>
+                    </>
+                  )}
+
+                  {lastSet.reps !== undefined && (
+                    <span className="font-mono text-lg font-semibold tabular-nums text-foreground dark:text-[#D4FF00]">
+                      {lastSet.reps}
+                    </span>
+                  )}
+
+                  {lastSet.duration !== undefined && (
+                    <span className="font-mono text-lg font-semibold tabular-nums text-foreground dark:text-[#D4FF00]">
+                      {Math.floor(lastSet.duration / 60)}:
+                      {String(lastSet.duration % 60).padStart(2, "0")}
+                    </span>
+                  )}
+                </div>
+
+                {/* Time Ago */}
+                <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                  {formatTimeAgo(lastSet.performedAt)}
+                </span>
+              </div>
             </div>
           </div>
 
+          {/* Previous History List */}
+          {previousHistory.length > 0 && (
+            <div className="px-4 py-2 border-t border-border dark:border-[#262626]">
+              <div className="grid grid-cols-[1fr_auto_auto_auto] gap-y-1.5 gap-x-2 text-xs font-mono">
+                {previousHistory.map((set) => (
+                  <React.Fragment key={set._id}>
+                    {/* Time */}
+                    <span className="text-muted-foreground tabular-nums opacity-60">
+                      {formatTimeAgo(set.performedAt)}
+                    </span>
+
+                    {/* Weight (Right aligned) */}
+                    <span className="text-foreground/80 text-right tabular-nums">
+                      {set.weight}
+                    </span>
+
+                    {/* x separator */}
+                    <span className="text-muted-foreground text-center">×</span>
+
+                    {/* Reps (Right aligned) */}
+                    <span className="text-foreground/80 text-right tabular-nums">
+                      {set.reps}
+                    </span>
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Suggestion Display */}
           {suggestion && (
-            <div
-              className="mt-3 pt-3 border-t"
-              style={{ borderColor: PERFORMANCE_COLORS.base.border }}
-            >
+            <div className="px-4 py-3 border-t border-border dark:border-[#262626]">
               <div className="flex items-center justify-between gap-4">
                 {/* Label with icon */}
                 <div className="flex items-center gap-2">
-                  <TrendingUp
-                    className="h-3 w-3"
-                    style={{ color: PERFORMANCE_COLORS.accent.primary }}
-                  />
-                  <div
-                    className="font-mono text-xs uppercase tracking-wider"
-                    style={{ color: PERFORMANCE_COLORS.text.tertiary }}
-                  >
+                  <TrendingUp className="h-3 w-3 text-foreground dark:text-[#D4FF00]" />
+                  <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
                     Try Next
                   </div>
                 </div>
@@ -152,35 +158,23 @@ export function GhostSetDisplay({
                   <div className="flex items-baseline gap-1.5">
                     {suggestion.weight !== undefined && (
                       <>
-                        <span
-                          className="font-mono text-lg font-semibold tabular-nums"
-                          style={{ color: PERFORMANCE_COLORS.text.primary }}
-                        >
+                        <span className="font-mono text-lg font-semibold tabular-nums text-foreground">
                           {suggestion.weight}
                         </span>
-                        <span
-                          className="font-mono text-xs"
-                          style={{ color: PERFORMANCE_COLORS.text.secondary }}
-                        >
+                        <span className="font-mono text-xs text-muted-foreground">
                           ×
                         </span>
                       </>
                     )}
 
                     {suggestion.reps !== undefined && (
-                      <span
-                        className="font-mono text-lg font-semibold tabular-nums"
-                        style={{ color: PERFORMANCE_COLORS.text.primary }}
-                      >
+                      <span className="font-mono text-lg font-semibold tabular-nums text-foreground">
                         {suggestion.reps}
                       </span>
                     )}
 
                     {suggestion.duration !== undefined && (
-                      <span
-                        className="font-mono text-lg font-semibold tabular-nums"
-                        style={{ color: PERFORMANCE_COLORS.text.primary }}
-                      >
+                      <span className="font-mono text-lg font-semibold tabular-nums text-foreground">
                         {Math.floor(suggestion.duration / 60)}:
                         {String(suggestion.duration % 60).padStart(2, "0")}
                       </span>
@@ -192,7 +186,7 @@ export function GhostSetDisplay({
                     className="font-mono text-xs px-2 py-0.5 rounded"
                     style={{
                       backgroundColor: PERFORMANCE_COLORS.accent.primaryDim,
-                      color: PERFORMANCE_COLORS.accent.primary,
+                      color: "#b0c900", // Darker chartreuse for readability in light mode
                     }}
                   >
                     {suggestion.strategy === "increase-reps" && "+1 rep"}

@@ -35,14 +35,14 @@ describe("Set Suggestion Engine", () => {
         expect(suggestion?.reasoning).toContain("endurance");
       });
 
-      it("caps bodyweight reps at maxReps (20)", () => {
+      it("continues progression beyond 20 reps for bodyweight", () => {
         const lastSet = createSet({ reps: 20, weight: 0 });
         const suggestion = suggestNextSet(lastSet, "lbs");
 
         expect(suggestion).toMatchObject({
-          reps: 20,
-          strategy: "maintain",
-          isPotentialPR: false,
+          reps: 21,
+          strategy: "increase-reps",
+          isPotentialPR: true,
         });
       });
     });

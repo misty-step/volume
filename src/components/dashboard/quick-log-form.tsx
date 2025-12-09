@@ -33,8 +33,6 @@ import { formatDuration } from "@/lib/date-utils";
 import { ExerciseSelectorDialog } from "./exercise-selector-dialog";
 import { useMobileViewport } from "@/hooks/useMobileViewport";
 import { GhostSetDisplay } from "./ghost-set-display";
-import { PRPreviewBadge } from "./pr-preview-badge";
-import { usePreviewPR } from "@/hooks/usePreviewPR";
 import { useLastSet } from "@/hooks/useLastSet";
 import { suggestNextSet } from "@/lib/set-suggestion-engine";
 
@@ -76,15 +74,6 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
         // Focus appropriate input based on mode
         focusElement(isDurationMode ? durationInputRef : repsInputRef);
       },
-    });
-
-    // PR Preview - real-time detection as user types
-    const prPreview = usePreviewPR({
-      exerciseId: form.watch("exerciseId"),
-      currentReps: form.watch("reps"),
-      currentWeight: form.watch("weight"),
-      currentDuration: form.watch("duration"),
-      unit,
     });
 
     // Calculate suggestion in parent (moved from GhostSetDisplay to fix infinite loop)
@@ -419,17 +408,6 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                 />
               </div>
             </div>
-
-            {/* PR Preview Badge - shows when current input would be a PR */}
-            {prPreview.isPR && (
-              <div className="flex justify-center md:justify-end pt-4">
-                <PRPreviewBadge
-                  isPR={prPreview.isPR}
-                  prType={prPreview.prType}
-                  delta={prPreview.delta}
-                />
-              </div>
-            )}
 
             {/* Submit button - parent handles sticky positioning on mobile */}
             <div className="pt-6 md:flex md:justify-end">
