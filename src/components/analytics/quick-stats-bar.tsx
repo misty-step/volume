@@ -87,7 +87,7 @@ export function QuickStatsBar({
         <div className="font-mono text-2xl font-bold tabular-nums">
           {prsThisMonth}
           <span className="text-sm font-normal text-muted-foreground ml-1">
-            this mo
+            this month
           </span>
         </div>
       </div>

@@ -229,6 +229,7 @@ export function Dashboard() {
             {/* FAB - Floating Action Button (bottom-right, above nav) */}
             <motion.button
               onClick={() => setFormOpen(true)}
+              aria-label="Log new set"
               className={cn(
                 "fixed bottom-24 right-4 z-30",
                 "w-16 h-16 rounded-full",

@@ -81,6 +81,51 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Effort**: 2h | **Impact**: CRITICAL
 **Acceptance**: 15+ magic numbers have rationale comments
 
+### [Cleanup] Consolidate duplicate isMobile detection
+
+**File**: src/lib/utils.ts:14
+**Source**: PR #56 review (gemini-code-assist)
+**Impact**: `isMobile()` utility duplicates logic from `useMobileViewport` hook, causing inconsistent viewport detection
+**Fix**: Extract shared breakpoint constant, have both use single source of truth
+**Effort**: 30m | **Value**: Consistency
+**Acceptance**: Single mobile detection logic, both hook and utility reference same breakpoint
+
+### [UX] Handle duration exercises in GhostSetDisplay history grid
+
+**File**: src/components/dashboard/ghost-set-display.tsx:119-138
+**Source**: PR #56 review (coderabbitai)
+**Impact**: History grid renders `weight × reps` for all sets; duration-based exercises show `undefined × undefined`
+**Fix**: Detect duration-based sets and render formatted duration (MM:SS) instead
+**Effort**: 30m | **Value**: Correctness
+**Acceptance**: Plank sets show duration in history grid, not undefined
+
+### [Refactor] Add badgeText to SetSuggestion interface
+
+**File**: src/lib/set-suggestion-engine.ts, src/components/dashboard/ghost-set-display.tsx:192-196
+**Source**: PR #56 review (coderabbitai)
+**Impact**: Badge text logic duplicated between engine and display component
+**Fix**: Extend `SetSuggestion` interface with `badgeText: string` property, populate in engine
+**Effort**: 30m | **Value**: DRY, single source of truth
+**Acceptance**: `SetSuggestion.badgeText` computed once, display component just renders
+
+### [Testing] Add history property to useLastSet test mocks
+
+**File**: src/components/dashboard/ghost-set-display.test.tsx
+**Source**: PR #56 review (coderabbitai)
+**Impact**: Test mocks omit `history` property from `useLastSet` return value
+**Fix**: Add `history: []` to all mock return values for accuracy
+**Effort**: 15m | **Value**: Test hygiene
+**Acceptance**: All useLastSet mocks include history property
+
+### [Cleanup] Rename Set type to avoid shadowing global
+
+**File**: src/lib/set-suggestion-engine.ts:17, src/lib/set-suggestion-engine.test.ts:3
+**Source**: PR #56 review (coderabbitai)
+**Impact**: `import type { Set }` shadows global JavaScript `Set` constructor
+**Fix**: Rename to `WorkoutSet` in domain types and update all imports
+**Effort**: 30m | **Value**: Clarity, linter compliance
+**Acceptance**: No type shadow warnings, clearer code
+
 ---
 
 ## Next (This Quarter, <3 months)
@@ -143,14 +188,10 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 **Effort**: 3h | **Speedup**: 4x on Analytics page
 **Acceptance**: Single DB round-trip, payload 75% smaller
 
-### [Performance] PR detection O(n²) → O(n) optimization
+### ~~[Performance] PR detection O(n²) → O(n) optimization~~ ✅ DONE (PR #56)
 
-**File**: convex/analytics.ts:303-380 (getRecentPRs)
-**Perspectives**: performance-pathfinder
-**Impact**: 50,000 iterations → 50 iterations (fetches ALL sets, filters in-memory for every recent set)
-**Fix**: Pre-compute historical max per exercise, compare current vs max (O(1) lookup)
-**Effort**: 2h | **Speedup**: 10x (200-500ms → 20-50ms)
-**Acceptance**: Analytics PRs calculate in <50ms
+**Status**: Resolved in PR #56 analytics overhaul
+**Fix Applied**: Refactored `calculateRecentPRs` to O(N log N) - process sets chronologically per exercise, maintaining running max values instead of filtering previousSets each time.
 
 ### [Infrastructure] Add Lefthook quality gates
 

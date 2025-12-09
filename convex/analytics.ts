@@ -592,6 +592,9 @@ function calculateFrequency(
 
 /**
  * Calculate recent PRs
+ *
+ * Optimized O(N log N) algorithm: process sets chronologically per exercise,
+ * maintaining running max values instead of filtering previousSets each time.
  */
 function calculateRecentPRs(
   sets: Doc<"sets">[],
@@ -611,32 +614,68 @@ function calculateRecentPRs(
 
   const prs: RecentPR[] = [];
 
-  // Check each recent set for PRs
-  for (const set of sets) {
-    if (set.performedAt < cutoffDate) continue;
-
-    const exercise = exerciseMap.get(set.exerciseId);
+  // Process each exercise's sets chronologically
+  for (const [exerciseId, exerciseSets] of setsByExercise) {
+    const exercise = exerciseMap.get(exerciseId);
     if (!exercise) continue;
 
-    const exerciseSets = setsByExercise.get(set.exerciseId) || [];
-    const previousSets = exerciseSets.filter(
-      (s) => s.performedAt < set.performedAt
+    // Sort by performedAt ascending (oldest first)
+    const sortedSets = [...exerciseSets].sort(
+      (a, b) => a.performedAt - b.performedAt
     );
 
-    const prResult = checkForPR(set, previousSets);
-    if (prResult && set.reps !== undefined) {
-      prs.push({
-        setId: set._id,
-        exerciseId: set.exerciseId,
-        exerciseName: exercise.name,
-        prType: prResult.type,
-        currentValue: prResult.currentValue,
-        previousValue: prResult.previousValue,
-        improvement: prResult.currentValue - prResult.previousValue,
-        performedAt: set.performedAt,
-        reps: set.reps,
-        weight: set.weight,
-      });
+    // Track running max values
+    let maxWeight = 0;
+    let maxReps = 0;
+    let maxVolume = 0;
+
+    for (const set of sortedSets) {
+      // Skip duration-based exercises (PR detection only works for rep-based)
+      if (set.reps === undefined) continue;
+
+      const weight = set.weight ?? 0;
+      const reps = set.reps;
+      const volume = weight * reps;
+
+      // Determine PR type (priority: weight > volume > reps)
+      let prType: PRType | null = null;
+      let currentValue = 0;
+      let previousValue = 0;
+
+      if (weight > 0 && weight > maxWeight) {
+        prType = "weight";
+        currentValue = weight;
+        previousValue = maxWeight;
+      } else if (volume > 0 && volume > maxVolume) {
+        prType = "volume";
+        currentValue = volume;
+        previousValue = maxVolume;
+      } else if (reps > maxReps) {
+        prType = "reps";
+        currentValue = reps;
+        previousValue = maxReps;
+      }
+
+      // If PR achieved and within cutoff window, record it
+      if (prType !== null && set.performedAt >= cutoffDate) {
+        prs.push({
+          setId: set._id,
+          exerciseId: set.exerciseId,
+          exerciseName: exercise.name,
+          prType,
+          currentValue,
+          previousValue,
+          improvement: currentValue - previousValue,
+          performedAt: set.performedAt,
+          reps: set.reps,
+          weight: set.weight,
+        });
+      }
+
+      // Update running max values
+      if (weight > maxWeight) maxWeight = weight;
+      if (reps > maxReps) maxReps = reps;
+      if (volume > maxVolume) maxVolume = volume;
     }
   }
 
@@ -726,7 +765,7 @@ function calculateRecovery(
     let daysSince: number;
 
     if (m.lastTrainedTimestamp === 0) {
-      daysSince = 999;
+      daysSince = Infinity;
     } else {
       const [dateStr] = new Date(m.lastTrainedTimestamp)
         .toISOString()
@@ -943,7 +982,12 @@ function calculateProgressiveOverload(
       const previous = dataPoints.slice(-6, -3);
       const recentAvg = recent.reduce((s, d) => s + d.volume, 0) / 3;
       const previousAvg = previous.reduce((s, d) => s + d.volume, 0) / 3;
-      const changePercent = ((recentAvg - previousAvg) / previousAvg) * 100;
+      const changePercent =
+        previousAvg > 0
+          ? ((recentAvg - previousAvg) / previousAvg) * 100
+          : recentAvg > 0
+            ? 100
+            : 0;
 
       if (changePercent > 5) trend = "improving";
       else if (changePercent < -5) trend = "declining";

@@ -39,10 +39,8 @@ export function GhostSetDisplay({
   const { lastSet, history, formatTimeAgo } = useLastSet(exerciseId);
   const { unit } = useWeightUnit();
 
-  // Filter out the very last set from history to avoid duplication, take next 3
-  const previousHistory = (history ?? [])
-    .filter((s) => s._id !== lastSet?._id)
-    .slice(0, 3);
+  // Skip first entry (lastSet) and take next 3 for previous history
+  const previousHistory = (history ?? []).slice(1, 4);
 
   return (
     <AnimatePresence mode="wait">

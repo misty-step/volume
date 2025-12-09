@@ -95,32 +95,22 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
     }, [form]);
 
     // Auto-populate form when suggestion changes (only empty fields)
+    // Uses form.getValues() instead of form.watch() to avoid stale closure issues
     useEffect(() => {
-      if (suggestion && form.watch("exerciseId")) {
-        const currentReps = form.watch("reps");
-        const currentWeight = form.watch("weight");
-        const currentDuration = form.watch("duration");
+      if (suggestion && form.getValues("exerciseId")) {
+        const { reps, weight, duration } = form.getValues();
 
-        if (suggestion.reps !== undefined && currentReps === undefined) {
+        if (suggestion.reps !== undefined && reps === undefined) {
           form.setValue("reps", suggestion.reps);
         }
-        if (suggestion.weight !== undefined && currentWeight === undefined) {
+        if (suggestion.weight !== undefined && weight === undefined) {
           form.setValue("weight", suggestion.weight);
         }
-        if (
-          suggestion.duration !== undefined &&
-          currentDuration === undefined
-        ) {
+        if (suggestion.duration !== undefined && duration === undefined) {
           form.setValue("duration", suggestion.duration);
         }
       }
-    }, [
-      suggestion?.reps,
-      suggestion?.weight,
-      suggestion?.duration,
-      suggestion,
-      form,
-    ]);
+    }, [suggestion, form]);
 
     /*
      * Autofocus Flow:

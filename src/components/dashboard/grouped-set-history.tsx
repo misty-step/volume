@@ -75,6 +75,7 @@ export const GroupedSetHistory = forwardRef<
               <Dumbbell
                 className="w-8 h-8 text-concrete-gray"
                 strokeWidth={2}
+                aria-hidden="true"
               />
             </div>
             <div>
@@ -98,7 +99,11 @@ export const GroupedSetHistory = forwardRef<
         </h2>
         <div className="border-4 border-dashed border-concrete-gray/20 min-h-[200px] flex flex-col items-center justify-center gap-4 bg-concrete-gray/5">
           <div className="p-4 bg-background border-3 border-concrete-black dark:border-concrete-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transform rotate-2">
-            <Dumbbell className="w-8 h-8 text-foreground" strokeWidth={2} />
+            <Dumbbell
+              className="w-8 h-8 text-foreground"
+              strokeWidth={2}
+              aria-hidden="true"
+            />
           </div>
           <div className="text-center space-y-1">
             <p className="font-display text-lg uppercase tracking-wide">
