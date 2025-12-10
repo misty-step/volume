@@ -1,3 +1,12 @@
+# Scan for secrets before commit
+if command -v trufflehog &> /dev/null; then
+  echo "🔍 Scanning for secrets..."
+  trufflehog git file://. --only-verified --fail --no-update 2>/dev/null || {
+    echo "❌ Secrets detected! Remove before committing."
+    exit 1
+  }
+fi
+
 pnpm exec lint-staged
 
 # Warn if Convex functions are being committed

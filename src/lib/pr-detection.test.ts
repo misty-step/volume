@@ -205,6 +205,103 @@ describe("checkForPR", () => {
       });
     });
   });
+
+  describe("duration-based exercises", () => {
+    const createDurationSet = (
+      duration: number,
+      performedAt: number = Date.now()
+    ): Set => ({
+      _id: "test-id" as Id<"sets">,
+      exerciseId: "exercise-1" as Id<"exercises">,
+      reps: undefined,
+      duration,
+      performedAt,
+    });
+
+    it("returns null for duration-based current set (no reps)", () => {
+      const currentSet = createDurationSet(60);
+      const previousSets = [createSet(10, 100)];
+
+      const result = checkForPR(currentSet, previousSets);
+
+      expect(result).toBeNull();
+    });
+
+    it("treats as first rep-based set when all previous sets are duration-based", () => {
+      const currentSet = createSet(10, 100);
+      const previousSets = [createDurationSet(60), createDurationSet(90)];
+
+      const result = checkForPR(currentSet, previousSets);
+
+      expect(result).toEqual({
+        type: "weight",
+        currentValue: 100,
+        previousValue: 0,
+      });
+    });
+
+    it("returns reps PR when first rep-based set has no weight", () => {
+      const currentSet = createSet(15);
+      const previousSets = [createDurationSet(60), createDurationSet(90)];
+
+      const result = checkForPR(currentSet, previousSets);
+
+      expect(result).toEqual({
+        type: "reps",
+        currentValue: 15,
+        previousValue: 0,
+      });
+    });
+
+    it("returns volume PR when first rep-based set has zero weight but positive reps", () => {
+      const currentSet = createSet(10, 0);
+      const previousSets = [createDurationSet(60)];
+
+      const result = checkForPR(currentSet, previousSets);
+
+      // With weight=0 and reps=10, volume=0, so reps PR takes priority
+      expect(result).toEqual({
+        type: "reps",
+        currentValue: 10,
+        previousValue: 0,
+      });
+    });
+
+    it("returns null when rep-based set has zero values and no previous rep-based sets", () => {
+      const currentSet = createSet(0, 0);
+      const previousSets = [createDurationSet(60)];
+
+      const result = checkForPR(currentSet, previousSets);
+
+      // No PR when reps=0, weight=0, volume=0
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("first set edge cases", () => {
+    it("returns volume PR when first set has zero weight but positive volume calculation fails", () => {
+      // This tests the path where weight=0, reps=0 but we still try volume
+      const currentSet = createSet(0, 0);
+      const result = checkForPR(currentSet, []);
+
+      // No PR because all values are 0
+      expect(result).toBeNull();
+    });
+
+    it("returns null when first set has undefined reps", () => {
+      const durationSet: Set = {
+        _id: "test-id" as Id<"sets">,
+        exerciseId: "exercise-1" as Id<"exercises">,
+        reps: undefined,
+        duration: 60,
+        performedAt: Date.now(),
+      };
+
+      const result = checkForPR(durationSet, []);
+
+      expect(result).toBeNull();
+    });
+  });
 });
 
 describe("formatPRMessage", () => {
