@@ -94,24 +94,6 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
       return () => subscription.unsubscribe();
     }, [form]);
 
-    // Auto-populate form when suggestion changes (only empty fields)
-    // Uses form.getValues() instead of form.watch() to avoid stale closure issues
-    useEffect(() => {
-      if (suggestion && form.getValues("exerciseId")) {
-        const { reps, weight, duration } = form.getValues();
-
-        if (suggestion.reps !== undefined && reps === undefined) {
-          form.setValue("reps", suggestion.reps);
-        }
-        if (suggestion.weight !== undefined && weight === undefined) {
-          form.setValue("weight", suggestion.weight);
-        }
-        if (suggestion.duration !== undefined && duration === undefined) {
-          form.setValue("duration", suggestion.duration);
-        }
-      }
-    }, [suggestion, form]);
-
     /*
      * Autofocus Flow:
      * 1. User selects exercise → auto-focus reps input (useEffect below)
@@ -319,7 +301,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                               )
                             }
                             value={field.value ?? ""}
-                            placeholder="0"
+                            placeholder={suggestion?.reps?.toFixed(0) ?? "0"}
                             className="w-full"
                             disabled={form.formState.isSubmitting}
                             data-testid="quick-log-reps-input"
@@ -386,7 +368,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                             )
                           }
                           value={field.value ?? ""}
-                          placeholder="0"
+                          placeholder={suggestion?.weight?.toString() ?? "0"}
                           className="w-full"
                           disabled={form.formState.isSubmitting}
                           data-testid="quick-log-weight-input"
