@@ -9,8 +9,7 @@ import { PRCard } from "@/components/analytics/pr-card";
 import { QuickStatsBar } from "@/components/analytics/quick-stats-bar";
 import { ReportNavigator } from "@/components/analytics/report-navigator";
 import { ProgressiveOverloadWidget } from "@/components/analytics/progressive-overload-widget";
-import { RecoveryDashboardWidget } from "@/components/analytics/recovery-dashboard-widget";
-import { FocusSuggestionsWidget } from "@/components/analytics/focus-suggestions-widget";
+import { BodyMapWidget } from "@/components/analytics/body-map-widget";
 import { Dumbbell } from "lucide-react";
 import {
   filterFrequencyFromFirstWorkout,
@@ -126,14 +125,8 @@ export default function AnalyticsPage() {
         {/* AI Reports */}
         <ReportNavigator />
 
-        {/* Two-column grid on desktop */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Focus Suggestions */}
-          <FocusSuggestionsWidget isLoading={isLoading} />
-
-          {/* Recovery Dashboard */}
-          <RecoveryDashboardWidget isLoading={isLoading} />
-        </div>
+        {/* Body Map - Visual recovery status (replaces Recovery + Focus widgets) */}
+        <BodyMapWidget isLoading={isLoading} />
 
         {/* Progressive Overload - Full width (charts need space) */}
         <ProgressiveOverloadWidget isLoading={isLoading} />

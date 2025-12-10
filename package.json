@@ -50,6 +50,7 @@
     "openai": "^6.9.1",
     "react": "^19.2.0",
     "react-activity-calendar": "^2.7.15",
+    "react-body-highlighter": "^2.0.5",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.66.1",
     "react-markdown": "^10.1.0",
