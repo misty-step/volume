@@ -301,7 +301,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                               )
                             }
                             value={field.value ?? ""}
-                            placeholder={suggestion?.reps?.toString() ?? "0"}
+                            placeholder={suggestion?.reps?.toFixed(0) ?? "0"}
                             className="w-full"
                             disabled={form.formState.isSubmitting}
                             data-testid="quick-log-reps-input"
