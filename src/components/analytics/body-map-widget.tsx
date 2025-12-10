@@ -24,6 +24,12 @@ import type {
 } from "../../../convex/analyticsRecovery";
 
 /**
+ * Sentinel value indicating a muscle group has never been trained.
+ * Used by analyticsRecovery.getRecoveryStatus when no workout data exists.
+ */
+const NEVER_TRAINED_SENTINEL = 999;
+
+/**
  * Map our muscle group names to react-body-highlighter muscle IDs
  *
  * Library muscles (anterior): chest, abs, obliques, biceps, forearm, front-deltoids, quadriceps, adductor
@@ -61,12 +67,15 @@ for (const [group, muscles] of Object.entries(MUSCLE_GROUP_MAP)) {
  * - Gray: Recovering (0-2 days) or never trained
  * - Safety Orange: Ready to train (3-7 days)
  * - Danger Red: Overdue (8+ days)
+ *
+ * Note: Gray lightened from #6B7280 to #9CA3AF for WCAG AA compliance
+ * in dark mode (4.5:1 contrast ratio against black background).
  */
 const STATUS_COLORS: Record<RecoveryStatus | "never", string> = {
-  recovering: "#6B7280", // Gray - still resting
+  recovering: "#9CA3AF", // Gray - still resting (WCAG AA compliant)
   ready: "#FF6B00", // Safety Orange - go train!
   overdue: "#C41E3A", // Danger Red - neglected
-  never: "#4B5563", // Darker gray for never trained
+  never: "#6B7280", // Darker gray for never trained
 };
 
 interface BodyMapWidgetProps {
@@ -133,7 +142,7 @@ export function BodyMapWidget({
       // frequency 2 = ready (orange)
       // frequency 3 = overdue (red)
       let frequency: number;
-      if (data.daysSince === 999) {
+      if (data.daysSince === NEVER_TRAINED_SENTINEL) {
         frequency = 1; // Never trained = gray
       } else if (data.status === "recovering") {
         frequency = 1;
@@ -181,7 +190,7 @@ export function BodyMapWidget({
    * Get status label and color for display
    */
   const getStatusDisplay = (status: RecoveryStatus, daysSince: number) => {
-    if (daysSince === 999) {
+    if (daysSince === NEVER_TRAINED_SENTINEL) {
       return {
         label: "Never trained",
         color: "text-muted-foreground",
@@ -233,7 +242,8 @@ export function BodyMapWidget({
 
   // Empty state (no workout data at all)
   const hasAnyData =
-    recoveryData && recoveryData.some((d) => d.daysSince !== 999);
+    recoveryData &&
+    recoveryData.some((d) => d.daysSince !== NEVER_TRAINED_SENTINEL);
 
   return (
     <Card>
@@ -243,13 +253,13 @@ export function BodyMapWidget({
             <Activity className="w-5 h-5 text-safety-orange" />
             <CardTitle>Recovery Map</CardTitle>
           </div>
-          {/* Front/Back Toggle */}
+          {/* Front/Back Toggle - 44px touch targets per TASK.md spec */}
           <div className="flex gap-1">
             <Button
               variant={view === "anterior" ? "default" : "outline"}
               size="sm"
               onClick={() => setView("anterior")}
-              className="h-8 px-3 text-xs"
+              className="h-11 px-4 text-sm"
             >
               Front
             </Button>
@@ -257,7 +267,7 @@ export function BodyMapWidget({
               variant={view === "posterior" ? "default" : "outline"}
               size="sm"
               onClick={() => setView("posterior")}
-              className="h-8 px-3 text-xs"
+              className="h-11 px-4 text-sm"
             >
               Back
             </Button>
@@ -338,7 +348,7 @@ export function BodyMapWidget({
                           Days since:
                         </span>
                         <span className="font-medium tabular-nums">
-                          {selectedMuscle.daysSince === 999
+                          {selectedMuscle.daysSince === NEVER_TRAINED_SENTINEL
                             ? "—"
                             : selectedMuscle.daysSince}
                         </span>
@@ -364,8 +374,9 @@ export function BodyMapWidget({
                             Volume (7d):
                           </span>
                           <span className="font-medium tabular-nums">
-                            {(selectedMuscle.volumeLast7Days / 1000).toFixed(1)}
-                            k
+                            {selectedMuscle.volumeLast7Days >= 1000
+                              ? `${(selectedMuscle.volumeLast7Days / 1000).toFixed(1)}k`
+                              : selectedMuscle.volumeLast7Days.toLocaleString()}
                           </span>
                         </div>
                       )}

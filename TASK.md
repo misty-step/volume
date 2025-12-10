@@ -395,7 +395,7 @@ action: "Stay motivated!" ❌
 
 - ✅ **Cut Daily Summaries (Phase 4)** - Users know what they did yesterday
 - ✅ **Body map IS the interface** - Not a widget, the whole page
-- ✅ **Two-color system** - Gray (don't train) vs Green (train). Not 4 states.
+- ✅ **Three-color system** - Gray (recovering), Orange (ready), Red (overdue). Not 4 states.
 - ✅ **Touch targets 88px** - Thumb-sized for gym use, not 44px minimum
 - ✅ **ONE insight maximum** - Not 5 cards, show the most important one
 - ✅ **Ship Phase 1 only, then listen** - Don't overbuild
@@ -451,7 +451,7 @@ action: "Stay motivated!" ❌
 **Dramatically Simplified**:
 
 - Full-screen body map replaces entire analytics section
-- **Two-color system**: Gray (recovering/never) vs Safety Orange (ready to train)
+- **Three-color system**: Gray (recovering/never), Safety Orange (ready 3-7d), Danger Red (overdue 8+d)
 - Tap muscle → minimal popover: days since, last weight×reps, "Train Now" button
 - 88px touch targets for major muscle groups
 - Front/Back toggle: 44px buttons, top-right
@@ -538,7 +538,7 @@ insightCards: defineTable({
 **Body Map Component**:
 
 - [ ] Full-width body map (front view default)
-- [ ] Two-color heat system: gray vs safety-orange
+- [x] Three-color heat system: gray (recovering) vs safety-orange (ready) vs danger-red (overdue)
 - [ ] 88px touch targets for major groups, 60px for smaller
 - [ ] Haptic feedback on tap (navigator.vibrate)
 - [ ] Front/Back toggle: 44px buttons, top-right
