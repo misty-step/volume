@@ -5,6 +5,7 @@ import type { Exercise, Set as WorkoutSet } from "@/types/domain";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
+import { computeExerciseMetrics } from "@/lib/exercise-metrics";
 
 // Mock sonner toast
 vi.mock("sonner", () => ({
@@ -45,8 +46,7 @@ describe("ExerciseSetGroup", () => {
   const defaultProps = {
     exercise: mockExercise,
     sets: [mockSet],
-    totalVolume: 1350,
-    totalReps: 10,
+    metrics: computeExerciseMetrics([mockSet], "lbs"),
     preferredUnit: "lbs" as const,
     onRepeat: mockOnRepeat,
     onDelete: mockOnDelete,
@@ -93,6 +93,58 @@ describe("ExerciseSetGroup", () => {
           screen.getByTestId(`delete-set-btn-${mockSet._id}`)
         ).toBeInTheDocument();
       });
+    });
+
+    it("shows TIME summary for duration-based groups", () => {
+      const durationSet: WorkoutSet = {
+        ...mockSet,
+        _id: "setDuration" as Id<"sets">,
+        reps: undefined,
+        weight: undefined,
+        duration: 90,
+        performedAt: Date.now(),
+      };
+
+      const sets = [durationSet];
+      render(
+        <ExerciseSetGroup
+          {...defaultProps}
+          sets={sets}
+          metrics={computeExerciseMetrics(sets, "lbs")}
+        />
+      );
+
+      expect(screen.getByText("TIME")).toBeInTheDocument();
+      expect(screen.getByText("1:30")).toBeInTheDocument();
+    });
+
+    it("shows both reps and time for mixed groups without volume", () => {
+      const repsSet: WorkoutSet = {
+        ...mockSet,
+        _id: "setRepsOnly" as Id<"sets">,
+        weight: undefined,
+        performedAt: Date.now() - 1000,
+      };
+      const durationSet: WorkoutSet = {
+        ...mockSet,
+        _id: "setDurationOnly" as Id<"sets">,
+        reps: undefined,
+        weight: undefined,
+        duration: 45,
+        performedAt: Date.now(),
+      };
+
+      const sets = [repsSet, durationSet];
+      render(
+        <ExerciseSetGroup
+          {...defaultProps}
+          sets={sets}
+          metrics={computeExerciseMetrics(sets, "lbs")}
+        />
+      );
+
+      expect(screen.getByText("REPS")).toBeInTheDocument();
+      expect(screen.getByText("TIME")).toBeInTheDocument();
     });
   });
 
@@ -486,7 +538,7 @@ describe("ExerciseSetGroup", () => {
         <ExerciseSetGroup
           {...defaultProps}
           sets={[mockSet, secondSet]}
-          totalReps={18}
+          metrics={computeExerciseMetrics([mockSet, secondSet], "lbs")}
         />
       );
 

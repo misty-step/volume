@@ -1,13 +1,15 @@
 import { Id } from "../../convex/_generated/dataModel";
 import { WeightUnit } from "@/types/domain";
 import type { Set } from "@/types/domain";
-import { convertWeight, normalizeWeightUnit } from "./weight-utils";
+import {
+  computeExerciseMetrics,
+  type ExerciseMetrics,
+} from "./exercise-metrics";
 
 export interface ExerciseGroup {
   exerciseId: Id<"exercises">;
   sets: Set[];
-  totalVolume: number;
-  totalReps: number;
+  metrics: ExerciseMetrics;
   mostRecentSetTime: number;
 }
 
@@ -37,26 +39,13 @@ export function groupSetsByExercise(
       groupsMap.set(set.exerciseId, {
         exerciseId: set.exerciseId,
         sets: [],
-        totalVolume: 0,
-        totalReps: 0,
+        metrics: computeExerciseMetrics([], targetUnit),
         mostRecentSetTime: 0,
       });
     }
 
     const group = groupsMap.get(set.exerciseId)!;
     group.sets.push(set);
-
-    // Only count reps and volume for rep-based exercises
-    if (set.reps !== undefined) {
-      group.totalReps += set.reps;
-
-      // Calculate volume with unit conversion (only for rep-based sets with weight)
-      if (set.weight) {
-        const setUnit = normalizeWeightUnit(set.unit);
-        const convertedWeight = convertWeight(set.weight, setUnit, targetUnit);
-        group.totalVolume += set.reps * convertedWeight;
-      }
-    }
 
     // Track most recent set time for sorting
     if (set.performedAt > group.mostRecentSetTime) {
@@ -70,6 +59,7 @@ export function groupSetsByExercise(
   groups.forEach((group) => {
     // Sort sets within each group newest first
     group.sets.sort((a, b) => b.performedAt - a.performedAt);
+    group.metrics = computeExerciseMetrics(group.sets, targetUnit);
   });
 
   // Sort groups by most recent set time (most recent exercise first)

@@ -5,16 +5,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Id } from "../../../convex/_generated/dataModel";
 import { BrutalistCard } from "@/components/brutalist";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
+import type { ExerciseGroup } from "@/lib/exercise-grouping";
 import { Exercise, Set as WorkoutSet } from "@/types/domain";
 import { ExerciseSetGroup } from "./exercise-set-group";
 import { Dumbbell } from "lucide-react";
-
-interface ExerciseGroup {
-  exerciseId: Id<"exercises">;
-  sets: WorkoutSet[];
-  totalVolume: number;
-  totalReps: number;
-}
 
 interface GroupedSetHistoryProps {
   exerciseGroups: ExerciseGroup[];
@@ -142,8 +136,7 @@ export const GroupedSetHistory = forwardRef<
             <ExerciseSetGroup
               exercise={exercise}
               sets={group.sets}
-              totalVolume={group.totalVolume}
-              totalReps={group.totalReps}
+              metrics={group.metrics}
               preferredUnit={preferredUnit}
               onRepeat={onRepeat}
               onDelete={onDelete}

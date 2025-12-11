@@ -2,6 +2,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import { Exercise, WeightUnit } from "@/types/domain";
 import type { Set } from "@/types/domain";
 import { convertWeight, normalizeWeightUnit } from "./weight-utils";
+import { computeExerciseMetrics } from "./exercise-metrics";
 
 export interface DailyStats {
   totalSets: number;
@@ -81,41 +82,36 @@ export function calculateDailyStatsByExercise(
 
   if (todaySets.length === 0) return [];
 
-  // Group by exercise
-  const statsMap = new Map<Id<"exercises">, ExerciseStats>();
+  const setsByExercise = new Map<Id<"exercises">, Set[]>();
 
   todaySets.forEach((set) => {
     const exercise = exerciseLookup.get(set.exerciseId);
     if (!exercise) return;
 
-    if (!statsMap.has(set.exerciseId)) {
-      statsMap.set(set.exerciseId, {
-        exerciseId: set.exerciseId,
-        name: exercise.name,
-        sets: 0,
-        reps: 0,
-        volume: 0,
-      });
-    }
-
-    const stats = statsMap.get(set.exerciseId)!;
-    stats.sets += 1;
-
-    // Only count reps and volume for rep-based exercises
-    if (set.reps !== undefined) {
-      stats.reps += set.reps;
-
-      // Convert weight to target unit before calculating volume
-      if (set.weight) {
-        const setUnit = normalizeWeightUnit(set.unit);
-        const convertedWeight = convertWeight(set.weight, setUnit, targetUnit);
-        stats.volume += set.reps * convertedWeight;
-      }
+    const list = setsByExercise.get(set.exerciseId);
+    if (list) {
+      list.push(set);
+    } else {
+      setsByExercise.set(set.exerciseId, [set]);
     }
   });
 
-  // Sort by most sets first, then alphabetical
-  return Array.from(statsMap.values()).sort((a, b) => {
+  const stats = Array.from(setsByExercise.entries()).map(
+    ([exerciseId, exerciseSets]) => {
+      const exercise = exerciseLookup.get(exerciseId)!;
+      const metrics = computeExerciseMetrics(exerciseSets, targetUnit);
+
+      return {
+        exerciseId,
+        name: exercise.name,
+        sets: exerciseSets.length,
+        reps: metrics.totalReps,
+        volume: metrics.totalVolume,
+      };
+    }
+  );
+
+  return stats.sort((a, b) => {
     if (a.sets !== b.sets) return b.sets - a.sets;
     return a.name.localeCompare(b.name);
   });

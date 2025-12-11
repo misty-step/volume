@@ -101,8 +101,7 @@ export function ChronologicalGroupedSetHistory({
                         <ExerciseSetGroup
                           exercise={exercise}
                           sets={group.sets}
-                          totalVolume={group.totalVolume}
-                          totalReps={group.totalReps}
+                          metrics={group.metrics}
                           preferredUnit={preferredUnit}
                           onRepeat={onRepeat}
                           onDelete={onDelete}

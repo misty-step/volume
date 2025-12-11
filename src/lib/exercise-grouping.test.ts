@@ -54,14 +54,14 @@ describe("exercise-grouping", () => {
       // ex2 should be first (most recent)
       expect(groups[0].exerciseId).toBe("ex2");
       expect(groups[0].sets).toHaveLength(1);
-      expect(groups[0].totalReps).toBe(5);
-      expect(groups[0].totalVolume).toBe(1125); // 5 * 225
+      expect(groups[0].metrics.totalReps).toBe(5);
+      expect(groups[0].metrics.totalVolume).toBe(1125); // 5 * 225
 
       // ex1 should be second
       expect(groups[1].exerciseId).toBe("ex1");
       expect(groups[1].sets).toHaveLength(2);
-      expect(groups[1].totalReps).toBe(18); // 10 + 8
-      expect(groups[1].totalVolume).toBe(1840); // 10*100 + 8*105
+      expect(groups[1].metrics.totalReps).toBe(18); // 10 + 8
+      expect(groups[1].metrics.totalVolume).toBe(1840); // 10*100 + 8*105
     });
 
     it("sorts groups by most recent set time", () => {
@@ -160,7 +160,7 @@ describe("exercise-grouping", () => {
 
       const groups = groupSetsByExercise(sets, "lbs");
       // 10 reps * 100kg (220.46 lbs) + 10 reps * 100 lbs = 2204.6 + 1000 = 3204.6
-      expect(groups[0].totalVolume).toBeCloseTo(3204.6, 1);
+      expect(groups[0].metrics.totalVolume).toBeCloseTo(3204.6, 1);
     });
 
     it("handles sets without weight (bodyweight exercises)", () => {
@@ -185,9 +185,67 @@ describe("exercise-grouping", () => {
       ];
 
       const groups = groupSetsByExercise(sets);
-      expect(groups[0].totalReps).toBe(18);
-      expect(groups[0].totalVolume).toBe(0); // No weight
+      expect(groups[0].metrics.totalReps).toBe(18);
+      expect(groups[0].metrics.totalVolume).toBe(0); // No weight
       expect(groups[0].sets).toHaveLength(2);
+    });
+
+    it("handles duration-only sets", () => {
+      const now = Date.now();
+      const sets: Set[] = [
+        {
+          _id: "set1" as Id<"sets">,
+          userId: "user1",
+          exerciseId: "ex1" as Id<"exercises">,
+          duration: 60,
+          performedAt: now,
+          _creationTime: now,
+        },
+        {
+          _id: "set2" as Id<"sets">,
+          userId: "user1",
+          exerciseId: "ex1" as Id<"exercises">,
+          duration: 90,
+          performedAt: now + 1000,
+          _creationTime: now + 1000,
+        },
+      ];
+
+      const groups = groupSetsByExercise(sets);
+      expect(groups).toHaveLength(1);
+      expect(groups[0].metrics.totalDuration).toBe(150);
+      expect(groups[0].metrics.totalReps).toBe(0);
+      expect(groups[0].metrics.totalVolume).toBe(0);
+      expect(groups[0].metrics.primary.kind).toBe("duration");
+      expect(groups[0].metrics.secondary).toBeUndefined();
+    });
+
+    it("handles mixed reps + duration sets without weight", () => {
+      const now = Date.now();
+      const sets: Set[] = [
+        {
+          _id: "set1" as Id<"sets">,
+          userId: "user1",
+          exerciseId: "ex1" as Id<"exercises">,
+          reps: 10,
+          performedAt: now - 1000,
+          _creationTime: now - 1000,
+        },
+        {
+          _id: "set2" as Id<"sets">,
+          userId: "user1",
+          exerciseId: "ex1" as Id<"exercises">,
+          duration: 45,
+          performedAt: now,
+          _creationTime: now,
+        },
+      ];
+
+      const groups = groupSetsByExercise(sets);
+      expect(groups[0].metrics.totalReps).toBe(10);
+      expect(groups[0].metrics.totalDuration).toBe(45);
+      expect(groups[0].metrics.primary.kind).toBe("duration");
+      expect(groups[0].metrics.secondary?.kind).toBe("reps");
     });
 
     it("tracks mostRecentSetTime correctly", () => {
@@ -249,7 +307,7 @@ describe("exercise-grouping", () => {
       expect(groups).toHaveLength(1);
       expect(groups[0].exerciseId).toBe("ex1");
       expect(groups[0].sets).toHaveLength(2);
-      expect(groups[0].totalReps).toBe(18); // 10 + 8, not 10 + 5 + 8
+      expect(groups[0].metrics.totalReps).toBe(18); // 10 + 8, not 10 + 5 + 8
     });
   });
 });
