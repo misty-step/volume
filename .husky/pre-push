@@ -1,10 +1,18 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
-echo "🚦 Running typecheck before push..."
+echo "🚦 Running quality checks before push..."
+
+# Type check
 pnpm typecheck || {
   echo "❌ Typecheck failed. Fix errors before pushing."
   exit 1
 }
 
-echo "✅ Typecheck passed."
+# Run changed tests only (fast)
+pnpm test --run --changed || {
+  echo "❌ Tests failed. Fix before pushing."
+  exit 1
+}
+
+echo "✅ All checks passed."

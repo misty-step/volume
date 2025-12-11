@@ -42,7 +42,7 @@ export default defineConfig({
       thresholds: {
         lines: 50,
         functions: 70,
-        branches: 83, // Lowered from 85% for analytics overhaul - TODO: restore after adding tests
+        branches: 84.5, // Raised from 83% - requires continued test improvement
         statements: 50,
       },
     },
