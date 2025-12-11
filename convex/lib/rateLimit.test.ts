@@ -159,19 +159,9 @@ describe("rateLimit helper", () => {
 });
 
 describe("getLimits environment variable parsing", () => {
-  const originalEnv = process.env;
-
-  afterEach(() => {
-    process.env = originalEnv;
-  });
-
   test("uses fallback for invalid env var values", () => {
-    // Set invalid values - use correct env var names
-    process.env = {
-      ...originalEnv,
-      RATE_LIMIT_EXERCISE_PER_MIN: "invalid",
-      RATE_LIMIT_REPORTS_PER_DAY: "-5", // Negative - should fall back
-    };
+    vi.stubEnv("RATE_LIMIT_EXERCISE_PER_MIN", "invalid");
+    vi.stubEnv("RATE_LIMIT_REPORTS_PER_DAY", "-5"); // Negative - should fall back
 
     const limits = getLimits();
 
@@ -181,10 +171,7 @@ describe("getLimits environment variable parsing", () => {
   });
 
   test("uses fallback for zero env var values", () => {
-    process.env = {
-      ...originalEnv,
-      RATE_LIMIT_EXERCISE_PER_MIN: "0",
-    };
+    vi.stubEnv("RATE_LIMIT_EXERCISE_PER_MIN", "0");
 
     const limits = getLimits();
 
@@ -193,10 +180,7 @@ describe("getLimits environment variable parsing", () => {
   });
 
   test("uses fallback for NaN env var values", () => {
-    process.env = {
-      ...originalEnv,
-      RATE_LIMIT_EXERCISE_PER_MIN: "NaN",
-    };
+    vi.stubEnv("RATE_LIMIT_EXERCISE_PER_MIN", "NaN");
 
     const limits = getLimits();
 
@@ -205,10 +189,7 @@ describe("getLimits environment variable parsing", () => {
   });
 
   test("uses fallback for Infinity env var values", () => {
-    process.env = {
-      ...originalEnv,
-      RATE_LIMIT_EXERCISE_PER_MIN: "Infinity",
-    };
+    vi.stubEnv("RATE_LIMIT_EXERCISE_PER_MIN", "Infinity");
 
     const limits = getLimits();
 
@@ -217,11 +198,8 @@ describe("getLimits environment variable parsing", () => {
   });
 
   test("uses valid env var values when provided", () => {
-    process.env = {
-      ...originalEnv,
-      RATE_LIMIT_EXERCISE_PER_MIN: "20",
-      RATE_LIMIT_REPORTS_PER_DAY: "10",
-    };
+    vi.stubEnv("RATE_LIMIT_EXERCISE_PER_MIN", "20");
+    vi.stubEnv("RATE_LIMIT_REPORTS_PER_DAY", "10");
 
     const limits = getLimits();
 

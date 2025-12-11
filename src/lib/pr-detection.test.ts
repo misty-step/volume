@@ -253,7 +253,7 @@ describe("checkForPR", () => {
       });
     });
 
-    it("returns volume PR when first rep-based set has zero weight but positive reps", () => {
+    it("returns reps PR when first rep-based set has zero weight but positive reps", () => {
       const currentSet = createSet(10, 0);
       const previousSets = [createDurationSet(60)];
 
@@ -279,7 +279,7 @@ describe("checkForPR", () => {
   });
 
   describe("first set edge cases", () => {
-    it("returns volume PR when first set has zero weight but positive volume calculation fails", () => {
+    it("returns null when first set has zero weight and zero reps", () => {
       // This tests the path where weight=0, reps=0 but we still try volume
       const currentSet = createSet(0, 0);
       const result = checkForPR(currentSet, []);
