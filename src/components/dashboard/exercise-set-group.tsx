@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { ChevronDown, ChevronRight, RotateCcw, Trash2 } from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
 import { BrutalistButton } from "@/components/brutalist";
@@ -18,14 +18,14 @@ import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
 import { formatNumber } from "@/lib/number-utils";
 import { formatTimestamp, formatDuration } from "@/lib/date-utils";
+import type { ExerciseMetrics, SummaryMetric } from "@/lib/exercise-metrics";
 import { Exercise, Set as WorkoutSet, WeightUnit } from "@/types/domain";
 import { BRUTALIST_TYPOGRAPHY } from "@/config/design-tokens";
 
 interface ExerciseSetGroupProps {
   exercise: Exercise;
   sets: WorkoutSet[];
-  totalVolume: number;
-  totalReps: number;
+  metrics: ExerciseMetrics;
   preferredUnit: WeightUnit;
   onRepeat: (set: WorkoutSet) => void;
   onDelete: (setId: Id<"sets">) => void;
@@ -35,8 +35,7 @@ interface ExerciseSetGroupProps {
 export function ExerciseSetGroup({
   exercise,
   sets,
-  totalVolume,
-  totalReps,
+  metrics,
   preferredUnit,
   onRepeat,
   onDelete,
@@ -45,6 +44,10 @@ export function ExerciseSetGroup({
   const [isExpanded, setIsExpanded] = useState(false);
   const [deletingId, setDeletingId] = useState<Id<"sets"> | null>(null);
   const [setToDelete, setSetToDelete] = useState<WorkoutSet | null>(null);
+
+  const summaryMetrics: SummaryMetric[] = metrics.secondary
+    ? [metrics.primary, metrics.secondary]
+    : [metrics.primary];
 
   const handleDeleteClick = (set: WorkoutSet) => {
     setSetToDelete(set);
@@ -93,33 +96,34 @@ export function ExerciseSetGroup({
                 {sets.length} SET{sets.length === 1 ? "" : "S"}
               </span>
               <span className="text-concrete-gray">•</span>
-              {totalVolume > 0 ? (
-                <>
-                  <span
-                    className={BRUTALIST_TYPOGRAPHY.pairings.setWeight.number}
-                  >
-                    {formatNumber(Math.round(totalVolume))}
-                  </span>
-                  <span
-                    className={BRUTALIST_TYPOGRAPHY.pairings.setWeight.unit}
-                  >
-                    {preferredUnit.toUpperCase()}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span
-                    className={BRUTALIST_TYPOGRAPHY.pairings.setWeight.number}
-                  >
-                    {totalReps}
-                  </span>
-                  <span
-                    className={BRUTALIST_TYPOGRAPHY.pairings.setWeight.unit}
-                  >
-                    REPS
-                  </span>
-                </>
-              )}
+              {summaryMetrics.map((metric, idx) => {
+                const value =
+                  metric.kind === "duration"
+                    ? formatDuration(Math.round(metric.value))
+                    : formatNumber(Math.round(metric.value));
+                const label =
+                  metric.kind === "volume"
+                    ? preferredUnit.toUpperCase()
+                    : metric.kind === "reps"
+                      ? "REPS"
+                      : "TIME";
+
+                return (
+                  <Fragment key={`${metric.kind}-${idx}`}>
+                    {idx > 0 && <span className="text-concrete-gray">•</span>}
+                    <span
+                      className={BRUTALIST_TYPOGRAPHY.pairings.setWeight.number}
+                    >
+                      {value}
+                    </span>
+                    <span
+                      className={BRUTALIST_TYPOGRAPHY.pairings.setWeight.unit}
+                    >
+                      {label}
+                    </span>
+                  </Fragment>
+                );
+              })}
             </div>
           </div>
         </button>
