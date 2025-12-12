@@ -1,7 +1,14 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { ChevronDown, ChevronRight, RotateCcw, Trash2 } from "lucide-react";
+import Link from "next/link";
+import {
+  ChevronDown,
+  ChevronRight,
+  RotateCcw,
+  Trash2,
+  ExternalLink,
+} from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
 import { BrutalistButton } from "@/components/brutalist";
 import {
@@ -30,6 +37,8 @@ interface ExerciseSetGroupProps {
   onRepeat: (set: WorkoutSet) => void;
   onDelete: (setId: Id<"sets">) => void;
   showRepeat?: boolean;
+  /** Optional URL for exercise detail page (makes exercise name a link) */
+  exerciseHref?: string;
 }
 
 export function ExerciseSetGroup({
@@ -40,6 +49,7 @@ export function ExerciseSetGroup({
   onRepeat,
   onDelete,
   showRepeat = true,
+  exerciseHref,
 }: ExerciseSetGroupProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [deletingId, setDeletingId] = useState<Id<"sets"> | null>(null);
@@ -85,9 +95,19 @@ export function ExerciseSetGroup({
               ) : (
                 <ChevronRight className="w-5 h-5 text-danger-red mt-0.5 shrink-0" />
               )}
-              <span className="font-display text-lg uppercase tracking-wide line-clamp-2">
+              <span className="font-display text-lg uppercase tracking-wide line-clamp-2 flex-1">
                 {exercise.name}
               </span>
+              {exerciseHref && (
+                <Link
+                  href={exerciseHref}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-muted-foreground hover:text-danger-red transition-colors shrink-0"
+                  aria-label={`View ${exercise.name} details`}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </Link>
+              )}
             </div>
 
             {/* Stats Row */}

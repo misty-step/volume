@@ -1,18 +1,28 @@
 "use client";
 
+import Link from "next/link";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
-import { Exercise, Set } from "@/types/domain";
+import { Exercise, Set, WeightUnit } from "@/types/domain";
 import { ExerciseSetGroup } from "./exercise-set-group";
 import { groupSetsByExercise } from "@/lib/exercise-grouping";
 import { motion } from "framer-motion";
 import { motionPresets } from "@/lib/brutalist-motion";
+import { formatNumber } from "@/lib/number-utils";
+import { formatDuration } from "@/lib/date-utils";
 
 interface DayGroup {
   date: string;
   displayDate: string;
   sets: Set[];
+  /** Optional pre-computed totals from useDayPagedHistory */
+  totals?: {
+    setCount: number;
+    reps: number;
+    durationSec: number;
+    volume: number;
+  };
 }
 
 interface ChronologicalGroupedSetHistoryProps {
@@ -21,6 +31,10 @@ interface ChronologicalGroupedSetHistoryProps {
   onRepeat: (set: Set) => void;
   onDelete: (setId: Id<"sets">) => void;
   showRepeat?: boolean;
+  /** When true, exercise names become links to exercise detail page */
+  linkExercises?: boolean;
+  /** Preferred weight unit for displaying volume */
+  preferredUnit?: WeightUnit;
 }
 
 /**
@@ -36,8 +50,11 @@ export function ChronologicalGroupedSetHistory({
   onRepeat,
   onDelete,
   showRepeat = false,
+  linkExercises = false,
+  preferredUnit: preferredUnitProp,
 }: ChronologicalGroupedSetHistoryProps) {
-  const { unit: preferredUnit } = useWeightUnit();
+  const { unit: contextUnit } = useWeightUnit();
+  const preferredUnit = preferredUnitProp ?? contextUnit;
 
   // Empty state
   if (groupedSets.length === 0) {
@@ -75,13 +92,43 @@ export function ChronologicalGroupedSetHistory({
           preferredUnit
         );
 
+        // Use pre-computed totals if available, otherwise compute from exercise groups
+        const totals = dayGroup.totals ?? {
+          setCount: dayGroup.sets.length,
+          reps: exerciseGroups.reduce((sum, g) => sum + g.metrics.totalReps, 0),
+          durationSec: exerciseGroups.reduce(
+            (sum, g) => sum + g.metrics.totalDuration,
+            0
+          ),
+          volume: exerciseGroups.reduce(
+            (sum, g) => sum + g.metrics.totalVolume,
+            0
+          ),
+        };
+
         return (
           <motion.div key={dayGroup.date} variants={motionPresets.cardEntrance}>
             <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">
-                  {dayGroup.displayDate} ({dayGroup.sets.length} set
-                  {dayGroup.sets.length === 1 ? "" : "s"})
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex flex-col gap-1">
+                  <span>{dayGroup.displayDate}</span>
+                  <span className="font-mono text-xs text-muted-foreground font-normal flex flex-wrap gap-x-3 gap-y-1">
+                    <span>
+                      {totals.setCount} set{totals.setCount === 1 ? "" : "s"}
+                    </span>
+                    {totals.volume > 0 && (
+                      <span>
+                        {formatNumber(Math.round(totals.volume))}{" "}
+                        {preferredUnit}
+                      </span>
+                    )}
+                    {totals.volume === 0 && totals.reps > 0 && (
+                      <span>{formatNumber(totals.reps)} reps</span>
+                    )}
+                    {totals.durationSec > 0 && (
+                      <span>{formatDuration(totals.durationSec)}</span>
+                    )}
+                  </span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -106,6 +153,11 @@ export function ChronologicalGroupedSetHistory({
                           onRepeat={onRepeat}
                           onDelete={onDelete}
                           showRepeat={showRepeat}
+                          exerciseHref={
+                            linkExercises
+                              ? `/history/exercise/${group.exerciseId}`
+                              : undefined
+                          }
                         />
                       </motion.div>
                     );
