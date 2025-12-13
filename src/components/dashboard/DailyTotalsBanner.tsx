@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { WeightUnit, Set } from "@/types/domain";
 import { convertWeight, normalizeWeightUnit } from "@/lib/weight-utils";
 import { formatDuration } from "@/lib/date-utils";
+import { trackEvent } from "@/lib/analytics";
 import { Dumbbell, Timer, Hash } from "lucide-react";
 
 export interface DailyTotals {
@@ -70,6 +71,15 @@ export function DailyTotalsBanner({
     () => computeDailyTotals(todaysSets, preferredUnit),
     [todaysSets, preferredUnit]
   );
+
+  // Track banner view once per mount (when there are sets)
+  const hasTracked = useRef(false);
+  useEffect(() => {
+    if (totals.totalSets > 0 && !hasTracked.current) {
+      hasTracked.current = true;
+      trackEvent("Daily Totals Banner Viewed", {});
+    }
+  }, [totals.totalSets]);
 
   // Don't render if no sets today
   if (totals.totalSets === 0) return null;

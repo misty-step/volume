@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -11,6 +11,7 @@ import { Id } from "../../../../convex/_generated/dataModel";
 import type { Exercise } from "@/types/domain";
 import { useDayPagedHistory } from "@/hooks/useDayPagedHistory";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
+import { trackEvent } from "@/lib/analytics";
 
 export default function HistoryPage() {
   const { unit: preferredUnit } = useWeightUnit();
@@ -42,6 +43,12 @@ export default function HistoryPage() {
   const handleDelete = async (setId: Id<"sets">) => {
     await deleteSetMutation({ id: setId });
   };
+
+  // Handle load more with analytics
+  const handleLoadMore = useCallback(() => {
+    trackEvent("History Load More Days", { days: 7 });
+    loadMoreDays(7);
+  }, [loadMoreDays]);
 
   // Transform DayGroup[] to format expected by ChronologicalGroupedSetHistory
   const groupedSets = useMemo(() => {
@@ -107,7 +114,7 @@ export default function HistoryPage() {
       {/* Load More button - loads more days */}
       {canLoadMore && status === "ready" && (
         <div className="flex justify-center mt-4">
-          <Button onClick={() => loadMoreDays(7)} size="touch" type="button">
+          <Button onClick={handleLoadMore} size="touch" type="button">
             Load More Days
           </Button>
         </div>

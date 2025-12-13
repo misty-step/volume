@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { use, useMemo, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../../convex/_generated/api";
@@ -17,6 +17,7 @@ import {
 } from "@/lib/exercise-insights";
 import { formatNumber } from "@/lib/number-utils";
 import { formatDuration } from "@/lib/date-utils";
+import { trackEvent } from "@/lib/analytics";
 
 // Compute date range outside component to avoid impure function warnings
 function getDateRange() {
@@ -82,6 +83,15 @@ export default function ExerciseDetailPage({
     if (sessions.length === 0) return [];
     return buildWeightTierBreakdown(sessions[0]!.sets, preferredUnit);
   }, [sessions, preferredUnit]);
+
+  // Track exercise detail view once per mount
+  const hasTracked = useRef(false);
+  useEffect(() => {
+    if (exercise && !hasTracked.current) {
+      hasTracked.current = true;
+      trackEvent("Exercise Detail Viewed", { exerciseId });
+    }
+  }, [exercise, exerciseId]);
 
   // Loading state
   if (exercise === undefined || allTimeStats === undefined) {

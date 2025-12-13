@@ -50,6 +50,18 @@ export interface AnalyticsEventDefinitions {
     target: string;
     device: "desktop" | "mobile";
   };
+  // Analytics & History events
+  "Daily Totals Banner Viewed": {
+    userId?: string;
+  };
+  "History Load More Days": {
+    days: number;
+    userId?: string;
+  };
+  "Exercise Detail Viewed": {
+    exerciseId: string;
+    userId?: string;
+  };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventDefinitions;
