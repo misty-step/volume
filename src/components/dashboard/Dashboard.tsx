@@ -300,6 +300,7 @@ export function Dashboard() {
                       <QuickLogForm
                         ref={formRef}
                         exercises={activeExercisesByRecency}
+                        todaysSets={todaysSets}
                         onSetLogged={handleSetLogged}
                         onUndo={handleUndo}
                       />
@@ -327,6 +328,7 @@ export function Dashboard() {
               <QuickLogForm
                 ref={formRef}
                 exercises={activeExercisesByRecency}
+                todaysSets={todaysSets}
                 onSetLogged={handleSetLogged}
                 onUndo={handleUndo}
               />

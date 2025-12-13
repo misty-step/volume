@@ -1,15 +1,18 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLastSet } from "@/hooks/useLastSet";
 import { PERFORMANCE_COLORS } from "@/config/design-tokens";
 import { cn } from "@/lib/utils";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
-import { TrendingUp } from "lucide-react";
+import { formatDuration } from "@/lib/date-utils";
+import { TrendingUp, Calendar } from "lucide-react";
+import type { Set } from "@/types/domain";
 
 interface GhostSetDisplayProps {
   exerciseId: string | null;
+  todaysSets?: Set[];
   suggestion?: {
     reps?: number;
     weight?: number;
@@ -33,6 +36,7 @@ interface GhostSetDisplayProps {
  */
 export function GhostSetDisplay({
   exerciseId,
+  todaysSets,
   suggestion,
   className,
 }: GhostSetDisplayProps) {
@@ -41,6 +45,26 @@ export function GhostSetDisplay({
 
   // Skip first entry (lastSet) and take next 3 for previous history
   const previousHistory = (history ?? []).slice(1, 4);
+
+  // Compute today's totals for this exercise
+  const todayTotal = useMemo(() => {
+    if (!todaysSets || !exerciseId) return null;
+    const exerciseSets = todaysSets.filter((s) => s.exerciseId === exerciseId);
+    if (exerciseSets.length === 0) return null;
+
+    return {
+      setCount: exerciseSets.length,
+      totalReps: exerciseSets.reduce((sum, s) => sum + (s.reps ?? 0), 0),
+      totalDuration: exerciseSets.reduce(
+        (sum, s) => sum + (s.duration ?? 0),
+        0
+      ),
+      totalVolume: exerciseSets.reduce((sum, s) => {
+        if (s.reps && s.weight) return sum + s.reps * s.weight;
+        return sum;
+      }, 0),
+    };
+  }, [todaysSets, exerciseId]);
 
   return (
     <AnimatePresence mode="wait">
@@ -65,6 +89,52 @@ export function GhostSetDisplay({
               boxShadow: `0 0 8px ${PERFORMANCE_COLORS.accent.primaryGlow}`,
             }}
           />
+
+          {/* Today's Total for This Exercise */}
+          {todayTotal && (
+            <div className="px-4 py-3 border-b border-border dark:border-[#262626]">
+              <div className="flex items-center justify-between gap-4">
+                {/* Label with icon */}
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5 text-foreground dark:text-[#D4FF00]" />
+                  <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                    Today
+                  </div>
+                </div>
+
+                {/* Today's totals */}
+                <div className="flex items-center gap-2">
+                  {/* Duration-based exercise */}
+                  {todayTotal.totalDuration > 0 && (
+                    <span className="font-mono text-lg font-bold tabular-nums text-foreground dark:text-[#D4FF00]">
+                      {formatDuration(todayTotal.totalDuration)}
+                    </span>
+                  )}
+
+                  {/* Rep-based exercise */}
+                  {todayTotal.totalReps > 0 && (
+                    <span className="font-mono text-lg font-bold tabular-nums text-foreground dark:text-[#D4FF00]">
+                      {todayTotal.totalReps.toLocaleString()}
+                      <span className="text-xs font-normal text-muted-foreground ml-1">
+                        reps
+                      </span>
+                    </span>
+                  )}
+
+                  {/* Volume for weighted exercises */}
+                  {todayTotal.totalVolume > 0 && (
+                    <span className="font-mono text-sm tabular-nums text-muted-foreground">
+                      •{" "}
+                      <span className="text-foreground/80">
+                        {Math.round(todayTotal.totalVolume).toLocaleString()}
+                      </span>{" "}
+                      {unit}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="px-4 py-3">
             <div className="flex items-center justify-between gap-4">

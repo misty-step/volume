@@ -2,11 +2,11 @@
 
 import { useMemo, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { WeightUnit, Set } from "@/types/domain";
+import { WeightUnit, Set as WorkoutSet } from "@/types/domain";
 import { convertWeight, normalizeWeightUnit } from "@/lib/weight-utils";
 import { formatDuration } from "@/lib/date-utils";
 import { trackEvent } from "@/lib/analytics";
-import { Dumbbell, Timer, Hash } from "lucide-react";
+import { Dumbbell, Timer, Hash, Layers } from "lucide-react";
 
 export interface DailyTotals {
   totalSets: number;
@@ -16,7 +16,7 @@ export interface DailyTotals {
 }
 
 interface DailyTotalsBannerProps {
-  todaysSets: Set[];
+  todaysSets: WorkoutSet[];
   preferredUnit: WeightUnit;
   className?: string;
 }
@@ -25,7 +25,7 @@ interface DailyTotalsBannerProps {
  * Compute daily totals from today's sets.
  */
 export function computeDailyTotals(
-  sets: Set[],
+  sets: WorkoutSet[],
   preferredUnit: WeightUnit
 ): DailyTotals {
   let totalSets = 0;
@@ -72,6 +72,12 @@ export function DailyTotalsBanner({
     [todaysSets, preferredUnit]
   );
 
+  // Count unique exercises
+  const exerciseCount = useMemo(() => {
+    const uniqueExercises = new Set(todaysSets.map((s) => s.exerciseId));
+    return uniqueExercises.size;
+  }, [todaysSets]);
+
   // Track banner view once per mount (when there are sets)
   const hasTracked = useRef(false);
   useEffect(() => {
@@ -98,8 +104,17 @@ export function DailyTotalsBanner({
         className
       )}
     >
-      <div className="flex items-center justify-center gap-4 md:gap-6 flex-wrap text-sm font-mono">
-        {/* Sets count - always show */}
+      <div className="flex items-center justify-center flex-wrap text-sm font-mono">
+        {/* Exercises count - show first */}
+        <StatPill
+          icon={<Layers className="w-3.5 h-3.5" />}
+          value={exerciseCount}
+          label={exerciseCount === 1 ? "exercise" : "exercises"}
+        />
+
+        <Separator />
+
+        {/* Sets count */}
         <StatPill
           icon={<Hash className="w-3.5 h-3.5" />}
           value={totals.totalSets}
@@ -108,31 +123,40 @@ export function DailyTotalsBanner({
 
         {/* Volume (if weighted sets exist) */}
         {hasVolume && (
-          <StatPill
-            icon={<Dumbbell className="w-3.5 h-3.5" />}
-            value={Math.round(totals.totalVolume).toLocaleString()}
-            label={preferredUnit}
-            highlight
-          />
+          <>
+            <Separator />
+            <StatPill
+              icon={<Dumbbell className="w-3.5 h-3.5" />}
+              value={Math.round(totals.totalVolume).toLocaleString()}
+              label={preferredUnit}
+              highlight
+            />
+          </>
         )}
 
-        {/* Reps (if any rep-based sets, and no volume to show) */}
-        {hasReps && !hasVolume && (
-          <StatPill
-            icon={<Hash className="w-3.5 h-3.5" />}
-            value={totals.totalReps.toLocaleString()}
-            label="reps"
-            highlight
-          />
+        {/* Reps (always show if present) */}
+        {hasReps && (
+          <>
+            <Separator />
+            <StatPill
+              icon={<Hash className="w-3.5 h-3.5" />}
+              value={totals.totalReps.toLocaleString()}
+              label="reps"
+              highlight={!hasVolume}
+            />
+          </>
         )}
 
         {/* Duration (if any timed sets) */}
         {hasDuration && (
-          <StatPill
-            icon={<Timer className="w-3.5 h-3.5" />}
-            value={formatDuration(totals.totalDurationSec)}
-            highlight={!hasVolume && !hasReps}
-          />
+          <>
+            <Separator />
+            <StatPill
+              icon={<Timer className="w-3.5 h-3.5" />}
+              value={formatDuration(totals.totalDurationSec)}
+              highlight={!hasVolume && !hasReps}
+            />
+          </>
         )}
       </div>
     </div>
@@ -158,5 +182,16 @@ function StatPill({ icon, value, label, highlight }: StatPillProps) {
       <span className="tabular-nums">{value}</span>
       {label && <span className="text-muted-foreground text-xs">{label}</span>}
     </div>
+  );
+}
+
+function Separator() {
+  return (
+    <span
+      className="mx-2 md:mx-3 text-concrete-gray/30 select-none"
+      aria-hidden="true"
+    >
+      │
+    </span>
   );
 }

@@ -112,11 +112,6 @@ export const GroupedSetHistory = forwardRef<
     );
   }
 
-  const totalSets = exerciseGroups.reduce(
-    (sum, group) => sum + group.sets.length,
-    0
-  );
-
   // Shared exercise groups content
   const exerciseGroupsContent = (
     <AnimatePresence mode="popLayout">
@@ -147,31 +142,21 @@ export const GroupedSetHistory = forwardRef<
     </AnimatePresence>
   );
 
-  // Mobile: no card wrapper, compact header
+  // Mobile: no card wrapper, exercise groups directly
   if (isMobile) {
     return (
       <div ref={ref}>
-        <p className="font-mono text-xs uppercase tracking-wider text-concrete-gray mb-4">
-          {exerciseGroups.length} exercise{exerciseGroups.length !== 1 && "s"}
-          {" • "}
-          {totalSets} set{totalSets !== 1 && "s"}
-        </p>
         <div className="space-y-3">{exerciseGroupsContent}</div>
       </div>
     );
   }
 
-  // Desktop: card wrapper with full header
+  // Desktop: card wrapper with header
   return (
     <BrutalistCard ref={ref} className="p-6">
-      <h2 className="font-display text-2xl uppercase tracking-wide mb-2">
+      <h2 className="font-display text-2xl uppercase tracking-wide mb-6">
         Today
       </h2>
-      <p className="font-mono text-xs uppercase tracking-wider text-concrete-gray mb-6">
-        {exerciseGroups.length} EXERCISE{exerciseGroups.length === 1 ? "" : "S"}
-        {" • "}
-        {totalSets} SET{totalSets === 1 ? "" : "S"}
-      </p>
       <div className="space-y-3">{exerciseGroupsContent}</div>
     </BrutalistCard>
   );
