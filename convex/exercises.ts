@@ -145,6 +145,31 @@ export const createExerciseInternal = internalMutation({
   },
 });
 
+// Get a single exercise by ID
+export const getExercise = query({
+  args: {
+    id: v.id("exercises"),
+  },
+  handler: async (ctx, args): Promise<Doc<"exercises"> | null> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
+    const exercise = await ctx.db.get(args.id);
+    if (!exercise) {
+      return null;
+    }
+
+    // Verify ownership (return null if not owned, not error - for graceful UI)
+    if (exercise.userId !== identity.subject) {
+      return null;
+    }
+
+    return exercise;
+  },
+});
+
 // List all exercises for the current user
 export const listExercises = query({
   args: {
