@@ -100,11 +100,11 @@ export function DailyTotalsBanner({
       className={cn(
         "w-full border-b-3 border-concrete-black dark:border-concrete-white",
         "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80",
-        "py-3 px-4",
+        "py-3 px-4 mb-4",
         className
       )}
     >
-      <div className="flex items-center justify-center flex-wrap text-sm font-mono">
+      <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-center gap-y-2 gap-x-4 sm:gap-0 text-sm font-mono">
         {/* Exercises count - show first */}
         <StatPill
           icon={<Layers className="w-3.5 h-3.5" />}
@@ -112,7 +112,7 @@ export function DailyTotalsBanner({
           label={exerciseCount === 1 ? "exercise" : "exercises"}
         />
 
-        <Separator />
+        <Separator className="hidden sm:inline" />
 
         {/* Sets count */}
         <StatPill
@@ -124,7 +124,7 @@ export function DailyTotalsBanner({
         {/* Volume (if weighted sets exist) */}
         {hasVolume && (
           <>
-            <Separator />
+            <Separator className="hidden sm:inline" />
             <StatPill
               icon={<Dumbbell className="w-3.5 h-3.5" />}
               value={Math.round(totals.totalVolume).toLocaleString()}
@@ -137,7 +137,7 @@ export function DailyTotalsBanner({
         {/* Reps (always show if present) */}
         {hasReps && (
           <>
-            <Separator />
+            <Separator className="hidden sm:inline" />
             <StatPill
               icon={<Hash className="w-3.5 h-3.5" />}
               value={totals.totalReps.toLocaleString()}
@@ -150,7 +150,7 @@ export function DailyTotalsBanner({
         {/* Duration (if any timed sets) */}
         {hasDuration && (
           <>
-            <Separator />
+            <Separator className="hidden sm:inline" />
             <StatPill
               icon={<Timer className="w-3.5 h-3.5" />}
               value={formatDuration(totals.totalDurationSec)}
@@ -180,15 +180,22 @@ function StatPill({ icon, value, label, highlight }: StatPillProps) {
     >
       {icon}
       <span className="tabular-nums">{value}</span>
-      {label && <span className="text-muted-foreground text-xs">{label}</span>}
+      {label && (
+        <span className="text-muted-foreground text-xs opacity-70 sm:opacity-100">
+          {label}
+        </span>
+      )}
     </div>
   );
 }
 
-function Separator() {
+function Separator({ className }: { className?: string }) {
   return (
     <span
-      className="mx-2 md:mx-3 text-concrete-gray/30 select-none"
+      className={cn(
+        "mx-2 md:mx-3 text-concrete-gray/30 select-none",
+        className
+      )}
       aria-hidden="true"
     >
       │
