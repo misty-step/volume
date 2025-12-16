@@ -324,3 +324,255 @@ export function getSessionsInDateRange(
     return sessionDate >= startDate && sessionDate <= endDate;
   });
 }
+
+/**
+ * Session delta result for comparing current vs previous session.
+ */
+export interface SessionDelta {
+  /** Absolute difference in metric value */
+  value: number;
+  /** Unit for display (lbs, reps, etc) */
+  unit: string;
+  /** Direction of change */
+  direction: "up" | "down" | "same";
+  /** Percentage change from previous */
+  percentChange: number | null;
+}
+
+/**
+ * Compute delta between current and previous session.
+ *
+ * Compares volume for weighted exercises, reps for bodyweight, duration for timed.
+ */
+export function computeSessionDelta(
+  currentSession: ExerciseSession,
+  previousSession: ExerciseSession | null,
+  preferredUnit: WeightUnit
+): SessionDelta | null {
+  if (!previousSession) {
+    return null;
+  }
+
+  const current = currentSession.totals;
+  const previous = previousSession.totals;
+
+  // Determine primary metric based on what data exists
+  // Priority: volume > reps > duration
+  if (current.volume > 0 && previous.volume > 0) {
+    const diff = current.volume - previous.volume;
+    const percentChange =
+      previous.volume > 0 ? (diff / previous.volume) * 100 : null;
+    return {
+      value: Math.abs(Math.round(diff)),
+      unit: preferredUnit,
+      direction: diff > 0 ? "up" : diff < 0 ? "down" : "same",
+      percentChange: percentChange !== null ? Math.round(percentChange) : null,
+    };
+  }
+
+  if (current.reps > 0 && previous.reps > 0) {
+    const diff = current.reps - previous.reps;
+    const percentChange =
+      previous.reps > 0 ? (diff / previous.reps) * 100 : null;
+    return {
+      value: Math.abs(diff),
+      unit: "reps",
+      direction: diff > 0 ? "up" : diff < 0 ? "down" : "same",
+      percentChange: percentChange !== null ? Math.round(percentChange) : null,
+    };
+  }
+
+  if (current.durationSec > 0 && previous.durationSec > 0) {
+    const diff = current.durationSec - previous.durationSec;
+    const percentChange =
+      previous.durationSec > 0 ? (diff / previous.durationSec) * 100 : null;
+    return {
+      value: Math.abs(diff),
+      unit: "sec",
+      direction: diff > 0 ? "up" : diff < 0 ? "down" : "same",
+      percentChange: percentChange !== null ? Math.round(percentChange) : null,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Set comparison result for ghost data display.
+ */
+export interface SetComparison {
+  /** Reps from the corresponding set in last session */
+  lastReps: number | null;
+  /** Weight from the corresponding set in last session */
+  lastWeight: number | null;
+  /** Duration from the corresponding set in last session */
+  lastDuration: number | null;
+  /** Quality indicator based on comparison */
+  quality: "beat" | "matched" | "under" | null;
+}
+
+/**
+ * Compare a set to the corresponding set from previous session.
+ *
+ * For set N in today's workout, compare to set N from last session.
+ * If last session had fewer sets, returns null values.
+ */
+export function computeSetComparison(
+  currentSet: Set,
+  setIndex: number,
+  previousSession: ExerciseSession | null
+): SetComparison {
+  const result: SetComparison = {
+    lastReps: null,
+    lastWeight: null,
+    lastDuration: null,
+    quality: null,
+  };
+
+  if (!previousSession || previousSession.sets.length === 0) {
+    return result;
+  }
+
+  // Get corresponding set from previous session (by index, oldest first)
+  // Previous session sets are sorted newest first, so reverse for comparison
+  const previousSetsOldestFirst = [...previousSession.sets].reverse();
+  const correspondingSet = previousSetsOldestFirst[setIndex];
+
+  if (!correspondingSet) {
+    return result;
+  }
+
+  result.lastReps = correspondingSet.reps ?? null;
+  result.lastWeight = correspondingSet.weight ?? null;
+  result.lastDuration = correspondingSet.duration ?? null;
+
+  // Compute quality (did we beat, match, or underperform?)
+  // Priority: volume comparison > reps comparison > duration comparison
+  if (
+    currentSet.weight !== undefined &&
+    currentSet.reps !== undefined &&
+    correspondingSet.weight !== undefined &&
+    correspondingSet.reps !== undefined
+  ) {
+    const currentVolume = currentSet.weight * currentSet.reps;
+    const previousVolume = correspondingSet.weight * correspondingSet.reps;
+
+    if (currentVolume > previousVolume) {
+      result.quality = "beat";
+    } else if (currentVolume === previousVolume) {
+      result.quality = "matched";
+    } else {
+      result.quality = "under";
+    }
+  } else if (
+    currentSet.reps !== undefined &&
+    correspondingSet.reps !== undefined
+  ) {
+    if (currentSet.reps > correspondingSet.reps) {
+      result.quality = "beat";
+    } else if (currentSet.reps === correspondingSet.reps) {
+      result.quality = "matched";
+    } else {
+      result.quality = "under";
+    }
+  } else if (
+    currentSet.duration !== undefined &&
+    correspondingSet.duration !== undefined
+  ) {
+    if (currentSet.duration > correspondingSet.duration) {
+      result.quality = "beat";
+    } else if (currentSet.duration === correspondingSet.duration) {
+      result.quality = "matched";
+    } else {
+      result.quality = "under";
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Sparkline data point for volume trend chart.
+ */
+export interface SparklineDataPoint {
+  /** Session date for tooltip */
+  date: string;
+  /** Primary metric value (volume, reps, or duration) */
+  value: number;
+  /** Metric type for formatting */
+  metricType: "volume" | "reps" | "duration";
+}
+
+/**
+ * Build sparkline data from sessions for trend visualization.
+ *
+ * Returns up to 8 most recent sessions with their primary metric.
+ */
+export function buildSparklineData(
+  sessions: ExerciseSession[],
+  maxPoints: number = 8
+): SparklineDataPoint[] {
+  if (sessions.length === 0) return [];
+
+  // Determine which metric to use based on first session
+  const firstSession = sessions[0]!;
+  let metricType: SparklineDataPoint["metricType"];
+
+  if (firstSession.totals.volume > 0) {
+    metricType = "volume";
+  } else if (firstSession.totals.reps > 0) {
+    metricType = "reps";
+  } else {
+    metricType = "duration";
+  }
+
+  // Build data points (oldest first for proper chart display)
+  const recentSessions = sessions.slice(0, maxPoints).reverse();
+
+  return recentSessions.map((session) => {
+    let value: number;
+    switch (metricType) {
+      case "volume":
+        value = session.totals.volume;
+        break;
+      case "reps":
+        value = session.totals.reps;
+        break;
+      case "duration":
+        value = session.totals.durationSec;
+        break;
+    }
+
+    return {
+      date: session.displayDate,
+      value,
+      metricType,
+    };
+  });
+}
+
+/**
+ * Determine overall trend direction from sparkline data.
+ */
+export function computeTrendDirection(
+  data: SparklineDataPoint[]
+): "up" | "down" | "flat" {
+  if (data.length < 2) return "flat";
+
+  // Compare first half average to second half average
+  const midpoint = Math.floor(data.length / 2);
+  const firstHalf = data.slice(0, midpoint);
+  const secondHalf = data.slice(midpoint);
+
+  const firstAvg =
+    firstHalf.reduce((sum, d) => sum + d.value, 0) / firstHalf.length;
+  const secondAvg =
+    secondHalf.reduce((sum, d) => sum + d.value, 0) / secondHalf.length;
+
+  const changePercent = ((secondAvg - firstAvg) / firstAvg) * 100;
+
+  // Consider 5% threshold for "meaningful" change
+  if (changePercent > 5) return "up";
+  if (changePercent < -5) return "down";
+  return "flat";
+}

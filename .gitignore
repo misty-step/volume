@@ -54,7 +54,3 @@ e2e/.auth/*
 
 # Archived changesets (historical reference)
 .changeset.archive/
-
-# Design artifacts
-AESTHETIC-CRITIQUE.md
-brand-guidelines.jpg

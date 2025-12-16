@@ -128,6 +128,299 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 
 ---
 
+### [Design System] Technical Brutalism Brand Alignment Audit & Implementation
+
+**Scope**: Comprehensive alignment of design system with "Technical Brutalism" brand guidelines
+**Perspectives**: design-systems-architect, user-experience-advocate
+**Source**: brand-guidelines.jpg, AESTHETIC-CRITIQUE.md
+
+**Brand Philosophy**:
+Volume Fitness is not about wellness—it's about work. A technical tool for those who measure effort in tonnage moved. The aesthetic should feel like well-calibrated heavy machinery: reliable, blunt, built for output.
+
+**Core Pillars**:
+
+- **Raw Utility**: Function dictates form. No unnecessary decoration.
+- **Heavy Industry**: Visual language of workshops, schematics, and iron.
+- **Momentum**: Feeling of upward trajectory and compounding gains.
+
+---
+
+**PHASE 1: Color Token Correction** (2h)
+
+Brand guidelines specify exact colors that current implementation deviates from:
+
+| Token          | Brand Spec             | Current Code           | Delta                  |
+| -------------- | ---------------------- | ---------------------- | ---------------------- |
+| Primary Red    | `#C8102E`              | `#C41E3A`              | Wrong hue (too pink)   |
+| Accent Orange  | `#FF5A1F`              | `#FF6B00`              | Wrong hue (too yellow) |
+| BG Concrete    | `#F4F3F1` (warm beige) | `#F5F5F5` (cool gray)  | Missing warmth         |
+| Border Carbon  | `#1A1A1A` (near-black) | `#000000` (pure black) | Too harsh              |
+| Text Secondary | `#6E6E73`              | Not defined            | Missing token          |
+
+**Files**:
+
+- `src/config/design-tokens.ts:15-45` - Update BRUTALIST_COLORS
+- `src/app/globals.css:25-60` - Update CSS custom properties
+- `tailwind.config.ts:85-110` - Update Tailwind theme colors
+
+**Acceptance**:
+
+- [ ] All 5 color values match brand spec exactly
+- [ ] HSL/OKLCH values calculated for design tokens
+- [ ] Visual diff: warm beige background instead of cool gray
+
+---
+
+**PHASE 2: Typography Alignment** (3h)
+
+Brand spec calls for Sora (headings) + JetBrains Mono (data). Current implementation uses Bebas Neue + JetBrains Mono.
+
+| Role             | Brand Spec                           | Current             | Action                |
+| ---------------- | ------------------------------------ | ------------------- | --------------------- |
+| H1 (Page Titles) | Sora Black, 32px                     | Bebas Neue 400      | Replace with Sora 800 |
+| H2 (Section)     | Sora Bold, 24px                      | Bebas Neue 400      | Replace with Sora 700 |
+| Data XL          | JetBrains Mono Bold, 48px            | JetBrains Mono Bold | ✓ Correct             |
+| Labels           | JetBrains Mono Bold, 12px, uppercase | JetBrains Mono      | ✓ Mostly correct      |
+| Body             | Unspecified (defaulting sans)        | Inter               | Keep Inter            |
+
+**Files**:
+
+- `src/app/layout.tsx:12-25` - Replace Bebas_Neue with Sora import
+- `src/config/design-tokens.ts:180-220` - Update BRUTALIST_TYPOGRAPHY
+- `tailwind.config.ts:65-80` - Update fontFamily config
+- `src/app/globals.css:15-25` - Update font-family fallbacks
+
+**Decision Required**:
+
+- Sora requires Google Fonts import (600KB+ for Black/Bold weights)
+- Alternative: Keep Bebas Neue but document deviation from spec
+- Recommendation: Use Sora for brand accuracy
+
+**Acceptance**:
+
+- [ ] Heading font renders as Sora Black (or documented alternative)
+- [ ] Page titles ("TODAY", "ANALYTICS") use `font-heading-xl` token
+- [ ] Section headers use `font-heading-lg` token
+
+---
+
+**PHASE 3: Hard Shadow System** (2h)
+
+Brand guidelines specify hard offset shadows (no blur) as core visual element. Current implementation has tokens defined but only applies on hover states.
+
+**Current State**:
+
+```typescript
+// design-tokens.ts - shadows defined but underused
+BRUTALIST_SHADOWS = {
+  lift: "4px 4px 0 0 rgba(0,0,0,1)", // ← Perfect, but hover-only
+  press: "inset 0 4px 8px rgba(0,0,0,0.3)",
+  heavy: "8px 8px 0 0 rgba(0,0,0,0.3)",
+};
+```
+
+**Brand Spec**:
+
+- Primary buttons: Default state has hard shadow, shifts on press
+- Cards: Default hard shadow (not just hover)
+- Active tabs: Encased in thick border with hard shadow offset
+
+**Files**:
+
+- `src/components/brutalist/BrutalistButton.tsx:30-45` - Add default shadow
+- `src/components/brutalist/BrutalistCard.tsx:25-40` - Add default shadow
+- `src/components/ui/card.tsx:15-25` - Consolidate with BrutalistCard
+- `src/components/layout/nav.tsx:45-80` - Add shadow to active tab
+
+**Implementation**:
+
+```tsx
+// Button: Default has shadow, pressed removes it
+className={cn(
+  "shadow-lift",                    // ADD default shadow
+  "active:shadow-none active:translate-x-[4px] active:translate-y-[4px]",
+  // ... rest
+)}
+
+// Card: Default shadow, hover intensifies
+className={cn(
+  "shadow-lift",                    // ADD default shadow
+  "hover:shadow-heavy",             // Intensify on hover
+  // ... rest
+)}
+```
+
+**Acceptance**:
+
+- [ ] Primary buttons have visible 4px offset shadow by default
+- [ ] Cards have visible shadow by default (not just on hover)
+- [ ] Press/active states shift button position to "fill" the shadow
+- [ ] Active navigation tab has thick border + shadow treatment
+
+---
+
+**PHASE 4: Navigation Brutalist Treatment** (2h)
+
+Current navigation uses only font-weight changes for active state. Brand guidelines specify: "The active tab should be encased in a thick 3px border-carbon box with accent-orange hard shadow offset."
+
+**Current State** (`nav.tsx:45-60`):
+
+```tsx
+// Only font-weight changes - too subtle
+className={cn(
+  isActive
+    ? "text-foreground font-medium"  // ← Weak differentiation
+    : "text-muted-foreground"
+)}
+```
+
+**Brand Spec Treatment**:
+
+```tsx
+// Active tab: thick border + hard shadow
+className={cn(
+  isActive && [
+    "border-3 border-border-carbon",
+    "shadow-[4px_4px_0_0_var(--color-accent-orange)]",
+    "px-4 py-2",
+    "font-bold uppercase",
+  ]
+)}
+```
+
+**Files**:
+
+- `src/components/layout/nav.tsx:45-80` - Update active state styling
+- `src/app/globals.css` - Add nav-specific shadow utilities if needed
+
+**Acceptance**:
+
+- [ ] Active nav item has visible 3px border
+- [ ] Active nav item has orange offset shadow
+- [ ] Clear visual hierarchy between active/inactive tabs
+- [ ] Touch targets remain 44px+ for accessibility
+
+---
+
+**PHASE 5: Concrete Texture Application** (1h)
+
+Brand guidelines: "BG Concrete should have subtle noise texture applied over it." Currently defined in CSS but only used on landing page.
+
+**Current State**:
+
+- `.concrete-texture` class exists in globals.css:182-194
+- Uses SVG feTurbulence filter at 5% opacity
+- Only applied to landing page hero
+
+**Brand Spec**:
+
+- Texture on main app background (not just landing)
+- Texture on card surfaces for "unpolished concrete" feel
+- Should bridge gap between dynamic hero image and flat UI
+
+**Files**:
+
+- `src/app/globals.css:108-120` - Apply texture to body
+- `src/components/brutalist/BrutalistCard.tsx` - Enable `textured` variant by default
+- `src/app/layout.tsx` - Add texture class to body wrapper
+
+**Acceptance**:
+
+- [ ] Subtle grain visible on main app background
+- [ ] Texture at 3-5% opacity (not distracting)
+- [ ] Cards have optional textured surface
+- [ ] Visual connection between landing page and app interior
+
+---
+
+**PHASE 6: Component Consolidation** (3h)
+
+Current state has parallel component systems that cause inconsistency:
+
+- `BrutalistButton` vs `Button` (ui)
+- `BrutalistCard` vs `Card` (ui)
+- `BrutalistInput` vs `Input` (ui)
+
+**Problem**: Devs reach for `ui/` components by habit, bypassing brutalist tokens.
+
+**Solution**: Deprecate `ui/` variants, make brutalist components the default.
+
+**Files**:
+
+- `src/components/ui/button.tsx` - Re-export from brutalist/
+- `src/components/ui/card.tsx` - Re-export from brutalist/
+- `src/components/ui/input.tsx` - Re-export from brutalist/
+- All consumers - Update imports (grep for `from "@/components/ui/button"`)
+
+**Acceptance**:
+
+- [ ] Single source of truth for each component
+- [ ] All buttons use thick borders + hard shadows
+- [ ] All cards use thick borders + optional texture
+- [ ] No "soft" variants accessible without explicit opt-in
+
+---
+
+**PHASE 7: Momentum Visual Language** (2h)
+
+Brand guidelines include "Momentum & Trajectory Motif" - ascending arrow graphics suggesting upward progress. Currently absent from implementation.
+
+**Brand Spec**:
+
+- Ascending arrow chevrons as decorative motif
+- Used near progress indicators, streaks, PRs
+- Suggests "gains" and "compounding progress"
+
+**Implementation Options**:
+
+1. SVG icon component `<MomentumArrows />`
+2. CSS pseudo-element decorations
+3. Background pattern on specific cards
+
+**Files**:
+
+- `src/components/icons/momentum-arrows.tsx` - New SVG component
+- `src/components/analytics/streak-card.tsx` - Add motif near streak
+- `src/components/dashboard/pr-celebration.tsx` - Add motif on PR
+
+**Acceptance**:
+
+- [ ] Momentum arrow motif visible on key progress indicators
+- [ ] Uses accent-orange color
+- [ ] Subtle, doesn't compete with data
+- [ ] Appears on: streak display, PR celebrations, volume trends
+
+---
+
+**Summary**:
+
+| Phase               | Effort | Priority | Impact                                  |
+| ------------------- | ------ | -------- | --------------------------------------- |
+| 1. Color Correction | 2h     | HIGH     | Foundation - all visuals depend on this |
+| 2. Typography       | 3h     | MEDIUM   | Brand accuracy, may keep Bebas for perf |
+| 3. Hard Shadows     | 2h     | HIGH     | Core brutalist differentiator           |
+| 4. Navigation       | 2h     | HIGH     | User sees this constantly               |
+| 5. Texture          | 1h     | LOW      | Polish, not critical                    |
+| 6. Consolidation    | 3h     | MEDIUM   | Prevents future drift                   |
+| 7. Momentum Motif   | 2h     | LOW      | Polish, brand flourish                  |
+
+**Total Effort**: 15h (2-3 days focused work)
+**Risk**: MEDIUM - Font change could affect layout, shadow changes affect interaction patterns
+**Strategic Value**: HIGH - Design system is noted strength, this prevents erosion
+
+**Acceptance Criteria (Overall)**:
+
+- [ ] All colors match brand-guidelines.jpg exactly
+- [ ] Typography uses Sora (or documented deviation)
+- [ ] Hard shadows visible on default component states
+- [ ] Navigation active state dramatically styled
+- [ ] Concrete texture applied to app surfaces
+- [ ] Single component system (no ui/ vs brutalist/ split)
+- [ ] Momentum arrows on key progress elements
+- [ ] Visual consistency score: Screenshot comparison passes design review
+
+---
+
 ## Next (This Quarter, <3 months)
 
 ### [PRODUCT - EXISTENTIAL] Freemium Monetization
