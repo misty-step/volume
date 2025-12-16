@@ -267,7 +267,10 @@ export function ExerciseSetGroup({
                                 >
                                   {set.reps}
                                 </span>
-                                <span className="text-concrete-gray text-xs uppercase tracking-wider">
+                                <span
+                                  className="text-concrete-gray text-xs uppercase tracking-wider"
+                                  data-testid="set-reps-label"
+                                >
                                   REPS
                                 </span>
                               </>
@@ -283,7 +286,10 @@ export function ExerciseSetGroup({
                               >
                                 {set.weight}
                               </span>
-                              <span className="text-concrete-gray text-xs uppercase tracking-wider">
+                              <span
+                                className="text-concrete-gray text-xs uppercase tracking-wider"
+                                data-testid="set-weight-unit"
+                              >
                                 {(set.unit || preferredUnit).toUpperCase()}
                               </span>
                             </div>
