@@ -25,6 +25,7 @@ import { sortExercisesByRecency } from "@/lib/exercise-sorting";
 import { getTodayRange } from "@/lib/date-utils";
 import type { Exercise, Set as WorkoutSet } from "@/types/domain";
 import { Plus, X } from "lucide-react";
+import { DailyTotalsBanner } from "@/components/dashboard/DailyTotalsBanner";
 
 export function Dashboard() {
   const { isLoaded: isClerkLoaded, userId } = useAuth();
@@ -208,6 +209,13 @@ export function Dashboard() {
         ) : isMobile ? (
           /* Mobile Layout: FAB + Modal (history fully visible when form closed) */
           <div className="flex flex-col h-full overflow-hidden">
+            {/* Daily Totals Banner - sticky at top on mobile */}
+            <DailyTotalsBanner
+              todaysSets={todaysSets}
+              preferredUnit={unit}
+              className="sticky top-0 z-20"
+            />
+
             {/* History section - full screen access when form modal closed */}
             <motion.div
               className="flex-1 overflow-y-auto pb-20"
@@ -292,6 +300,7 @@ export function Dashboard() {
                       <QuickLogForm
                         ref={formRef}
                         exercises={activeExercisesByRecency}
+                        todaysSets={todaysSets}
                         onSetLogged={handleSetLogged}
                         onUndo={handleUndo}
                       />
@@ -309,11 +318,17 @@ export function Dashboard() {
             initial="initial"
             animate="animate"
           >
+            {/* Daily Totals Banner - above form on desktop */}
+            <motion.div variants={motionPresets.cardEntrance}>
+              <DailyTotalsBanner todaysSets={todaysSets} preferredUnit={unit} />
+            </motion.div>
+
             {/* Quick Log Form - PRIME POSITION */}
             <motion.div variants={motionPresets.cardEntrance}>
               <QuickLogForm
                 ref={formRef}
                 exercises={activeExercisesByRecency}
+                todaysSets={todaysSets}
                 onSetLogged={handleSetLogged}
                 onUndo={handleUndo}
               />

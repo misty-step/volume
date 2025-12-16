@@ -1,3 +1,4 @@
+import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ExerciseSetGroup } from "./exercise-set-group";
@@ -6,6 +7,20 @@ import type { Id } from "../../../convex/_generated/dataModel";
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
 import { computeExerciseMetrics } from "@/lib/exercise-metrics";
+
+// Mock Framer Motion to avoid animation issues in tests
+vi.mock("framer-motion", () => ({
+  motion: {
+    div: ({
+      children,
+      ...props
+    }: React.PropsWithChildren<{
+      className?: string;
+      "data-testid"?: string;
+    }>) => <div {...props}>{children}</div>,
+  },
+  AnimatePresence: ({ children }: React.PropsWithChildren) => <>{children}</>,
+}));
 
 // Mock sonner toast
 vi.mock("sonner", () => ({
@@ -18,6 +33,20 @@ vi.mock("sonner", () => ({
 // Mock error handler
 vi.mock("@/lib/error-handler", () => ({
   handleMutationError: vi.fn(),
+}));
+
+// Mock useExerciseCardData hook
+vi.mock("@/hooks/useExerciseCardData", () => ({
+  useExerciseCardData: () => ({
+    isLoading: false,
+    sessionDelta: null,
+    hasPR: false,
+    sparklineData: [],
+    trendDirection: "flat" as const,
+    enrichedSets: [],
+    previousSession: null,
+    sessions: [],
+  }),
 }));
 
 describe("ExerciseSetGroup", () => {

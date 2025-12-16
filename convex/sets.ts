@@ -159,6 +159,159 @@ export const listSetsPaginated = query({
   },
 });
 
+// Get recent sets for a specific exercise (limited, for "last set" queries)
+export const getRecentSetsForExercise = query({
+  args: {
+    exerciseId: v.id("exercises"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return [];
+    }
+
+    // Verify exercise ownership (IDOR prevention)
+    const exercise = await ctx.db.get(args.exerciseId);
+    requireOwnership(exercise, identity.subject, "exercise");
+
+    const limit = args.limit ?? 5;
+
+    const sets = await ctx.db
+      .query("sets")
+      .withIndex("by_exercise", (q) => q.eq("exerciseId", args.exerciseId))
+      .order("desc")
+      .take(limit);
+
+    return sets;
+  },
+});
+
+// List sets for a specific exercise within a date range (for exercise detail page)
+export const listSetsForExerciseDateRange = query({
+  args: {
+    exerciseId: v.id("exercises"),
+    startDate: v.number(),
+    endDate: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return [];
+    }
+
+    // Verify exercise ownership (IDOR prevention)
+    const exercise = await ctx.db.get(args.exerciseId);
+    requireOwnership(exercise, identity.subject, "exercise");
+
+    const sets = await ctx.db
+      .query("sets")
+      .withIndex("by_exercise", (q) => q.eq("exerciseId", args.exerciseId))
+      .filter((q) =>
+        q.and(
+          q.gte(q.field("performedAt"), args.startDate),
+          q.lte(q.field("performedAt"), args.endDate)
+        )
+      )
+      .order("desc")
+      .collect();
+
+    return sets;
+  },
+});
+
+// Get all-time stats for an exercise (computed without returning all sets)
+export const getExerciseAllTimeStats = query({
+  args: {
+    exerciseId: v.id("exercises"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
+    // Verify exercise ownership (IDOR prevention)
+    const exercise = await ctx.db.get(args.exerciseId);
+    requireOwnership(exercise, identity.subject, "exercise");
+
+    const sets = await ctx.db
+      .query("sets")
+      .withIndex("by_exercise", (q) => q.eq("exerciseId", args.exerciseId))
+      .collect();
+
+    if (sets.length === 0) {
+      return {
+        totalSets: 0,
+        totalReps: 0,
+        totalDuration: 0,
+        uniqueDays: 0,
+        firstSetAt: null,
+        lastSetAt: null,
+        bestRepSet: null,
+        bestWeightSet: null,
+        bestDurationSet: null,
+      };
+    }
+
+    let totalReps = 0;
+    let totalDuration = 0;
+    const uniqueDays = new Set<string>();
+    // We checked sets.length > 0 above, so first set exists
+    const firstSet = sets[0]!;
+    let firstSetAt = firstSet.performedAt;
+    let lastSetAt = firstSet.performedAt;
+    let bestRepSet: (typeof sets)[0] | null = null;
+    let bestWeightSet: (typeof sets)[0] | null = null;
+    let bestDurationSet: (typeof sets)[0] | null = null;
+
+    for (const set of sets) {
+      // Track dates
+      const dayKey = new Date(set.performedAt).toDateString();
+      uniqueDays.add(dayKey);
+
+      if (set.performedAt < firstSetAt) firstSetAt = set.performedAt;
+      if (set.performedAt > lastSetAt) lastSetAt = set.performedAt;
+
+      // Sum totals
+      if (set.reps !== undefined) {
+        totalReps += set.reps;
+        if (!bestRepSet || set.reps > (bestRepSet.reps ?? 0)) {
+          bestRepSet = set;
+        }
+      }
+
+      if (set.duration !== undefined) {
+        totalDuration += set.duration;
+        if (
+          !bestDurationSet ||
+          set.duration > (bestDurationSet.duration ?? 0)
+        ) {
+          bestDurationSet = set;
+        }
+      }
+
+      if (set.weight !== undefined) {
+        if (!bestWeightSet || set.weight > (bestWeightSet.weight ?? 0)) {
+          bestWeightSet = set;
+        }
+      }
+    }
+
+    return {
+      totalSets: sets.length,
+      totalReps,
+      totalDuration,
+      uniqueDays: uniqueDays.size,
+      firstSetAt,
+      lastSetAt,
+      bestRepSet,
+      bestWeightSet,
+      bestDurationSet,
+    };
+  },
+});
+
 // Delete a set
 export const deleteSet = mutation({
   args: {

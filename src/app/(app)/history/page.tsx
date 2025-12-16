@@ -1,29 +1,28 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import Link from "next/link";
-import { usePaginatedQuery, useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { ChronologicalGroupedSetHistory } from "@/components/dashboard/chronological-grouped-set-history";
-import { groupSetsByDay } from "@/lib/date-formatters";
 import { PageLayout } from "@/components/layout/page-layout";
 import { Button } from "@/components/ui/button";
 import { Id } from "../../../../convex/_generated/dataModel";
 import type { Exercise } from "@/types/domain";
-
-const PAGINATION_PAGE_SIZE = 25;
+import { useDayPagedHistory } from "@/hooks/useDayPagedHistory";
+import { useWeightUnit } from "@/contexts/WeightUnitContext";
+import { trackEvent } from "@/lib/analytics";
 
 export default function HistoryPage() {
-  // Fetch paginated sets
-  const { results, status, loadMore } = usePaginatedQuery(
-    api.sets.listSetsPaginated,
-    {},
-    { initialNumItems: PAGINATION_PAGE_SIZE }
-  );
+  const { unit: preferredUnit } = useWeightUnit();
+
+  // Use day-paged history hook for day-first pagination
+  const { dayGroups, status, loadMoreDays, canLoadMore } = useDayPagedHistory({
+    pageSizeSets: 100,
+    preferredUnit,
+  });
 
   // Fetch exercises for names (include deleted to show accurate history)
-  // Note: Query errors automatically throw and bubble to app/error.tsx
-  // Error boundary then reports to Sentry via reportError()
   const exercises = useQuery(api.exercises.listExercises, {
     includeDeleted: true,
   });
@@ -37,9 +36,6 @@ export default function HistoryPage() {
   // Delete mutation
   const deleteSetMutation = useMutation(api.sets.deleteSet);
 
-  // Group sets by day
-  const groupedSets = useMemo(() => groupSetsByDay(results), [results]);
-
   // No-op: Repeat functionality not applicable in history view
   const handleRepeat = () => {};
 
@@ -48,8 +44,24 @@ export default function HistoryPage() {
     await deleteSetMutation({ id: setId });
   };
 
+  // Handle load more with analytics
+  const handleLoadMore = useCallback(() => {
+    trackEvent("History Load More Days", { days: 7 });
+    loadMoreDays(7);
+  }, [loadMoreDays]);
+
+  // Transform DayGroup[] to format expected by ChronologicalGroupedSetHistory
+  const groupedSets = useMemo(() => {
+    return dayGroups.map((day) => ({
+      date: day.dayKey,
+      displayDate: day.displayDate,
+      sets: day.sets,
+      totals: day.totals,
+    }));
+  }, [dayGroups]);
+
   // Loading state (first page) - Brutalist skeleton
-  if (status === "LoadingFirstPage") {
+  if (status === "loading") {
     return (
       <PageLayout title="Workout History">
         <div className="space-y-3">
@@ -68,7 +80,7 @@ export default function HistoryPage() {
   }
 
   // Empty state
-  if (results.length === 0) {
+  if (dayGroups.length === 0) {
     return (
       <PageLayout title="Workout History">
         <div className="border-3 border-border p-12 text-center">
@@ -95,28 +107,35 @@ export default function HistoryPage() {
         onRepeat={handleRepeat}
         onDelete={handleDelete}
         showRepeat={false}
+        linkExercises={true}
+        preferredUnit={preferredUnit}
       />
 
-      {/* Load More button */}
-      {status === "CanLoadMore" && (
-        <div className="flex justify-center">
-          <Button
-            onClick={() => loadMore(PAGINATION_PAGE_SIZE)}
-            size="touch"
-            type="button"
-          >
-            Load More
+      {/* Load More button - loads more days */}
+      {canLoadMore && status === "ready" && (
+        <div className="flex justify-center mt-4">
+          <Button onClick={handleLoadMore} size="touch" type="button">
+            Load More Days
           </Button>
         </div>
       )}
 
       {/* Loading more indicator */}
-      {status === "LoadingMore" && (
-        <div className="flex justify-center">
+      {status === "loadingMore" && (
+        <div className="flex justify-center mt-4">
           <div className="animate-pulse">
             <div className="px-6 py-2 bg-muted text-muted-foreground text-sm border-2 border-border font-mono uppercase">
               Loading...
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* End of history indicator */}
+      {status === "done" && dayGroups.length > 0 && (
+        <div className="flex justify-center mt-4">
+          <div className="px-6 py-2 text-muted-foreground text-xs font-mono uppercase">
+            End of history
           </div>
         </div>
       )}

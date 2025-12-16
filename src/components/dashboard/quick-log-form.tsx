@@ -26,18 +26,17 @@ import { InlineExerciseCreator } from "./inline-exercise-creator";
 import { DurationInput } from "./duration-input";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { Exercise, Set } from "@/types/domain";
-import { useQuickLogForm, QuickLogFormValues } from "@/hooks/useQuickLogForm";
+import { useQuickLogForm } from "@/hooks/useQuickLogForm";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatDuration } from "@/lib/date-utils";
 import { ExerciseSelectorDialog } from "./exercise-selector-dialog";
 import { useMobileViewport } from "@/hooks/useMobileViewport";
-import { GhostSetDisplay } from "./ghost-set-display";
-import { useLastSet } from "@/hooks/useLastSet";
-import { suggestNextSet } from "@/lib/set-suggestion-engine";
+import { WorkoutContextCarousel } from "./workout-context-carousel";
+import { SetSuggestion } from "@/lib/set-suggestion-engine";
 
 interface QuickLogFormProps {
   exercises: Exercise[];
+  todaysSets?: Set[];
   onSetLogged?: (setId: Id<"sets">) => void;
   onUndo?: (setId: Id<"sets">) => void;
 }
@@ -55,7 +54,7 @@ export interface QuickLogFormHandle {
 const FOCUS_DELAY_MS = 100;
 
 const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
-  function QuickLogForm({ exercises, onSetLogged, onUndo }, ref) {
+  function QuickLogForm({ exercises, todaysSets, onSetLogged, onUndo }, ref) {
     const [showInlineCreator, setShowInlineCreator] = useState(false);
     const [comboboxOpen, setComboboxOpen] = useState(false);
     const [isDurationMode, setIsDurationMode] = useState(false);
@@ -75,10 +74,6 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
         focusElement(isDurationMode ? durationInputRef : repsInputRef);
       },
     });
-
-    // Calculate suggestion in parent (moved from GhostSetDisplay to fix infinite loop)
-    const { lastSet } = useLastSet(form.watch("exerciseId"));
-    const suggestion = lastSet ? suggestNextSet(lastSet, unit) : null;
 
     // Watch for changes in form values to clear opposing fields
     useEffect(() => {
@@ -177,6 +172,46 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
       }
     };
 
+    // Handle repeat from carousel - fills form with last set values
+    const handleCarouselRepeat = (
+      weight?: number,
+      reps?: number,
+      duration?: number
+    ) => {
+      if (duration !== undefined) {
+        form.setValue("duration", duration);
+        form.setValue("reps", undefined);
+        setIsDurationMode(true);
+        focusElement(durationInputRef);
+      } else if (reps !== undefined) {
+        form.setValue("reps", reps);
+        form.setValue("duration", undefined);
+        setIsDurationMode(false);
+        focusElement(repsInputRef);
+      }
+      if (weight !== undefined) {
+        form.setValue("weight", weight);
+      }
+    };
+
+    // Handle use suggestion from carousel - fills form with suggested values
+    const handleUseSuggestion = (suggestion: SetSuggestion) => {
+      if (suggestion.duration !== undefined) {
+        form.setValue("duration", suggestion.duration);
+        form.setValue("reps", undefined);
+        setIsDurationMode(true);
+        focusElement(durationInputRef);
+      } else if (suggestion.reps !== undefined) {
+        form.setValue("reps", suggestion.reps);
+        form.setValue("duration", undefined);
+        setIsDurationMode(false);
+        focusElement(repsInputRef);
+      }
+      if (suggestion.weight !== undefined) {
+        form.setValue("weight", suggestion.weight);
+      }
+    };
+
     // Shared form content
     const formContent = (
       <div className="space-y-4">
@@ -264,12 +299,14 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                 />
               </div>
 
-              {/* Ghost Set Display - Show last set inline + suggestions */}
+              {/* Workout Context Carousel - Swipeable cards for last set, history, suggestions */}
               {form.watch("exerciseId") && (
                 <div className="mt-3">
-                  <GhostSetDisplay
+                  <WorkoutContextCarousel
                     exerciseId={form.watch("exerciseId")}
-                    suggestion={suggestion}
+                    todaysSets={todaysSets}
+                    onRepeat={handleCarouselRepeat}
+                    onUseSuggestion={handleUseSuggestion}
                   />
                 </div>
               )}
@@ -301,7 +338,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                               )
                             }
                             value={field.value ?? ""}
-                            placeholder={suggestion?.reps?.toFixed(0) ?? "0"}
+                            placeholder="0"
                             className="w-full"
                             disabled={form.formState.isSubmitting}
                             data-testid="quick-log-reps-input"
@@ -368,7 +405,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                             )
                           }
                           value={field.value ?? ""}
-                          placeholder={suggestion?.weight?.toString() ?? "0"}
+                          placeholder="0"
                           className="w-full"
                           disabled={form.formState.isSubmitting}
                           data-testid="quick-log-weight-input"
