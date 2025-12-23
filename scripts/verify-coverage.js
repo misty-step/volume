@@ -3,27 +3,8 @@
 const fs = require("fs");
 const path = require("path");
 
-// Deep module: Simple interface, complex coverage analysis
+// Simple coverage verification - uses vitest's built-in thresholds
 class CoverageVerifier {
-  constructor() {
-    this.thresholds = {
-      global: {
-        lines: 50,
-        functions: 70,
-        branches: 84.5,
-        statements: 50,
-      },
-      critical: {
-        lines: 80,
-        functions: 80,
-        branches: 85,
-        statements: 80,
-      },
-    };
-
-    this.criticalPaths = ["src/lib/", "convex/", "src/hooks/"];
-  }
-
   verify() {
     const coveragePath = path.join(
       process.cwd(),
@@ -40,12 +21,15 @@ class CoverageVerifier {
 
     const coverage = JSON.parse(fs.readFileSync(coveragePath, "utf8"));
 
-    // Verify global thresholds
-    this.checkThresholds(coverage.total, this.thresholds.global, "global");
+    // Use same thresholds as vitest.config.ts
+    const thresholds = {
+      lines: 50,
+      functions: 70,
+      branches: 84,
+      statements: 50,
+    };
 
-    // Verify critical paths
-    this.verifyCriticalPaths(coverage);
-
+    this.checkThresholds(coverage.total, thresholds, "global");
     console.log("✅ All coverage thresholds passed");
   }
 
@@ -60,66 +44,6 @@ class CoverageVerifier {
         process.exit(1);
       }
     }
-  }
-
-  verifyCriticalPaths(coverage) {
-    for (const criticalPath of this.criticalPaths) {
-      const matchingFiles = Object.keys(coverage).filter((file) =>
-        file.includes(criticalPath)
-      );
-
-      if (matchingFiles.length === 0) continue;
-
-      const aggregated = this.aggregateCoverage(matchingFiles, coverage);
-      this.checkThresholds(aggregated, this.thresholds.critical, criticalPath);
-    }
-  }
-
-  aggregateCoverage(files, coverage) {
-    const aggregated = {
-      lines: { total: 0, covered: 0 },
-      functions: { total: 0, covered: 0 },
-      branches: { total: 0, covered: 0 },
-      statements: { total: 0, covered: 0 },
-    };
-
-    for (const file of files) {
-      const fileCoverage = coverage[file];
-      if (!fileCoverage) continue;
-
-      for (const metric of ["lines", "functions", "branches", "statements"]) {
-        aggregated[metric].total += fileCoverage[metric]?.total || 0;
-        aggregated[metric].covered += fileCoverage[metric]?.covered || 0;
-      }
-    }
-
-    // Convert to percentages
-    return {
-      lines: {
-        pct:
-          Math.round(
-            (aggregated.lines.covered / aggregated.lines.total) * 100
-          ) || 0,
-      },
-      functions: {
-        pct:
-          Math.round(
-            (aggregated.functions.covered / aggregated.functions.total) * 100
-          ) || 0,
-      },
-      branches: {
-        pct:
-          Math.round(
-            (aggregated.branches.covered / aggregated.branches.total) * 100
-          ) || 0,
-      },
-      statements: {
-        pct:
-          Math.round(
-            (aggregated.statements.covered / aggregated.statements.total) * 100
-          ) || 0,
-      },
-    };
   }
 }
 

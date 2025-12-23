@@ -87,7 +87,6 @@
     "dotenv": "^17.2.3",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.0.7",
-    "husky": "^9.1.7",
     "jsdom": "^27.2.0",
     "lefthook": "^2.0.12",
     "lint-staged": "^16.2.7",
