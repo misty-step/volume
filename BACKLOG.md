@@ -486,16 +486,6 @@ Brand guidelines include "Momentum & Trajectory Motif" - ascending arrow graphic
 **Status**: Resolved in PR #56 analytics overhaul
 **Fix Applied**: Refactored `calculateRecentPRs` to O(N log N) - process sets chronologically per exercise, maintaining running max values instead of filtering previousSets each time.
 
-### [Infrastructure] Add Lefthook quality gates
-
-**Files**: .lefthook.yml (new), migrate from Husky
-**Perspectives**: architecture-guardian
-**Gap**: BLOCKS FRIDAY DEPLOYS - no pre-push test execution, build verification, coverage thresholds
-**Impact**: Tests fail in CI after push (wasted time), broken builds reach remote
-**Fix**: Lefthook pre-push: typecheck + test + build + audit (parallel execution)
-**Effort**: 2h | **Impact**: Prevents 90% of CI failures
-**Acceptance**: Push fails locally if tests/build fail, <30s feedback
-
 ### [Infrastructure] Implement Pino structured logging
 
 **Files**: lib/logger.ts (new), migrate 30+ console.log calls

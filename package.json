@@ -13,12 +13,18 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "analyze": "ANALYZE=true pnpm build",
-    "prepare": "husky",
+    "prepare": "lefthook install",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage --run",
     "test:e2e": "playwright test",
-    "sync:prod": "./scripts/pull-prod-data.sh"
+    "sync:prod": "./scripts/pull-prod-data.sh",
+    "lint:fix": "eslint . --fix --max-warnings=0",
+    "test:affected": "vitest --related --run",
+    "security:audit": "pnpm audit --audit-level moderate",
+    "security:scan": "trufflehog git file://. --only-verified --fail --no-update",
+    "quality:check": "node scripts/verify-coverage.js",
+    "quality:full": "pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build"
   },
   "packageManager": "pnpm@10.17.1",
   "dependencies": {
@@ -83,6 +89,7 @@
     "eslint-config-next": "^16.0.7",
     "husky": "^9.1.7",
     "jsdom": "^27.2.0",
+    "lefthook": "^2.0.12",
     "lint-staged": "^16.2.7",
     "postcss": "^8.5.6",
     "prettier": "^3.6.2",
