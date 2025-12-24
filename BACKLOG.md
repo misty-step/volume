@@ -760,7 +760,17 @@ Brand guidelines include "Momentum & Trajectory Motif" - ascending arrow graphic
 **Effort**: 1h | **Impact**: Detect and prevent performance issues
 **Acceptance**: Performance monitoring for all quality gates
 
-## Later (Someday/Maybe, 6+ months)
+## Now (Sprint-Ready, <2 weeks)
+
+### [CI] Document Git 2.52.0 compatibility workarounds
+
+**Files**: .github/docs/CI-DEBUGGING.md (new)
+**Perspectives**: architecture-guardian, performance-pathfinder
+**Gap**: GitHub Actions Git 2.52.0 has known incompatibilities causing intermittent checkout failures
+**Impact**: CI reliability issues, developer time waste on debugging
+**Fix**: Document comprehensive workarounds and troubleshooting steps
+**Effort**: 1h | **Impact**: Enables faster problem resolution for team
+**Acceptance**: Team has clear guidance for Git compatibility issues
 
 - **[Platform] Native Mobile Apps** - React Native or native iOS/Android if PWA insufficient
 - **[Platform] Apple Watch / Wear OS** - Log sets without phone, 2x engagement
