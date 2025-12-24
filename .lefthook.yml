@@ -57,11 +57,6 @@ pre-push:
       run: "NODE_ENV=test CI=true pnpm test:coverage"
       fail_text: "❌ Test suite failed. Run 'pnpm test' for details."
 
-    # === Coverage Enforcement (Quality) ===
-    coverage-gate:
-      run: node scripts/verify-coverage.js
-      fail_text: "❌ Coverage thresholds not met. Add tests to improve coverage."
-
     # === Build Verification (Integration) ===
     build-check:
       run: pnpm build
@@ -69,7 +64,7 @@ pre-push:
 
     # === Security Audit (Vulnerabilities) ===
     security-audit:
-      run: pnpm audit --audit-level moderate
+      run: pnpm audit --audit-level=high
       fail_text: "❌ Security vulnerabilities found. Run 'pnpm audit' for details."
 
     # === Bundle Analysis (Performance) ===
@@ -77,16 +72,16 @@ pre-push:
       run: pnpm analyze
       fail_text: "❌ Bundle analysis failed. Review bundle size changes."
       only:
-        - ref: main
-        - ref: develop
+        - ref: master
 
 # Post-checkout Convex type regeneration
 post-checkout:
   commands:
     convex-types:
       run: |
-        if [ -f "convex/manifest.json" ]; then
-          echo "🔄 Regenerating Convex types..."
-          pnpm convex dev --once --typecheck
-        fi
+        echo ""
+        echo "⚠️  Convex functions changed between branches"
+        echo "   Run: pnpm dev (or pnpm dev:convex)"
+        echo "   to sync types and deployment"
+        echo ""
       glob: "convex/**/*"

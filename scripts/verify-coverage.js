@@ -25,7 +25,7 @@ class CoverageVerifier {
     const thresholds = {
       lines: 50,
       functions: 70,
-      branches: 84,
+      branches: 84.5,
       statements: 50,
     };
 
