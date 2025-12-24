@@ -718,6 +718,48 @@ Brand guidelines include "Momentum & Trajectory Motif" - ascending arrow graphic
 
 ---
 
+## Now (Sprint-Ready, <2 weeks)
+
+### [Testing] Add unit tests for quality gates scripts
+
+**Files**: scripts/verify-coverage.js, test coverage verification
+**Perspectives**: maintainability-maven
+**Gap**: Quality gates scripts lack test coverage for edge cases and error handling
+**Impact**: Quality gate failures difficult to debug, potential regressions
+**Fix**: Add unit tests for threshold enforcement, missing file handling, error conditions
+**Effort**: 2h | **Impact**: High confidence in quality gates
+**Acceptance**: All quality gate scripts have comprehensive test coverage
+
+### [Testing] Add unit tests for Lefthook configuration
+
+**Files**: .lefthook.yml, validate hook configuration
+**Perspectives**: architecture-guardian
+**Gap**: Lefthook YAML configuration lacks validation tests for syntax and command validity
+**Impact**: Configuration errors only discovered at runtime, breaking developer workflow
+**Fix**: Add schema validation tests, hook execution tests, command validation
+**Effort**: 2h | **Impact**: Prevent configuration-related workflow interruptions
+**Acceptance**: Lefthook configuration validated before deployment
+
+### [Documentation] Document quality gates bypass procedures
+
+**Files**: AGENTS.md, README.md
+**Perspectives**: architecture-guardian
+**Gap**: No documented procedure for bypassing quality gates in emergencies
+**Impact**: Teams blocked from urgent fixes when quality gates fail unexpectedly
+**Fix**: Document SKIP_QUALITY_GATES environment variable and usage guidelines
+**Effort**: 1h | **Impact**: Emergency response capability
+**Acceptance**: Clear bypass documentation in AGENTS.md
+
+### [Performance] Monitor quality gates performance
+
+**Files**: AGENTS.md
+**Perspectives**: performance-pathfinder
+**Gap**: No baseline metrics for quality gates execution time or performance monitoring
+**Impact**: Cannot detect performance regressions in quality gates
+**Fix**: Document performance targets and monitoring procedures
+**Effort**: 1h | **Impact**: Detect and prevent performance issues
+**Acceptance**: Performance monitoring for all quality gates
+
 ## Later (Someday/Maybe, 6+ months)
 
 - **[Platform] Native Mobile Apps** - React Native or native iOS/Android if PWA insufficient

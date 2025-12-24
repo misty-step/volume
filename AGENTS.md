@@ -31,7 +31,26 @@ Vitest with `jsdom` and Testing Library covers unit tests; name suites `<feature
 - **Post-checkout hooks**: Regenerate Convex types when Convex files change
 - All hooks run in parallel where possible for performance (<30s total for pre-push)
 
-Commits follow [Conventional Commits](https://www.conventionalcommits.org/) format, enforced by Lefthook commit-msg hook. Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`. Format: `<type>: <description>` (e.g., `fix: restore autofocus on mobile`). Each PR should supply a short summary, link related issues, document schema or environment changes, and include screenshots for UI updates. Lefthook runs quality gates on commit/push and surfaces Convex warnings; rerun `pnpm dev` before pushing to ensure both servers stay in sync.
+### Configuration Validation
+
+Pre-commit includes automated configuration validation to prevent consistency issues between Lefthook, CI workflows, and related tools:
+
+- **Coverage thresholds**: Must match between verify-coverage.js and vitest.config.ts
+- **Security audit levels**: Must align between Lefthook and GitHub Actions workflows
+- **Branch references**: Must reference existing branches in repository
+- **Command validity**: All tool commands must use valid CLI flags
+
+### Emergency Bypass
+
+To skip quality gates in emergencies:
+
+```bash
+SKIP_QUALITY_GATES=1 git push
+```
+
+Use sparingly and document in PR comments when bypassed.
+
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/) format, enforced by Lefthook commit-msg hook. Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`. Format: `<type>: <description>` (e.g., `fix: restore autofocus on mobile`). Each PR should supply a short summary, link related issues, document schema or environment changes, and include screenshots for UI updates. Lefthook runs quality gates, config validation, and surfaces Convex warnings; rerun `pnpm dev` before pushing to ensure both servers stay in sync.
 
 ## Release Management
 

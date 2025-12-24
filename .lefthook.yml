@@ -30,6 +30,11 @@ pre-commit:
       run: pnpm typecheck
       fail_text: "TypeScript errors found. Fix before committing."
 
+    # === Configuration Validation ===
+    validate-config:
+      run: node scripts/validate-lefthook-config.js
+      fail_text: "❌ Configuration validation failed. Fix issues before committing."
+
     # === Convex Integration (Project-specific) ===
     convex-warning:
       glob: "convex/**/*.ts"
