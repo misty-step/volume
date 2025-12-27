@@ -8,8 +8,10 @@ App router code lives under `src/app`, with shared UI in `src/components/{dashbo
 
 - `pnpm dev` runs Next.js and Convex together; use `pnpm dev:next` or `pnpm dev:convex` when isolating issues.
 - `pnpm build` creates the production bundle; add `ANALYZE=true pnpm build` when you need bundle stats.
-- `pnpm lint`, `pnpm typecheck`, and `pnpm format:check` enforce ESLint, TypeScript, and Prettier rules.
-- `pnpm test`, `pnpm test:ui`, and `pnpm test:coverage` run Vitest, launch the UI runner, and enforce coverage thresholds.
+- `pnpm lint`, `pnpm lint:fix`, `pnpm typecheck`, and `pnpm format:check` enforce ESLint, TypeScript, and Prettier rules.
+- `pnpm test`, `pnpm test:ui`, `pnpm test:coverage`, and `pnpm test:affected` run Vitest, launch the UI runner, enforce coverage thresholds, and test only affected files.
+- `pnpm security:audit` and `pnpm security:scan` check for vulnerabilities and secrets.
+- `pnpm quality:check` and `pnpm quality:full` run comprehensive quality verification.
 
 ## Coding Style & Naming Conventions
 
@@ -21,7 +23,34 @@ Vitest with `jsdom` and Testing Library covers unit tests; name suites `<feature
 
 ## Commit & Pull Request Guidelines
 
-Commits follow [Conventional Commits](https://www.conventionalcommits.org/) format, enforced by commitlint git hook. Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`. Format: `<type>: <description>` (e.g., `fix: restore autofocus on mobile`). Each PR should supply a short summary, link related issues, document schema or environment changes, and include screenshots for UI updates. Husky runs lint-staged on commit and surfaces Convex warnings; rerun `pnpm dev` before pushing to ensure both servers stay in sync.
+## Quality Gates
+
+- **Pre-commit hooks**: Fast checks (format, lint, typecheck, security scan, Convex warnings) - run automatically
+- **Pre-push hooks**: Comprehensive checks (tests, coverage, build, security audit) - run before sharing code
+- **Commit message hooks**: Enforce conventional commit standards
+- **Post-checkout hooks**: Regenerate Convex types when Convex files change
+- All hooks run in parallel where possible for performance (<30s total for pre-push)
+
+### Configuration Validation
+
+Pre-commit includes automated configuration validation to prevent consistency issues between Lefthook, CI workflows, and related tools:
+
+- **Coverage thresholds**: Must match between verify-coverage.js and vitest.config.ts
+- **Security audit levels**: Must align between Lefthook and GitHub Actions workflows
+- **Branch references**: Must reference existing branches in repository
+- **Command validity**: All tool commands must use valid CLI flags
+
+### Emergency Bypass
+
+To skip quality gates in emergencies:
+
+```bash
+SKIP_QUALITY_GATES=1 git push
+```
+
+Use sparingly and document in PR comments when bypassed.
+
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/) format, enforced by Lefthook commit-msg hook. Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`. Format: `<type>: <description>` (e.g., `fix: restore autofocus on mobile`). Each PR should supply a short summary, link related issues, document schema or environment changes, and include screenshots for UI updates. Lefthook runs quality gates, config validation, and surfaces Convex warnings; rerun `pnpm dev` before pushing to ensure both servers stay in sync.
 
 ## Release Management
 

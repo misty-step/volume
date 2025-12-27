@@ -1,0 +1,92 @@
+# Lefthook Quality Gates Configuration
+# Simple interface, powerful implementation
+
+# Fast, iterative quality checks (sub-second)
+pre-commit:
+  parallel: true
+  commands:
+    # === Security Scanning (Critical) ===
+    security-scan:
+      run: trufflehog git file://. --only-verified --fail --no-update
+      fail_text: "❌ Secrets detected! Remove before committing."
+
+    # === Code Formatting (Auto-fixable) ===
+    format:
+      glob: "*.{ts,tsx,js,jsx,json,md,yml,yaml}"
+      run: pnpm prettier --write {staged_files}
+      stage_fixed: true
+      fail_text: "Formatting issues auto-fixed. Review and re-commit."
+
+    # === Code Quality (Auto-fixable) ===
+    lint:
+      glob: "*.{ts,tsx,js,jsx}"
+      run: pnpm eslint --fix --max-warnings=0 {staged_files}
+      stage_fixed: true
+      fail_text: "Linting issues auto-fixed. Review and re-commit."
+
+    # === Type Safety (Fast Incremental) ===
+    typecheck:
+      glob: "*.{ts,tsx}"
+      run: pnpm typecheck
+      fail_text: "TypeScript errors found. Fix before committing."
+
+    # === Configuration Validation ===
+    validate-config:
+      run: node scripts/validate-lefthook-config.js
+      fail_text: "❌ Configuration validation failed. Fix issues before committing."
+
+    # === Convex Integration (Project-specific) ===
+    convex-warning:
+      glob: "convex/**/*.ts"
+      run: |
+        echo ""
+        echo "⚠️  Convex function changes detected"
+        echo "   Ensure you've tested with: pnpm dev"
+        echo "   (runs both Next.js AND Convex)"
+        echo ""
+      interactive: false
+
+# Commit message standards
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm commitlint --edit {1}
+      fail_text: "❌ Commit message doesn't follow conventional commit standard."
+
+# Comprehensive quality gates (full verification)
+pre-push:
+  parallel: true
+  commands:
+    # === Test Suite (Correctness) ===
+    test-suite:
+      run: "NODE_ENV=test CI=true pnpm test:coverage"
+      fail_text: "❌ Test suite failed. Run 'pnpm test' for details."
+
+    # === Build Verification (Integration) ===
+    build-check:
+      run: pnpm build
+      fail_text: "❌ Build failed. Fix build errors before pushing."
+
+    # === Security Audit (Vulnerabilities) ===
+    security-audit:
+      run: pnpm audit --audit-level=high
+      fail_text: "❌ Security vulnerabilities found. Run 'pnpm audit' for details."
+
+    # === Bundle Analysis (Performance) ===
+    bundle-analysis:
+      run: pnpm analyze
+      fail_text: "❌ Bundle analysis failed. Review bundle size changes."
+      only:
+        - ref: master
+
+# Post-checkout Convex type regeneration
+post-checkout:
+  commands:
+    convex-types:
+      run: |
+        echo ""
+        echo "⚠️  Convex functions changed between branches"
+        echo "   Run: pnpm dev (or pnpm dev:convex)"
+        echo "   to sync types and deployment"
+        echo ""
+      glob: "convex/**/*"
