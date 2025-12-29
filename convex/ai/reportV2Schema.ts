@@ -66,21 +66,29 @@ export const AIReportV2Schema = z.object({
   }),
 
   // PR section (computed + AI merged)
-  pr: z.object({
-    hasPR: z.boolean(),
-    // Computed fields (from database)
-    exercise: z.string().optional(),
-    type: z.enum(["weight", "reps"]).optional(),
-    value: z.string().optional(), // "225 lbs"
-    previousBest: z.string().optional(), // "215 lbs"
-    improvement: z.string().optional(), // "+10 lbs"
-    progression: z.string().optional(), // "185 → 205 → 225 lbs"
-    // AI-generated fields
-    headline: z.string().optional(), // "BENCH PRESS PR!"
-    celebrationCopy: z.string().optional(), // "You've been building..."
-    nextMilestone: z.string().optional(), // "250 lbs by March"
-    emptyMessage: z.string().optional(), // "No PRs this week..."
-  }),
+  // Uses discriminatedUnion for type safety: hasPR=true requires all PR fields
+  pr: z.discriminatedUnion("hasPR", [
+    // No PR case
+    z.object({
+      hasPR: z.literal(false),
+      emptyMessage: z.string().optional(), // "No PRs this week..."
+    }),
+    // Has PR case - all fields required
+    z.object({
+      hasPR: z.literal(true),
+      // Computed fields (from database)
+      exercise: z.string(),
+      type: z.enum(["weight", "reps"]),
+      value: z.string(), // "225 lbs"
+      previousBest: z.string(), // "215 lbs"
+      improvement: z.string(), // "+10 lbs"
+      progression: z.string().optional(), // "185 → 205 → 225 lbs"
+      // AI-generated fields
+      headline: z.string().optional(), // "BENCH PRESS PR!"
+      celebrationCopy: z.string().optional(), // "You've been building..."
+      nextMilestone: z.string().optional(), // "250 lbs by March"
+    }),
+  ]),
 
   // Action section (AI-generated)
   action: z.object({

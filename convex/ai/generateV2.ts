@@ -526,18 +526,24 @@ export const generateReportV2 = internalAction({
     // ========================================================================
     // Step 5: Merge computed + AI data
     // ========================================================================
-    // Merge computed + AI data (convert null to undefined for storage schema)
+    // Merge computed + AI data (handle discriminated union branches separately)
+    const mergedPR: AIReportV2["pr"] = pr.hasPR
+      ? {
+          ...pr,
+          headline: aiOutput.prCelebration?.headline,
+          celebrationCopy: aiOutput.prCelebration?.celebrationCopy,
+          nextMilestone: aiOutput.prCelebration?.nextMilestone,
+        }
+      : {
+          hasPR: false,
+          emptyMessage: aiOutput.prEmptyMessage ?? undefined,
+        };
+
     const report: AIReportV2 = {
       version: "2.0",
       period,
       metrics,
-      pr: {
-        ...pr,
-        headline: aiOutput.prCelebration?.headline,
-        celebrationCopy: aiOutput.prCelebration?.celebrationCopy,
-        nextMilestone: aiOutput.prCelebration?.nextMilestone,
-        emptyMessage: aiOutput.prEmptyMessage ?? undefined,
-      },
+      pr: mergedPR,
       action: aiOutput.action,
     };
 

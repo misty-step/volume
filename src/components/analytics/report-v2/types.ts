@@ -27,21 +27,26 @@ export interface AIReportV2 {
     streak: { value: number };
   };
 
-  pr: {
-    hasPR: boolean;
-    // Computed fields
-    exercise?: string;
-    type?: "weight" | "reps";
-    value?: string; // "225 lbs"
-    previousBest?: string; // "215 lbs"
-    improvement?: string; // "+10 lbs"
-    progression?: string; // "185 → 205 → 225 lbs"
-    // AI-generated fields
-    headline?: string; // "BENCH PRESS PR!"
-    celebrationCopy?: string;
-    nextMilestone?: string;
-    emptyMessage?: string;
-  };
+  // Discriminated union: hasPR determines which fields are available
+  pr:
+    | {
+        hasPR: false;
+        emptyMessage?: string;
+      }
+    | {
+        hasPR: true;
+        // Computed fields (required when hasPR is true)
+        exercise: string;
+        type: "weight" | "reps";
+        value: string; // "225 lbs"
+        previousBest: string; // "215 lbs"
+        improvement: string; // "+10 lbs"
+        progression?: string; // "185 → 205 → 225 lbs"
+        // AI-generated fields
+        headline?: string; // "BENCH PRESS PR!"
+        celebrationCopy?: string;
+        nextMilestone?: string;
+      };
 
   action: {
     directive: string;
