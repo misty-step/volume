@@ -25,6 +25,37 @@ export function getWeekStartDate(date: Date = new Date()): number {
 }
 
 /**
+ * Get default period start for a report type
+ *
+ * @param reportType - Type of report (daily/weekly/monthly)
+ * @returns Unix timestamp for the default period start
+ */
+export function getDefaultPeriodStart(
+  reportType: "daily" | "weekly" | "monthly"
+): number {
+  const now = new Date();
+
+  switch (reportType) {
+    case "daily": {
+      // Start of today (UTC)
+      const today = new Date(now);
+      today.setUTCHours(0, 0, 0, 0);
+      return today.getTime();
+    }
+    case "monthly": {
+      // Start of current month (UTC)
+      const monthStart = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
+      );
+      return monthStart.getTime();
+    }
+    case "weekly":
+    default:
+      return getWeekStartDate();
+  }
+}
+
+/**
  * Calculate date range based on report type
  *
  * @param reportType - Type of report (daily/weekly/monthly)

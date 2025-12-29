@@ -134,7 +134,7 @@ export const saveReportV2 = internalMutation({
         },
         frequency: {
           workoutDays: content.metrics.workouts.value,
-          restDays: periodDays - content.metrics.workouts.value,
+          restDays: Math.max(0, periodDays - content.metrics.workouts.value),
           avgSetsPerDay: 0,
         },
       },

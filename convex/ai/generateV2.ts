@@ -19,7 +19,11 @@ import type {
   AICreativeResult,
   ReportType,
 } from "./reportV2Schema";
-import { getWeekStartDate, calculateDateRange } from "./dateUtils";
+import {
+  getDefaultPeriodStart,
+  calculateDateRange,
+  calculateCurrentStreak,
+} from "./dateUtils";
 import { format } from "date-fns";
 
 type SetDoc = Doc<"sets">;
@@ -110,12 +114,16 @@ function countWorkoutDays(sets: SetDoc[]): number {
  * Calculate total volume from sets
  *
  * Volume = sum of (reps * weight) for all weighted sets
- * Bodyweight sets contribute reps only (weight = 0)
+ * Bodyweight sets (weight = 0 or undefined) contribute reps directly
+ * to ensure bodyweight exercises are reflected in total volume.
  */
 function calculateTotalVolume(sets: SetDoc[]): number {
   return sets.reduce((total, set) => {
     if (set.reps === undefined) return total; // Skip duration sets
-    return total + set.reps * (set.weight ?? 0);
+    const weight = set.weight ?? 0;
+    // Bodyweight exercises: count reps directly since weight is 0
+    // Weighted exercises: count reps * weight
+    return total + (weight > 0 ? set.reps * weight : set.reps);
   }, 0);
 }
 
@@ -282,25 +290,42 @@ function formatPRImprovement(improvement: number, prType: "weight" | "reps"): st
 /**
  * Calculate volume trend for context
  *
- * Compares this week's volume to previous week.
+ * Compares this period's volume to previous period.
+ * Adjusts comparison window based on report type.
  */
 function calculateVolumeTrend(
-  thisWeekSets: SetDoc[],
+  thisPeriodSets: SetDoc[],
   allSets: SetDoc[],
-  weekStart: number
+  periodStart: number,
+  reportType: ReportType
 ): string {
-  const thisWeekVolume = calculateTotalVolume(thisWeekSets);
+  const thisPeriodVolume = calculateTotalVolume(thisPeriodSets);
 
-  // Get previous week's sets
-  const prevWeekStart = weekStart - 7 * 24 * 60 * 60 * 1000;
-  const prevWeekEnd = weekStart;
-  const prevWeekSets = allSets.filter(
-    (s) => s.performedAt >= prevWeekStart && s.performedAt < prevWeekEnd
+  // Calculate previous period based on report type
+  const periodDurationMs =
+    reportType === "daily"
+      ? 24 * 60 * 60 * 1000 // 1 day
+      : reportType === "weekly"
+        ? 7 * 24 * 60 * 60 * 1000 // 7 days
+        : 30 * 24 * 60 * 60 * 1000; // ~30 days for monthly
+
+  const prevPeriodStart = periodStart - periodDurationMs;
+  const prevPeriodEnd = periodStart;
+  const prevPeriodSets = allSets.filter(
+    (s) => s.performedAt >= prevPeriodStart && s.performedAt < prevPeriodEnd
   );
-  const prevWeekVolume = calculateTotalVolume(prevWeekSets);
+  const prevPeriodVolume = calculateTotalVolume(prevPeriodSets);
 
-  if (prevWeekVolume === 0) return "first week tracked";
-  const change = ((thisWeekVolume - prevWeekVolume) / prevWeekVolume) * 100;
+  const periodLabel =
+    reportType === "daily"
+      ? "day"
+      : reportType === "weekly"
+        ? "week"
+        : "month";
+
+  if (prevPeriodVolume === 0) return `first ${periodLabel} tracked`;
+  const change =
+    ((thisPeriodVolume - prevPeriodVolume) / prevPeriodVolume) * 100;
 
   if (change > 10) return `up ${Math.round(change)}%`;
   if (change < -10) return `down ${Math.round(Math.abs(change))}%`;
@@ -383,7 +408,8 @@ export const generateReportV2 = internalAction({
   handler: async (ctx, args): Promise<ReportId> => {
     const { userId } = args;
     const reportType = (args.reportType ?? "weekly") as ReportType;
-    const periodStartDate = args.periodStartDate ?? getWeekStartDate();
+    const periodStartDate =
+      args.periodStartDate ?? getDefaultPeriodStart(reportType);
 
     console.log(
       `[AI Reports V2] Generating ${reportType} report for user ${userId}, period ${new Date(periodStartDate).toISOString()}`
@@ -433,37 +459,8 @@ export const generateReportV2 = internalAction({
     const totalVolume = calculateTotalVolume(volumeData);
     const workoutDays = countWorkoutDays(volumeData);
 
-    // Calculate current streak from all sets
-    const workoutDates = Array.from(
-      new Set(
-        allSets.map((s) => new Date(s.performedAt).toISOString().split("T")[0])
-      )
-    ).sort();
-
-    let currentStreak = 0;
-    if (workoutDates.length > 0) {
-      const today = new Date().toISOString().split("T")[0];
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0];
-      const lastWorkout = workoutDates[workoutDates.length - 1];
-
-      if (lastWorkout === today || lastWorkout === yesterday) {
-        currentStreak = 1;
-        for (let i = workoutDates.length - 2; i >= 0; i--) {
-          const current = new Date(workoutDates[i]!);
-          const next = new Date(workoutDates[i + 1]!);
-          const diffDays = Math.floor(
-            (next.getTime() - current.getTime()) / (24 * 60 * 60 * 1000)
-          );
-          if (diffDays === 1) {
-            currentStreak++;
-          } else {
-            break;
-          }
-        }
-      }
-    }
+    // Calculate current streak using utility function
+    const currentStreak = calculateCurrentStreak(allSets);
 
     const metrics = {
       volume: { value: formatNumber(totalVolume), unit: "lbs" },
@@ -503,7 +500,12 @@ export const generateReportV2 = internalAction({
         value: pr.value,
         improvement: pr.improvement,
         progression: progression || undefined,
-        volumeTrend: calculateVolumeTrend(volumeData, allSets, periodStartDate),
+        volumeTrend: calculateVolumeTrend(
+          volumeData,
+          allSets,
+          periodStartDate,
+          reportType
+        ),
         muscleBalance: calculateMuscleBalance(volumeData, exercises),
         workoutFrequency: workoutDays,
       };
@@ -512,7 +514,12 @@ export const generateReportV2 = internalAction({
 
       aiContext = {
         hasPR: false,
-        volumeTrend: calculateVolumeTrend(volumeData, allSets, periodStartDate),
+        volumeTrend: calculateVolumeTrend(
+          volumeData,
+          allSets,
+          periodStartDate,
+          reportType
+        ),
         muscleBalance: calculateMuscleBalance(volumeData, exercises),
         workoutFrequency: workoutDays,
       };
