@@ -40,6 +40,8 @@ import {
 import type { ExerciseSession } from "@/lib/exercise-insights";
 import { PRBadge } from "./pr-badge";
 import { History } from "lucide-react";
+import { ExerciseSparkline } from "./exercise-sparkline";
+import { formatNumber } from "@/lib/number-utils";
 
 interface ExerciseSetGroupProps {
   exercise: Exercise;
@@ -68,11 +70,14 @@ export function ExerciseSetGroup({
   const [setToDelete, setSetToDelete] = useState<WorkoutSet | null>(null);
 
   // Fetch enriched data for analytics features
-  const { hasPR, enrichedSets, sessions } = useExerciseCardData(
-    exercise._id,
-    sets,
-    preferredUnit
-  );
+  const {
+    hasPR,
+    enrichedSets,
+    sessions,
+    sessionDelta,
+    sparklineData,
+    trendDirection,
+  } = useExerciseCardData(exercise._id, sets, preferredUnit);
 
   // Map enriched sets by ID for lookup
   const enrichedSetMap = useMemo(() => {
@@ -82,6 +87,37 @@ export function ExerciseSetGroup({
     }
     return map;
   }, [enrichedSets]);
+
+  // Calculate today's session stats for analytics
+  const todaysStats = useMemo(() => {
+    let workingWeight: number | null = null;
+    let bestSetVolume = 0;
+    let bestSet: WorkoutSet | null = null;
+
+    for (const set of sets) {
+      // Track working weight (max weight used)
+      if (set.weight !== undefined) {
+        if (workingWeight === null || set.weight > workingWeight) {
+          workingWeight = set.weight;
+        }
+
+        // Track best set by volume
+        if (set.reps !== undefined) {
+          const volume = set.weight * set.reps;
+          if (volume > bestSetVolume) {
+            bestSetVolume = volume;
+            bestSet = set;
+          }
+        }
+      } else if (set.reps !== undefined && set.reps > bestSetVolume) {
+        // Bodyweight: best set by reps
+        bestSetVolume = set.reps;
+        bestSet = set;
+      }
+    }
+
+    return { workingWeight, bestSet };
+  }, [sets]);
 
   const handleDeleteClick = (set: WorkoutSet) => {
     setSetToDelete(set);
@@ -213,6 +249,16 @@ export function ExerciseSetGroup({
               transition={{ duration: 0.2, ease: "easeInOut" }}
               className="overflow-hidden"
             >
+              {/* Analytics Summary - appears right after header when expanded */}
+              <AnalyticsSummary
+                sessionDelta={sessionDelta}
+                sparklineData={sparklineData}
+                trendDirection={trendDirection}
+                workingWeight={todaysStats.workingWeight}
+                bestSet={todaysStats.bestSet}
+                preferredUnit={preferredUnit}
+              />
+
               <div className="divide-y-2 divide-concrete-gray/30">
                 {sets.map((set, index) => {
                   const isDeleting = deletingId === set._id;
@@ -459,6 +505,148 @@ function GhostData({
     <span className="text-xs text-muted-foreground font-mono opacity-60">
       ({ghostText})
     </span>
+  );
+}
+
+/**
+ * Analytics summary showing session performance vs last session.
+ * Displays delta, sparkline, working weight, and best set.
+ */
+function AnalyticsSummary({
+  sessionDelta,
+  sparklineData,
+  trendDirection,
+  workingWeight,
+  bestSet,
+  preferredUnit,
+}: {
+  sessionDelta: ReturnType<typeof useExerciseCardData>["sessionDelta"];
+  sparklineData: ReturnType<typeof useExerciseCardData>["sparklineData"];
+  trendDirection: ReturnType<typeof useExerciseCardData>["trendDirection"];
+  workingWeight: number | null;
+  bestSet: WorkoutSet | null;
+  preferredUnit: WeightUnit;
+}) {
+  // Don't show analytics if no meaningful data
+  if (!sessionDelta && sparklineData.length === 0 && !workingWeight && !bestSet) {
+    return null;
+  }
+
+  return (
+    <div className="px-4 py-3 bg-concrete-gray/5 dark:bg-concrete-gray/10 border-b-2 border-concrete-gray/30">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Session Delta - Volume/Reps change vs last session */}
+        {sessionDelta && (
+          <div className="space-y-1">
+            <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+              vs Last
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              {sessionDelta.direction === "up" ? (
+                <TrendingUp className="w-4 h-4 text-safety-orange shrink-0" />
+              ) : sessionDelta.direction === "down" ? (
+                <TrendingDown className="w-4 h-4 text-danger-red/70 shrink-0" />
+              ) : (
+                <Equal className="w-4 h-4 text-concrete-gray shrink-0" />
+              )}
+              <span
+                className={cn(
+                  "font-mono text-sm font-bold tabular-nums",
+                  sessionDelta.direction === "up" && "text-safety-orange",
+                  sessionDelta.direction === "down" && "text-danger-red/70",
+                  sessionDelta.direction === "same" && "text-concrete-gray"
+                )}
+              >
+                {sessionDelta.direction === "up" && "+"}
+                {sessionDelta.direction === "down" && "-"}
+                {formatNumber(sessionDelta.value)}
+              </span>
+              <span className="font-mono text-xs text-muted-foreground uppercase">
+                {sessionDelta.unit}
+              </span>
+              {sessionDelta.percentChange !== null && (
+                <span className="font-mono text-xs text-muted-foreground">
+                  ({sessionDelta.percentChange > 0 && "+"}
+                  {sessionDelta.percentChange}%)
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Sparkline - Trend visualization */}
+        {sparklineData.length >= 2 && (
+          <div className="space-y-1">
+            <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+              Trend
+            </div>
+            <div className="flex items-center gap-2">
+              <ExerciseSparkline
+                data={sparklineData}
+                trend={trendDirection}
+                width={80}
+                height={24}
+              />
+              <span
+                className={cn(
+                  "font-mono text-xs uppercase",
+                  trendDirection === "up" && "text-safety-orange",
+                  trendDirection === "down" && "text-danger-red/70",
+                  trendDirection === "flat" && "text-concrete-gray"
+                )}
+              >
+                {trendDirection}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Working Weight - Max weight used today */}
+        {workingWeight !== null && (
+          <div className="space-y-1">
+            <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+              Working
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-mono text-sm font-bold tabular-nums">
+                {workingWeight}
+              </span>
+              <span className="font-mono text-xs text-muted-foreground uppercase">
+                {preferredUnit}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Best Set - Highest volume set today */}
+        {bestSet && (
+          <div className="space-y-1">
+            <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+              Best Set
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-mono text-sm font-bold tabular-nums text-safety-orange">
+                {bestSet.reps}
+              </span>
+              <span className="font-mono text-xs text-muted-foreground">
+                reps
+              </span>
+              {bestSet.weight !== undefined && (
+                <>
+                  <span className="text-concrete-gray">@</span>
+                  <span className="font-mono text-sm font-bold tabular-nums">
+                    {bestSet.weight}
+                  </span>
+                  <span className="font-mono text-xs text-muted-foreground uppercase">
+                    {(bestSet.unit || preferredUnit).toLowerCase()}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
