@@ -9,10 +9,15 @@
  */
 
 import type * as ai_data from "../ai/data.js";
+import type * as ai_dataV2 from "../ai/dataV2.js";
 import type * as ai_dateUtils from "../ai/dateUtils.js";
 import type * as ai_generate from "../ai/generate.js";
+import type * as ai_generateV2 from "../ai/generateV2.js";
 import type * as ai_openai from "../ai/openai.js";
+import type * as ai_openaiV2 from "../ai/openaiV2.js";
 import type * as ai_prompts from "../ai/prompts.js";
+import type * as ai_promptsV2 from "../ai/promptsV2.js";
+import type * as ai_reportV2Schema from "../ai/reportV2Schema.js";
 import type * as ai_reports from "../ai/reports.js";
 import type * as analytics from "../analytics.js";
 import type * as analyticsFocus from "../analyticsFocus.js";
@@ -37,10 +42,15 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "ai/data": typeof ai_data;
+  "ai/dataV2": typeof ai_dataV2;
   "ai/dateUtils": typeof ai_dateUtils;
   "ai/generate": typeof ai_generate;
+  "ai/generateV2": typeof ai_generateV2;
   "ai/openai": typeof ai_openai;
+  "ai/openaiV2": typeof ai_openaiV2;
   "ai/prompts": typeof ai_prompts;
+  "ai/promptsV2": typeof ai_promptsV2;
+  "ai/reportV2Schema": typeof ai_reportV2Schema;
   "ai/reports": typeof ai_reports;
   analytics: typeof analytics;
   analyticsFocus: typeof analyticsFocus;

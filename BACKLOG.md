@@ -11,13 +11,6 @@ Analyzed by: 8 specialized perspectives (complexity-archaeologist, architecture-
 
 - each exercise should be well named, have instructions, have required gear, have muscle groups they work, and have one or more images / graphics showing form
 
-### [PRODUCT] Make daily and weekly and monthly AI reports higher quality
-
-- need to be more actionable
-- insights up top
-- summary and analysis
-- recommendations
-
 ### [Security] Fix test endpoint production exposure
 
 **File**: src/app/api/test/reset/route.ts

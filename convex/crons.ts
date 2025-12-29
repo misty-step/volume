@@ -112,9 +112,10 @@ export const generateWeeklyReports = internalAction({
         try {
           console.log(`[Cron] Generating report for user: ${userId}`);
 
-          await ctx.runAction(internal.ai.generate.generateReport, {
+          await ctx.runAction(internal.ai.generateV2.generateReportV2, {
             userId,
-            // weekStartDate will default to current week in generateReport
+            reportType: "weekly",
+            // periodStartDate will default to current week in generateReportV2
           });
 
           successCount++;
@@ -331,10 +332,10 @@ export const generateDailyReports = internalAction({
         // This is the report date.
         const reportDate = getPreviousDayStartInTimezone(timezone);
 
-        await ctx.runAction(internal.ai.generate.generateReport, {
+        await ctx.runAction(internal.ai.generateV2.generateReportV2, {
           userId,
           reportType: "daily",
-          weekStartDate: reportDate, // Pass canonical day start for deduplication
+          periodStartDate: reportDate, // Pass canonical day start for deduplication
         });
         successCount++;
       } catch (error: unknown) {
@@ -437,7 +438,7 @@ export const generateMonthlyReports = internalAction({
 
     for (const userId of users) {
       try {
-        await ctx.runAction(internal.ai.generate.generateReport, {
+        await ctx.runAction(internal.ai.generateV2.generateReportV2, {
           userId,
           reportType: "monthly",
         });
