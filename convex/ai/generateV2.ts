@@ -17,6 +17,7 @@ import type {
   AIReportV2,
   AICreativeContext,
   AICreativeResult,
+  ReportType,
 } from "./reportV2Schema";
 import { getWeekStartDate, calculateDateRange } from "./dateUtils";
 import { format } from "date-fns";
@@ -37,14 +38,31 @@ interface WorkoutData {
 // ============================================================================
 
 /**
- * Format period label for display
+ * Format period label for display based on report type
  *
- * @example "Dec 16-22, 2024"
+ * @example daily: "Dec 28, 2024"
+ * @example weekly: "Dec 16-22, 2024"
+ * @example monthly: "December 2024"
  */
-function formatPeriodLabel(startDate: number, endDate: number): string {
+function formatPeriodLabel(
+  startDate: number,
+  endDate: number,
+  reportType: ReportType
+): string {
   const start = new Date(startDate);
-  const end = new Date(endDate - 1); // endDate is exclusive, so subtract 1ms
 
+  // Daily: "Dec 28, 2024"
+  if (reportType === "daily") {
+    return format(start, "MMM d, yyyy");
+  }
+
+  // Monthly: "December 2024"
+  if (reportType === "monthly") {
+    return format(start, "MMMM yyyy");
+  }
+
+  // Weekly: "Dec 16-22, 2024" or "Dec 30 - Jan 5, 2025"
+  const end = new Date(endDate - 1); // endDate is exclusive, so subtract 1ms
   const startMonth = format(start, "MMM");
   const startDay = format(start, "d");
   const endDay = format(end, "d");
@@ -350,26 +368,31 @@ function calculateMuscleBalance(
  * 4. Store with reportVersion: "2.0"
  *
  * @param userId - User to generate report for
- * @param weekStartDate - Optional Unix timestamp for week start (Monday 00:00 UTC)
+ * @param reportType - Report type: daily, weekly, or monthly (default: weekly)
+ * @param periodStartDate - Optional Unix timestamp for period start
  * @returns Report ID of newly generated or existing report
  */
 export const generateReportV2 = internalAction({
   args: {
     userId: v.string(),
-    weekStartDate: v.optional(v.number()),
+    reportType: v.optional(
+      v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly"))
+    ),
+    periodStartDate: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<ReportId> => {
     const { userId } = args;
-    const weekStartDate = args.weekStartDate ?? getWeekStartDate();
+    const reportType = (args.reportType ?? "weekly") as ReportType;
+    const periodStartDate = args.periodStartDate ?? getWeekStartDate();
 
     console.log(
-      `[AI Reports V2] Generating weekly report for user ${userId}, week ${new Date(weekStartDate).toISOString()}`
+      `[AI Reports V2] Generating ${reportType} report for user ${userId}, period ${new Date(periodStartDate).toISOString()}`
     );
 
     // Check for existing v2 report (deduplication)
     const existingReportId = await ctx.runQuery(
       internal.ai.dataV2.checkExistingReportV2,
-      { userId, weekStartDate }
+      { userId, reportType, periodStartDate }
     );
 
     if (existingReportId) {
@@ -380,7 +403,7 @@ export const generateReportV2 = internalAction({
     }
 
     // Calculate date range
-    const { startDate, endDate } = calculateDateRange("weekly", weekStartDate);
+    const { startDate, endDate } = calculateDateRange(reportType, periodStartDate);
 
     // Fetch workout data
     const { volumeData, allSets, exercises }: WorkoutData = await ctx.runQuery(
@@ -398,10 +421,10 @@ export const generateReportV2 = internalAction({
     // Step 1: Compute period metadata
     // ========================================================================
     const period = {
-      type: "weekly" as const,
+      type: reportType,
       startDate: formatISODate(startDate),
       endDate: formatISODate(endDate),
-      label: formatPeriodLabel(startDate, endDate),
+      label: formatPeriodLabel(startDate, endDate, reportType),
     };
 
     // ========================================================================
@@ -480,7 +503,7 @@ export const generateReportV2 = internalAction({
         value: pr.value,
         improvement: pr.improvement,
         progression: progression || undefined,
-        volumeTrend: calculateVolumeTrend(volumeData, allSets, weekStartDate),
+        volumeTrend: calculateVolumeTrend(volumeData, allSets, periodStartDate),
         muscleBalance: calculateMuscleBalance(volumeData, exercises),
         workoutFrequency: workoutDays,
       };
@@ -489,7 +512,7 @@ export const generateReportV2 = internalAction({
 
       aiContext = {
         hasPR: false,
-        volumeTrend: calculateVolumeTrend(volumeData, allSets, weekStartDate),
+        volumeTrend: calculateVolumeTrend(volumeData, allSets, periodStartDate),
         muscleBalance: calculateMuscleBalance(volumeData, exercises),
         workoutFrequency: workoutDays,
       };
@@ -503,6 +526,7 @@ export const generateReportV2 = internalAction({
     // ========================================================================
     // Step 5: Merge computed + AI data
     // ========================================================================
+    // Merge computed + AI data (convert null to undefined for storage schema)
     const report: AIReportV2 = {
       version: "2.0",
       period,
@@ -512,7 +536,7 @@ export const generateReportV2 = internalAction({
         headline: aiOutput.prCelebration?.headline,
         celebrationCopy: aiOutput.prCelebration?.celebrationCopy,
         nextMilestone: aiOutput.prCelebration?.nextMilestone,
-        emptyMessage: aiOutput.prEmptyMessage,
+        emptyMessage: aiOutput.prEmptyMessage ?? undefined,
       },
       action: aiOutput.action,
     };
@@ -524,7 +548,8 @@ export const generateReportV2 = internalAction({
       internal.ai.dataV2.saveReportV2,
       {
         userId,
-        weekStartDate,
+        reportType,
+        periodStartDate,
         structuredContent: report,
         model: aiOutput.model,
         tokenUsage: aiOutput.tokenUsage,

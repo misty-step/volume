@@ -12,10 +12,10 @@ export interface AIReportV2 {
   version: "2.0";
 
   period: {
-    type: "weekly";
+    type: "daily" | "weekly" | "monthly";
     startDate: string; // "2024-12-16"
     endDate: string; // "2024-12-22"
-    label: string; // "Dec 16-22, 2024"
+    label: string; // "Dec 16-22, 2024" or "Dec 28, 2024" or "December 2024"
   };
 
   metrics: {

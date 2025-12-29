@@ -20,16 +20,17 @@ import { z } from "zod";
  */
 export const AICreativeOutputSchema = z.object({
   // PR celebration (only when hasPR context is true)
+  // Using .nullable() instead of .optional() for OpenAI Structured Outputs compatibility
   prCelebration: z
     .object({
       headline: z.string(), // "BENCH PRESS PR!"
       celebrationCopy: z.string(), // "You've been building to this..."
       nextMilestone: z.string(), // "At this pace, 250 lbs by March"
     })
-    .optional(),
+    .nullable(),
 
   // Empty state message (only when hasPR context is false)
-  prEmptyMessage: z.string().optional(),
+  prEmptyMessage: z.string().nullable(),
 
   // Always required: ONE action directive
   action: z.object({
@@ -48,10 +49,10 @@ export const AIReportV2Schema = z.object({
 
   // Period metadata (computed server-side)
   period: z.object({
-    type: z.literal("weekly"),
+    type: z.enum(["daily", "weekly", "monthly"]),
     startDate: z.string(), // "2024-12-16"
     endDate: z.string(), // "2024-12-22"
-    label: z.string(), // "Dec 16-22, 2024"
+    label: z.string(), // "Dec 16-22, 2024" or "Dec 28, 2024" or "December 2024"
   }),
 
   // Key numbers (computed server-side)
@@ -91,6 +92,7 @@ export const AIReportV2Schema = z.object({
 // Type exports
 export type AICreativeOutput = z.infer<typeof AICreativeOutputSchema>;
 export type AIReportV2 = z.infer<typeof AIReportV2Schema>;
+export type ReportType = AIReportV2["period"]["type"];
 
 /**
  * Context passed to AI for creative content generation

@@ -16,13 +16,19 @@ import { internalMutation, internalQuery } from "../_generated/server";
  * from v1 to v2 format.
  *
  * @param userId - User ID
- * @param weekStartDate - Week start timestamp
+ * @param reportType - Report type (daily, weekly, monthly)
+ * @param periodStartDate - Period start timestamp
  * @returns Existing report ID or null
  */
 export const checkExistingReportV2 = internalQuery({
   args: {
     userId: v.string(),
-    weekStartDate: v.number(),
+    reportType: v.union(
+      v.literal("daily"),
+      v.literal("weekly"),
+      v.literal("monthly")
+    ),
+    periodStartDate: v.number(),
   },
   handler: async (ctx, args) => {
     const existingReport = await ctx.db
@@ -30,8 +36,8 @@ export const checkExistingReportV2 = internalQuery({
       .withIndex("by_user_type_date", (q) =>
         q
           .eq("userId", args.userId)
-          .eq("reportType", "weekly")
-          .eq("weekStartDate", args.weekStartDate)
+          .eq("reportType", args.reportType)
+          .eq("weekStartDate", args.periodStartDate)
       )
       .filter((q) => q.eq(q.field("reportVersion"), "2.0"))
       .first();
@@ -52,7 +58,12 @@ export const checkExistingReportV2 = internalQuery({
 export const saveReportV2 = internalMutation({
   args: {
     userId: v.string(),
-    weekStartDate: v.number(),
+    reportType: v.union(
+      v.literal("daily"),
+      v.literal("weekly"),
+      v.literal("monthly")
+    ),
+    periodStartDate: v.number(),
     structuredContent: v.any(),
     model: v.string(),
     tokenUsage: v.object({
@@ -83,10 +94,14 @@ export const saveReportV2 = internalMutation({
       10
     );
 
+    // Calculate rest days based on report type
+    const periodDays =
+      args.reportType === "daily" ? 1 : args.reportType === "weekly" ? 7 : 30;
+
     const reportId = await ctx.db.insert("aiReports", {
       userId: args.userId,
-      reportType: "weekly",
-      weekStartDate: args.weekStartDate,
+      reportType: args.reportType,
+      weekStartDate: args.periodStartDate,
       generatedAt: Date.now(),
       // V2: Structured content instead of markdown
       structuredContent: args.structuredContent,
@@ -119,7 +134,7 @@ export const saveReportV2 = internalMutation({
         },
         frequency: {
           workoutDays: content.metrics.workouts.value,
-          restDays: 7 - content.metrics.workouts.value,
+          restDays: periodDays - content.metrics.workouts.value,
           avgSetsPerDay: 0,
         },
       },

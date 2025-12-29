@@ -59,7 +59,7 @@ export function AIReportCardV2({ report }: AIReportCardV2Props) {
             <span className="text-lg font-bold font-mono">{data.period.label}</span>
           </div>
           <span className="text-xs px-2 py-1 font-bold font-mono uppercase tracking-wide bg-safety-orange text-white border-2 border-concrete-black dark:border-concrete-white">
-            Weekly
+            {data.period.type}
           </span>
         </div>
       </CardHeader>

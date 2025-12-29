@@ -24,9 +24,9 @@ import { systemPromptV2, formatCreativePrompt } from "./promptsV2";
  */
 const CONFIG = {
   model: "gpt-5-mini" as const,
-  maxCompletionTokens: 500, // Much smaller than v1 (creative only)
+  maxCompletionTokens: 1500, // Structured JSON needs more tokens than plain text
   reasoningEffort: "low" as const, // Simple creative task
-  timeout: 20000, // 20 seconds (faster with smaller output)
+  timeout: 30000, // 30 seconds to match v1
 } as const;
 
 /**
@@ -133,7 +133,28 @@ export async function generateCreativeContent(
  * Returns generic but motivational content to prevent report generation failure.
  */
 function fallbackCreativeContent(context: AICreativeContext): AICreativeResult {
-  const result: AICreativeResult = {
+  // With nullable schema, all fields must be present (set to null if not applicable)
+  if (context.hasPR && context.exerciseName) {
+    return {
+      prCelebration: {
+        headline: `${context.exerciseName.toUpperCase()} PR!`,
+        celebrationCopy: "Great work pushing your limits!",
+        nextMilestone: "Keep the momentum going.",
+      },
+      prEmptyMessage: null,
+      action: {
+        directive: "Keep up your current routine.",
+        rationale: "Consistency is the foundation of progress.",
+      },
+      model: "fallback",
+      tokenUsage: { input: 0, output: 0, costUSD: 0 },
+    };
+  }
+
+  return {
+    prCelebration: null,
+    prEmptyMessage:
+      "No PRs this week—but consistency builds the foundation for breakthroughs.",
     action: {
       directive: "Keep up your current routine.",
       rationale: "Consistency is the foundation of progress.",
@@ -141,17 +162,4 @@ function fallbackCreativeContent(context: AICreativeContext): AICreativeResult {
     model: "fallback",
     tokenUsage: { input: 0, output: 0, costUSD: 0 },
   };
-
-  if (context.hasPR && context.exerciseName) {
-    result.prCelebration = {
-      headline: `${context.exerciseName.toUpperCase()} PR!`,
-      celebrationCopy: "Great work pushing your limits!",
-      nextMilestone: "Keep the momentum going.",
-    };
-  } else {
-    result.prEmptyMessage =
-      "No PRs this week—but consistency builds the foundation for breakthroughs.";
-  }
-
-  return result;
 }
