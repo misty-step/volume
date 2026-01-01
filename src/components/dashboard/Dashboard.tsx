@@ -144,8 +144,8 @@ export function Dashboard() {
   // to prevent Content Layout Shift (CLS) during hydration
   if (!isHydrated) {
     return (
-      <PageLayout title="Dashboard">
-        <DashboardSkeleton />
+      <PageLayout title={isMobile ? undefined : "Today"} fullHeight={isMobile}>
+        <DashboardSkeleton isMobile={isMobile} />
       </PageLayout>
     );
   }
