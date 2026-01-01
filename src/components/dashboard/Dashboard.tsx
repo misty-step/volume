@@ -11,6 +11,7 @@ import {
 } from "@/components/dashboard/quick-log-form";
 import { GroupedSetHistory } from "@/components/dashboard/grouped-set-history";
 import { FirstRunExperience } from "@/components/dashboard/first-run-experience";
+import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { handleMutationError } from "@/lib/error-handler";
 import { PageLayout } from "@/components/layout/page-layout";
@@ -139,43 +140,12 @@ export function Dashboard() {
   };
 
   // Loading state - show skeleton until data is stable
+  // Uses DashboardSkeleton component that mirrors actual content structure
+  // to prevent Content Layout Shift (CLS) during hydration
   if (!isHydrated) {
     return (
       <PageLayout title="Dashboard">
-        <motion.div
-          className={LAYOUT.section.spacing}
-          variants={motionPresets.listStagger}
-          initial="initial"
-          animate="animate"
-        >
-          {/* Form skeleton */}
-          <motion.div variants={motionPresets.cardEntrance}>
-            <BrutalistCard className="p-6">
-              <div className="space-y-4">
-                <div className="h-8 w-32 bg-concrete-gray animate-pulse" />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="h-12 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
-                  <div className="h-12 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
-                  <div className="h-12 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
-                  <div className="h-12 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
-                </div>
-              </div>
-            </BrutalistCard>
-          </motion.div>
-
-          {/* History skeleton */}
-          <motion.div variants={motionPresets.cardEntrance}>
-            <BrutalistCard className="p-6">
-              <div className="space-y-4">
-                <div className="h-8 w-48 bg-concrete-gray animate-pulse font-mono" />
-                <div className="space-y-3">
-                  <div className="h-24 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
-                  <div className="h-24 border-3 border-concrete-black dark:border-concrete-white bg-background animate-pulse" />
-                </div>
-              </div>
-            </BrutalistCard>
-          </motion.div>
-        </motion.div>
+        <DashboardSkeleton />
       </PageLayout>
     );
   }
