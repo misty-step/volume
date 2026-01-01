@@ -64,7 +64,7 @@ export function FirstRunExperience({
         <CardTitle>Welcome to Volume</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-center mb-6">
+        <div className="mb-6">
           <p className="text-muted-foreground text-sm mb-4">
             Create your first exercise to begin tracking
           </p>
@@ -72,7 +72,7 @@ export function FirstRunExperience({
 
         {/* Inline Exercise Creator */}
         <div className="mb-6 p-4 border-3 border-concrete-black dark:border-concrete-white">
-          <div className="flex gap-2">
+          <div className="space-y-3">
             <input
               ref={inputRef}
               type="text"
@@ -80,14 +80,14 @@ export function FirstRunExperience({
               onChange={(e) => setName(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Exercise name (e.g., Push-ups)"
-              className="flex-1 px-3 py-3 border-3 border-concrete-black dark:border-concrete-white focus:outline-none focus:ring-3 focus:ring-danger-red font-mono"
+              className="w-full px-3 py-3 border-3 border-concrete-black dark:border-concrete-white focus:outline-none focus:ring-3 focus:ring-danger-red font-mono"
               disabled={isCreating}
             />
             <button
               type="button"
               onClick={() => handleCreateExercise(name)}
               disabled={!name.trim() || isCreating}
-              className="px-6 py-3 bg-primary text-primary-foreground font-bold border-2 border-border hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full px-6 py-3 bg-primary text-primary-foreground font-bold border-2 border-border hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isCreating ? "..." : "Create"}
             </button>
