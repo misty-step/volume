@@ -5,6 +5,8 @@ import { useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
+import { BrutalistInput } from "@/components/brutalist/BrutalistInput";
+import { BrutalistButton } from "@/components/brutalist/BrutalistButton";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { handleMutationError } from "@/lib/error-handler";
 
@@ -73,43 +75,44 @@ export function FirstRunExperience({
         {/* Inline Exercise Creator */}
         <div className="mb-6 p-4 border-3 border-concrete-black dark:border-concrete-white">
           <div className="space-y-3">
-            <input
+            <BrutalistInput
               ref={inputRef}
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Exercise name (e.g., Push-ups)"
-              className="w-full px-3 py-3 border-3 border-concrete-black dark:border-concrete-white focus:outline-none focus:ring-3 focus:ring-danger-red font-mono"
               disabled={isCreating}
             />
-            <button
+            <BrutalistButton
               type="button"
+              variant="danger"
+              className="w-full"
               onClick={() => handleCreateExercise(name)}
               disabled={!name.trim() || isCreating}
-              className="w-full px-6 py-3 bg-primary text-primary-foreground font-bold border-2 border-border hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isCreating ? "..." : "Create"}
-            </button>
+            </BrutalistButton>
           </div>
         </div>
 
         {/* Popular Exercises Quick Create */}
         <div>
           <p className="text-xs font-bold text-muted-foreground mb-3">
-            Or select popular exercise:
+            Or select a popular exercise:
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {POPULAR_EXERCISES.map((exercise) => (
-              <button
+              <BrutalistButton
                 key={exercise}
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => handleQuickCreate(exercise)}
                 disabled={isCreating}
-                className="px-4 py-3 text-sm border-2 border-input hover:border-primary hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {exercise}
-              </button>
+              </BrutalistButton>
             ))}
           </div>
         </div>
