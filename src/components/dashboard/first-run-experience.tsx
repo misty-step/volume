@@ -99,7 +99,7 @@ export function FirstRunExperience({
         {/* Popular Exercises Quick Create */}
         <div>
           <p className="text-xs font-bold text-muted-foreground mb-3">
-            Or select popular exercise:
+            Or select a popular exercise:
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {POPULAR_EXERCISES.map((exercise) => (
