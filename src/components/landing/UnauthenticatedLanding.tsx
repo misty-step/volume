@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { motion, useMotionValue, useMotionTemplate, useSpring } from "framer-motion";
 import { Timer, Trophy, Sparkles, ChevronDown, Zap } from "lucide-react";
 import { BrutalistButton } from "@/components/brutalist";
@@ -37,8 +37,6 @@ function useCardTilt() {
 }
 
 export function UnauthenticatedLanding() {
-  const router = useRouter();
-
   // Cursor-tracking spotlight for features grid
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
@@ -75,7 +73,7 @@ export function UnauthenticatedLanding() {
         </div>
 
         {/* Main Content Layer */}
-        <main className="relative z-10 flex min-h-[100dvh] flex-col items-center justify-center px-4">
+        <div className="relative z-10 flex min-h-[100dvh] flex-col items-center justify-center px-4">
           {/* Massive Title - Blending into reality */}
           <motion.div
             initial={{ opacity: 0, y: -40, scale: 1.02 }}
@@ -126,14 +124,16 @@ export function UnauthenticatedLanding() {
             <BrutalistButton
               variant="danger"
               size="lg"
-              onClick={() => router.push("/sign-up")}
+              asChild
               className="text-xl md:text-2xl px-8 md:px-12 py-6 md:py-8 border-4 tracking-widest relative overflow-hidden group/btn"
             >
-              <span className="relative z-10">START LOGGING</span>
-              {/* Sheen micro-interaction - CSS group-hover for reliable trigger */}
-              <div
-                className="absolute inset-0 bg-white/20 -skew-x-12 z-0 -translate-x-[150%] group-hover/btn:translate-x-[200%] transition-transform duration-500 ease-in-out"
-              />
+              <Link href="/sign-up">
+                <span className="relative z-10">START LOGGING</span>
+                {/* Sheen micro-interaction - CSS group-hover for reliable trigger */}
+                <div
+                  className="absolute inset-0 bg-white/20 -skew-x-12 z-0 -translate-x-[150%] group-hover/btn:translate-x-[200%] transition-transform duration-500 ease-in-out"
+                />
+              </Link>
             </BrutalistButton>
           </motion.div>
 
@@ -149,7 +149,7 @@ export function UnauthenticatedLanding() {
           >
             <ChevronDown className="w-8 h-8 text-concrete-white/60" />
           </motion.div>
-        </main>
+        </div>
       </section>
 
       {/* Features Section - Industrial Control Panel */}
@@ -371,10 +371,10 @@ export function UnauthenticatedLanding() {
                   <BrutalistButton
                     variant="danger"
                     size="lg"
-                    onClick={() => router.push("/sign-up")}
+                    asChild
                     className="text-lg md:text-xl px-8 py-5 border-4 tracking-widest hover:scale-105 transition-transform whitespace-nowrap"
                   >
-                    GET STARTED FREE
+                    <Link href="/sign-up">GET STARTED FREE</Link>
                   </BrutalistButton>
                 </div>
               </motion.div>
