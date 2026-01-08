@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    /* Brutalist color palette - Light Mode */
-    --background: 0 0% 96%; /* Concrete white */
-    --foreground: 0 0% 0%; /* Concrete black */
+    /* Brutalist color palette - Light Mode (brand-tinted neutrals) */
+    --background: 349 3% 96%; /* Warm concrete white */
+    --foreground: 349 5% 4%; /* Warm concrete black */
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 0%;
+    --card: 349 2% 100%;
+    --card-foreground: 349 5% 4%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
+    --popover: 349 2% 100%;
+    --popover-foreground: 349 5% 4%;
 
     /* Primary: Danger Red */
     --primary: 349 78% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 50%; /* Concrete gray */
-    --secondary-foreground: 0 0% 0%;
+    --secondary: 349 4% 50%; /* Warm concrete gray */
+    --secondary-foreground: 349 5% 4%;
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 50%;
+    --muted: 349 2% 94%;
+    --muted-foreground: 349 4% 50%;
 
     /* Accent: Safety Orange */
     --accent: 23 100% 50%;
@@ -56,25 +56,25 @@
   }
 
   .dark {
-    /* Brutalist color palette - Dark Mode */
-    --background: 0 0% 0%; /* Concrete black */
-    --foreground: 0 0% 96%; /* Concrete white */
+    /* Brutalist color palette - Dark Mode (brand-tinted neutrals) */
+    --background: 349 8% 4%; /* Warm near-black */
+    --foreground: 349 3% 96%; /* Warm concrete white */
 
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 96%;
+    --card: 349 6% 8%;
+    --card-foreground: 349 3% 96%;
 
-    --popover: 0 0% 5%;
-    --popover-foreground: 0 0% 96%;
+    --popover: 349 6% 8%;
+    --popover-foreground: 349 3% 96%;
 
     /* Primary: Brighter red for dark mode */
     --primary: 349 78% 50%;
-    --primary-foreground: 0 0% 0%;
+    --primary-foreground: 349 8% 4%;
 
-    --secondary: 0 0% 50%;
-    --secondary-foreground: 0 0% 96%;
+    --secondary: 349 4% 50%;
+    --secondary-foreground: 349 3% 96%;
 
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 50%;
+    --muted: 349 5% 12%;
+    --muted-foreground: 349 4% 50%;
 
     /* Accent: Safety Orange (same in dark) */
     --accent: 23 100% 50%;
