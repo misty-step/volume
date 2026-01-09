@@ -8,6 +8,7 @@ import { z } from "zod";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Form,
@@ -109,7 +110,14 @@ export function InlineExerciseCreator({
             disabled={form.formState.isSubmitting}
             data-testid="create-exercise-submit-btn"
           >
-            {form.formState.isSubmitting ? "Creating..." : "Create"}
+            {form.formState.isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              "Create"
+            )}
           </Button>
           <Button
             type="button"
