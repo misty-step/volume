@@ -7,6 +7,7 @@ import { Id } from "../../../convex/_generated/dataModel";
 import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
 import { BrutalistInput } from "@/components/brutalist/BrutalistInput";
 import { BrutalistButton } from "@/components/brutalist/BrutalistButton";
+import { Loader2 } from "lucide-react";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { handleMutationError } from "@/lib/error-handler";
 
@@ -91,7 +92,14 @@ export function FirstRunExperience({
               onClick={() => handleCreateExercise(name)}
               disabled={!name.trim() || isCreating}
             >
-              {isCreating ? "..." : "Create"}
+              {isCreating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                "Create"
+              )}
             </BrutalistButton>
           </div>
         </div>
