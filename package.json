@@ -1,6 +1,6 @@
 {
   "name": "volume",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "dev": "concurrently --kill-others-on-fail -n \"Next,Convex\" -c \"cyan,magenta\" \"pnpm dev:next\" \"pnpm dev:convex\"",
