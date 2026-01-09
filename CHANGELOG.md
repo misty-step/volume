@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/misty-step/volume/compare/v1.0.0...v1.1.0) (2026-01-09)
+
+
+### Features
+
+* **ux:** add spinner and loading text for AI exercise classification ([#164](https://github.com/misty-step/volume/issues/164)) ([#229](https://github.com/misty-step/volume/issues/229)) ([5fd086c](https://github.com/misty-step/volume/commit/5fd086c43bea6ba0fe6ea38dab3f80f18e0436fa))
+
+
+### Bug Fixes
+
+* validate muscle groups against canonical list ([#230](https://github.com/misty-step/volume/issues/230)) ([cc6be1d](https://github.com/misty-step/volume/commit/cc6be1d1143d8ccfe672f5ad6d3028a363c1b5c3))
+
 ## 1.0.0 (2026-01-02)
 
 
