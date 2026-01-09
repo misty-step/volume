@@ -17,20 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
-
-// All available muscle groups
-const ALL_MUSCLE_GROUPS = [
-  "Chest",
-  "Back",
-  "Shoulders",
-  "Biceps",
-  "Triceps",
-  "Quads",
-  "Hamstrings",
-  "Glutes",
-  "Calves",
-  "Core",
-] as const;
+import { MUSCLE_GROUPS } from "../../../convex/lib/muscle-groups";
 
 interface EditMuscleGroupsDialogProps {
   open: boolean;
@@ -98,7 +85,7 @@ export function EditMuscleGroupsDialog({
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-4 py-4">
-          {ALL_MUSCLE_GROUPS.map((group) => (
+          {MUSCLE_GROUPS.map((group) => (
             <div key={group} className="flex items-center space-x-2">
               <Checkbox
                 id={group}

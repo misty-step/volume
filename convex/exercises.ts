@@ -9,6 +9,7 @@ import {
 } from "./lib/validate";
 import { classifyExercise } from "./ai/openai";
 import { getLimits } from "./lib/rateLimit";
+import { filterValidMuscleGroups } from "./lib/muscle-groups";
 
 /**
  * Create a new exercise (action-based)
@@ -333,8 +334,11 @@ export const updateMuscleGroups = mutation({
       throw new Error("Cannot update a deleted exercise");
     }
 
+    // Validate: filter to canonical muscle groups only (defense in depth)
+    const validated = filterValidMuscleGroups(args.muscleGroups);
+
     await ctx.db.patch(args.id, {
-      muscleGroups: args.muscleGroups,
+      muscleGroups: validated,
     });
   },
 });

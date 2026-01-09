@@ -312,10 +312,10 @@ describe("InlineExerciseCreator", () => {
         expect(screen.getByTestId("create-exercise-cancel-btn")).toBeDisabled();
       });
 
-      // Button text should change
+      // Button text should change to show AI analysis in progress
       expect(
         screen.getByTestId("create-exercise-submit-btn")
-      ).toHaveTextContent("Creating...");
+      ).toHaveTextContent("Analyzing...");
 
       // Resolve the promise
       resolveCreate!("ex-123" as Id<"exercises">);
