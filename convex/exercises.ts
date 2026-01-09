@@ -9,7 +9,7 @@ import {
 } from "./lib/validate";
 import { classifyExercise } from "./ai/openai";
 import { getLimits } from "./lib/rateLimit";
-import { filterValidMuscleGroups } from "./lib/muscle-groups";
+import { filterValidMuscleGroups } from "./lib/muscleGroups";
 
 /**
  * Create a new exercise (action-based)

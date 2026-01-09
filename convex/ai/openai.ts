@@ -10,7 +10,7 @@
 import OpenAI from "openai";
 import { systemPrompt, formatMetricsPrompt } from "./prompts";
 import type { AnalyticsMetrics } from "./prompts";
-import { filterValidMuscleGroups } from "../lib/muscle-groups";
+import { filterValidMuscleGroups } from "../lib/muscleGroups";
 
 /**
  * OpenAI Model Selection

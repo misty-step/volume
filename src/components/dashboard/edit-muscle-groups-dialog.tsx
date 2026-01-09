@@ -17,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
-import { MUSCLE_GROUPS } from "../../../convex/lib/muscle-groups";
+import { MUSCLE_GROUPS } from "../../../convex/lib/muscleGroups";
 
 interface EditMuscleGroupsDialogProps {
   open: boolean;
