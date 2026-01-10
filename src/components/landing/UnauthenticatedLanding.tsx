@@ -6,6 +6,7 @@ import { motion, useMotionValue, useMotionTemplate, useSpring } from "framer-mot
 import { Timer, Trophy, Sparkles, ChevronDown, Zap } from "lucide-react";
 import { BrutalistButton } from "@/components/brutalist";
 import { type MouseEvent, useRef } from "react";
+import { PlatformStats } from "./PlatformStats";
 
 // Hook for true cursor-tracking 3D tilt
 function useCardTilt() {
@@ -151,6 +152,9 @@ export function UnauthenticatedLanding() {
           </motion.div>
         </div>
       </section>
+
+      {/* Platform Stats - Social Proof */}
+      <PlatformStats />
 
       {/* Features Section - Industrial Control Panel */}
       <section
