@@ -5,6 +5,7 @@
  * - Daily AI reports: Hourly cron with timezone-aware midnight detection
  * - Weekly AI reports: Sunday 9 PM UTC for active users
  * - Monthly AI reports: 1st of month at midnight UTC for opted-in users
+ * - Platform stats cache: Daily at 4 AM UTC for landing page social proof
  *
  * @module crons
  */
@@ -509,6 +510,13 @@ crons.monthly(
     minuteUTC: 0,
   },
   internal.crons.generateMonthlyReports
+);
+
+// Platform stats cache: Update daily at 4 AM UTC (off-peak)
+crons.daily(
+  "update-platform-stats",
+  { hourUTC: 4, minuteUTC: 0 },
+  internal.platformStats.computePlatformStats
 );
 
 export default crons;

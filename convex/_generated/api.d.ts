@@ -31,6 +31,7 @@ import type * as lib_rateLimit from "../lib/rateLimit.js";
 import type * as lib_streak_calculator from "../lib/streak_calculator.js";
 import type * as lib_validate from "../lib/validate.js";
 import type * as migrations_backfillMuscleGroups from "../migrations/backfillMuscleGroups.js";
+import type * as platformStats from "../platformStats.js";
 import type * as sets from "../sets.js";
 import type * as test_resetUserData from "../test/resetUserData.js";
 import type * as users from "../users.js";
@@ -65,6 +66,7 @@ declare const fullApi: ApiFromModules<{
   "lib/streak_calculator": typeof lib_streak_calculator;
   "lib/validate": typeof lib_validate;
   "migrations/backfillMuscleGroups": typeof migrations_backfillMuscleGroups;
+  platformStats: typeof platformStats;
   sets: typeof sets;
   "test/resetUserData": typeof test_resetUserData;
   users: typeof users;

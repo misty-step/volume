@@ -119,4 +119,16 @@ export default defineSchema({
   })
     .index("by_user_scope_window", ["userId", "scope", "windowStartMs"])
     .index("by_expires", ["expiresAt"]),
+
+  /**
+   * Pre-aggregated platform statistics cache for landing page social proof.
+   * Updated daily via cron job to avoid full table scans on every page load.
+   * Single document table - only one row should exist.
+   */
+  platformStatsCache: defineTable({
+    totalSets: v.number(),
+    totalLifters: v.number(),
+    setsThisWeek: v.number(),
+    computedAt: v.number(), // Unix timestamp of last computation
+  }),
 });
