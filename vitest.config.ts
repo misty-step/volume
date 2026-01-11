@@ -38,6 +38,7 @@ export default defineConfig({
         "**/src/app/**/*-image.tsx",
         "**/middleware.ts",
         "**/convex/admin/**",
+        "**/scripts/*.js", // Exclude legacy JS scripts
       ],
       thresholds: {
         lines: 50,
