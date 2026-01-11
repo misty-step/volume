@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0](https://github.com/misty-step/volume/compare/v1.1.0...v1.2.0) (2026-01-11)
+
+
+### Features
+
+* **testing:** add unit tests for coverage verifier ([#234](https://github.com/misty-step/volume/issues/234)) ([5186283](https://github.com/misty-step/volume/commit/5186283b3397c30c8a95770625f2b9d3b6eb5f09))
+
 ## [1.1.0](https://github.com/misty-step/volume/compare/v1.0.0...v1.1.0) (2026-01-09)
 
 
