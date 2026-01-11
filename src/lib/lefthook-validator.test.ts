@@ -16,10 +16,6 @@ import {
   type LefthookConfig,
 } from "./lefthook-validator";
 
-// ============================================================================
-// Test Fixtures
-// ============================================================================
-
 const validConfig = `
 pre-commit:
   parallel: true
@@ -79,10 +75,6 @@ pre-push:
       run: NODE_ENV=test CI=true pnpm test:coverage
 `;
 
-// ============================================================================
-// Mock Dependencies
-// ============================================================================
-
 function createMockDeps(overrides: Partial<ValidatorDeps> = {}): ValidatorDeps {
   return {
     readFile: () => validConfig,
@@ -91,10 +83,6 @@ function createMockDeps(overrides: Partial<ValidatorDeps> = {}): ValidatorDeps {
     ...overrides,
   };
 }
-
-// ============================================================================
-// Tests
-// ============================================================================
 
 describe("LefthookConfigValidator", () => {
   let validator: LefthookConfigValidator;

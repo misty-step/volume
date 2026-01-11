@@ -12,10 +12,6 @@ import * as fs from "fs";
 import * as yaml from "js-yaml";
 import { execSync } from "child_process";
 
-// ============================================================================
-// Types
-// ============================================================================
-
 interface CommandConfig {
   run?: string;
   glob?: string;
@@ -49,10 +45,6 @@ export interface ValidationResult {
   warnings: string[];
 }
 
-// ============================================================================
-// Default Dependencies
-// ============================================================================
-
 export const defaultDeps: ValidatorDeps = {
   readFile: (path: string) => fs.readFileSync(path, "utf8"),
   fileExists: (path: string) => fs.existsSync(path),
@@ -65,10 +57,6 @@ export const defaultDeps: ValidatorDeps = {
     }
   },
 };
-
-// ============================================================================
-// Validator Class
-// ============================================================================
 
 export class LefthookConfigValidator {
   private errors: string[] = [];
@@ -89,25 +77,16 @@ export class LefthookConfigValidator {
    * e.g., "NODE_ENV=test CI=true pnpm test" -> "pnpm"
    */
   extractCommandBinary(runCommand: string): string | null {
-    const trimmed = runCommand.trim();
-
-    // Handle multiline commands (take first line)
-    const firstLine = trimmed.split("\n")[0]?.trim();
+    const firstLine = runCommand.trim().split("\n")[0]?.trim();
     if (!firstLine) return null;
 
-    // Skip echo/env variable assignments
-    if (firstLine.startsWith("echo ")) return "echo";
-
-    // Handle multiple env prefix patterns (e.g., NODE_ENV=test CI=true)
-    // Keep removing env prefixes until we get to the actual command
-    let withoutEnv = firstLine;
-    while (/^[A-Z_]+=\S+\s+/.test(withoutEnv)) {
-      withoutEnv = withoutEnv.replace(/^[A-Z_]+=\S+\s+/, "");
+    // Strip env variable prefixes (e.g., NODE_ENV=test CI=true)
+    let command = firstLine;
+    while (/^[A-Z_]+=\S+\s+/.test(command)) {
+      command = command.replace(/^[A-Z_]+=\S+\s+/, "");
     }
 
-    // Get first word
-    const binary = withoutEnv.split(/\s+/)[0];
-    return binary ?? null;
+    return command.split(/\s+/)[0] ?? null;
   }
 
   /**
@@ -142,20 +121,12 @@ export class LefthookConfigValidator {
     const bundleAnalysis = config["pre-push"]?.commands?.["bundle-analysis"];
     if (!bundleAnalysis?.only) return;
 
-    const commonBranches = ["main", "master", "develop"];
-    const onlyRefs = bundleAnalysis.only;
+    const validBranches = ["main", "master", "develop"];
 
-    const invalidRefs = onlyRefs.filter((refObj) => {
-      const branchName = refObj.ref;
-      return !commonBranches.includes(branchName);
-    });
-
-    if (invalidRefs.length > 0) {
-      invalidRefs.forEach((refObj) => {
-        this.errors.push(
-          `❌ Invalid branch reference: ${refObj.ref} in bundle-analysis`
-        );
-      });
+    for (const { ref } of bundleAnalysis.only) {
+      if (!validBranches.includes(ref)) {
+        this.errors.push(`❌ Invalid branch reference: ${ref} in bundle-analysis`);
+      }
     }
   }
 
@@ -222,8 +193,8 @@ export class LefthookConfigValidator {
 
     return {
       valid: this.errors.length === 0,
-      errors: [...this.errors],
-      warnings: [...this.warnings],
+      errors: this.errors,
+      warnings: this.warnings,
     };
   }
 
