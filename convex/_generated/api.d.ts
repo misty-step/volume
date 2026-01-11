@@ -9,10 +9,15 @@
  */
 
 import type * as ai_data from "../ai/data.js";
+import type * as ai_dataV2 from "../ai/dataV2.js";
 import type * as ai_dateUtils from "../ai/dateUtils.js";
 import type * as ai_generate from "../ai/generate.js";
+import type * as ai_generateV2 from "../ai/generateV2.js";
 import type * as ai_openai from "../ai/openai.js";
+import type * as ai_openaiV2 from "../ai/openaiV2.js";
 import type * as ai_prompts from "../ai/prompts.js";
+import type * as ai_promptsV2 from "../ai/promptsV2.js";
+import type * as ai_reportV2Schema from "../ai/reportV2Schema.js";
 import type * as ai_reports from "../ai/reports.js";
 import type * as analytics from "../analytics.js";
 import type * as analyticsFocus from "../analyticsFocus.js";
@@ -20,11 +25,13 @@ import type * as analyticsProgressiveOverload from "../analyticsProgressiveOverl
 import type * as analyticsRecovery from "../analyticsRecovery.js";
 import type * as crons from "../crons.js";
 import type * as exercises from "../exercises.js";
+import type * as lib_muscleGroups from "../lib/muscleGroups.js";
 import type * as lib_pr_detection from "../lib/pr_detection.js";
 import type * as lib_rateLimit from "../lib/rateLimit.js";
 import type * as lib_streak_calculator from "../lib/streak_calculator.js";
 import type * as lib_validate from "../lib/validate.js";
 import type * as migrations_backfillMuscleGroups from "../migrations/backfillMuscleGroups.js";
+import type * as platformStats from "../platformStats.js";
 import type * as sets from "../sets.js";
 import type * as test_resetUserData from "../test/resetUserData.js";
 import type * as users from "../users.js";
@@ -37,10 +44,15 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "ai/data": typeof ai_data;
+  "ai/dataV2": typeof ai_dataV2;
   "ai/dateUtils": typeof ai_dateUtils;
   "ai/generate": typeof ai_generate;
+  "ai/generateV2": typeof ai_generateV2;
   "ai/openai": typeof ai_openai;
+  "ai/openaiV2": typeof ai_openaiV2;
   "ai/prompts": typeof ai_prompts;
+  "ai/promptsV2": typeof ai_promptsV2;
+  "ai/reportV2Schema": typeof ai_reportV2Schema;
   "ai/reports": typeof ai_reports;
   analytics: typeof analytics;
   analyticsFocus: typeof analyticsFocus;
@@ -48,11 +60,13 @@ declare const fullApi: ApiFromModules<{
   analyticsRecovery: typeof analyticsRecovery;
   crons: typeof crons;
   exercises: typeof exercises;
+  "lib/muscleGroups": typeof lib_muscleGroups;
   "lib/pr_detection": typeof lib_pr_detection;
   "lib/rateLimit": typeof lib_rateLimit;
   "lib/streak_calculator": typeof lib_streak_calculator;
   "lib/validate": typeof lib_validate;
   "migrations/backfillMuscleGroups": typeof migrations_backfillMuscleGroups;
+  platformStats: typeof platformStats;
   sets: typeof sets;
   "test/resetUserData": typeof test_resetUserData;
   users: typeof users;

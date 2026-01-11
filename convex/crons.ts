@@ -5,6 +5,7 @@
  * - Daily AI reports: Hourly cron with timezone-aware midnight detection
  * - Weekly AI reports: Sunday 9 PM UTC for active users
  * - Monthly AI reports: 1st of month at midnight UTC for opted-in users
+ * - Platform stats cache: Daily at 4 AM UTC for landing page social proof
  *
  * @module crons
  */
@@ -112,9 +113,10 @@ export const generateWeeklyReports = internalAction({
         try {
           console.log(`[Cron] Generating report for user: ${userId}`);
 
-          await ctx.runAction(internal.ai.generate.generateReport, {
+          await ctx.runAction(internal.ai.generateV2.generateReportV2, {
             userId,
-            // weekStartDate will default to current week in generateReport
+            reportType: "weekly",
+            // periodStartDate will default to current week in generateReportV2
           });
 
           successCount++;
@@ -331,10 +333,10 @@ export const generateDailyReports = internalAction({
         // This is the report date.
         const reportDate = getPreviousDayStartInTimezone(timezone);
 
-        await ctx.runAction(internal.ai.generate.generateReport, {
+        await ctx.runAction(internal.ai.generateV2.generateReportV2, {
           userId,
           reportType: "daily",
-          weekStartDate: reportDate, // Pass canonical day start for deduplication
+          periodStartDate: reportDate, // Pass canonical day start for deduplication
         });
         successCount++;
       } catch (error: unknown) {
@@ -437,7 +439,7 @@ export const generateMonthlyReports = internalAction({
 
     for (const userId of users) {
       try {
-        await ctx.runAction(internal.ai.generate.generateReport, {
+        await ctx.runAction(internal.ai.generateV2.generateReportV2, {
           userId,
           reportType: "monthly",
         });
@@ -508,6 +510,13 @@ crons.monthly(
     minuteUTC: 0,
   },
   internal.crons.generateMonthlyReports
+);
+
+// Platform stats cache: Update daily at 4 AM UTC (off-peak)
+crons.daily(
+  "update-platform-stats",
+  { hourUTC: 4, minuteUTC: 0 },
+  internal.platformStats.computePlatformStats
 );
 
 export default crons;

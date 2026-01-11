@@ -10,6 +10,7 @@
 import OpenAI from "openai";
 import { systemPrompt, formatMetricsPrompt } from "./prompts";
 import type { AnalyticsMetrics } from "./prompts";
+import { filterValidMuscleGroups } from "../lib/muscleGroups";
 
 /**
  * OpenAI Model Selection
@@ -381,13 +382,14 @@ Examples:
     const content = completion.choices[0]?.message?.content?.trim();
     if (!content) return classifyExerciseFallback(exerciseName);
 
-    // Parse comma-separated list
-    const groups = content
+    // Parse comma-separated list and filter to valid groups only
+    const rawGroups = content
       .split(",")
       .map((g) => g.trim())
       .filter((g) => g.length > 0);
 
-    return groups.length > 0 ? groups : classifyExerciseFallback(exerciseName);
+    // Filter AI response to canonical muscle groups (garbage like "(and possibly...)" → "Other")
+    return filterValidMuscleGroups(rawGroups);
   } catch (error) {
     console.error(`[OpenAI] Exercise classification failed:`, error);
     return classifyExerciseFallback(exerciseName); // Fallback to prevent blocking exercise creation

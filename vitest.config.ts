@@ -38,6 +38,7 @@ export default defineConfig({
         "**/src/app/**/*-image.tsx",
         "**/middleware.ts",
         "**/convex/admin/**",
+        "**/scripts/**", // CLI wrappers, not library code
       ],
       thresholds: {
         lines: 50,

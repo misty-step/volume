@@ -57,7 +57,19 @@ export default defineSchema({
     ), // Report type (optional for backward compatibility, defaults to "weekly")
     weekStartDate: v.number(), // Unix timestamp for Monday 00:00
     generatedAt: v.number(), // Unix timestamp of generation
-    content: v.string(), // Markdown-formatted AI response
+    content: v.optional(v.string()), // V1: Markdown-formatted AI response (optional for v2)
+    /**
+     * V2: Structured JSON content for visual rendering
+     * Contains computed metrics, PR data, and AI-generated creative content.
+     * When present, frontend renders structured components instead of markdown.
+     */
+    structuredContent: v.optional(v.any()),
+    /**
+     * Report version for renderer selection
+     * - undefined or "1.0": Legacy markdown (uses content field)
+     * - "2.0": Structured JSON (uses structuredContent field)
+     */
+    reportVersion: v.optional(v.string()),
     metricsSnapshot: v.object({
       volume: v.array(
         v.object({
@@ -107,4 +119,16 @@ export default defineSchema({
   })
     .index("by_user_scope_window", ["userId", "scope", "windowStartMs"])
     .index("by_expires", ["expiresAt"]),
+
+  /**
+   * Pre-aggregated platform statistics cache for landing page social proof.
+   * Updated daily via cron job to avoid full table scans on every page load.
+   * Single document table - only one row should exist.
+   */
+  platformStatsCache: defineTable({
+    totalSets: v.number(),
+    totalLifters: v.number(),
+    setsThisWeek: v.number(),
+    computedAt: v.number(), // Unix timestamp of last computation
+  }),
 });

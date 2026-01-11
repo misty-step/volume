@@ -6,6 +6,7 @@ import { useAuth } from "@clerk/nextjs";
 import { api } from "../../../convex/_generated/api";
 import { AIInsightsCard } from "./ai-insights-card";
 import type { AIReport } from "./ai-insights-card";
+import { AIReportCardV2 } from "./report-v2";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Doc } from "../../../convex/_generated/dataModel";
 
@@ -146,8 +147,12 @@ export function ReportNavigator() {
         </div>
       )}
 
-      {/* Report Display */}
-      <AIInsightsCard report={(currentReport as AIReport | null) ?? null} />
+      {/* Report Display - v2 or fallback to v1 */}
+      {currentReport ? (
+        <AIReportCardV2 report={currentReport} />
+      ) : (
+        <AIInsightsCard report={null} />
+      )}
     </div>
   );
 }

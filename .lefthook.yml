@@ -32,7 +32,7 @@ pre-commit:
 
     # === Configuration Validation ===
     validate-config:
-      run: node scripts/validate-lefthook-config.js
+      run: npx tsx scripts/validate-lefthook-config.ts
       fail_text: "❌ Configuration validation failed. Fix issues before committing."
 
     # === Convex Integration (Project-specific) ===
