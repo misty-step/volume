@@ -41,7 +41,6 @@ import type { ExerciseSession } from "@/lib/exercise-insights";
 import { PRBadge } from "./pr-badge";
 import { History } from "lucide-react";
 import { ExerciseSparkline } from "./exercise-sparkline";
-import { formatNumber } from "@/lib/number-utils";
 
 interface ExerciseSetGroupProps {
   exercise: Exercise;
