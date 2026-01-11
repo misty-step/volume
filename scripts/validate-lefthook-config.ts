@@ -11,3 +11,7 @@ import { LefthookConfigValidator } from "../src/lib/lefthook-validator";
 const validator = new LefthookConfigValidator();
 const result = validator.validate();
 validator.printResults(result);
+
+if (!result.valid) {
+  process.exit(1);
+}

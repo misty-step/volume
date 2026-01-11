@@ -50,7 +50,10 @@ export const defaultDeps: ValidatorDeps = {
   fileExists: (path: string) => fs.existsSync(path),
   commandExists: (cmd: string) => {
     try {
-      execSync(`which ${cmd}`, { stdio: "ignore" });
+      execSync('command -v "$COMMAND"', {
+        env: { ...process.env, COMMAND: cmd },
+        stdio: "ignore",
+      });
       return true;
     } catch {
       return false;
@@ -205,7 +208,6 @@ export class LefthookConfigValidator {
     if (!result.valid) {
       console.error("\n❌ Configuration Validation Failed");
       result.errors.forEach((error) => console.error(error));
-      process.exit(1);
     }
 
     if (result.warnings.length > 0) {
