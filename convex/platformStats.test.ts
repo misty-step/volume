@@ -1,7 +1,7 @@
 import { convexTest } from "convex-test";
 import { expect, test, describe, beforeEach } from "vitest";
 import schema from "./schema";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { TestConvex } from "convex-test";
 
 describe("platformStats", () => {
@@ -14,8 +14,8 @@ describe("platformStats", () => {
   });
 
   describe("getPlatformStats", () => {
-    test("returns null when no sets exist (below threshold)", async () => {
-      // No data seeded
+    test("returns null when no cache exists", async () => {
+      // No data seeded, no cache computed
       const stats = await t.query(api.platformStats.getPlatformStats, {});
       expect(stats).toBeNull();
     });
@@ -37,6 +37,9 @@ describe("platformStats", () => {
           });
       }
 
+      // Compute cache
+      await t.mutation(internal.platformStats.computePlatformStats, {});
+
       const stats = await t.query(api.platformStats.getPlatformStats, {});
       expect(stats).toBeNull();
     });
@@ -57,6 +60,9 @@ describe("platformStats", () => {
             unit: "lbs",
           });
       }
+
+      // Compute cache
+      await t.mutation(internal.platformStats.computePlatformStats, {});
 
       const stats = await t.query(api.platformStats.getPlatformStats, {});
 
@@ -99,6 +105,9 @@ describe("platformStats", () => {
           });
       }
 
+      // Compute cache
+      await t.mutation(internal.platformStats.computePlatformStats, {});
+
       const stats = await t.query(api.platformStats.getPlatformStats, {});
 
       expect(stats).not.toBeNull();
@@ -123,11 +132,86 @@ describe("platformStats", () => {
           });
       }
 
+      // Compute cache
+      await t.mutation(internal.platformStats.computePlatformStats, {});
+
       // Query WITHOUT identity (public/unauthenticated)
       const stats = await t.query(api.platformStats.getPlatformStats, {});
 
       expect(stats).not.toBeNull();
       expect(stats?.totalSets).toBe(100);
+    });
+  });
+
+  describe("computePlatformStats", () => {
+    test("creates cache document with correct stats", async () => {
+      // Create exercise and log 100 sets
+      const exerciseId = await t
+        .withIdentity({ subject: user1Subject, name: "User 1" })
+        .action(api.exercises.createExercise, { name: "Bench Press" });
+
+      for (let i = 0; i < 100; i++) {
+        await t
+          .withIdentity({ subject: user1Subject, name: "User 1" })
+          .mutation(api.sets.logSet, {
+            exerciseId,
+            reps: 10,
+            weight: 100,
+            unit: "lbs",
+          });
+      }
+
+      // Compute cache
+      const result = await t.mutation(
+        internal.platformStats.computePlatformStats,
+        {}
+      );
+
+      expect(result.totalSets).toBe(100);
+      expect(result.totalLifters).toBe(1);
+      expect(result.setsThisWeek).toBe(100);
+      expect(result.durationMs).toBeDefined();
+    });
+
+    test("upserts cache (replaces existing)", async () => {
+      // Create exercise and log 50 sets
+      const exerciseId = await t
+        .withIdentity({ subject: user1Subject, name: "User 1" })
+        .action(api.exercises.createExercise, { name: "Bench Press" });
+
+      for (let i = 0; i < 50; i++) {
+        await t
+          .withIdentity({ subject: user1Subject, name: "User 1" })
+          .mutation(api.sets.logSet, {
+            exerciseId,
+            reps: 10,
+            weight: 100,
+            unit: "lbs",
+          });
+      }
+
+      // First compute
+      await t.mutation(internal.platformStats.computePlatformStats, {});
+
+      // Add more sets
+      for (let i = 0; i < 50; i++) {
+        await t
+          .withIdentity({ subject: user1Subject, name: "User 1" })
+          .mutation(api.sets.logSet, {
+            exerciseId,
+            reps: 10,
+            weight: 100,
+            unit: "lbs",
+          });
+      }
+
+      // Recompute
+      const result = await t.mutation(
+        internal.platformStats.computePlatformStats,
+        {}
+      );
+
+      expect(result.totalSets).toBe(100);
     });
   });
 });

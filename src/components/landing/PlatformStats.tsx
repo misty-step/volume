@@ -13,6 +13,18 @@ function formatNumber(n: number): string {
 }
 
 /**
+ * Metric configuration used for both skeleton loader and data rendering.
+ * Ensures consistency between loading state and final display.
+ */
+const METRICS_CONFIG = [
+  { key: "totalSets", label: "SETS LOGGED" },
+  { key: "totalLifters", label: "LIFTERS" },
+  { key: "setsThisWeek", label: "THIS WEEK" },
+] as const;
+
+type MetricKey = (typeof METRICS_CONFIG)[number]["key"];
+
+/**
  * Platform-wide aggregate metrics for social proof.
  * Hidden when below threshold (query returns null).
  *
@@ -24,14 +36,14 @@ function formatNumber(n: number): string {
 export function PlatformStats() {
   const stats = useQuery(api.platformStats.getPlatformStats);
 
-  // Loading state - show subtle skeleton
+  // Loading state - show subtle skeleton (synced with METRICS_CONFIG)
   if (stats === undefined) {
     return (
       <div className="w-full py-6 md:py-8">
         <div className="max-w-4xl mx-auto px-4">
           <div className="grid grid-cols-3 gap-4 md:gap-8">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="text-center animate-pulse">
+            {METRICS_CONFIG.map((metric) => (
+              <div key={metric.key} className="text-center animate-pulse">
                 <div className="h-10 md:h-14 bg-concrete-white/5 rounded mb-2" />
                 <div className="h-4 bg-concrete-white/5 rounded w-20 mx-auto" />
               </div>
@@ -47,23 +59,11 @@ export function PlatformStats() {
     return null;
   }
 
-  const metrics = [
-    {
-      value: stats.totalSets,
-      label: "SETS LOGGED",
-      delay: 0,
-    },
-    {
-      value: stats.totalLifters,
-      label: "LIFTERS",
-      delay: 0.1,
-    },
-    {
-      value: stats.setsThisWeek,
-      label: "THIS WEEK",
-      delay: 0.2,
-    },
-  ];
+  const metrics = METRICS_CONFIG.map((config, index) => ({
+    value: stats[config.key as MetricKey],
+    label: config.label,
+    delay: index * 0.1,
+  }));
 
   return (
     <div className="w-full py-6 md:py-8 border-y border-concrete-white/10">
