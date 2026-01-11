@@ -111,8 +111,9 @@ export class CoverageVerifier {
   checkThresholds(actual: CoverageSummary["total"]): VerificationResult {
     const failures: string[] = [];
 
-    for (const [metric, required] of Object.entries(this.thresholds)) {
-      const actualValue = actual[metric as keyof Thresholds]?.pct ?? 0;
+    for (const metric of Object.keys(this.thresholds) as Array<keyof Thresholds>) {
+      const required = this.thresholds[metric];
+      const actualValue = actual[metric]?.pct ?? 0;
       if (actualValue < required) {
         failures.push(
           `${metric} coverage ${actualValue}% is below threshold ${required}%`
