@@ -41,6 +41,7 @@ import type { ExerciseSession } from "@/lib/exercise-insights";
 import { PRBadge } from "./pr-badge";
 import { History } from "lucide-react";
 import { ExerciseSparkline } from "./exercise-sparkline";
+import { convertWeight, normalizeWeightUnit } from "@/lib/weight-utils";
 
 interface ExerciseSetGroupProps {
   exercise: Exercise;
@@ -88,21 +89,24 @@ export function ExerciseSetGroup({
   }, [enrichedSets]);
 
   // Calculate today's session stats for analytics
+  // Normalize weights to preferred unit for correct comparisons across mixed lb/kg sets
   const todaysStats = useMemo(() => {
     let workingWeight: number | null = null;
     let bestSetVolume = 0;
     let bestSet: WorkoutSet | null = null;
 
     for (const set of sets) {
-      // Track working weight (max weight used)
+      // Track working weight (max weight used, normalized to preferred unit)
       if (set.weight !== undefined) {
-        if (workingWeight === null || set.weight > workingWeight) {
-          workingWeight = set.weight;
+        const setUnit = normalizeWeightUnit(set.unit);
+        const normalizedWeight = convertWeight(set.weight, setUnit, preferredUnit);
+        if (workingWeight === null || normalizedWeight > workingWeight) {
+          workingWeight = normalizedWeight;
         }
 
-        // Track best set by volume
+        // Track best set by volume (normalized)
         if (set.reps !== undefined) {
-          const volume = set.weight * set.reps;
+          const volume = normalizedWeight * set.reps;
           if (volume > bestSetVolume) {
             bestSetVolume = volume;
             bestSet = set;
@@ -116,7 +120,7 @@ export function ExerciseSetGroup({
     }
 
     return { workingWeight, bestSet };
-  }, [sets]);
+  }, [sets, preferredUnit]);
 
   const handleDeleteClick = (set: WorkoutSet) => {
     setSetToDelete(set);
@@ -542,11 +546,11 @@ function AnalyticsSummary({
             </div>
             <div className="flex items-baseline gap-1.5">
               {sessionDelta.direction === "up" ? (
-                <TrendingUp className="w-4 h-4 text-safety-orange shrink-0" />
+                <TrendingUp className="w-4 h-4 text-safety-orange shrink-0" aria-label="Increasing" />
               ) : sessionDelta.direction === "down" ? (
-                <TrendingDown className="w-4 h-4 text-danger-red/70 shrink-0" />
+                <TrendingDown className="w-4 h-4 text-danger-red/70 shrink-0" aria-label="Decreasing" />
               ) : (
-                <Equal className="w-4 h-4 text-concrete-gray shrink-0" />
+                <Equal className="w-4 h-4 text-concrete-gray shrink-0" aria-label="No change" />
               )}
               <span
                 className={cn(
@@ -637,7 +641,7 @@ function AnalyticsSummary({
                     {bestSet.weight}
                   </span>
                   <span className="font-mono text-xs text-muted-foreground uppercase">
-                    {(bestSet.unit || preferredUnit).toLowerCase()}
+                    {(bestSet.unit || preferredUnit).toUpperCase()}
                   </span>
                 </>
               )}
