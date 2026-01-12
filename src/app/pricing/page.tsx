@@ -4,7 +4,7 @@ import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Check, Loader2, Zap } from "lucide-react";
 import { BrutalistButton } from "@/components/brutalist";
 import Link from "next/link";
@@ -100,8 +100,14 @@ function PricingContent() {
   };
 
   // Already subscribed - redirect to app
+  useEffect(() => {
+    if (subscriptionStatus?.status === "active") {
+      router.replace("/today");
+    }
+  }, [subscriptionStatus?.status, router]);
+
+  // Show nothing while redirecting
   if (subscriptionStatus?.status === "active") {
-    router.replace("/today");
     return null;
   }
 

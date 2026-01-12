@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getStripe } from "@/lib/stripe";
+import { reportError } from "@/lib/analytics";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/../convex/_generated/api";
 
@@ -42,6 +43,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
+    const error = err instanceof Error ? err : new Error("Unknown portal error");
+    reportError(error, { context: "stripe/portal", stripeCustomerId });
     console.error("Error creating portal session:", err);
     return NextResponse.json(
       { error: "Failed to create portal session" },

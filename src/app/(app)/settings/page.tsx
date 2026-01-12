@@ -38,12 +38,9 @@ export default function SettingsPage() {
 
     setBillingLoading(true);
     try {
+      // stripeCustomerId fetched server-side from authenticated user
       const response = await fetch("/api/stripe/portal", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stripeCustomerId: billingInfo.stripeCustomerId,
-        }),
       });
 
       const data = await response.json();
