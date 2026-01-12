@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { Nav } from "@/components/layout/nav";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Footer } from "@/components/layout/footer";
+import { PaywallGate, TrialBanner } from "@/components/subscription";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const { userId } = await auth();
@@ -13,7 +14,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <>
+    <PaywallGate>
+      <TrialBanner />
       <div className="min-h-screen flex flex-col">
         <Nav initialUserId={userId} />
         <div className="flex-1 flex flex-col">{children}</div>
@@ -22,6 +24,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <div className="md:hidden">
         <BottomNav initialUserId={userId} />
       </div>
-    </>
+    </PaywallGate>
   );
 }

@@ -9,6 +9,8 @@ const isPublicRoute = createRouteMatcher([
   // Legal pages
   "/terms",
   "/privacy",
+  // Pricing page (accessible to non-authenticated users)
+  "/pricing",
   // Next.js metadata routes (must be accessible to crawlers/bots)
   "/opengraph-image",
   "/robots.txt",

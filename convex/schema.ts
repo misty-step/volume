@@ -43,12 +43,26 @@ export default defineSchema({
     dailyReportsEnabled: v.optional(v.boolean()), // Default: false (opt-in)
     weeklyReportsEnabled: v.optional(v.boolean()), // Default: true
     monthlyReportsEnabled: v.optional(v.boolean()), // Default: false
+    // Subscription fields
+    trialEndsAt: v.optional(v.number()), // Unix timestamp when trial expires
+    stripeCustomerId: v.optional(v.string()), // Stripe customer ID
+    stripeSubscriptionId: v.optional(v.string()), // Active subscription ID
+    subscriptionStatus: v.optional(
+      v.union(
+        v.literal("trial"),
+        v.literal("active"),
+        v.literal("canceled"),
+        v.literal("expired")
+      )
+    ),
+    subscriptionPeriodEnd: v.optional(v.number()), // Current period end timestamp
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_clerk_id", ["clerkUserId"])
     .index("by_daily_enabled", ["dailyReportsEnabled"])
-    .index("by_timezone", ["timezone"]),
+    .index("by_timezone", ["timezone"])
+    .index("by_stripe_customer", ["stripeCustomerId"]),
 
   aiReports: defineTable({
     userId: v.string(),
