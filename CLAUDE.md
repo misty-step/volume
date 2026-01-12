@@ -357,6 +357,13 @@ CLERK_JWT_ISSUER_DOMAIN=https://your-clerk-domain.clerk.accounts.dev
 
 # OpenAI API (for AI features - set in Convex environment)
 OPENAI_API_KEY=sk-proj-...
+
+# Stripe (for subscription/payments)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID=price_...
+NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID=price_...
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 **Setting OpenAI API Key:**
@@ -372,6 +379,22 @@ npx convex env set OPENAI_API_KEY "sk-proj-..." --prod
 ```
 
 Note: Do NOT set this in Vercel or GitHub secrets - only Convex backend uses it.
+
+**Setting Stripe Keys:**
+
+Stripe keys must be set in both Next.js (`.env.local`) and Convex environments:
+
+```bash
+# For Convex (webhook handler runs there)
+npx convex env set STRIPE_SECRET_KEY "sk_test_..."
+npx convex env set STRIPE_WEBHOOK_SECRET "whsec_..."
+
+# For production
+npx convex env set STRIPE_SECRET_KEY "sk_live_..." --prod
+npx convex env set STRIPE_WEBHOOK_SECRET "whsec_..." --prod
+```
+
+The webhook endpoint is `https://<your-convex-url>/stripe/webhook`.
 
 ## First-Time Setup
 
