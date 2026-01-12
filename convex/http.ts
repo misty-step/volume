@@ -68,19 +68,22 @@ http.route({
               });
             }
 
-            // Update subscription status - cast to access current_period_end
-            const periodEndTimestamp = (
-              subscription as Stripe.Subscription & { current_period_end: number }
-            ).current_period_end;
+            // Update subscription status
+            // In API version 2025-03-31+, current_period_end moved to items
+            const firstItem = subscription.items?.data?.[0];
+            const periodEndTimestamp = firstItem?.current_period_end;
+            if (!periodEndTimestamp) {
+              throw new Error(
+                `Webhook Error: current_period_end not found on subscription ${subscription.id}`
+              );
+            }
             await ctx.runMutation(
               internal.subscriptions.updateSubscriptionFromStripe,
               {
                 stripeCustomerId: session.customer as string,
                 stripeSubscriptionId: subscription.id,
                 status: "active",
-                periodEnd: periodEndTimestamp
-                  ? periodEndTimestamp * 1000
-                  : Date.now() + 30 * 24 * 60 * 60 * 1000,
+                periodEnd: periodEndTimestamp * 1000,
               }
             );
           }
@@ -100,12 +103,15 @@ http.route({
             status = "expired";
           }
 
-          const periodEndTimestamp = (
-            subscription as Stripe.Subscription & { current_period_end: number }
-          ).current_period_end;
-          const periodEnd = periodEndTimestamp
-            ? periodEndTimestamp * 1000
-            : Date.now();
+          // In API version 2025-03-31+, current_period_end moved to items
+          const firstItem = subscription.items?.data?.[0];
+          const periodEndTimestamp = firstItem?.current_period_end;
+          if (!periodEndTimestamp) {
+            throw new Error(
+              `Webhook Error: current_period_end not found on subscription ${subscription.id}`
+            );
+          }
+          const periodEnd = periodEndTimestamp * 1000;
 
           await ctx.runMutation(
             internal.subscriptions.updateSubscriptionFromStripe,

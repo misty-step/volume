@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
 import { api } from "../../../../convex/_generated/api";
 import { ExerciseManager } from "@/components/dashboard/exercise-manager";
 import { InlineExerciseCreator } from "@/components/dashboard/inline-exercise-creator";
@@ -15,6 +16,7 @@ import { Plus, ExternalLink, Mail, CreditCard, Loader2 } from "lucide-react";
 import { clientVersion } from "@/lib/version";
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [showCreator, setShowCreator] = useState(false);
   const [billingLoading, setBillingLoading] = useState(false);
 
@@ -45,6 +47,10 @@ export default function SettingsPage() {
       });
 
       const data = await response.json();
+      if (!response.ok) {
+        console.error("Portal error:", data.error);
+        return;
+      }
       if (data.url) {
         window.location.href = data.url;
       }
@@ -165,7 +171,7 @@ export default function SettingsPage() {
                 <Button
                   size="sm"
                   variant="default"
-                  onClick={() => (window.location.href = "/pricing")}
+                  onClick={() => router.push("/pricing")}
                 >
                   Upgrade
                 </Button>

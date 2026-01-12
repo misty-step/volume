@@ -19,8 +19,8 @@ export function getStripe(): Stripe {
   return stripeInstance;
 }
 
-// Price IDs - set these in Stripe Dashboard
+// Price IDs - set these in Stripe Dashboard (use NEXT_PUBLIC_ for client access)
 export const PRICE_IDS = {
-  monthly: process.env.STRIPE_MONTHLY_PRICE_ID,
-  annual: process.env.STRIPE_ANNUAL_PRICE_ID,
+  monthly: process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID,
+  annual: process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID,
 } as const;

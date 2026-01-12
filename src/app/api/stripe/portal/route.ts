@@ -1,28 +1,32 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import Stripe from "stripe";
+import { getStripe } from "@/lib/stripe";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/../convex/_generated/api";
 
-function getStripe() {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) {
-    throw new Error("STRIPE_SECRET_KEY is not configured");
-  }
-  return new Stripe(key, { apiVersion: "2025-12-15.clover" });
-}
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: Request) {
-  const { userId } = await auth();
+  const { userId, getToken } = await auth();
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
-  const { stripeCustomerId } = body;
+  // Get Convex token for authenticated request
+  const token = await getToken({ template: "convex" });
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Fetch stripeCustomerId server-side to prevent IDOR attacks
+  convex.setAuth(token);
+  const billingInfo = await convex.query(api.subscriptions.getBillingInfo);
+  const stripeCustomerId = billingInfo?.stripeCustomerId;
 
   if (!stripeCustomerId) {
     return NextResponse.json(
-      { error: "No Stripe customer ID" },
+      { error: "No Stripe customer ID found for this account" },
       { status: 400 }
     );
   }

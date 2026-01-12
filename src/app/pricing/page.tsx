@@ -11,13 +11,13 @@ import Link from "next/link";
 
 const PRICES = {
   monthly: {
-    id: process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID!,
+    id: process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID ?? "",
     amount: 8,
     interval: "month" as const,
     label: "Monthly",
   },
   annual: {
-    id: process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID!,
+    id: process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID ?? "",
     amount: 70,
     interval: "year" as const,
     label: "Annual",
@@ -60,6 +60,13 @@ function PricingContent() {
       return;
     }
 
+    // Validate price ID is configured
+    const priceId = PRICES[selectedPlan].id;
+    if (!priceId) {
+      console.error("Stripe price ID not configured for", selectedPlan);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -67,12 +74,18 @@ function PricingContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          priceId: PRICES[selectedPlan].id,
+          priceId,
           stripeCustomerId: stripeCustomerId ?? undefined,
         }),
       });
 
       const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Checkout error:", data.error);
+        setIsLoading(false);
+        return;
+      }
 
       if (data.url) {
         window.location.href = data.url;

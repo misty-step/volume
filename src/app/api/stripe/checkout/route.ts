@@ -1,14 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import Stripe from "stripe";
-
-function getStripe() {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) {
-    throw new Error("STRIPE_SECRET_KEY is not configured");
-  }
-  return new Stripe(key, { apiVersion: "2025-12-15.clover" });
-}
+import { getStripe } from "@/lib/stripe";
+import { reportError } from "@/lib/analytics";
 
 export async function POST(request: Request) {
   const { userId } = await auth();
@@ -61,6 +55,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
+    const error = err instanceof Error ? err : new Error("Unknown checkout error");
+    reportError(error, { context: "stripe/checkout", priceId });
     console.error("Error creating checkout session:", err);
     return NextResponse.json(
       { error: "Failed to create checkout session" },

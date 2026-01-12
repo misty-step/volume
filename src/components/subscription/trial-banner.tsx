@@ -21,9 +21,9 @@ export function TrialBanner() {
   // Don't show if not on trial
   if (subscriptionStatus.status !== "trial") return null;
 
-  // Only show in final 5 days
+  // Only show in final 5 days (guard against undefined)
   const daysLeft = subscriptionStatus.trialDaysRemaining;
-  if (daysLeft > 5) return null;
+  if (daysLeft === undefined || daysLeft > 5) return null;
 
   const urgency = daysLeft <= 1 ? "bg-red-500" : "bg-amber-500";
   const message =

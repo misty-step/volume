@@ -1,6 +1,9 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+/** Number of days for free trial period */
+const TRIAL_PERIOD_DAYS = 14;
+
 /**
  * Get or create user record
  *
@@ -26,10 +29,9 @@ export const getOrCreateUser = mutation({
 
     if (existing) return existing._id;
 
-    // Create new user with 14-day trial
+    // Create new user with trial
     const now = Date.now();
-    const trialDays = 14;
-    const trialEndsAt = now + trialDays * 24 * 60 * 60 * 1000;
+    const trialEndsAt = now + TRIAL_PERIOD_DAYS * 24 * 60 * 60 * 1000;
 
     const userId = await ctx.db.insert("users", {
       clerkUserId: identity.subject,
@@ -67,10 +69,9 @@ export const updateUserTimezone = mutation({
       .first();
 
     if (!user) {
-      // Create user if doesn't exist (with 14-day trial)
+      // Create user if doesn't exist (with trial)
       const now = Date.now();
-      const trialDays = 14;
-      const trialEndsAt = now + trialDays * 24 * 60 * 60 * 1000;
+      const trialEndsAt = now + TRIAL_PERIOD_DAYS * 24 * 60 * 60 * 1000;
 
       await ctx.db.insert("users", {
         clerkUserId: identity.subject,
@@ -194,9 +195,11 @@ export const getSubscriptionStatus = query({
     const trialEndsAt = user.trialEndsAt ?? 0;
     const status = user.subscriptionStatus ?? "trial";
 
-    // Determine access: active subscription OR valid trial
+    // Determine access: active subscription OR valid trial OR canceled but still in period
     const hasAccess =
-      status === "active" || (status === "trial" && trialEndsAt > now);
+      status === "active" ||
+      (status === "trial" && trialEndsAt > now) ||
+      (status === "canceled" && (user.subscriptionPeriodEnd ?? 0) > now);
 
     // Calculate days remaining in trial (for countdown banner)
     const trialDaysRemaining =
