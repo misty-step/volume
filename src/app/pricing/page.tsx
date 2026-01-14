@@ -40,10 +40,6 @@ function PricingContent() {
   const searchParams = useSearchParams();
   const reason = searchParams.get("reason");
 
-  const stripeCustomerId = useQuery(
-    api.subscriptions.getStripeCustomerId,
-    user ? {} : "skip"
-  );
   const subscriptionStatus = useQuery(
     api.users.getSubscriptionStatus,
     user ? {} : "skip"
@@ -53,6 +49,7 @@ function PricingContent() {
     "annual"
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleCheckout = async () => {
     if (!user) {
@@ -63,26 +60,24 @@ function PricingContent() {
     // Validate price ID is configured
     const priceId = PRICES[selectedPlan].id;
     if (!priceId) {
-      console.error("Stripe price ID not configured for", selectedPlan);
+      setError("Payment configuration error. Please try again later.");
       return;
     }
 
     setIsLoading(true);
+    setError(null);
 
     try {
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          priceId,
-          stripeCustomerId: stripeCustomerId ?? undefined,
-        }),
+        body: JSON.stringify({ priceId }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        console.error("Checkout error:", data.error);
+        setError("Something went wrong. Please try again.");
         setIsLoading(false);
         return;
       }
@@ -90,11 +85,11 @@ function PricingContent() {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        console.error("No checkout URL returned");
+        setError("Something went wrong. Please try again.");
         setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Checkout error:", error);
+    } catch {
+      setError("Connection error. Please check your internet and try again.");
       setIsLoading(false);
     }
   };
@@ -231,6 +226,12 @@ function PricingContent() {
                   </>
                 )}
               </BrutalistButton>
+
+              {error && (
+                <p className="text-center text-sm text-danger-red mt-3">
+                  {error}
+                </p>
+              )}
 
               {!user && (
                 <p className="text-center text-xs text-muted-foreground mt-4">
