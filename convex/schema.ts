@@ -51,6 +51,7 @@ export default defineSchema({
       v.union(
         v.literal("trial"),
         v.literal("active"),
+        v.literal("past_due"),
         v.literal("canceled"),
         v.literal("expired")
       )

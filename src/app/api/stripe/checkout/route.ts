@@ -3,16 +3,31 @@ import { auth } from "@clerk/nextjs/server";
 import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { reportError } from "@/lib/analytics";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/../convex/_generated/api";
+
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: Request) {
-  const { userId } = await auth();
+  const { userId, getToken } = await auth();
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Get Convex token for authenticated request
+  const token = await getToken({ template: "convex" });
+
   const body = await request.json();
-  const { priceId, stripeCustomerId } = body;
+  const { priceId } = body;
+
+  // Fetch stripeCustomerId server-side to prevent IDOR attacks
+  let stripeCustomerId: string | undefined;
+  if (token) {
+    convex.setAuth(token);
+    const billingInfo = await convex.query(api.subscriptions.getBillingInfo);
+    stripeCustomerId = billingInfo?.stripeCustomerId ?? undefined;
+  }
 
   if (!priceId) {
     return NextResponse.json({ error: "Price ID required" }, { status: 400 });

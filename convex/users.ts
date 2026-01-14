@@ -195,9 +195,10 @@ export const getSubscriptionStatus = query({
     const trialEndsAt = user.trialEndsAt ?? 0;
     const status = user.subscriptionStatus ?? "trial";
 
-    // Determine access: active subscription OR valid trial OR canceled but still in period
+    // Determine access: active/past_due subscription OR valid trial OR canceled but still in period
     const hasAccess =
       status === "active" ||
+      status === "past_due" ||
       (status === "trial" && trialEndsAt > now) ||
       (status === "canceled" && (user.subscriptionPeriodEnd ?? 0) > now);
 
