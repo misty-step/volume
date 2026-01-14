@@ -5,9 +5,6 @@ import Stripe from "stripe";
 
 const http = httpRouter();
 
-/** Tolerance in seconds for webhook signature verification (handles clock skew) */
-const WEBHOOK_SIGNATURE_TOLERANCE = 300;
-
 /**
  * Extract current_period_end from Stripe subscription
  *
