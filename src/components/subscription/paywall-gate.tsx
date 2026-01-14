@@ -1,9 +1,9 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 
 interface PaywallGateProps {
@@ -20,26 +20,37 @@ interface PaywallGateProps {
  * Allows access if:
  * - User has active subscription
  * - User is within trial period
+ *
+ * Auto-creates user with trial if no record exists (handles edge case
+ * where user navigates to protected route before getOrCreateUser is called).
  */
 export function PaywallGate({ children }: PaywallGateProps) {
   const router = useRouter();
   const subscriptionStatus = useQuery(api.users.getSubscriptionStatus);
+  const getOrCreateUser = useMutation(api.users.getOrCreateUser);
+  const userCreationAttempted = useRef(false);
 
   useEffect(() => {
     // Wait for query to load
     if (subscriptionStatus === undefined) return;
 
-    // If no subscription data (new user), they'll get created with trial
-    if (subscriptionStatus === null) return;
+    // Auto-create user with trial if no record exists
+    if (subscriptionStatus === null && !userCreationAttempted.current) {
+      userCreationAttempted.current = true;
+      getOrCreateUser({
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      });
+      return;
+    }
 
     // Redirect to pricing if no access
-    if (!subscriptionStatus.hasAccess) {
+    if (subscriptionStatus && !subscriptionStatus.hasAccess) {
       router.replace("/pricing?reason=expired");
     }
-  }, [subscriptionStatus, router]);
+  }, [subscriptionStatus, router, getOrCreateUser]);
 
-  // Loading state
-  if (subscriptionStatus === undefined) {
+  // Loading state (includes waiting for user creation)
+  if (subscriptionStatus === undefined || subscriptionStatus === null) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -48,7 +59,7 @@ export function PaywallGate({ children }: PaywallGateProps) {
   }
 
   // No access - show nothing while redirecting
-  if (subscriptionStatus && !subscriptionStatus.hasAccess) {
+  if (!subscriptionStatus.hasAccess) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
