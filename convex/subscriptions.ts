@@ -2,10 +2,55 @@ import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
+ * Internal mutation to handle checkout.session.completed
+ *
+ * Atomically links Stripe customer and activates subscription in one operation.
+ * Uses clerkUserId (from checkout metadata) to find user, avoiding race conditions
+ * that occur when linking customer ID separately from subscription update.
+ *
+ * Throws on missing user to trigger Stripe webhook retry.
+ */
+export const handleCheckoutCompleted = internalMutation({
+  args: {
+    clerkUserId: v.string(),
+    stripeCustomerId: v.string(),
+    stripeSubscriptionId: v.string(),
+    status: v.union(
+      v.literal("trial"),
+      v.literal("active"),
+      v.literal("past_due"),
+      v.literal("canceled")
+    ),
+    periodEnd: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkUserId", args.clerkUserId))
+      .first();
+
+    if (!user) {
+      // Throw to trigger Stripe retry - user record may not exist yet
+      throw new Error(
+        `No user found for Clerk ID: ${args.clerkUserId}. Stripe will retry.`
+      );
+    }
+
+    await ctx.db.patch(user._id, {
+      stripeCustomerId: args.stripeCustomerId,
+      stripeSubscriptionId: args.stripeSubscriptionId,
+      subscriptionStatus: args.status,
+      subscriptionPeriodEnd: args.periodEnd,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
  * Internal mutation to update subscription from Stripe webhook
  *
- * Called by the Next.js API route after verifying the Stripe webhook signature.
- * Updates user subscription status based on Stripe events.
+ * Called for subscription.updated and subscription.deleted events.
+ * Throws on missing user to trigger Stripe webhook retry.
  */
 export const updateSubscriptionFromStripe = internalMutation({
   args: {
@@ -14,6 +59,7 @@ export const updateSubscriptionFromStripe = internalMutation({
     status: v.union(
       v.literal("trial"),
       v.literal("active"),
+      v.literal("past_due"),
       v.literal("canceled"),
       v.literal("expired")
     ),
@@ -28,45 +74,16 @@ export const updateSubscriptionFromStripe = internalMutation({
       .first();
 
     if (!user) {
-      console.error(
-        `No user found for Stripe customer: ${args.stripeCustomerId}`
+      // Throw to trigger Stripe retry - timing issue possible
+      throw new Error(
+        `No user found for Stripe customer: ${args.stripeCustomerId}. Stripe will retry.`
       );
-      return;
     }
 
     await ctx.db.patch(user._id, {
       subscriptionStatus: args.status,
       stripeSubscriptionId: args.stripeSubscriptionId,
       subscriptionPeriodEnd: args.periodEnd,
-      updatedAt: Date.now(),
-    });
-  },
-});
-
-/**
- * Internal mutation to link Stripe customer to user
- *
- * Called when checkout.session.completed with a new customer.
- * Links the Stripe customer ID to the Clerk user.
- */
-export const linkStripeCustomer = internalMutation({
-  args: {
-    clerkUserId: v.string(),
-    stripeCustomerId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkUserId", args.clerkUserId))
-      .first();
-
-    if (!user) {
-      console.error(`No user found for Clerk ID: ${args.clerkUserId}`);
-      return;
-    }
-
-    await ctx.db.patch(user._id, {
-      stripeCustomerId: args.stripeCustomerId,
       updatedAt: Date.now(),
     });
   },

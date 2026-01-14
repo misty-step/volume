@@ -5,11 +5,68 @@ import Stripe from "stripe";
 
 const http = httpRouter();
 
+/** Tolerance in seconds for webhook signature verification (handles clock skew) */
+const WEBHOOK_SIGNATURE_TOLERANCE = 300;
+
+/**
+ * Extract current_period_end from Stripe subscription
+ *
+ * In API version 2025-03-31+, current_period_end moved to subscription items.
+ * Falls back to root subscription object for older API versions.
+ */
+function getPeriodEndMs(subscription: Stripe.Subscription): number {
+  const fromItem = subscription.items?.data?.[0]?.current_period_end;
+  // Fallback for older API versions where current_period_end is on root
+  const fromRoot = (subscription as unknown as { current_period_end?: number })
+    .current_period_end;
+  const timestamp = fromItem ?? fromRoot;
+
+  if (!timestamp) {
+    throw new Error(
+      `current_period_end not found on subscription ${subscription.id}`
+    );
+  }
+  return timestamp * 1000;
+}
+
+/**
+ * Map Stripe subscription to our status
+ *
+ * Key distinction: Stripe's "canceled" means "won't renew but still paid through period end"
+ * We map this to "canceled" (not "expired") so hasAccess logic can check period end.
+ */
+function mapStripeStatus(
+  subscription: Stripe.Subscription
+): "active" | "past_due" | "canceled" | "trialing" {
+  // User requested cancellation but still has access until period end
+  if (subscription.cancel_at_period_end) {
+    return "canceled";
+  }
+
+  switch (subscription.status) {
+    case "active":
+      return "active";
+    case "trialing":
+      return "trialing";
+    case "past_due":
+      return "past_due";
+    case "canceled":
+    case "unpaid":
+    case "incomplete":
+    case "incomplete_expired":
+    case "paused":
+    default:
+      // These statuses mean no active access
+      return "canceled";
+  }
+}
+
 /**
  * Stripe Webhook Handler
  *
  * Receives and processes Stripe webhook events.
  * Verifies signature before processing any events.
+ * Returns 500 on processing errors to trigger Stripe retry.
  */
 http.route({
   path: "/stripe/webhook",
@@ -40,7 +97,9 @@ http.route({
       event = await stripe.webhooks.constructEventAsync(
         body,
         signature,
-        webhookSecret
+        webhookSecret,
+        undefined, // crypto provider (use default)
+        Stripe.createSubtleCryptoProvider(),
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
@@ -54,72 +113,39 @@ http.route({
           const session = event.data.object as Stripe.Checkout.Session;
 
           if (session.subscription && session.customer) {
-            const subscription: Stripe.Subscription =
-              await stripe.subscriptions.retrieve(
-                session.subscription as string
-              );
+            const subscription = await stripe.subscriptions.retrieve(
+              session.subscription as string
+            );
 
             const clerkUserId = session.metadata?.clerkUserId;
-            if (clerkUserId) {
-              // Link Stripe customer to user
-              await ctx.runMutation(internal.subscriptions.linkStripeCustomer, {
-                clerkUserId,
-                stripeCustomerId: session.customer as string,
-              });
+            if (!clerkUserId) {
+              throw new Error("Missing clerkUserId in checkout session metadata");
             }
 
-            // Update subscription status
-            // In API version 2025-03-31+, current_period_end moved to items
-            const firstItem = subscription.items?.data?.[0];
-            const periodEndTimestamp = firstItem?.current_period_end;
-            if (!periodEndTimestamp) {
-              throw new Error(
-                `Webhook Error: current_period_end not found on subscription ${subscription.id}`
-              );
-            }
-            await ctx.runMutation(
-              internal.subscriptions.updateSubscriptionFromStripe,
-              {
-                stripeCustomerId: session.customer as string,
-                stripeSubscriptionId: subscription.id,
-                status: "active",
-                periodEnd: periodEndTimestamp * 1000,
-              }
-            );
+            // Atomic operation: link customer + activate subscription
+            const stripeStatus = mapStripeStatus(subscription);
+            await ctx.runMutation(internal.subscriptions.handleCheckoutCompleted, {
+              clerkUserId,
+              stripeCustomerId: session.customer as string,
+              stripeSubscriptionId: subscription.id,
+              status: stripeStatus === "trialing" ? "trial" : stripeStatus,
+              periodEnd: getPeriodEndMs(subscription),
+            });
           }
           break;
         }
 
         case "customer.subscription.updated": {
           const subscription = event.data.object as Stripe.Subscription;
-
-          let status: "active" | "canceled" | "expired" = "active";
-          if (subscription.cancel_at_period_end) {
-            status = "canceled";
-          } else if (
-            subscription.status === "canceled" ||
-            subscription.status === "unpaid"
-          ) {
-            status = "expired";
-          }
-
-          // In API version 2025-03-31+, current_period_end moved to items
-          const firstItem = subscription.items?.data?.[0];
-          const periodEndTimestamp = firstItem?.current_period_end;
-          if (!periodEndTimestamp) {
-            throw new Error(
-              `Webhook Error: current_period_end not found on subscription ${subscription.id}`
-            );
-          }
-          const periodEnd = periodEndTimestamp * 1000;
+          const status = mapStripeStatus(subscription);
 
           await ctx.runMutation(
             internal.subscriptions.updateSubscriptionFromStripe,
             {
               stripeCustomerId: subscription.customer as string,
               stripeSubscriptionId: subscription.id,
-              status,
-              periodEnd,
+              status: status === "trialing" ? "trial" : status,
+              periodEnd: getPeriodEndMs(subscription),
             }
           );
           break;
@@ -144,8 +170,9 @@ http.route({
           console.log(`Unhandled event type: ${event.type}`);
       }
     } catch (err) {
-      console.error("Error processing webhook:", err);
-      return new Response("Webhook processing failed", { status: 500 });
+      const message = err instanceof Error ? err.message : "Unknown error";
+      console.error("Error processing webhook:", { eventType: event.type, eventId: event.id, error: message });
+      return new Response(`Webhook processing failed: ${message}`, { status: 500 });
     }
 
     return new Response(JSON.stringify({ received: true }), {
