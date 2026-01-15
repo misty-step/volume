@@ -43,17 +43,17 @@ Users often delete an exercise then later realize they want it back. Rather than
 
 ### Consequences
 
-**Good**
+#### Good
 - Workout history remains accurate indefinitely
 - Users can "undo" deletion by re-creating the exercise
 - Foreign key integrity maintained (exerciseId always valid)
 - Enables future "trash bin" UI without schema changes
 
-**Bad**
+#### Bad
 - All queries must explicitly handle deleted state
 - Potential confusion: creating "Bench Press" restores old exercise with old muscle groups (mitigated by updating muscleGroups on restore)
 
-**Neutral**
+#### Neutral
 - Database grows slightly over time (soft-deleted records persist)
 - Could add periodic cleanup of exercises with no sets if needed
 

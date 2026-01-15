@@ -73,17 +73,17 @@ export const createExerciseInternal = internalMutation({
 
 ### Consequences
 
-**Good**
+#### Good
 - Single user-facing call for complete operation
 - AI keys never leave server
 - AI failures don't block exercise creation
 - Clean separation: AI logic vs DB logic
 
-**Bad**
+#### Bad
 - Slightly more complex than pure mutation
 - If action crashes after AI but before mutation, AI call is wasted (rare)
 
-**Neutral**
+#### Neutral
 - Pattern reused for other AI-enriched operations (reports, etc.)
 
 ## Implementation Notes

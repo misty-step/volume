@@ -71,17 +71,17 @@ catch (err) {
 
 ### Consequences
 
-**Good**
+#### Good
 - Atomic database updates (no partial states)
 - Stripe retry semantics work naturally (500 = retry, 200 = done)
 - No additional infrastructure required
 - Minimal latency (Convex is already our backend)
 
-**Bad**
+#### Bad
 - Must remember Convex runtime constraints (no Node timers)
 - Webhook secret must be in Convex environment, not just Vercel
 
-**Neutral**
+#### Neutral
 - Webhook endpoint format: `https://<convex-url>/stripe/webhook`
 - Different from typical Next.js patterns (learning curve)
 

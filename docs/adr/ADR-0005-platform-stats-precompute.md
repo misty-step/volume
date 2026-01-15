@@ -66,17 +66,17 @@ if (cached.totalSets < MIN_SETS_THRESHOLD) {
 
 ### Consequences
 
-**Good**
+#### Good
 - Landing page loads fast (single document read)
 - Predictable Convex compute cost (one scan/day)
 - Simple implementation (no distributed counters)
 
-**Bad**
+#### Bad
 - Stats up to 24h stale
 - Cron job must be configured correctly
 - First deploy shows no stats until cron runs
 
-**Neutral**
+#### Neutral
 - Could reduce staleness by running cron more frequently if needed
 - Could add manual refresh mutation for admin use
 

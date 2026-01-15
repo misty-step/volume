@@ -4,7 +4,7 @@ Volume is a workout tracker: exercises in, sets out, insights generated. This do
 
 ## Three Domains
 
-```
+```text
 Browser (Next.js)  <-->  Convex Cloud  <-->  External Services
      |                        |                    |
   UI + State              Data + Logic         AI + Payments
@@ -37,7 +37,7 @@ Convex functions own all data mutations. Every user action flows through here.
 | `schema.ts` | Data shapes, indexes | Single source of truth |
 | `exercises.ts` | CRUD + soft delete + muscle groups | `create`, `list`, `delete` |
 | `sets.ts` | Logging + validation | `logSet`, `listSets`, `deleteSet` |
-| `users.ts` | Profile + preferences + subscriptions | `get`, `update`, `checkSubscription` |
+| `users.ts` | Profile + preferences + subscriptions | `get`, `update`, `getSubscriptionStatus` |
 | `analytics.ts` | Weekly aggregation, AI reports | Scheduled cron |
 | `crons.ts` | Scheduled jobs | Automatic |
 | `http.ts` | Stripe webhooks | POST handlers |
@@ -58,7 +58,7 @@ Convex functions own all data mutations. Every user action flows through here.
 
 ## Data Flow
 
-```
+```text
 User logs set
      |
      v
@@ -86,7 +86,7 @@ Exercises are never hard-deleted. `deletedAt` timestamp hides from UI while pres
 `rateLimits` table + `assertRateLimit` helper. Fixed-window counters prevent AI endpoint abuse. See [ADR-0001](docs/adr/ADR-0001-rate-limits.md).
 
 ### Subscription Gating
-`PaywallGate` component + `checkSubscription` query. Trial users get 14 days; expired users see upgrade prompt. Stripe webhooks keep status in sync.
+`PaywallGate` component + `getSubscriptionStatus` query. Trial users get 14 days; expired users see upgrade prompt. Stripe webhooks keep status in sync.
 
 ### Real-time Sync
 Convex queries automatically subscribe to changes. No manual polling or cache invalidation.

@@ -75,17 +75,17 @@ interface AIReportV2 {
 
 ### Consequences
 
-**Good**
+#### Good
 - Old reports remain valid indefinitely
 - New reports have predictable structure for UI components
 - AI cost reduced (smaller prompts, focused on creative tasks)
 - Numeric accuracy guaranteed (computed, not generated)
 
-**Bad**
+#### Bad
 - Frontend must handle both v1 and v2 rendering paths
 - `structuredContent: v.any()` loses type safety in schema (validated at runtime)
 
-**Neutral**
+#### Neutral
 - Can add v3 in future with same pattern
 - Old reports naturally age out of "recent" views
 

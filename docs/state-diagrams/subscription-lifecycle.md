@@ -62,7 +62,7 @@ const hasAccess =
 
 **Webhook Failures**: Mutations throw on missing user to trigger Stripe retry.
 
-```
+```text
 No user found -> Error thrown -> Stripe retries (up to 72 hours)
 ```
 

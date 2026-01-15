@@ -59,7 +59,7 @@ function mapStripeStatus(subscription: Stripe.Subscription) {
   // Map Stripe statuses
   switch (subscription.status) {
     case "active": return "active";
-    case "trialing": return "trialing";
+    case "trialing": return "trial";
     case "past_due": return "past_due";
     default: return "canceled";  // unpaid, incomplete, etc.
   }
@@ -86,8 +86,8 @@ The `PaywallGate` component wraps protected routes and handles edge cases:
 
 ```typescript
 // Auto-create user with trial if no record exists
-if (subscriptionStatus === null && !userCreationAttempted.current) {
-  getOrCreateUser({ timezone });
+if (subscriptionStatus === null) {
+  userCreationInFlight.current ??= getOrCreateUser({ timezone });
   return;
 }
 
@@ -103,23 +103,22 @@ Checkout route fetches `stripeCustomerId` server-side to prevent attackers from 
 
 ```typescript
 // Server-side fetch, not from request body
-const billingInfo = await convex.query(api.subscriptions.getBillingInfo);
-stripeCustomerId = billingInfo?.stripeCustomerId;
+stripeCustomerId = await convex.query(api.subscriptions.getStripeCustomerId);
 ```
 
 ### Consequences
 
-**Good**
+#### Good
 - Clear state machine with defined transitions
 - Rich UI messaging (days remaining, period end date)
 - Stripe semantics preserved (canceled =/= no access)
 - IDOR-resistant checkout flow
 
-**Bad**
+#### Bad
 - Access logic requires understanding combined status+date semantics
 - Must keep Stripe status mapping updated if Stripe adds new statuses
 
-**Neutral**
+#### Neutral
 - `past_due` included to allow grace period (could be policy decision)
 - Trial period (14 days) is hardcoded constant
 
