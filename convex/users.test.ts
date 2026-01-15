@@ -143,6 +143,102 @@ describe("User Management", () => {
     });
   });
 
+  describe("getSubscriptionStatus", () => {
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    async function seedUserWithStatus({
+      clerkUserId,
+      subscriptionStatus,
+      trialEndsAt,
+      subscriptionPeriodEnd,
+    }: {
+      clerkUserId: string;
+      subscriptionStatus: "trial" | "active" | "past_due" | "canceled" | "expired";
+      trialEndsAt?: number;
+      subscriptionPeriodEnd?: number;
+    }) {
+      const now = Date.now();
+      await t.run(async (ctx) => {
+        await ctx.db.insert("users", {
+          clerkUserId,
+          subscriptionStatus,
+          trialEndsAt,
+          subscriptionPeriodEnd,
+          createdAt: now,
+          updatedAt: now,
+        });
+      });
+    }
+
+    test("returns null for unauthenticated requests", async () => {
+      const result = await t.query(api.users.getSubscriptionStatus, {});
+      expect(result).toBeNull();
+    });
+
+    test("grants access for active subscriptions", async () => {
+      const clerkUserId = "user_active";
+      await seedUserWithStatus({
+        clerkUserId,
+        subscriptionStatus: "active",
+      });
+
+      const result = await t
+        .withIdentity({ subject: clerkUserId })
+        .query(api.users.getSubscriptionStatus, {});
+
+      expect(result?.hasAccess).toBe(true);
+      expect(result?.status).toBe("active");
+    });
+
+    test("grants access for past_due subscriptions", async () => {
+      const clerkUserId = "user_past_due";
+      await seedUserWithStatus({
+        clerkUserId,
+        subscriptionStatus: "past_due",
+      });
+
+      const result = await t
+        .withIdentity({ subject: clerkUserId })
+        .query(api.users.getSubscriptionStatus, {});
+
+      expect(result?.hasAccess).toBe(true);
+      expect(result?.status).toBe("past_due");
+    });
+
+    test("grants access for canceled subscriptions before period end", async () => {
+      const clerkUserId = "user_canceled";
+      const periodEnd = Date.now() + 2 * dayMs;
+      await seedUserWithStatus({
+        clerkUserId,
+        subscriptionStatus: "canceled",
+        subscriptionPeriodEnd: periodEnd,
+      });
+
+      const result = await t
+        .withIdentity({ subject: clerkUserId })
+        .query(api.users.getSubscriptionStatus, {});
+
+      expect(result?.hasAccess).toBe(true);
+      expect(result?.subscriptionPeriodEnd).toBe(periodEnd);
+    });
+
+    test("denies access for expired trial", async () => {
+      const clerkUserId = "user_trial_expired";
+      await seedUserWithStatus({
+        clerkUserId,
+        subscriptionStatus: "trial",
+        trialEndsAt: Date.now() - dayMs,
+      });
+
+      const result = await t
+        .withIdentity({ subject: clerkUserId })
+        .query(api.users.getSubscriptionStatus, {});
+
+      expect(result?.hasAccess).toBe(false);
+      expect(result?.status).toBe("trial");
+    });
+  });
+
   describe("data isolation", () => {
     test("users are isolated by clerkUserId", async () => {
       const user1Subject = "user_1";
