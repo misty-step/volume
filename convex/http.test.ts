@@ -34,22 +34,12 @@ describe("Stripe webhook helpers", () => {
     expect(mapStripeStatus(subscription)).toBe("past_due");
   });
 
-  test("getPeriodEndMs prefers subscription item period end", () => {
+  test("getPeriodEndMs extracts period end from subscription item", () => {
     const subscription = makeSubscription({
       items: { data: [{ current_period_end: 123 }] },
-      current_period_end: 456,
     });
 
     expect(getPeriodEndMs(subscription)).toBe(123 * 1000);
-  });
-
-  test("getPeriodEndMs falls back to root period end", () => {
-    const subscription = makeSubscription({
-      items: { data: [] },
-      current_period_end: 456,
-    });
-
-    expect(getPeriodEndMs(subscription)).toBe(456 * 1000);
   });
 
   test("getPeriodEndMs throws when period end is missing", () => {

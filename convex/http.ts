@@ -8,21 +8,17 @@ const http = httpRouter();
 /**
  * Extract current_period_end from Stripe subscription
  *
- * In API version 2025-03-31+, current_period_end moved to subscription items.
- * Falls back to root subscription object for older API versions.
+ * API version 2025-12-15.clover: current_period_end is on subscription items.
  */
 export function getPeriodEndMs(subscription: Stripe.Subscription): number {
-  const fromItem = subscription.items?.data?.[0]?.current_period_end;
-  // Fallback for older API versions where current_period_end is on root
-  const fromRoot = subscription.current_period_end;
-  const timestamp = fromItem ?? fromRoot;
+  const periodEnd = subscription.items?.data?.[0]?.current_period_end;
 
-  if (!timestamp) {
+  if (!periodEnd) {
     throw new Error(
       `current_period_end not found on subscription ${subscription.id}`
     );
   }
-  return timestamp * 1000;
+  return periodEnd * 1000;
 }
 
 /**
