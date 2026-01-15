@@ -7,6 +7,9 @@ import { api } from "@/../convex/_generated/api";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
+/**
+ * Create a Stripe Billing Portal session for the authenticated user.
+ */
 export async function POST(request: Request) {
   const { userId, getToken } = await auth();
 
@@ -22,8 +25,9 @@ export async function POST(request: Request) {
 
   // Fetch stripeCustomerId server-side to prevent IDOR attacks
   convex.setAuth(token);
-  const billingInfo = await convex.query(api.subscriptions.getBillingInfo);
-  const stripeCustomerId = billingInfo?.stripeCustomerId;
+  const stripeCustomerId = await convex.query(
+    api.subscriptions.getStripeCustomerId
+  );
 
   if (!stripeCustomerId) {
     return NextResponse.json(

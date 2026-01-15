@@ -8,6 +8,7 @@ import { useState, useEffect, Suspense } from "react";
 import { Check, Loader2, Zap } from "lucide-react";
 import { BrutalistButton } from "@/components/brutalist";
 import Link from "next/link";
+import { reportError } from "@/lib/analytics";
 
 const PRICES = {
   monthly: {
@@ -77,6 +78,11 @@ function PricingContent() {
       const data = await response.json();
 
       if (!response.ok) {
+        reportError(new Error("Checkout request failed"), {
+          context: "pricing/checkout",
+          status: response.status,
+          plan: selectedPlan,
+        });
         setError("Something went wrong. Please try again.");
         setIsLoading(false);
         return;
@@ -88,7 +94,10 @@ function PricingContent() {
         setError("Something went wrong. Please try again.");
         setIsLoading(false);
       }
-    } catch {
+    } catch (error) {
+      const err =
+        error instanceof Error ? error : new Error("Checkout request failed");
+      reportError(err, { context: "pricing/checkout", plan: selectedPlan });
       setError("Connection error. Please check your internet and try again.");
       setIsLoading(false);
     }
@@ -96,13 +105,19 @@ function PricingContent() {
 
   // Already subscribed - redirect to app
   useEffect(() => {
-    if (subscriptionStatus?.status === "active") {
+    if (
+      subscriptionStatus?.hasAccess &&
+      subscriptionStatus.status !== "trial"
+    ) {
       router.replace("/today");
     }
-  }, [subscriptionStatus?.status, router]);
+  }, [subscriptionStatus?.hasAccess, subscriptionStatus?.status, router]);
 
   // Show nothing while redirecting
-  if (subscriptionStatus?.status === "active") {
+  if (
+    subscriptionStatus?.hasAccess &&
+    subscriptionStatus.status !== "trial"
+  ) {
     return null;
   }
 

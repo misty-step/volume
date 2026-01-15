@@ -8,6 +8,9 @@ import { api } from "@/../convex/_generated/api";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
+/**
+ * Create a Stripe Checkout session for the authenticated user.
+ */
 export async function POST(request: Request) {
   const { userId, getToken } = await auth();
 
@@ -17,17 +20,22 @@ export async function POST(request: Request) {
 
   // Get Convex token for authenticated request
   const token = await getToken({ template: "convex" });
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  const body = await request.json();
+  let body: { priceId?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
   const { priceId } = body;
 
   // Fetch stripeCustomerId server-side to prevent IDOR attacks
-  let stripeCustomerId: string | undefined;
-  if (token) {
-    convex.setAuth(token);
-    const billingInfo = await convex.query(api.subscriptions.getBillingInfo);
-    stripeCustomerId = billingInfo?.stripeCustomerId ?? undefined;
-  }
+  convex.setAuth(token);
+  const stripeCustomerId =
+    (await convex.query(api.subscriptions.getStripeCustomerId)) ?? undefined;
 
   if (!priceId) {
     return NextResponse.json({ error: "Price ID required" }, { status: 400 });

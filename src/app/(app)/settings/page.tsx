@@ -19,6 +19,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const [showCreator, setShowCreator] = useState(false);
   const [billingLoading, setBillingLoading] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
 
   // Fetch exercises and sets for ExerciseManager (active only)
   const exercises = useQuery(api.exercises.listExercises, {
@@ -37,6 +38,7 @@ export default function SettingsPage() {
     if (!billingInfo?.stripeCustomerId) return;
 
     setBillingLoading(true);
+    setBillingError(null);
     try {
       // stripeCustomerId fetched server-side from authenticated user
       const response = await fetch("/api/stripe/portal", {
@@ -46,6 +48,7 @@ export default function SettingsPage() {
       const data = await response.json();
       if (!response.ok) {
         console.error("Portal error:", data.error);
+        setBillingError("Unable to open billing portal. Try again.");
         return;
       }
       if (data.url) {
@@ -53,6 +56,7 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error("Portal error:", error);
+      setBillingError("Unable to open billing portal. Try again.");
     } finally {
       setBillingLoading(false);
     }
@@ -176,6 +180,9 @@ export default function SettingsPage() {
             }
           />
         </SettingsList>
+        {billingError && (
+          <p className="px-4 pt-2 text-xs text-danger-red">{billingError}</p>
+        )}
       </SettingsSection>
 
       {/* About Section */}
