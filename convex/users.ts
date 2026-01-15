@@ -3,6 +3,11 @@ import { v } from "convex/values";
 
 /** Number of days for free trial period */
 const TRIAL_PERIOD_DAYS = 14;
+const TRIAL_PERIOD_MS = TRIAL_PERIOD_DAYS * 24 * 60 * 60 * 1000;
+
+function getTrialEndsAt(now: number) {
+  return now + TRIAL_PERIOD_MS;
+}
 
 /**
  * Get or create user record
@@ -31,7 +36,7 @@ export const getOrCreateUser = mutation({
 
     // Create new user with trial
     const now = Date.now();
-    const trialEndsAt = now + TRIAL_PERIOD_DAYS * 24 * 60 * 60 * 1000;
+    const trialEndsAt = getTrialEndsAt(now);
 
     const userId = await ctx.db.insert("users", {
       clerkUserId: identity.subject,
@@ -71,7 +76,7 @@ export const updateUserTimezone = mutation({
     if (!user) {
       // Create user if doesn't exist (with trial)
       const now = Date.now();
-      const trialEndsAt = now + TRIAL_PERIOD_DAYS * 24 * 60 * 60 * 1000;
+      const trialEndsAt = getTrialEndsAt(now);
 
       await ctx.db.insert("users", {
         clerkUserId: identity.subject,

@@ -28,18 +28,25 @@ export function PaywallGate({ children }: PaywallGateProps) {
   const router = useRouter();
   const subscriptionStatus = useQuery(api.users.getSubscriptionStatus);
   const getOrCreateUser = useMutation(api.users.getOrCreateUser);
-  const userCreationAttempted = useRef(false);
+  const userCreationInFlight = useRef<Promise<unknown> | null>(null);
 
   useEffect(() => {
     // Wait for query to load
     if (subscriptionStatus === undefined) return;
 
     // Auto-create user with trial if no record exists
-    if (subscriptionStatus === null && !userCreationAttempted.current) {
-      userCreationAttempted.current = true;
-      getOrCreateUser({
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      });
+    if (subscriptionStatus === null) {
+      if (!userCreationInFlight.current) {
+        userCreationInFlight.current = getOrCreateUser({
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        })
+          .catch((error) => {
+            console.error("Failed to create user record:", error);
+          })
+          .finally(() => {
+            userCreationInFlight.current = null;
+          });
+      }
       return;
     }
 

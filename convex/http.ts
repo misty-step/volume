@@ -11,11 +11,10 @@ const http = httpRouter();
  * In API version 2025-03-31+, current_period_end moved to subscription items.
  * Falls back to root subscription object for older API versions.
  */
-function getPeriodEndMs(subscription: Stripe.Subscription): number {
+export function getPeriodEndMs(subscription: Stripe.Subscription): number {
   const fromItem = subscription.items?.data?.[0]?.current_period_end;
   // Fallback for older API versions where current_period_end is on root
-  const fromRoot = (subscription as unknown as { current_period_end?: number })
-    .current_period_end;
+  const fromRoot = subscription.current_period_end;
   const timestamp = fromItem ?? fromRoot;
 
   if (!timestamp) {
@@ -32,9 +31,9 @@ function getPeriodEndMs(subscription: Stripe.Subscription): number {
  * Key distinction: Stripe's "canceled" means "won't renew but still paid through period end"
  * We map this to "canceled" (not "expired") so hasAccess logic can check period end.
  */
-function mapStripeStatus(
+export function mapStripeStatus(
   subscription: Stripe.Subscription
-): "active" | "past_due" | "canceled" | "trialing" {
+): "active" | "past_due" | "canceled" | "trial" {
   // User requested cancellation but still has access until period end
   if (subscription.cancel_at_period_end) {
     return "canceled";
@@ -44,7 +43,7 @@ function mapStripeStatus(
     case "active":
       return "active";
     case "trialing":
-      return "trialing";
+      return "trial";
     case "past_due":
       return "past_due";
     case "canceled":
@@ -125,7 +124,7 @@ http.route({
               clerkUserId,
               stripeCustomerId: session.customer as string,
               stripeSubscriptionId: subscription.id,
-              status: stripeStatus === "trialing" ? "trial" : stripeStatus,
+              status: stripeStatus,
               periodEnd: getPeriodEndMs(subscription),
             });
           }
@@ -141,7 +140,7 @@ http.route({
             {
               stripeCustomerId: subscription.customer as string,
               stripeSubscriptionId: subscription.id,
-              status: status === "trialing" ? "trial" : status,
+              status,
               periodEnd: getPeriodEndMs(subscription),
             }
           );
