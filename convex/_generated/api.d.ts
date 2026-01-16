@@ -34,6 +34,7 @@ import type * as lib_validate from "../lib/validate.js";
 import type * as migrations_backfillMuscleGroups from "../migrations/backfillMuscleGroups.js";
 import type * as platformStats from "../platformStats.js";
 import type * as sets from "../sets.js";
+import type * as stripe from "../stripe.js";
 import type * as subscriptions from "../subscriptions.js";
 import type * as test_resetUserData from "../test/resetUserData.js";
 import type * as users from "../users.js";
@@ -71,6 +72,7 @@ declare const fullApi: ApiFromModules<{
   "migrations/backfillMuscleGroups": typeof migrations_backfillMuscleGroups;
   platformStats: typeof platformStats;
   sets: typeof sets;
+  stripe: typeof stripe;
   subscriptions: typeof subscriptions;
   "test/resetUserData": typeof test_resetUserData;
   users: typeof users;

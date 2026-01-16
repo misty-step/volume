@@ -5,24 +5,34 @@ import { PaywallGate } from "./paywall-gate";
 const mockReplace = vi.fn();
 const mockUseQuery = vi.fn();
 const mockUseMutation = vi.fn();
+const mockUseAction = vi.fn();
 const mockGetOrCreateUser = vi.fn();
+const mockSyncCheckout = vi.fn();
+const mockSearchParamsGet = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     replace: mockReplace,
+  }),
+  useSearchParams: () => ({
+    get: mockSearchParamsGet,
   }),
 }));
 
 vi.mock("convex/react", () => ({
   useQuery: () => mockUseQuery(),
   useMutation: () => mockUseMutation(),
+  useAction: () => mockUseAction(),
 }));
 
 describe("PaywallGate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseMutation.mockReturnValue(mockGetOrCreateUser);
+    mockUseAction.mockReturnValue(mockSyncCheckout);
     mockGetOrCreateUser.mockResolvedValue("user_1");
+    mockSyncCheckout.mockResolvedValue({ success: true });
+    mockSearchParamsGet.mockReturnValue(null); // No checkout params by default
   });
 
   it("shows a loading state while subscription status loads", () => {
