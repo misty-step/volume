@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0](https://github.com/misty-step/volume/compare/v1.2.0...v1.3.0) (2026-01-16)
+
+
+### Features
+
+* add Stripe subscription paywall with free trial ([#181](https://github.com/misty-step/volume/issues/181)) ([#239](https://github.com/misty-step/volume/issues/239)) ([3fc90c5](https://github.com/misty-step/volume/commit/3fc90c5bfd957e223f401f41f3fc2bc0c8ca3b3e))
+
+
+### Bug Fixes
+
+* remove invalid customer_creation param from subscription checkout ([23113a0](https://github.com/misty-step/volume/commit/23113a0156a1310a34e632b376df0608a4dc5a90))
+* resolve post-checkout race condition in PaywallGate ([c77612b](https://github.com/misty-step/volume/commit/c77612b9984f133fb839457f8519aa5ff6a03b0d))
+
 ## [1.2.0](https://github.com/misty-step/volume/compare/v1.1.0...v1.2.0) (2026-01-11)
 
 
