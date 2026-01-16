@@ -32,6 +32,14 @@
 - [ ] Delete confirmation works
 - [ ] Navigation works smoothly
 
+### Payment/Subscription Changes (if applicable)
+
+- [ ] Test full checkout flow (new user, no Stripe customer)
+- [ ] Test with existing subscriber (customer reuse)
+- [ ] Verify webhook handling works (check Convex logs)
+- [ ] Check Stripe Dashboard for test events
+- [ ] Test subscription cancellation/billing portal
+
 ## Test Results
 
 - [ ] `pnpm test` passes

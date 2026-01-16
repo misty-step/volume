@@ -68,10 +68,9 @@ export async function POST(request: Request) {
     };
 
     // Reuse existing Stripe customer if available
+    // Note: In subscription mode, Stripe auto-creates customers - no customer_creation param needed
     if (stripeCustomerId) {
       sessionParams.customer = stripeCustomerId;
-    } else {
-      sessionParams.customer_creation = "always";
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
