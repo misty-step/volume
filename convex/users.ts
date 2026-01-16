@@ -1,6 +1,14 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+/** Number of days for free trial period */
+const TRIAL_PERIOD_DAYS = 14;
+const TRIAL_PERIOD_MS = TRIAL_PERIOD_DAYS * 24 * 60 * 60 * 1000;
+
+function getTrialEndsAt(now: number) {
+  return now + TRIAL_PERIOD_MS;
+}
+
 /**
  * Get or create user record
  *
@@ -26,15 +34,20 @@ export const getOrCreateUser = mutation({
 
     if (existing) return existing._id;
 
-    // Create new user
+    // Create new user with trial
+    const now = Date.now();
+    const trialEndsAt = getTrialEndsAt(now);
+
     const userId = await ctx.db.insert("users", {
       clerkUserId: identity.subject,
       timezone: args.timezone,
-      dailyReportsEnabled: true, // Enabled for all users (paywall later)
-      weeklyReportsEnabled: true, // Default on
-      monthlyReportsEnabled: false, // Opt-in
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      dailyReportsEnabled: true,
+      weeklyReportsEnabled: true,
+      monthlyReportsEnabled: false,
+      trialEndsAt,
+      subscriptionStatus: "trial",
+      createdAt: now,
+      updatedAt: now,
     });
 
     return userId;
@@ -61,15 +74,20 @@ export const updateUserTimezone = mutation({
       .first();
 
     if (!user) {
-      // Create user if doesn't exist
+      // Create user if doesn't exist (with trial)
+      const now = Date.now();
+      const trialEndsAt = getTrialEndsAt(now);
+
       await ctx.db.insert("users", {
         clerkUserId: identity.subject,
         timezone: args.timezone,
-        dailyReportsEnabled: true, // Enabled for all users
+        dailyReportsEnabled: true,
         weeklyReportsEnabled: true,
         monthlyReportsEnabled: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        trialEndsAt,
+        subscriptionStatus: "trial",
+        createdAt: now,
+        updatedAt: now,
       });
       return;
     }
@@ -156,5 +174,51 @@ export const getFirstWorkoutDate = query({
 
     // Return ISO date string (YYYY-MM-DD)
     return new Date(earliestSet.performedAt).toISOString().split("T")[0];
+  },
+});
+
+/**
+ * Get subscription status for the current user
+ *
+ * Returns subscription state used by PaywallGate to determine access.
+ * Computes hasAccess based on trial validity or active subscription.
+ */
+export const getSubscriptionStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkUserId", identity.subject))
+      .first();
+
+    if (!user) return null;
+
+    const now = Date.now();
+    const trialEndsAt = user.trialEndsAt ?? 0;
+    const status = user.subscriptionStatus ?? "trial";
+
+    // Determine access: active/past_due subscription OR valid trial OR canceled but still in period
+    const hasAccess =
+      status === "active" ||
+      status === "past_due" ||
+      (status === "trial" && trialEndsAt > now) ||
+      (status === "canceled" && (user.subscriptionPeriodEnd ?? 0) > now);
+
+    // Calculate days remaining in trial (for countdown banner)
+    const trialDaysRemaining =
+      status === "trial" && trialEndsAt > now
+        ? Math.ceil((trialEndsAt - now) / (24 * 60 * 60 * 1000))
+        : 0;
+
+    return {
+      status,
+      hasAccess,
+      trialEndsAt: status === "trial" ? trialEndsAt : null,
+      trialDaysRemaining,
+      subscriptionPeriodEnd: user.subscriptionPeriodEnd ?? null,
+    };
   },
 });

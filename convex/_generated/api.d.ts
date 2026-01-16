@@ -25,6 +25,7 @@ import type * as analyticsProgressiveOverload from "../analyticsProgressiveOverl
 import type * as analyticsRecovery from "../analyticsRecovery.js";
 import type * as crons from "../crons.js";
 import type * as exercises from "../exercises.js";
+import type * as http from "../http.js";
 import type * as lib_muscleGroups from "../lib/muscleGroups.js";
 import type * as lib_pr_detection from "../lib/pr_detection.js";
 import type * as lib_rateLimit from "../lib/rateLimit.js";
@@ -33,6 +34,7 @@ import type * as lib_validate from "../lib/validate.js";
 import type * as migrations_backfillMuscleGroups from "../migrations/backfillMuscleGroups.js";
 import type * as platformStats from "../platformStats.js";
 import type * as sets from "../sets.js";
+import type * as subscriptions from "../subscriptions.js";
 import type * as test_resetUserData from "../test/resetUserData.js";
 import type * as users from "../users.js";
 
@@ -60,6 +62,7 @@ declare const fullApi: ApiFromModules<{
   analyticsRecovery: typeof analyticsRecovery;
   crons: typeof crons;
   exercises: typeof exercises;
+  http: typeof http;
   "lib/muscleGroups": typeof lib_muscleGroups;
   "lib/pr_detection": typeof lib_pr_detection;
   "lib/rateLimit": typeof lib_rateLimit;
@@ -68,6 +71,7 @@ declare const fullApi: ApiFromModules<{
   "migrations/backfillMuscleGroups": typeof migrations_backfillMuscleGroups;
   platformStats: typeof platformStats;
   sets: typeof sets;
+  subscriptions: typeof subscriptions;
   "test/resetUserData": typeof test_resetUserData;
   users: typeof users;
 }>;

@@ -54,3 +54,5 @@ e2e/.auth/*
 
 # Archived changesets (historical reference)
 .changeset.archive/
+thinktank.log
+thinktank_*/
