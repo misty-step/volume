@@ -52,11 +52,8 @@ export function Footer() {
             </a>
           </div>
 
-          {/* Copyright Section */}
-          <div className="space-y-2">
-            <h3 className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-              &nbsp;
-            </h3>
+          {/* Copyright Section - no heading, aligned with other sections' content */}
+          <div className="pt-6">
             <div className="font-mono text-sm text-muted-foreground space-y-0.5">
               <p>© {currentYear} Volume</p>
               <p className="text-xs text-muted-foreground/80">v{version}</p>
