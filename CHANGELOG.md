@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0](https://github.com/misty-step/volume/compare/v1.3.1...v1.4.0) (2026-01-17)
+
+
+### Features
+
+* add undo to delete operations ([#254](https://github.com/misty-step/volume/issues/254)) ([0d6f119](https://github.com/misty-step/volume/commit/0d6f119b3c86acb94f558e9b9cdae1328d60012b))
+
 ## [1.3.1](https://github.com/misty-step/volume/compare/v1.3.0...v1.3.1) (2026-01-17)
 
 
