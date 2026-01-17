@@ -5,7 +5,7 @@ import { Id } from "../../../convex/_generated/dataModel";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { Exercise, Set, WeightUnit } from "@/types/domain";
-import { ExerciseSetGroup } from "./exercise-set-group";
+import { ExerciseSetGroup, type DeletedSetData } from "./exercise-set-group";
 import { groupSetsByExercise } from "@/lib/exercise-grouping";
 import { motion } from "framer-motion";
 import { motionPresets } from "@/lib/brutalist-motion";
@@ -30,6 +30,8 @@ interface ChronologicalGroupedSetHistoryProps {
   exerciseMap: Map<Id<"exercises">, Exercise>;
   onRepeat: (set: Set) => void;
   onDelete: (setId: Id<"sets">) => void;
+  /** Called when user clicks undo in toast - recreates the deleted set */
+  onUndoDelete?: (setData: DeletedSetData) => void;
   showRepeat?: boolean;
   /** When true, exercise names become links to exercise detail page */
   linkExercises?: boolean;
@@ -49,6 +51,7 @@ export function ChronologicalGroupedSetHistory({
   exerciseMap,
   onRepeat,
   onDelete,
+  onUndoDelete,
   showRepeat = false,
   linkExercises = false,
   preferredUnit: preferredUnitProp,
@@ -152,6 +155,7 @@ export function ChronologicalGroupedSetHistory({
                           preferredUnit={preferredUnit}
                           onRepeat={onRepeat}
                           onDelete={onDelete}
+                          onUndoDelete={onUndoDelete}
                           showRepeat={showRepeat}
                           exerciseHref={
                             linkExercises

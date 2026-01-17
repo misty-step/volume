@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { ChronologicalGroupedSetHistory } from "@/components/dashboard/chronological-grouped-set-history";
+import { type DeletedSetData } from "@/components/dashboard/exercise-set-group";
 import { PageLayout } from "@/components/layout/page-layout";
 import { Button } from "@/components/ui/button";
 import { Id } from "../../../../convex/_generated/dataModel";
@@ -12,6 +13,7 @@ import type { Exercise } from "@/types/domain";
 import { useDayPagedHistory } from "@/hooks/useDayPagedHistory";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { trackEvent } from "@/lib/analytics";
+import { handleMutationError } from "@/lib/error-handler";
 
 export default function HistoryPage() {
   const { unit: preferredUnit } = useWeightUnit();
@@ -33,15 +35,35 @@ export default function HistoryPage() {
     return new Map(exercises.map((ex) => [ex._id, ex]));
   }, [exercises]);
 
-  // Delete mutation
+  // Set mutations
   const deleteSetMutation = useMutation(api.sets.deleteSet);
+  const logSetMutation = useMutation(api.sets.logSet);
 
   // No-op: Repeat functionality not applicable in history view
   const handleRepeat = () => {};
 
   // Handle delete set
   const handleDelete = async (setId: Id<"sets">) => {
-    await deleteSetMutation({ id: setId });
+    try {
+      await deleteSetMutation({ id: setId });
+    } catch (error) {
+      handleMutationError(error, "Delete Set");
+    }
+  };
+
+  // Handle undo delete - recreate the set
+  const handleUndoDelete = async (setData: DeletedSetData) => {
+    try {
+      await logSetMutation({
+        exerciseId: setData.exerciseId,
+        reps: setData.reps,
+        weight: setData.weight,
+        unit: setData.unit,
+        duration: setData.duration,
+      });
+    } catch (error) {
+      handleMutationError(error, "Restore Set");
+    }
   };
 
   // Handle load more with analytics
@@ -106,6 +128,7 @@ export default function HistoryPage() {
         exerciseMap={exerciseMap}
         onRepeat={handleRepeat}
         onDelete={handleDelete}
+        onUndoDelete={handleUndoDelete}
         showRepeat={false}
         linkExercises={true}
         preferredUnit={preferredUnit}

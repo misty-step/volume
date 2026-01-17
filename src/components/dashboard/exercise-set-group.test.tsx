@@ -224,7 +224,12 @@ describe("ExerciseSetGroup", () => {
       fireEvent.click(screen.getByTestId("confirm-delete-btn"));
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith("Set deleted");
+        expect(toast.success).toHaveBeenCalledWith(
+          "Set deleted",
+          expect.objectContaining({
+            duration: 5000,
+          })
+        );
         expect(toast.success).toHaveBeenCalledTimes(1);
       });
     });
@@ -533,7 +538,7 @@ describe("ExerciseSetGroup", () => {
       expect(mockOnDelete).not.toHaveBeenCalled();
     });
 
-    it("shows warning that action cannot be undone", async () => {
+    it("shows undo hint in delete dialog", async () => {
       render(<ExerciseSetGroup {...defaultProps} />);
 
       fireEvent.click(screen.getByText("Bench Press"));
@@ -547,7 +552,9 @@ describe("ExerciseSetGroup", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText("This action cannot be undone.")
+          screen.getByText(
+            "You can undo this action for a few seconds after deletion."
+          )
         ).toBeInTheDocument();
       });
     });
