@@ -150,6 +150,7 @@ export function Dashboard() {
         weight: setData.weight,
         unit: setData.unit,
         duration: setData.duration,
+        performedAt: setData.performedAt,
       });
     } catch (error) {
       handleMutationError(error, "Restore Set");

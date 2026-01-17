@@ -281,6 +281,60 @@ describe("ExerciseSetGroup", () => {
         expect(screen.queryByText("Delete set?")).not.toBeInTheDocument();
       });
     });
+
+    it("calls onUndoDelete with correct data when undo action is triggered", async () => {
+      const mockOnUndoDelete = vi.fn();
+
+      render(
+        <ExerciseSetGroup
+          {...defaultProps}
+          onUndoDelete={mockOnUndoDelete}
+        />
+      );
+
+      // Expand the group
+      fireEvent.click(screen.getByText("Bench Press"));
+
+      // Click delete button
+      await waitFor(() => {
+        expect(
+          screen.getByTestId(`delete-set-btn-${mockSet._id}`)
+        ).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByTestId(`delete-set-btn-${mockSet._id}`));
+
+      // Confirmation dialog should appear
+      await waitFor(() => {
+        expect(screen.getByText("Delete set?")).toBeInTheDocument();
+      });
+
+      // Confirm deletion
+      fireEvent.click(screen.getByTestId("confirm-delete-btn"));
+
+      // Wait for toast to be called
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalled();
+      });
+
+      // Extract the toast call and verify action exists
+      const toastCall = vi.mocked(toast.success).mock.calls[0];
+      const toastOptions = toastCall[1] as { action?: { label: string; onClick: () => void } };
+      expect(toastOptions?.action).toBeDefined();
+      expect(toastOptions?.action?.label).toBe("Undo");
+
+      // Trigger the undo action
+      toastOptions.action?.onClick();
+
+      // Verify onUndoDelete was called with correct set data
+      expect(mockOnUndoDelete).toHaveBeenCalledWith({
+        exerciseId: mockSet.exerciseId,
+        reps: mockSet.reps,
+        weight: mockSet.weight,
+        unit: mockSet.unit,
+        duration: undefined,
+        performedAt: mockSet.performedAt,
+      });
+    });
   });
 
   describe("delete failure path", () => {

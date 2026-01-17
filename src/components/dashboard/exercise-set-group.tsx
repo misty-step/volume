@@ -48,6 +48,7 @@ export interface DeletedSetData {
   weight?: number;
   unit?: string;
   duration?: number;
+  performedAt: number;
 }
 
 interface ExerciseSetGroupProps {
@@ -109,6 +110,7 @@ export function ExerciseSetGroup({
       weight: setToDelete.weight,
       unit: setToDelete.unit,
       duration: setToDelete.duration,
+      performedAt: setToDelete.performedAt,
     };
 
     setDeletingId(setToDelete._id);
@@ -119,7 +121,13 @@ export function ExerciseSetGroup({
         action: onUndoDelete
           ? {
               label: "Undo",
-              onClick: () => onUndoDelete(deletedSetData),
+              onClick: async () => {
+                try {
+                  await onUndoDelete(deletedSetData);
+                } catch {
+                  // Error already handled by parent's handleMutationError
+                }
+              },
             }
           : undefined,
       });
