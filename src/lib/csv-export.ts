@@ -27,39 +27,25 @@ interface ExerciseData {
 
 /**
  * Escape a field value for CSV per RFC 4180.
- * - Wraps in quotes if contains comma, quote, or newline
- * - Doubles internal quotes
+ * Wraps in quotes if contains comma, quote, or newline; doubles internal quotes.
  */
 function escapeCSVField(value: string | number | undefined): string {
-  if (value === undefined || value === null) {
-    return "";
-  }
+  if (value === undefined || value === null) return "";
 
   const str = String(value);
+  const needsEscape = str.includes(",") || str.includes('"') || str.includes("\n");
 
-  // Check if escaping needed
-  if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-    // Double quotes and wrap in quotes
-    return `"${str.replace(/"/g, '""')}"`;
-  }
-
-  return str;
+  return needsEscape ? `"${str.replace(/"/g, '""')}"` : str;
 }
 
-/**
- * Format a timestamp as ISO-8601 date (YYYY-MM-DD).
- */
+/** Format timestamp as ISO-8601 date (YYYY-MM-DD). */
 function formatDate(timestamp: number): string {
-  const date = new Date(timestamp);
-  return date.toISOString().split("T")[0] ?? "";
+  return new Date(timestamp).toISOString().split("T")[0] ?? "";
 }
 
-/**
- * Format a timestamp as 24h time (HH:MM).
- */
+/** Format timestamp as 24h time (HH:MM). */
 function formatTime(timestamp: number): string {
-  const date = new Date(timestamp);
-  return date.toTimeString().slice(0, 5);
+  return new Date(timestamp).toTimeString().slice(0, 5);
 }
 
 /**
@@ -107,12 +93,7 @@ export function generateWorkoutCSV(
   return [headers.join(","), ...rows].join("\n");
 }
 
-/**
- * Trigger browser download of CSV content.
- *
- * @param content - CSV string content
- * @param filename - Download filename (should end in .csv)
- */
+/** Trigger browser download of CSV content. */
 export function downloadCSV(content: string, filename: string): void {
   const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -125,18 +106,14 @@ export function downloadCSV(content: string, filename: string): void {
   document.body.appendChild(link);
   link.click();
 
-  // Cleanup
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
 
-/**
- * Generate default export filename with current date.
- */
+/** Generate default export filename with current date. */
 export function getExportFilename(): string {
-  const date = new Date().toISOString().split("T")[0];
-  return `volume-export-${date}.csv`;
+  return `volume-export-${new Date().toISOString().split("T")[0]}.csv`;
 }
 
-// Export internal function for testing
+// Export for testing
 export { escapeCSVField };

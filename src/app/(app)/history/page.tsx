@@ -83,9 +83,9 @@ export default function HistoryPage() {
     loadMoreDays(7);
   }, [loadMoreDays]);
 
-  // Handle CSV export
+  // Handle CSV export (button disabled when data unavailable)
   const handleExport = useCallback(() => {
-    if (!allSets || !exercises) return;
+    if (!allSets) return;
 
     setIsExporting(true);
     trackEvent("CSV Export Started", { setCount: allSets.length });
@@ -94,17 +94,14 @@ export default function HistoryPage() {
       const csv = generateWorkoutCSV(allSets, exerciseMap);
       const filename = getExportFilename();
       downloadCSV(csv, filename);
-      trackEvent("CSV Export Completed", {
-        setCount: allSets.length,
-        filename,
-      });
+      trackEvent("CSV Export Completed", { setCount: allSets.length, filename });
     } catch (error) {
       trackEvent("CSV Export Failed", { error: String(error) });
       handleMutationError(error, "Export CSV");
     } finally {
       setIsExporting(false);
     }
-  }, [allSets, exercises, exerciseMap]);
+  }, [allSets, exerciseMap]);
 
   // Transform DayGroup[] to format expected by ChronologicalGroupedSetHistory
   const groupedSets = useMemo(() => {
@@ -116,7 +113,8 @@ export default function HistoryPage() {
     }));
   }, [dayGroups]);
 
-  // Export button component (reused in multiple states)
+  // Export button (reused in loading/empty/ready states)
+  const ExportIcon = isExporting ? Loader2 : Download;
   const exportButton = (
     <Button
       onClick={handleExport}
@@ -125,11 +123,7 @@ export default function HistoryPage() {
       variant="outline"
       className="gap-2"
     >
-      {isExporting ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <Download className="h-4 w-4" />
-      )}
+      <ExportIcon className={`h-4 w-4 ${isExporting ? "animate-spin" : ""}`} />
       {isExporting ? "Exporting..." : "Export CSV"}
     </Button>
   );

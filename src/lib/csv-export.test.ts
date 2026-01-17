@@ -190,15 +190,7 @@ describe("generateWorkoutCSV", () => {
   });
 });
 
-describe("downloadCSV", () => {
-  // Skip browser-dependent tests in jsdom
-  // downloadCSV is tested manually via browser integration
-
-  it.skip("creates download link and triggers download", () => {
-    // Browser integration test - URL.createObjectURL not available in jsdom
-    // Manual testing: verify download works in Chrome, Safari, Firefox, mobile Safari
-  });
-});
+// downloadCSV: browser-only, tested manually in Chrome/Safari/Firefox
 
 describe("getExportFilename", () => {
   it("generates filename with current date", () => {
