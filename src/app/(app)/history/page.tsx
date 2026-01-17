@@ -35,7 +35,8 @@ export default function HistoryPage() {
   // Fetch all sets for export (separate from paginated display)
   const allSets = useQuery(api.sets.listSets, {});
 
-  // Build exercise Map for O(1) lookups
+  // Build exercise Map for O(1) lookups in history display
+  // Note: csv-export builds its own Map internally - this is only for ChronologicalGroupedSetHistory
   const exerciseMap: Map<Id<"exercises">, Exercise> = useMemo(() => {
     if (!exercises) return new Map();
     return new Map(exercises.map((ex) => [ex._id, ex]));
@@ -44,9 +45,6 @@ export default function HistoryPage() {
   // Set mutations
   const deleteSetMutation = useMutation(api.sets.deleteSet);
   const logSetMutation = useMutation(api.sets.logSet);
-
-  // No-op: Repeat functionality not applicable in history view
-  const handleRepeat = () => {};
 
   // Handle delete set
   const handleDelete = async (setId: Id<"sets">) => {
@@ -79,15 +77,15 @@ export default function HistoryPage() {
     loadMoreDays(7);
   }, [loadMoreDays]);
 
-  // Handle CSV export (button disabled when data unavailable)
+  // Handle CSV export - passes arrays, module builds internal structures
   const handleExport = useCallback(() => {
-    if (!allSets) return;
+    if (!allSets || !exercises) return;
 
     setIsExporting(true);
     trackEvent("CSV Export Started", { setCount: allSets.length });
 
     try {
-      exportWorkoutData(allSets, exerciseMap);
+      exportWorkoutData(allSets, exercises);
       trackEvent("CSV Export Completed", { setCount: allSets.length, filename: "volume-export" });
     } catch (error) {
       trackEvent("CSV Export Failed", { error: String(error) });
@@ -95,7 +93,7 @@ export default function HistoryPage() {
     } finally {
       setIsExporting(false);
     }
-  }, [allSets, exerciseMap]);
+  }, [allSets, exercises]);
 
   // Transform DayGroup[] to format expected by ChronologicalGroupedSetHistory
   const groupedSets = useMemo(() => {
@@ -107,8 +105,6 @@ export default function HistoryPage() {
     }));
   }, [dayGroups]);
 
-  // Export button (reused in loading/empty/ready states)
-  const ExportIcon = isExporting ? Loader2 : Download;
   const exportButton = (
     <Button
       onClick={handleExport}
@@ -117,7 +113,11 @@ export default function HistoryPage() {
       variant="outline"
       className="gap-2"
     >
-      <ExportIcon className={`h-4 w-4 ${isExporting ? "animate-spin" : ""}`} />
+      {isExporting ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Download className="h-4 w-4" />
+      )}
       {isExporting ? "Exporting..." : "Export CSV"}
     </Button>
   );
@@ -179,7 +179,7 @@ export default function HistoryPage() {
       <ChronologicalGroupedSetHistory
         groupedSets={groupedSets}
         exerciseMap={exerciseMap}
-        onRepeat={handleRepeat}
+        onRepeat={() => {}}
         onDelete={handleDelete}
         onUndoDelete={handleUndoDelete}
         showRepeat={false}

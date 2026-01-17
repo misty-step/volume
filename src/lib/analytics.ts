@@ -180,31 +180,12 @@ function sanitizeEventProperties(
  *
  * Respects explicit enable/disable flags and auto-disables in dev/test
  * environments to avoid polluting production analytics.
- *
- * @returns true if analytics should track events
  */
 function isAnalyticsEnabled(): boolean {
-  // Explicit disable flag
-  if (process.env.NEXT_PUBLIC_DISABLE_ANALYTICS === "true") {
-    return false;
-  }
-
-  // Explicit enable flag (overrides environment checks)
-  if (process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true") {
-    return true;
-  }
-
-  // Auto-disable in test environment
-  if (process.env.NODE_ENV === "test") {
-    return false;
-  }
-
-  // Auto-disable in development
-  if (process.env.NODE_ENV === "development") {
-    return false;
-  }
-
-  // Default: enabled (production)
+  if (process.env.NEXT_PUBLIC_DISABLE_ANALYTICS === "true") return false;
+  if (process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true") return true;
+  if (process.env.NODE_ENV === "test") return false;
+  if (process.env.NODE_ENV === "development") return false;
   return true;
 }
 
@@ -478,27 +459,3 @@ export function reportError(
   }
 }
 
-/**
- * PUBLIC API EXPORTS
- *
- * Deep module design: Simple interface, complex implementation.
- *
- * Exported functions:
- * - trackEvent() - Type-safe analytics tracking (client + server)
- * - reportError() - PII-safe error reporting to Sentry
- * - setUserContext() - Enrich events with user identity
- * - clearUserContext() - Remove user identity on logout
- *
- * Exported types:
- * - AnalyticsEventDefinitions - Event catalog with typed properties
- * - AnalyticsEventName - Union of valid event names
- * - AnalyticsEventProperties<Name> - Type-safe properties for event
- *
- * Internal (not exported):
- * - sanitizeString() - Email redaction helper
- * - sanitizeEventProperties() - Recursive PII sanitization
- * - isAnalyticsEnabled() - Environment detection
- * - isSentryEnabled() - Sentry-specific enable check
- * - loadServerTrack() - Dynamic server track loader
- * - withUserContext() - User context merger
- */

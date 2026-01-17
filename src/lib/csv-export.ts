@@ -1,3 +1,4 @@
+import type { Set, Exercise } from "@/types/domain";
 import type { Id } from "../../convex/_generated/dataModel";
 
 /**
@@ -7,45 +8,58 @@ import type { Id } from "../../convex/_generated/dataModel";
  * - RFC 4180 escaping (commas, quotes, newlines)
  * - Date/time formatting
  * - Chronological sorting
+ * - Exercise lookup (Map built internally)
  * - Blob URL lifecycle + browser download trigger
+ *
+ * Interface: exportWorkoutData(sets, exercises, options?)
+ * Hidden: escaping, formatting, sorting, Map construction, download trigger
  */
-
-interface SetData {
-  _id: Id<"sets">;
-  exerciseId: Id<"exercises">;
-  performedAt: number;
-  reps?: number;
-  weight?: number;
-  unit?: string;
-  duration?: number;
-}
-
-interface ExerciseData {
-  _id: Id<"exercises">;
-  name: string;
-  muscleGroups?: string[];
-}
 
 /**
  * Export workout data as CSV file download.
  *
- * @param sets - Array of set records
- * @param exerciseMap - Map of exercise ID to exercise data for O(1) lookups
+ * Builds internal lookup structures; callers need only provide raw arrays.
+ *
+ * @param sets - Array of set records from Convex
+ * @param exercises - Array of exercise records (Map built internally for O(1) lookup)
  * @param options - Optional filename override
  */
 export function exportWorkoutData(
-  sets: SetData[],
-  exerciseMap: Map<Id<"exercises">, ExerciseData>,
+  sets: Set[],
+  exercises: Exercise[],
   options?: { filename?: string }
 ): void {
+  // Build exercise lookup internally - callers don't need to know the strategy
+  const exerciseMap = buildExerciseMap(exercises);
   const csv = generateWorkoutCSV(sets, exerciseMap);
-  const filename = options?.filename ?? getDefaultFilename();
-  triggerDownload(csv, filename);
+  const filename = options?.filename ?? generateDefaultFilename();
+  triggerBrowserDownload(csv, filename);
+}
+
+/**
+ * Generate CSV string from workout data.
+ *
+ * Exported for testing. In production, use exportWorkoutData() which
+ * handles the full pipeline including download trigger.
+ */
+export function generateCSV(sets: Set[], exercises: Exercise[]): string {
+  const exerciseMap = buildExerciseMap(exercises);
+  return generateWorkoutCSV(sets, exerciseMap);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Internal implementation - not exported
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Build exercise ID -> Exercise Map for O(1) lookups. */
+function buildExerciseMap(exercises: Exercise[]): Map<Id<"exercises">, Exercise> {
+  return new Map(exercises.map((ex) => [ex._id, ex]));
 }
 
 /** Generate default export filename with current date. */
-function getDefaultFilename(): string {
-  return `volume-export-${new Date().toISOString().split("T")[0]}.csv`;
+function generateDefaultFilename(): string {
+  const dateStr = new Date().toISOString().split("T")[0];
+  return "volume-export-" + dateStr + ".csv";
 }
 
 /**
@@ -58,7 +72,8 @@ function escapeCSVField(value: string | number | undefined): string {
   const str = String(value);
   const needsEscape = str.includes(",") || str.includes('"') || str.includes("\n");
 
-  return needsEscape ? `"${str.replace(/"/g, '""')}"` : str;
+  if (!needsEscape) return str;
+  return '"' + str.replace(/"/g, '""') + '"';
 }
 
 /** Format timestamp as ISO-8601 date (YYYY-MM-DD). */
@@ -73,8 +88,8 @@ function formatTime(timestamp: number): string {
 
 /** Generate CSV content from workout sets and exercises. */
 function generateWorkoutCSV(
-  sets: SetData[],
-  exerciseMap: Map<Id<"exercises">, ExerciseData>
+  sets: Set[],
+  exerciseMap: Map<Id<"exercises">, Exercise>
 ): string {
   const headers = [
     "date",
@@ -111,7 +126,7 @@ function generateWorkoutCSV(
 }
 
 /** Trigger browser download of CSV content. */
-function triggerDownload(content: string, filename: string): void {
+function triggerBrowserDownload(content: string, filename: string): void {
   const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
 
@@ -126,6 +141,3 @@ function triggerDownload(content: string, filename: string): void {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
-
-// Export internal functions for testing only
-export { escapeCSVField, generateWorkoutCSV, getDefaultFilename };
