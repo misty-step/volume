@@ -40,6 +40,13 @@
 - [ ] Check Stripe Dashboard for test events
 - [ ] Test subscription cancellation/billing portal
 
+### External Integration Deployment (if modifying Stripe, Clerk, OpenAI, etc.)
+
+- [ ] Verify env vars exist on **production** Convex: `./scripts/verify-env.sh --prod-only`
+- [ ] Test against real API (not mocks) in test/sandbox mode
+- [ ] Check API documentation for parameter constraints TypeScript can't enforce
+- [ ] Verify webhook endpoint is registered and receiving events
+
 ## Test Results
 
 - [ ] `pnpm test` passes

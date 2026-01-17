@@ -79,6 +79,16 @@ pre-push:
       only:
         - ref: master
 
+    # === Production Environment Verification ===
+    verify-prod-env:
+      run: ./scripts/verify-env.sh --prod-only --quiet
+      fail_text: |
+        ❌ Production environment variables missing!
+        Run './scripts/verify-env.sh --prod-only' for details.
+        See CLAUDE.md 'Debugging External Integrations' for fix instructions.
+      only:
+        - ref: master
+
 # Post-checkout Convex type regeneration
 post-checkout:
   commands:
