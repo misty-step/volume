@@ -55,7 +55,7 @@ commit-msg:
 
 # Comprehensive quality gates (full verification)
 pre-push:
-  parallel: true
+  parallel: false # Changed: build-check and bundle-analysis conflict on .next/lock
   commands:
     # === Test Suite (Correctness) ===
     test-suite:
