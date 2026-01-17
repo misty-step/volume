@@ -9,6 +9,10 @@ export const dynamic = "force-dynamic";
  * Returns application health status for external monitoring services
  * like UptimeRobot, BetterUptime, or Pingdom.
  *
+ * Checks:
+ * - Convex: Backend connectivity
+ * - Stripe: Payment configuration (checkout and pricing)
+ *
  * @returns 200 with health status when healthy, 503 when unhealthy
  */
 export async function GET() {
@@ -19,7 +23,13 @@ export async function GET() {
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
   const convexHealthy = Boolean(convexUrl);
 
-  const isHealthy = convexHealthy;
+  // Check Stripe configuration (all required for checkout flow)
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  const monthlyPriceId = process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID;
+  const annualPriceId = process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID;
+  const stripeHealthy = Boolean(stripeSecretKey && monthlyPriceId && annualPriceId);
+
+  const isHealthy = convexHealthy && stripeHealthy;
 
   const response = {
     status: isHealthy ? "pass" : "fail",
@@ -27,6 +37,19 @@ export async function GET() {
     version,
     checks: {
       convex: { status: convexHealthy ? "pass" : "fail" },
+      stripe: {
+        status: stripeHealthy ? "pass" : "fail",
+        // Only expose missing config names, never values
+        ...(stripeHealthy
+          ? {}
+          : {
+              missing: [
+                !stripeSecretKey && "STRIPE_SECRET_KEY",
+                !monthlyPriceId && "NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID",
+                !annualPriceId && "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID",
+              ].filter(Boolean),
+            }),
+      },
     },
   };
 
