@@ -10,6 +10,7 @@ import {
   QuickLogFormHandle,
 } from "@/components/dashboard/quick-log-form";
 import { GroupedSetHistory } from "@/components/dashboard/grouped-set-history";
+import { type DeletedSetData } from "@/components/dashboard/exercise-set-group";
 import { FirstRunExperience } from "@/components/dashboard/first-run-experience";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
@@ -71,8 +72,9 @@ export function Dashboard() {
     }
   }, [authReady, todaysSets, exercises, isHydrated]);
 
-  // Delete set mutation
+  // Set mutations
   const deleteSet = useMutation(api.sets.deleteSet);
+  const logSet = useMutation(api.sets.logSet);
 
   // Group today's sets by exercise for workout view
   const exerciseGroups = useMemo(
@@ -130,12 +132,28 @@ export function Dashboard() {
     }, 100);
   };
 
-  // Handle undo - delete the set (called from toast action)
+  // Handle undo - delete the set (called from toast action when undoing a create)
   const handleUndo = async (setId: Id<"sets">) => {
     try {
       await deleteSet({ id: setId });
     } catch (error) {
       handleMutationError(error, "Undo Set");
+    }
+  };
+
+  // Handle undo delete - recreate the set (called from toast action when undoing a delete)
+  const handleUndoDelete = async (setData: DeletedSetData) => {
+    try {
+      await logSet({
+        exerciseId: setData.exerciseId,
+        reps: setData.reps,
+        weight: setData.weight,
+        unit: setData.unit,
+        duration: setData.duration,
+        performedAt: setData.performedAt,
+      });
+    } catch (error) {
+      handleMutationError(error, "Restore Set");
     }
   };
 
@@ -199,6 +217,7 @@ export function Dashboard() {
                 exerciseMap={exerciseMap}
                 onRepeat={handleRepeatSet}
                 onDelete={handleDeleteSet}
+                onUndoDelete={handleUndoDelete}
                 isLoading={!isHydrated}
                 isMobile={isMobile}
               />
@@ -312,6 +331,7 @@ export function Dashboard() {
                 exerciseMap={exerciseMap}
                 onRepeat={handleRepeatSet}
                 onDelete={handleDeleteSet}
+                onUndoDelete={handleUndoDelete}
                 isLoading={!isHydrated}
               />
             </motion.div>

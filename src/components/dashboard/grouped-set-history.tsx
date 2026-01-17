@@ -7,7 +7,7 @@ import { BrutalistCard } from "@/components/brutalist";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import type { ExerciseGroup } from "@/lib/exercise-grouping";
 import { Exercise, Set as WorkoutSet } from "@/types/domain";
-import { ExerciseSetGroup } from "./exercise-set-group";
+import { ExerciseSetGroup, type DeletedSetData } from "./exercise-set-group";
 import { Dumbbell } from "lucide-react";
 
 interface GroupedSetHistoryProps {
@@ -15,6 +15,8 @@ interface GroupedSetHistoryProps {
   exerciseMap: Map<Id<"exercises">, Exercise>;
   onRepeat: (set: WorkoutSet) => void;
   onDelete: (setId: Id<"sets">) => void;
+  /** Called when user clicks undo in toast - recreates the deleted set */
+  onUndoDelete?: (setData: DeletedSetData) => void;
   isLoading?: boolean;
   /** Mobile layout: form is below, so empty state points down */
   isMobile?: boolean;
@@ -29,6 +31,7 @@ export const GroupedSetHistory = forwardRef<
     exerciseMap,
     onRepeat,
     onDelete,
+    onUndoDelete,
     isLoading = false,
     isMobile = false,
   },
@@ -135,6 +138,7 @@ export const GroupedSetHistory = forwardRef<
               preferredUnit={preferredUnit}
               onRepeat={onRepeat}
               onDelete={onDelete}
+              onUndoDelete={onUndoDelete}
             />
           </motion.div>
         );

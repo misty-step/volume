@@ -224,7 +224,12 @@ describe("ExerciseSetGroup", () => {
       fireEvent.click(screen.getByTestId("confirm-delete-btn"));
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith("Set deleted");
+        expect(toast.success).toHaveBeenCalledWith(
+          "Set deleted",
+          expect.objectContaining({
+            duration: 5000,
+          })
+        );
         expect(toast.success).toHaveBeenCalledTimes(1);
       });
     });
@@ -274,6 +279,60 @@ describe("ExerciseSetGroup", () => {
 
       await waitFor(() => {
         expect(screen.queryByText("Delete set?")).not.toBeInTheDocument();
+      });
+    });
+
+    it("calls onUndoDelete with correct data when undo action is triggered", async () => {
+      const mockOnUndoDelete = vi.fn();
+
+      render(
+        <ExerciseSetGroup
+          {...defaultProps}
+          onUndoDelete={mockOnUndoDelete}
+        />
+      );
+
+      // Expand the group
+      fireEvent.click(screen.getByText("Bench Press"));
+
+      // Click delete button
+      await waitFor(() => {
+        expect(
+          screen.getByTestId(`delete-set-btn-${mockSet._id}`)
+        ).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByTestId(`delete-set-btn-${mockSet._id}`));
+
+      // Confirmation dialog should appear
+      await waitFor(() => {
+        expect(screen.getByText("Delete set?")).toBeInTheDocument();
+      });
+
+      // Confirm deletion
+      fireEvent.click(screen.getByTestId("confirm-delete-btn"));
+
+      // Wait for toast to be called
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalled();
+      });
+
+      // Extract the toast call and verify action exists
+      const toastCall = vi.mocked(toast.success).mock.calls[0];
+      const toastOptions = toastCall[1] as { action?: { label: string; onClick: () => void } };
+      expect(toastOptions?.action).toBeDefined();
+      expect(toastOptions?.action?.label).toBe("Undo");
+
+      // Trigger the undo action
+      toastOptions.action?.onClick();
+
+      // Verify onUndoDelete was called with correct set data
+      expect(mockOnUndoDelete).toHaveBeenCalledWith({
+        exerciseId: mockSet.exerciseId,
+        reps: mockSet.reps,
+        weight: mockSet.weight,
+        unit: mockSet.unit,
+        duration: undefined,
+        performedAt: mockSet.performedAt,
       });
     });
   });
@@ -533,7 +592,7 @@ describe("ExerciseSetGroup", () => {
       expect(mockOnDelete).not.toHaveBeenCalled();
     });
 
-    it("shows warning that action cannot be undone", async () => {
+    it("shows undo hint in delete dialog", async () => {
       render(<ExerciseSetGroup {...defaultProps} />);
 
       fireEvent.click(screen.getByText("Bench Press"));
@@ -547,7 +606,9 @@ describe("ExerciseSetGroup", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText("This action cannot be undone.")
+          screen.getByText(
+            "You can undo this action for a few seconds after deletion."
+          )
         ).toBeInTheDocument();
       });
     });

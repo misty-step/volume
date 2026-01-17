@@ -18,6 +18,7 @@ export const logSet = mutation({
     weight: v.optional(v.number()),
     unit: v.optional(v.string()), // "lbs" or "kg" - required when weight is provided
     duration: v.optional(v.number()), // Duration in seconds for time-based exercises
+    performedAt: v.optional(v.number()), // Optional timestamp for undo operations
   },
   handler: async (ctx, args) => {
     const identity = await requireAuth(ctx);
@@ -67,7 +68,7 @@ export const logSet = mutation({
       weight, // Use validated/rounded weight
       unit: args.unit, // Store the unit with the set for data integrity
       duration, // Store duration in seconds for time-based exercises
-      performedAt: Date.now(),
+      performedAt: args.performedAt ?? Date.now(),
     });
 
     return setId;

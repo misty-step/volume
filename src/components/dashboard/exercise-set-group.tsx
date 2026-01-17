@@ -41,6 +41,16 @@ import type { ExerciseSession } from "@/lib/exercise-insights";
 import { PRBadge } from "./pr-badge";
 import { History } from "lucide-react";
 
+/** Data needed to recreate a deleted set */
+export interface DeletedSetData {
+  exerciseId: Id<"exercises">;
+  reps?: number;
+  weight?: number;
+  unit?: string;
+  duration?: number;
+  performedAt: number;
+}
+
 interface ExerciseSetGroupProps {
   exercise: Exercise;
   sets: WorkoutSet[];
@@ -48,6 +58,8 @@ interface ExerciseSetGroupProps {
   preferredUnit: WeightUnit;
   onRepeat: (set: WorkoutSet) => void;
   onDelete: (setId: Id<"sets">) => void;
+  /** Called when user clicks undo in toast - recreates the deleted set */
+  onUndoDelete?: (setData: DeletedSetData) => void;
   showRepeat?: boolean;
   /** Optional URL for exercise detail page (makes exercise name a link) */
   exerciseHref?: string;
@@ -60,6 +72,7 @@ export function ExerciseSetGroup({
   preferredUnit,
   onRepeat,
   onDelete,
+  onUndoDelete,
   showRepeat = true,
   exerciseHref,
 }: ExerciseSetGroupProps) {
@@ -90,10 +103,34 @@ export function ExerciseSetGroup({
   const confirmDelete = async () => {
     if (!setToDelete) return;
 
+    // Capture set data for undo before deletion
+    const deletedSetData: DeletedSetData = {
+      exerciseId: setToDelete.exerciseId,
+      reps: setToDelete.reps,
+      weight: setToDelete.weight,
+      unit: setToDelete.unit,
+      duration: setToDelete.duration,
+      performedAt: setToDelete.performedAt,
+    };
+
     setDeletingId(setToDelete._id);
     try {
       await onDelete(setToDelete._id);
-      toast.success("Set deleted");
+      toast.success("Set deleted", {
+        duration: 5000,
+        action: onUndoDelete
+          ? {
+              label: "Undo",
+              onClick: async () => {
+                try {
+                  await onUndoDelete(deletedSetData);
+                } catch {
+                  // Error already handled by parent's handleMutationError
+                }
+              },
+            }
+          : undefined,
+      });
       setSetToDelete(null);
       setDeletingId(null);
     } catch (error) {
@@ -373,7 +410,7 @@ export function ExerciseSetGroup({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete set?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone.
+              You can undo this action for a few seconds after deletion.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
