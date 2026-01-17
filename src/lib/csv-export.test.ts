@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   generateWorkoutCSV,
-  getExportFilename,
+  getDefaultFilename,
   escapeCSVField,
 } from "./csv-export";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -192,15 +192,15 @@ describe("generateWorkoutCSV", () => {
 
 // downloadCSV: browser-only, tested manually in Chrome/Safari/Firefox
 
-describe("getExportFilename", () => {
+describe("getDefaultFilename", () => {
   it("generates filename with current date", () => {
-    const filename = getExportFilename();
+    const filename = getDefaultFilename();
 
     expect(filename).toMatch(/^volume-export-\d{4}-\d{2}-\d{2}\.csv$/);
   });
 
   it("uses ISO date format (YYYY-MM-DD)", () => {
-    const filename = getExportFilename();
+    const filename = getDefaultFilename();
     const dateMatch = filename.match(/(\d{4}-\d{2}-\d{2})/);
 
     expect(dateMatch).not.toBeNull();

@@ -1,12 +1,13 @@
 import type { Id } from "../../convex/_generated/dataModel";
 
 /**
- * CSV Export utilities for workout data.
+ * CSV Export for workout data.
  *
- * Deep module: simple interface (2 functions), handles all RFC 4180 edge cases internally.
- * - Escaping: commas, quotes, newlines
- * - Formatting: dates, times, empty fields
- * - Download: Blob URL creation and cleanup
+ * Deep module: single `exportWorkoutData` function hides all complexity:
+ * - RFC 4180 escaping (commas, quotes, newlines)
+ * - Date/time formatting
+ * - Chronological sorting
+ * - Blob URL lifecycle + browser download trigger
  */
 
 interface SetData {
@@ -23,6 +24,28 @@ interface ExerciseData {
   _id: Id<"exercises">;
   name: string;
   muscleGroups?: string[];
+}
+
+/**
+ * Export workout data as CSV file download.
+ *
+ * @param sets - Array of set records
+ * @param exerciseMap - Map of exercise ID to exercise data for O(1) lookups
+ * @param options - Optional filename override
+ */
+export function exportWorkoutData(
+  sets: SetData[],
+  exerciseMap: Map<Id<"exercises">, ExerciseData>,
+  options?: { filename?: string }
+): void {
+  const csv = generateWorkoutCSV(sets, exerciseMap);
+  const filename = options?.filename ?? getDefaultFilename();
+  triggerDownload(csv, filename);
+}
+
+/** Generate default export filename with current date. */
+function getDefaultFilename(): string {
+  return `volume-export-${new Date().toISOString().split("T")[0]}.csv`;
 }
 
 /**
@@ -48,14 +71,8 @@ function formatTime(timestamp: number): string {
   return new Date(timestamp).toTimeString().slice(0, 5);
 }
 
-/**
- * Generate CSV content from workout sets and exercises.
- *
- * @param sets - Array of set records
- * @param exerciseMap - Map of exercise ID to exercise data for O(1) lookups
- * @returns CSV string with headers and data rows
- */
-export function generateWorkoutCSV(
+/** Generate CSV content from workout sets and exercises. */
+function generateWorkoutCSV(
   sets: SetData[],
   exerciseMap: Map<Id<"exercises">, ExerciseData>
 ): string {
@@ -94,7 +111,7 @@ export function generateWorkoutCSV(
 }
 
 /** Trigger browser download of CSV content. */
-export function downloadCSV(content: string, filename: string): void {
+function triggerDownload(content: string, filename: string): void {
   const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
 
@@ -110,10 +127,5 @@ export function downloadCSV(content: string, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-/** Generate default export filename with current date. */
-export function getExportFilename(): string {
-  return `volume-export-${new Date().toISOString().split("T")[0]}.csv`;
-}
-
-// Export for testing
-export { escapeCSVField };
+// Export internal functions for testing only
+export { escapeCSVField, generateWorkoutCSV, getDefaultFilename };

@@ -15,11 +15,7 @@ import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { trackEvent } from "@/lib/analytics";
 import { handleMutationError } from "@/lib/error-handler";
 import { Download, Loader2 } from "lucide-react";
-import {
-  generateWorkoutCSV,
-  downloadCSV,
-  getExportFilename,
-} from "@/lib/csv-export";
+import { exportWorkoutData } from "@/lib/csv-export";
 
 export default function HistoryPage() {
   const { unit: preferredUnit } = useWeightUnit();
@@ -91,10 +87,8 @@ export default function HistoryPage() {
     trackEvent("CSV Export Started", { setCount: allSets.length });
 
     try {
-      const csv = generateWorkoutCSV(allSets, exerciseMap);
-      const filename = getExportFilename();
-      downloadCSV(csv, filename);
-      trackEvent("CSV Export Completed", { setCount: allSets.length, filename });
+      exportWorkoutData(allSets, exerciseMap);
+      trackEvent("CSV Export Completed", { setCount: allSets.length, filename: "volume-export" });
     } catch (error) {
       trackEvent("CSV Export Failed", { error: String(error) });
       handleMutationError(error, "Export CSV");
