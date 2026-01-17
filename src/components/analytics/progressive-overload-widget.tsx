@@ -241,7 +241,9 @@ export function ProgressiveOverloadWidget({
                         textTransform: "uppercase",
                         fontSize: "10px",
                       }}
-                      formatter={(value: number, name: string) => {
+                      formatter={(value, name) => {
+                        if (value === undefined || typeof value !== "number")
+                          return null;
                         if (name === "weight") {
                           return value > 0
                             ? [`${value} lbs`, "Max Weight"]
