@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -14,9 +14,16 @@ import { useDayPagedHistory } from "@/hooks/useDayPagedHistory";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { trackEvent } from "@/lib/analytics";
 import { handleMutationError } from "@/lib/error-handler";
+import { Download, Loader2 } from "lucide-react";
+import {
+  generateWorkoutCSV,
+  downloadCSV,
+  getExportFilename,
+} from "@/lib/csv-export";
 
 export default function HistoryPage() {
   const { unit: preferredUnit } = useWeightUnit();
+  const [isExporting, setIsExporting] = useState(false);
 
   // Use day-paged history hook for day-first pagination
   const { dayGroups, status, loadMoreDays, canLoadMore } = useDayPagedHistory({
@@ -28,6 +35,9 @@ export default function HistoryPage() {
   const exercises = useQuery(api.exercises.listExercises, {
     includeDeleted: true,
   });
+
+  // Fetch all sets for export (separate from paginated display)
+  const allSets = useQuery(api.sets.listSets, {});
 
   // Build exercise Map for O(1) lookups
   const exerciseMap: Map<Id<"exercises">, Exercise> = useMemo(() => {
@@ -73,6 +83,29 @@ export default function HistoryPage() {
     loadMoreDays(7);
   }, [loadMoreDays]);
 
+  // Handle CSV export
+  const handleExport = useCallback(() => {
+    if (!allSets || !exercises) return;
+
+    setIsExporting(true);
+    trackEvent("CSV Export Started", { setCount: allSets.length });
+
+    try {
+      const csv = generateWorkoutCSV(allSets, exerciseMap);
+      const filename = getExportFilename();
+      downloadCSV(csv, filename);
+      trackEvent("CSV Export Completed", {
+        setCount: allSets.length,
+        filename,
+      });
+    } catch (error) {
+      trackEvent("CSV Export Failed", { error: String(error) });
+      handleMutationError(error, "Export CSV");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [allSets, exercises, exerciseMap]);
+
   // Transform DayGroup[] to format expected by ChronologicalGroupedSetHistory
   const groupedSets = useMemo(() => {
     return dayGroups.map((day) => ({
@@ -83,10 +116,32 @@ export default function HistoryPage() {
     }));
   }, [dayGroups]);
 
+  // Export button component (reused in multiple states)
+  const exportButton = (
+    <Button
+      onClick={handleExport}
+      disabled={isExporting || !allSets || !exercises}
+      size="sm"
+      variant="outline"
+      className="gap-2"
+    >
+      {isExporting ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Download className="h-4 w-4" />
+      )}
+      {isExporting ? "Exporting..." : "Export CSV"}
+    </Button>
+  );
+
   // Loading state (first page) - Brutalist skeleton
   if (status === "loading") {
     return (
-      <PageLayout title="Workout History">
+      <PageLayout>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold tracking-tight">Workout History</h1>
+          {exportButton}
+        </div>
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="border-3 border-border p-4 animate-pulse">
@@ -105,7 +160,11 @@ export default function HistoryPage() {
   // Empty state
   if (dayGroups.length === 0) {
     return (
-      <PageLayout title="Workout History">
+      <PageLayout>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold tracking-tight">Workout History</h1>
+          {exportButton}
+        </div>
         <div className="border-3 border-border p-12 text-center">
           <p className="text-muted-foreground text-sm mb-2 font-mono uppercase tracking-wide">
             No workout history yet
@@ -123,7 +182,12 @@ export default function HistoryPage() {
   }
 
   return (
-    <PageLayout title="Workout History">
+    <PageLayout>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold tracking-tight">Workout History</h1>
+        {exportButton}
+      </div>
+
       <ChronologicalGroupedSetHistory
         groupedSets={groupedSets}
         exerciseMap={exerciseMap}

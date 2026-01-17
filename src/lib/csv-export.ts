@@ -51,7 +51,7 @@ function escapeCSVField(value: string | number | undefined): string {
  */
 function formatDate(timestamp: number): string {
   const date = new Date(timestamp);
-  return date.toISOString().split("T")[0];
+  return date.toISOString().split("T")[0] ?? "";
 }
 
 /**

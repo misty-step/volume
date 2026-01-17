@@ -62,6 +62,20 @@ export interface AnalyticsEventDefinitions {
     exerciseId: string;
     userId?: string;
   };
+  // CSV Export events
+  "CSV Export Started": {
+    setCount: number;
+    userId?: string;
+  };
+  "CSV Export Completed": {
+    setCount: number;
+    filename: string;
+    userId?: string;
+  };
+  "CSV Export Failed": {
+    error: string;
+    userId?: string;
+  };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventDefinitions;
