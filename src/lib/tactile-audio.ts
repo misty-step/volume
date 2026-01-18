@@ -1,38 +1,23 @@
 /**
  * Tactile Audio Engine
  *
- * Singleton module for managing tactile sound feedback.
- * Handles AudioContext lifecycle, buffer caching, and playback.
- *
- * Key design decisions:
- * - Singleton pattern prevents AudioContext limit (6-10 max per page)
- * - Lazy initialization on first user gesture (required by browsers)
- * - Buffer caching for instant playback
+ * Singleton for tactile sound feedback. Uses AudioContext with lazy init
+ * (required by browsers - must init on user gesture). Buffer is cached
+ * for instant playback.
  */
 
-// Singleton state
 let audioContext: AudioContext | null = null;
 let audioBuffer: AudioBuffer | null = null;
 let isInitialized = false;
-
-// Sound data (will be set by init)
 let soundDataUri: string | null = null;
 
-/**
- * Set the sound data URI (Base64 encoded audio)
- * Call this once at app startup
- */
+/** Set the sound data URI (Base64 encoded audio). Call once at app startup. */
 export function setSoundData(dataUri: string): void {
   soundDataUri = dataUri;
 }
 
-/**
- * Initialize audio context and decode buffer
- * Must be called from a user gesture handler
- */
-export async function initAudio(): Promise<boolean> {
+async function initAudio(): Promise<boolean> {
   if (isInitialized && audioContext && audioBuffer) {
-    // Resume if suspended (e.g., after screen lock)
     if (audioContext.state === "suspended") {
       await audioContext.resume();
     }
@@ -45,7 +30,6 @@ export async function initAudio(): Promise<boolean> {
   }
 
   try {
-    // Create AudioContext (with webkit fallback for older Safari)
     const AudioContextClass =
       window.AudioContext ||
       (window as typeof window & { webkitAudioContext?: typeof AudioContext })
@@ -58,12 +42,10 @@ export async function initAudio(): Promise<boolean> {
 
     audioContext = new AudioContextClass();
 
-    // Resume if created in suspended state
     if (audioContext.state === "suspended") {
       await audioContext.resume();
     }
 
-    // Decode the Base64 sound data
     const base64Data = soundDataUri.split(",")[1];
     if (!base64Data) {
       console.warn("Tactile audio: Invalid sound data URI format");
@@ -84,12 +66,8 @@ export async function initAudio(): Promise<boolean> {
   }
 }
 
-/**
- * Play the tactile click sound
- * Safe to call even if audio not initialized - will attempt lazy init
- */
+/** Play the tactile click sound. Handles lazy init if needed. */
 export async function playTactileSound(): Promise<void> {
-  // Attempt initialization if not done
   if (!isInitialized) {
     const success = await initAudio();
     if (!success) return;
@@ -98,12 +76,10 @@ export async function playTactileSound(): Promise<void> {
   if (!audioContext || !audioBuffer) return;
 
   try {
-    // Resume context if suspended
     if (audioContext.state === "suspended") {
       await audioContext.resume();
     }
 
-    // Create a new buffer source for each play (required by Web Audio API)
     const source = audioContext.createBufferSource();
     source.buffer = audioBuffer;
     source.connect(audioContext.destination);
@@ -111,11 +87,4 @@ export async function playTactileSound(): Promise<void> {
   } catch (error) {
     console.warn("Tactile audio: Playback failed", error);
   }
-}
-
-/**
- * Check if audio is ready to play
- */
-export function isAudioReady(): boolean {
-  return isInitialized && audioContext !== null && audioBuffer !== null;
 }

@@ -66,10 +66,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
 
     const { unit } = useWeightUnit();
 
-    // Tactile feedback for button press
-    const { triggerTactile, animationControls } = useTactileFeedback({
-      disabled: false,
-    });
+    const { triggerTactile, animationControls } = useTactileFeedback();
 
     const { form, onSubmit } = useQuickLogForm({
       unit,
