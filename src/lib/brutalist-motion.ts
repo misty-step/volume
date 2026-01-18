@@ -128,6 +128,30 @@ export const brutalistMotion = {
 };
 
 /**
+ * Tactile Feedback Animation
+ *
+ * For use with useAnimation() imperative API.
+ * Triggered on button press for tactile feedback.
+ *
+ * @example
+ * ```tsx
+ * const controls = useAnimation();
+ * const handleClick = () => controls.start(tactilePulse);
+ *
+ * <motion.div animate={controls}>
+ *   <Button onClick={handleClick}>Click me</Button>
+ * </motion.div>
+ * ```
+ */
+export const tactilePulse = {
+  scale: [1, 0.97, 1],
+  transition: {
+    duration: PRECISION_TIMING.MICRO, // 0.146s - under 200ms constraint
+    ease: [0.4, 0.0, 0.2, 1], // ease-out
+  },
+};
+
+/**
  * Motion Presets - Reusable animation patterns for common UI contexts
  *
  * Use these presets for consistent motion vocabulary across the app.
