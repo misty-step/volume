@@ -41,6 +41,9 @@ import { useUndoableAction } from "@/hooks/useUndoableAction";
 import type { ExerciseSession } from "@/lib/exercise-insights";
 import { PRBadge } from "./pr-badge";
 
+/** Noop restore function for when onUndoDelete is not provided */
+const NOOP_RESTORE = async () => {};
+
 /** Data needed to recreate a deleted set */
 export interface DeletedSetData {
   exerciseId: Id<"exercises">;
@@ -109,7 +112,7 @@ export function ExerciseSetGroup({
       duration: set.duration,
       performedAt: set.performedAt,
     }),
-    restore: onUndoDelete ?? (async () => {}),
+    restore: onUndoDelete ?? NOOP_RESTORE,
     successMessage: "Set deleted",
     undoDuration: 5000,
     onActionError: (error) => handleMutationError(error, "Delete Set"),

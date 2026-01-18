@@ -82,11 +82,11 @@ export function useUndoableAction<TData, TItem>(
 
   const execute = useCallback(
     async (item: TItem) => {
-      // Capture state BEFORE action executes
-      const capturedData = captureState(item);
-
       setIsPending(true);
       try {
+        // Capture state BEFORE action executes
+        const capturedData = captureState(item);
+
         await action(item);
 
         toast.success(successMessage, {

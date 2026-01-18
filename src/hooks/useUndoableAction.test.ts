@@ -274,4 +274,32 @@ describe("useUndoableAction", () => {
       })
     ).resolves.not.toThrow();
   });
+
+  it("handles captureState throwing an error", async () => {
+    const captureError = new Error("Capture failed");
+    mockCaptureState.mockImplementation(() => {
+      throw captureError;
+    });
+
+    const { result } = renderHook(() =>
+      useUndoableAction({
+        action: mockAction,
+        captureState: mockCaptureState,
+        restore: mockRestore,
+        successMessage: "Deleted",
+        onActionError: mockOnActionError,
+      })
+    );
+
+    await act(async () => {
+      await result.current.execute({ id: "test" });
+    });
+
+    // Should call onActionError with the capture error
+    expect(mockOnActionError).toHaveBeenCalledWith(captureError);
+    // Action should not have been called since capture failed first
+    expect(mockAction).not.toHaveBeenCalled();
+    // isPending should be reset
+    expect(result.current.isPending).toBe(false);
+  });
 });
