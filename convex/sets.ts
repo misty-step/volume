@@ -57,7 +57,23 @@ export const logSet = mutation({
     requireOwnership(exercise, identity.subject, "exercise");
 
     // Auto-restore soft-deleted exercise (enables undo after exercise deletion)
+    // Unlike createExercise, we preserve original muscleGroups
     if (exercise.deletedAt !== undefined) {
+      // Prevent duplicate active exercises with same name
+      const duplicateName = await ctx.db
+        .query("exercises")
+        .withIndex("by_user_name", (q) =>
+          q.eq("userId", identity.subject).eq("name", exercise.name)
+        )
+        .filter((q) => q.eq(q.field("deletedAt"), undefined))
+        .first();
+
+      if (duplicateName && duplicateName._id !== args.exerciseId) {
+        throw new Error(
+          `Cannot restore set: an exercise named "${exercise.name}" already exists`
+        );
+      }
+
       await ctx.db.patch(args.exerciseId, { deletedAt: undefined });
     }
 
