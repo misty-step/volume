@@ -12,6 +12,7 @@ import {
   TrendingUp,
   TrendingDown,
   Equal,
+  History,
 } from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
 import { BrutalistButton } from "@/components/brutalist";
@@ -25,7 +26,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
 import { formatNumber } from "@/lib/number-utils";
 import { formatTimestamp, formatDuration } from "@/lib/date-utils";
@@ -37,9 +37,12 @@ import {
   useExerciseCardData,
   type EnrichedSet,
 } from "@/hooks/useExerciseCardData";
+import { useUndoableAction } from "@/hooks/useUndoableAction";
 import type { ExerciseSession } from "@/lib/exercise-insights";
 import { PRBadge } from "./pr-badge";
-import { History } from "lucide-react";
+
+/** Noop restore function for when onUndoDelete is not provided */
+const NOOP_RESTORE = async () => {};
 
 /** Data needed to recreate a deleted set */
 export interface DeletedSetData {
@@ -96,6 +99,25 @@ export function ExerciseSetGroup({
     return map;
   }, [enrichedSets]);
 
+  // Undoable delete action
+  const { execute: executeDelete } = useUndoableAction<DeletedSetData, WorkoutSet>({
+    action: async (set) => {
+      await onDelete(set._id);
+    },
+    captureState: (set) => ({
+      exerciseId: set.exerciseId,
+      reps: set.reps,
+      weight: set.weight,
+      unit: set.unit,
+      duration: set.duration,
+      performedAt: set.performedAt,
+    }),
+    restore: onUndoDelete ?? NOOP_RESTORE,
+    successMessage: "Set deleted",
+    undoDuration: 5000,
+    onActionError: (error) => handleMutationError(error, "Delete Set"),
+  });
+
   const handleDeleteClick = (set: WorkoutSet) => {
     setSetToDelete(set);
   };
@@ -103,38 +125,13 @@ export function ExerciseSetGroup({
   const confirmDelete = async () => {
     if (!setToDelete) return;
 
-    // Capture set data for undo before deletion
-    const deletedSetData: DeletedSetData = {
-      exerciseId: setToDelete.exerciseId,
-      reps: setToDelete.reps,
-      weight: setToDelete.weight,
-      unit: setToDelete.unit,
-      duration: setToDelete.duration,
-      performedAt: setToDelete.performedAt,
-    };
-
     setDeletingId(setToDelete._id);
     try {
-      await onDelete(setToDelete._id);
-      toast.success("Set deleted", {
-        duration: 5000,
-        action: onUndoDelete
-          ? {
-              label: "Undo",
-              onClick: async () => {
-                try {
-                  await onUndoDelete(deletedSetData);
-                } catch {
-                  // Error already handled by parent's handleMutationError
-                }
-              },
-            }
-          : undefined,
-      });
-      setSetToDelete(null);
-      setDeletingId(null);
-    } catch (error) {
-      handleMutationError(error, "Delete Set");
+      const success = await executeDelete(setToDelete);
+      if (success) {
+        setSetToDelete(null);
+      }
+    } finally {
       setDeletingId(null);
     }
   };
