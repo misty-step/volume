@@ -127,8 +127,10 @@ export function ExerciseSetGroup({
 
     setDeletingId(setToDelete._id);
     try {
-      await executeDelete(setToDelete);
-      setSetToDelete(null);
+      const success = await executeDelete(setToDelete);
+      if (success) {
+        setSetToDelete(null);
+      }
     } finally {
       setDeletingId(null);
     }

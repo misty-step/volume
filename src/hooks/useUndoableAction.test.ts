@@ -35,13 +35,15 @@ describe("useUndoableAction", () => {
 
     const testItem = { id: "123", name: "Test" };
 
+    let success: boolean | undefined;
     await act(async () => {
-      await result.current.execute(testItem);
+      success = await result.current.execute(testItem);
     });
 
     // Capture should be called first
     expect(mockCaptureState).toHaveBeenCalledWith(testItem);
     expect(mockCaptureState).toHaveBeenCalledBefore(mockAction);
+    expect(success).toBe(true);
   });
 
   it("executes action with provided item", async () => {
@@ -194,7 +196,7 @@ describe("useUndoableAction", () => {
     expect(result.current.isPending).toBe(false);
   });
 
-  it("calls onActionError on action failure (does not re-throw)", async () => {
+  it("returns false and calls onActionError on action failure", async () => {
     const error = new Error("Delete failed");
     mockAction.mockRejectedValue(error);
 
@@ -208,10 +210,12 @@ describe("useUndoableAction", () => {
       })
     );
 
+    let success: boolean | undefined;
     await act(async () => {
-      await result.current.execute({ id: "test" });
+      success = await result.current.execute({ id: "test" });
     });
 
+    expect(success).toBe(false);
     expect(mockOnActionError).toHaveBeenCalledWith(error);
     expect(toast.success).not.toHaveBeenCalled();
     expect(result.current.isPending).toBe(false);
@@ -275,7 +279,7 @@ describe("useUndoableAction", () => {
     ).resolves.not.toThrow();
   });
 
-  it("handles captureState throwing an error", async () => {
+  it("returns false when captureState throws an error", async () => {
     const captureError = new Error("Capture failed");
     mockCaptureState.mockImplementation(() => {
       throw captureError;
@@ -291,10 +295,12 @@ describe("useUndoableAction", () => {
       })
     );
 
+    let success: boolean | undefined;
     await act(async () => {
-      await result.current.execute({ id: "test" });
+      success = await result.current.execute({ id: "test" });
     });
 
+    expect(success).toBe(false);
     // Should call onActionError with the capture error
     expect(mockOnActionError).toHaveBeenCalledWith(captureError);
     // Action should not have been called since capture failed first

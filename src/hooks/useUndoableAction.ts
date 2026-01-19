@@ -30,8 +30,8 @@ export interface UndoableActionConfig<TData, TItem> {
 }
 
 export interface UndoableActionResult<TItem> {
-  /** Execute the action with undo support */
-  execute: (item: TItem) => Promise<void>;
+  /** Execute the action with undo support. Returns true on success, false on failure. */
+  execute: (item: TItem) => Promise<boolean>;
 
   /** Whether an action is currently in progress */
   isPending: boolean;
@@ -81,7 +81,7 @@ export function useUndoableAction<TData, TItem>(
   const [isPending, setIsPending] = useState(false);
 
   const execute = useCallback(
-    async (item: TItem) => {
+    async (item: TItem): Promise<boolean> => {
       setIsPending(true);
       try {
         // Capture state BEFORE action executes
@@ -102,9 +102,10 @@ export function useUndoableAction<TData, TItem>(
             },
           },
         });
+        return true;
       } catch (error) {
         onActionError?.(error);
-        // Don't re-throw - error handler is responsible for user feedback
+        return false;
       } finally {
         setIsPending(false);
       }
