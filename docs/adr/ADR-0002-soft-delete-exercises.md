@@ -35,6 +35,7 @@ Key behaviors:
 - `listExercises({ includeDeleted: false })` filters deleted exercises for active UI
 - `listExercises({ includeDeleted: true })` returns all exercises for history views
 - Creating an exercise with the same name as a soft-deleted one **restores** the original record
+- `logSet` on a soft-deleted exercise **auto-restores** it (enables undo after exercise deletion)
 - Index `by_user_deleted` enables efficient active-only queries
 
 ### Why Auto-Restore?
@@ -67,5 +68,6 @@ Users often delete an exercise then later realize they want it back. Rather than
 ## References
 
 - convex/schema.ts (deletedAt field definition)
-- convex/exercises.ts (soft delete mutations, auto-restore logic)
+- convex/exercises.ts (soft delete mutations, auto-restore on create)
+- convex/sets.ts (auto-restore on logSet for undo support)
 - CLAUDE.md (Soft Delete Pattern section)

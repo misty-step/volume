@@ -196,7 +196,7 @@ describe("listSets - Security Tests", () => {
   });
 });
 
-describe("logSet - Soft Delete Protection", () => {
+describe("logSet - Soft Delete Auto-Restore", () => {
   let t: TestConvex<typeof schema>;
   const user1Subject = "user_1_test_subject";
 
@@ -204,7 +204,7 @@ describe("logSet - Soft Delete Protection", () => {
     t = convexTest(schema, import.meta.glob("./**/*.ts"));
   });
 
-  test("should prevent logging sets to soft-deleted exercises", async () => {
+  test("should auto-restore soft-deleted exercise when logging set (undo support)", async () => {
     // Create exercise
     const exerciseId = await t
       .withIdentity({ subject: user1Subject, name: "User 1" })
@@ -215,17 +215,85 @@ describe("logSet - Soft Delete Protection", () => {
       .withIdentity({ subject: user1Subject, name: "User 1" })
       .mutation(api.exercises.deleteExercise, { id: exerciseId });
 
-    // Try to log set to deleted exercise → should throw error
+    // Verify exercise is soft-deleted (direct check on document state)
+    const deletedExercise = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .query(api.exercises.getExercise, { id: exerciseId });
+    expect(deletedExercise?.deletedAt).toBeDefined();
+
+    // Log set to deleted exercise → should auto-restore and succeed
+    const setId = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .mutation(api.sets.logSet, {
+        exerciseId,
+        reps: 10,
+        weight: 135,
+        unit: "lbs",
+      });
+
+    expect(setId).toBeDefined();
+
+    // Verify set was logged
+    const sets = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .query(api.sets.listSets, { exerciseId });
+    expect(sets.length).toBe(1);
+    expect(sets[0].reps).toBe(10);
+
+    // Verify exercise was auto-restored (direct check on document state)
+    const restoredExercise = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .query(api.exercises.getExercise, { id: exerciseId });
+    expect(restoredExercise).toBeDefined();
+    expect(restoredExercise?.deletedAt).toBeUndefined();
+  });
+
+  test("should reject restore if active exercise with same name exists", async () => {
+    // Create two exercises with different names
+    const exerciseAId = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .action(api.exercises.createExercise, { name: "BENCH PRESS" });
+
+    const exerciseBId = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .action(api.exercises.createExercise, { name: "INCLINE PRESS" });
+
+    // Delete exercise A (BENCH PRESS)
+    await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .mutation(api.exercises.deleteExercise, { id: exerciseAId });
+
+    // Delete exercise B (INCLINE PRESS)
+    await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .mutation(api.exercises.deleteExercise, { id: exerciseBId });
+
+    // Create new exercise with name "BENCH PRESS" - this auto-restores exercise A
+    await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .action(api.exercises.createExercise, { name: "BENCH PRESS" });
+
+    // Now we have active "BENCH PRESS" and deleted "INCLINE PRESS"
+    // Use direct DB manipulation to rename the deleted exercise to "BENCH PRESS"
+    // (simulating a race condition or data migration scenario)
+    await t.run(async (ctx) => {
+      await ctx.db.patch(exerciseBId, { name: "BENCH PRESS" });
+    });
+
+    // Now we have:
+    // - Active "BENCH PRESS" (exercise A, restored)
+    // - Deleted "BENCH PRESS" (exercise B, renamed)
+    // Trying to log set to exercise B should fail due to name conflict
     await expect(
       t
         .withIdentity({ subject: user1Subject, name: "User 1" })
         .mutation(api.sets.logSet, {
-          exerciseId,
+          exerciseId: exerciseBId,
           reps: 10,
           weight: 135,
           unit: "lbs",
         })
-    ).rejects.toThrow("Cannot log sets for a deleted exercise");
+    ).rejects.toThrow('Cannot restore set: an exercise named "BENCH PRESS" already exists');
   });
 });
 
