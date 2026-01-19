@@ -56,9 +56,9 @@ export const logSet = mutation({
     }
     requireOwnership(exercise, identity.subject, "exercise");
 
-    // Block logging sets for soft-deleted exercises
+    // Auto-restore soft-deleted exercise (enables undo after exercise deletion)
     if (exercise.deletedAt !== undefined) {
-      throw new Error("Cannot log sets for a deleted exercise");
+      await ctx.db.patch(args.exerciseId, { deletedAt: undefined });
     }
 
     const setId = await ctx.db.insert("sets", {

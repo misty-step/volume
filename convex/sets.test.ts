@@ -196,7 +196,7 @@ describe("listSets - Security Tests", () => {
   });
 });
 
-describe("logSet - Soft Delete Protection", () => {
+describe("logSet - Soft Delete Auto-Restore", () => {
   let t: TestConvex<typeof schema>;
   const user1Subject = "user_1_test_subject";
 
@@ -204,7 +204,7 @@ describe("logSet - Soft Delete Protection", () => {
     t = convexTest(schema, import.meta.glob("./**/*.ts"));
   });
 
-  test("should prevent logging sets to soft-deleted exercises", async () => {
+  test("should auto-restore soft-deleted exercise when logging set (undo support)", async () => {
     // Create exercise
     const exerciseId = await t
       .withIdentity({ subject: user1Subject, name: "User 1" })
@@ -215,17 +215,38 @@ describe("logSet - Soft Delete Protection", () => {
       .withIdentity({ subject: user1Subject, name: "User 1" })
       .mutation(api.exercises.deleteExercise, { id: exerciseId });
 
-    // Try to log set to deleted exercise → should throw error
-    await expect(
-      t
-        .withIdentity({ subject: user1Subject, name: "User 1" })
-        .mutation(api.sets.logSet, {
-          exerciseId,
-          reps: 10,
-          weight: 135,
-          unit: "lbs",
-        })
-    ).rejects.toThrow("Cannot log sets for a deleted exercise");
+    // Verify exercise is deleted
+    const deletedExercises = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .query(api.exercises.listExercises, { includeDeleted: false });
+    expect(deletedExercises.find((e) => e._id === exerciseId)).toBeUndefined();
+
+    // Log set to deleted exercise → should auto-restore and succeed
+    const setId = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .mutation(api.sets.logSet, {
+        exerciseId,
+        reps: 10,
+        weight: 135,
+        unit: "lbs",
+      });
+
+    expect(setId).toBeDefined();
+
+    // Verify set was logged
+    const sets = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .query(api.sets.listSets, { exerciseId });
+    expect(sets.length).toBe(1);
+    expect(sets[0].reps).toBe(10);
+
+    // Verify exercise was auto-restored (deletedAt cleared)
+    const activeExercises = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .query(api.exercises.listExercises, { includeDeleted: false });
+    const restoredExercise = activeExercises.find((e) => e._id === exerciseId);
+    expect(restoredExercise).toBeDefined();
+    expect(restoredExercise?.deletedAt).toBeUndefined();
   });
 });
 
