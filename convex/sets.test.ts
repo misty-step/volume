@@ -215,11 +215,11 @@ describe("logSet - Soft Delete Auto-Restore", () => {
       .withIdentity({ subject: user1Subject, name: "User 1" })
       .mutation(api.exercises.deleteExercise, { id: exerciseId });
 
-    // Verify exercise is deleted
-    const deletedExercises = await t
+    // Verify exercise is soft-deleted (direct check on document state)
+    const deletedExercise = await t
       .withIdentity({ subject: user1Subject, name: "User 1" })
-      .query(api.exercises.listExercises, { includeDeleted: false });
-    expect(deletedExercises.find((e) => e._id === exerciseId)).toBeUndefined();
+      .query(api.exercises.getExercise, { id: exerciseId });
+    expect(deletedExercise?.deletedAt).toBeDefined();
 
     // Log set to deleted exercise → should auto-restore and succeed
     const setId = await t
@@ -240,11 +240,10 @@ describe("logSet - Soft Delete Auto-Restore", () => {
     expect(sets.length).toBe(1);
     expect(sets[0].reps).toBe(10);
 
-    // Verify exercise was auto-restored (deletedAt cleared)
-    const activeExercises = await t
+    // Verify exercise was auto-restored (direct check on document state)
+    const restoredExercise = await t
       .withIdentity({ subject: user1Subject, name: "User 1" })
-      .query(api.exercises.listExercises, { includeDeleted: false });
-    const restoredExercise = activeExercises.find((e) => e._id === exerciseId);
+      .query(api.exercises.getExercise, { id: exerciseId });
     expect(restoredExercise).toBeDefined();
     expect(restoredExercise?.deletedAt).toBeUndefined();
   });
