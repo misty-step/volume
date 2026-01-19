@@ -1,3 +1,4 @@
+import "server-only";
 import Stripe from "stripe";
 import { STRIPE_API_VERSION, getRequiredEnv } from "./config";
 

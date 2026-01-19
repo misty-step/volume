@@ -17,6 +17,7 @@ export function getStripe(): Stripe {
     const key = getRequiredEnv("STRIPE_SECRET_KEY");
     stripeInstance = new Stripe(key, {
       apiVersion: STRIPE_API_VERSION,
+      typescript: true,
     });
   }
   return stripeInstance;
