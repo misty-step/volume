@@ -101,6 +101,45 @@ var_exists() {
   return 1
 }
 
+# Get value of a var from env list
+get_env_value() {
+  local var_name="$1"
+  local env_list="$2"
+  echo "$env_list" | grep "^${var_name}=" | cut -d'=' -f2-
+}
+
+# Validate Stripe key type matches deployment environment
+# Returns: 0 = valid, 1 = mismatch, 2 = can't validate (unknown format)
+validate_stripe_key_type() {
+  local deployment_type="$1"  # "dev" or "prod"
+  local key_value="$2"
+
+  local is_live=false
+  local is_test=false
+
+  [[ "$key_value" == sk_live_* ]] && is_live=true
+  [[ "$key_value" == sk_test_* ]] && is_test=true
+
+  # Can't validate unknown format (webhook secrets, etc.)
+  [[ "$is_live" == "false" && "$is_test" == "false" ]] && return 2
+
+  if [[ "$deployment_type" == "prod" ]]; then
+    if [[ "$is_test" == "true" ]]; then
+      log_error "    ERROR: Test key (sk_test_*) in PRODUCTION!"
+      log_error "           Production requires live keys (sk_live_*)"
+      return 1
+    fi
+  else
+    if [[ "$is_live" == "true" ]]; then
+      log_error "    ERROR: Live key (sk_live_*) in DEVELOPMENT!"
+      log_error "           Development should use test keys (sk_test_*)"
+      return 1
+    fi
+  fi
+
+  return 0
+}
+
 # --- Main Logic ---
 MISSING_COUNT=0
 declare -a MISSING_VARS=()
@@ -124,12 +163,29 @@ check_deployment() {
   local missing_here=0
   local i
 
+  # Determine deployment type from name
+  local deploy_type="dev"
+  [[ "$name" == *"Production"* ]] && deploy_type="prod"
+
   # Check required vars
   for i in "${!CONVEX_REQUIRED_VARS[@]}"; do
     local var="${CONVEX_REQUIRED_VARS[$i]}"
     local desc="${CONVEX_REQUIRED_DESCRIPTIONS[$i]}"
     if var_exists "$var" "$env_list"; then
-      log "    [OK] $var"
+      # Additional validation for Stripe secret key
+      if [[ "$var" == "STRIPE_SECRET_KEY" ]]; then
+        local key_value
+        key_value=$(get_env_value "$var" "$env_list")
+        if ! validate_stripe_key_type "$deploy_type" "$key_value"; then
+          log "    [WRONG TYPE] $var - key type doesn't match environment"
+          MISSING_VARS+=("$name:$var (WRONG KEY TYPE)")
+          missing_here=$((missing_here + 1))
+        else
+          log "    [OK] $var"
+        fi
+      else
+        log "    [OK] $var"
+      fi
     else
       log "    [MISSING] $var - $desc"
       MISSING_VARS+=("$name:$var")

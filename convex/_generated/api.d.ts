@@ -30,6 +30,7 @@ import type * as lib_muscleGroups from "../lib/muscleGroups.js";
 import type * as lib_pr_detection from "../lib/pr_detection.js";
 import type * as lib_rateLimit from "../lib/rateLimit.js";
 import type * as lib_streak_calculator from "../lib/streak_calculator.js";
+import type * as lib_stripeConfig from "../lib/stripeConfig.js";
 import type * as lib_validate from "../lib/validate.js";
 import type * as migrations_backfillMuscleGroups from "../migrations/backfillMuscleGroups.js";
 import type * as platformStats from "../platformStats.js";
@@ -68,6 +69,7 @@ declare const fullApi: ApiFromModules<{
   "lib/pr_detection": typeof lib_pr_detection;
   "lib/rateLimit": typeof lib_rateLimit;
   "lib/streak_calculator": typeof lib_streak_calculator;
+  "lib/stripeConfig": typeof lib_stripeConfig;
   "lib/validate": typeof lib_validate;
   "migrations/backfillMuscleGroups": typeof migrations_backfillMuscleGroups;
   platformStats: typeof platformStats;
