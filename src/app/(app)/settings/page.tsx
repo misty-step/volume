@@ -191,6 +191,16 @@ export default function SettingsPage() {
           <SettingsListItem
             title="Volume"
             subtitle={`Version ${clientVersion}`}
+            actions={
+              <a
+                href={`https://github.com/misty-step/volume/releases/tag/v${clientVersion}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-primary transition-colors"
+              >
+                Release Notes
+              </a>
+            }
           />
           <SettingsListItem
             title="A Misty Step Project"
