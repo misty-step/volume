@@ -1,0 +1,3 @@
+In this update, you can now enjoy a smoother experience when using AI exercise classification. The newly added spinner and loading text will keep you informed while your exercises are being analyzed, so you’ll know exactly when the information is ready for you. 
+
+Additionally, we've improved the app's reliability by validating muscle groups against a canonical list. This ensures that your workout logs are accurate and meaningful, enabling you to track your fitness journey with confidence. With these enhancements, you can focus more on your workouts and less on the details.

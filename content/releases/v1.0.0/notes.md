@@ -1,0 +1,3 @@
+You can now track your fitness journey more effectively with the newly added Analytics tab, providing you with insights on workout frequency, personal records, and recovery status. This enhancement allows you to visualize your progress over time, making it easier to identify trends and areas for improvement.
+
+Additionally, we've introduced smart number formatting and streak statistics, helping you stay motivated by clearly displaying your achievements and workout consistency. With the improved analytics, you can make informed decisions about your training regimen, ensuring you maximize your results and stay on track with your fitness goals.

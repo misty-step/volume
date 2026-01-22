@@ -1,0 +1,26 @@
+{
+  "version": "1.3.0",
+  "compareUrl": "https://github.com/misty-step/volume/compare/v1.2.0...v1.3.0",
+  "date": "2026-01-16",
+  "changes": [
+    {
+      "type": "feat",
+      "description": "add Stripe subscription paywall with free trial",
+      "pr": 181,
+      "commit": "3fc90c5",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "remove invalid customer_creation param from subscription checkout",
+      "commit": "23113a0",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "resolve post-checkout race condition in PaywallGate",
+      "commit": "c77612b",
+      "breaking": false
+    }
+  ]
+}

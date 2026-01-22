@@ -1,0 +1,1443 @@
+{
+  "version": "1.0.0",
+  "date": "2026-01-02",
+  "changes": [
+    {
+      "type": "feat",
+      "description": "100% automated deployment via Sentry API + CLI",
+      "commit": "287bfd5",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add 2px ring-offset to focus system for clarity",
+      "commit": "fbfd3d3",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add 360° rotation to SetCard repeat button on click",
+      "commit": "ebe3e9b",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add 4px focus rings for number inputs",
+      "commit": "8ed04be",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add aiReports table to Convex schema",
+      "commit": "6eee2df",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add Analytics tab to bottom navigation",
+      "commit": "4d3fb96",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add automated deployment script for observability stack",
+      "commit": "51bc465",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add chrome accent system to design tokens",
+      "commit": "7c254ad",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "Add comprehensive Lefthook quality gates",
+      "pr": 69,
+      "commit": "875deb1",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add deployment environment detection utility",
+      "commit": "ec3ab24",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add empty state for new users on analytics page",
+      "commit": "243b489",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add Framer Motion animation system",
+      "commit": "b9f8a8d",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add golden ratio entrance animations to SetCard",
+      "commit": "ff83cd1",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add golden ratio PRECISION_TIMING constants",
+      "commit": "a0624b4",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add listSetsForDateRange query for Dashboard optimization",
+      "commit": "909b475",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add loading spinner to Log Set button",
+      "commit": "90a9817",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add motionPresets for common animation patterns",
+      "commit": "004ef42",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add on-demand report generation mutation with rate limiting",
+      "commit": "1129165",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add PR (Personal Record) detection utility",
+      "commit": "c148dc8",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add recent PRs query",
+      "commit": "11b784a",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add report query functions",
+      "commit": "4a5ea79",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add Sentry configuration factory with PII scrubbing",
+      "commit": "d42dcbc",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add shadcn core components",
+      "commit": "2bde529",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add shake animation to delete confirmation on cancel",
+      "commit": "889b514",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add smart number formatting with K/M suffixes",
+      "commit": "260810b",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add streak statistics query",
+      "commit": "0abbbf7",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add support for duration-based exercises",
+      "commit": "127da8c",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add support for duration-based exercises",
+      "commit": "bc7097e",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add Vercel Analytics with URL filtering",
+      "commit": "a74605a",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add version resolution module",
+      "commit": "8992ce7",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add volume by exercise analytics query",
+      "commit": "f8bca9b",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add workout frequency query for heatmap",
+      "commit": "b375399",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "add zod validation schema for QuickLogForm",
+      "commit": "831ac65",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** add email redaction helper",
+      "commit": "b917e35",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** add environment detection helpers",
+      "commit": "bb6ed82",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** add focus suggestions widget with rule-based recommendations",
+      "commit": "ced193a",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** add muscle group mapping system with comprehensive coverage",
+      "commit": "02700a3",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** add progressive overload backend query",
+      "commit": "434ac45",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** add progressive overload widget with trend visualization",
+      "commit": "69b2dba",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** add property sanitizer for PII protection",
+      "commit": "ced92e1",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** add recovery dashboard widget with color-coded muscle groups",
+      "commit": "cd415bf",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** add recovery status tracking with muscle group analysis",
+      "commit": "29d359e",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** add report type badge to AI insights card",
+      "commit": "ebdb447",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** add server-side track function loader",
+      "commit": "db52fd8",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** add user context management",
+      "commit": "2557db7",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** apply brutalist design to PR card",
+      "commit": "d81ce88",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** apply brutalist design to streak card",
+      "commit": "f9f4b20",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** complete AI insights dashboard with report navigation",
+      "commit": "12d1ec7",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** enable full-width layout for analytics page",
+      "commit": "8431f7a",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** harden test-analytics surface",
+      "commit": "9da45e5",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** implement 12-column responsive grid layout",
+      "commit": "31196d3",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** implement core trackEvent function",
+      "commit": "c233328",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** implement reportError function",
+      "commit": "3c9ca93",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** instrument ui flows",
+      "commit": "fec2026",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** integrate progressive overload widget into analytics page",
+      "commit": "bdbbcd5",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**analytics:** integrate recovery dashboard widget into analytics page",
+      "commit": "e3ee9bb",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**app:** integrate timezone sync in ConvexClientProvider",
+      "commit": "3b6946b",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "apply chrome accent glow to input focus states",
+      "commit": "46f658e",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "apply chrome glow to card hover states",
+      "commit": "dad0246",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "apply chrome shadow to button pressed states",
+      "commit": "5acbd3b",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "apply golden ratio timing to form focus transitions",
+      "commit": "8b51c19",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**ci:** add Convex validation to prevent deployment failures",
+      "commit": "eb6a88a",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**ci:** add coverage reporting to PRs and README badges",
+      "commit": "9e9ecc3",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**ci:** add E2E smoke tests to CI workflow",
+      "commit": "d3701e9",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "complete brutalist design system transformation",
+      "commit": "45e047e",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "configure Sentry build integration and CSP",
+      "commit": "54a19c0",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**convex:** add per-user rate limits for AI endpoints",
+      "pr": 47,
+      "commit": "3a5434b",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "create AI prompt template module",
+      "commit": "9abd3bd",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "create AI report generation mutation",
+      "commit": "90129d8",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "create AIInsightsCard component",
+      "commit": "5c65e07",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "create analytics page scaffold",
+      "commit": "4bd0e55",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**crons:** add hourly cron for timezone-aware daily reports",
+      "commit": "64eb4cc",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**crons:** add monthly cron for monthly reports",
+      "commit": "016fc74",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**dashboard:** apply brutalist design to daily stats card",
+      "commit": "e6fa339",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**dashboard:** apply hero typography to exercise group totals",
+      "commit": "a6f299b",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**date-formatters:** extract date grouping module from dashboard-utils",
+      "commit": "33cf79c",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**date-utils:** add formatTimeAgo utility with terminal and compact formats",
+      "commit": "8cda043",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**design-system:** add mobile design token system",
+      "commit": "75aa090",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**design:** convert SetCard buttons to brutalist styling",
+      "commit": "b6dea6f",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**design:** convert SetCard container to brutalist styling",
+      "commit": "3dfa4eb",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**design:** convert SetCard exercise name to display font",
+      "commit": "f6ec354",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**design:** implement brutalist design system and transform core UI",
+      "commit": "879316a",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**design:** transform SetCard weight/reps with dominant typography",
+      "commit": "4bcbc45",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**design:** update SetCard timestamp to monospace uppercase",
+      "commit": "c84722e",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "display app version in footer",
+      "commit": "367dd6d",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "enhanced analytics and history views",
+      "pr": 64,
+      "commit": "7b0571a",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**error-boundaries:** add global error boundary",
+      "commit": "ec9d8ac",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**error-boundaries:** add route segment error boundary",
+      "commit": "e9ae8f1",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**exercise-grouping:** extract session grouping module from dashboard-utils",
+      "commit": "83c4224",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**exercise-sorting:** extract exercise ordering module from dashboard-utils",
+      "commit": "f9b74b6",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "expand BRUTALIST_TYPOGRAPHY with stat/metric/label sizes",
+      "commit": "634cbf7",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "expose version and automate releases",
+      "commit": "60e915f",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**gamification:** add PR badge (🏆) to set history",
+      "commit": "7815db1",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**gamification:** add PR celebration toast component",
+      "commit": "2ee0adc",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**gamification:** add streak calculation utility",
+      "commit": "74c8cfb",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**gamification:** display workout streak in daily stats",
+      "commit": "bbd0549",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**gamification:** integrate PR detection into QuickLogForm",
+      "commit": "671d49b",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**hooks:** add timezone detection and sync hook",
+      "commit": "6c9f9f0",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "implement ActivityHeatmap component for workout frequency",
+      "commit": "157c677",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "implement ContextManager and Clerk integration hook",
+      "commit": "39fd001",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "implement EventCatalog and linting script",
+      "commit": "92cec82",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "implement OpenAI integration module",
+      "commit": "0ded68a",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "implement PRCard component for personal records",
+      "commit": "ed17c3c",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "implement SanitizationEngine with PII redaction and size guards",
+      "commit": "5537e62",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "implement scheduled weekly report generation",
+      "commit": "d1d60cc",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "implement server-side analytics instrumentation for Convex",
+      "commit": "e039b50",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "implement StreakCard component for workout streaks",
+      "commit": "d4ad868",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "implement TransportRouter with robust tracking and error reporting",
+      "commit": "61ac799",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "implement VolumeChart component with Recharts",
+      "commit": "f8f49e7",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "initialize shadcn/ui with New York style",
+      "commit": "1479662",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**input:** add hero typography scaling on focus",
+      "commit": "9bd9f9e",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "integrate AI insights into analytics page",
+      "commit": "b6a44cb",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "integrate analytics components into dashboard page",
+      "commit": "59e489d",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "integrate analytics into root layout",
+      "commit": "a8de907",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**log-form:** add searchable exercise combobox",
+      "commit": "9153017",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**marketing:** add benefits and social proof sections",
+      "commit": "5c7b046",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**marketing:** add FAQ and final CTA sections",
+      "commit": "d37295a",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**marketing:** add hero, navbar, and footer components",
+      "commit": "f432904",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**marketing:** add how it works and screens carousel",
+      "commit": "23cb761",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**marketing:** add pricing and waitlist section",
+      "commit": "8b6733b",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**marketing:** add seo metadata and og image",
+      "commit": "88341be",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**marketing:** add testimonials section",
+      "commit": "63926e7",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**marketing:** compose new marketing page",
+      "commit": "c14ffd5",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**marketing:** integrate hero device mock",
+      "commit": "47bc90c",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**marketing:** track page analytics events",
+      "commit": "100bb1f",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "mobile UX improvements - touch targets, autofocus, responsive layouts",
+      "commit": "0c234af",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**mobile:** improve exercise editing UX with stacked buttons",
+      "commit": "b818f0e",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**observability:** add health check endpoint for uptime monitoring",
+      "commit": "0ee4eeb",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**observability:** add health check, tests, alerts, and release tracking",
+      "commit": "999c7b4",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**observability:** add Sentry alert automation script",
+      "commit": "96ba820",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "Phase 1 & 2.1 - navigation restructure + hero stats",
+      "commit": "96eef93",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "quality infrastructure improvements",
+      "pr": 60,
+      "commit": "3f99293",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "redesign footer with legal pages and simplified layout",
+      "commit": "0d24090",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "replace custom inputs with shadcn Input",
+      "commit": "9f0e84c",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "replace terminal CSS with shadcn variables",
+      "commit": "a01af6b",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**reports:** add reportType filtering to getLatestReport query",
+      "commit": "0b3dc46",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**reports:** support daily/weekly/monthly report types",
+      "commit": "11453ad",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "scaffold analytics module structure",
+      "commit": "c685e89",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**schema:** add reportType field to aiReports table",
+      "commit": "be38bfd",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**schema:** add users table for timezone and report preferences",
+      "commit": "d9e3879",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**scripts:** add production → dev data sync for easy QA",
+      "commit": "fb16ec7",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**settings:** implement iOS-style Settings UI",
+      "commit": "937acf5",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "smooth scroll to history after logging set",
+      "commit": "a905057",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**stats-calculator:** extract workout statistics module from dashboard-utils",
+      "commit": "dc8c38e",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "switch from IBM Plex Mono to Inter font",
+      "commit": "ab95e3b",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**typography:** add number display typography utilities",
+      "commit": "bfa3d38",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**ui:** add exercise grouping utility",
+      "commit": "0dbc146",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**ui:** add mobile-optimized button size variants",
+      "commit": "3fee654",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**ui:** add responsive layout to Last Set indicator",
+      "commit": "637934b",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**ui:** add responsive mobile card layout to DailyStatsCard",
+      "commit": "ef58c04",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**ui:** add responsive mobile card layout to ExerciseManager",
+      "commit": "aed7c73",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**ui:** add responsive spacing to FormItem component",
+      "commit": "2219d57",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**ui:** add touch feedback to button component",
+      "commit": "ad36cff",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**ui:** create ExerciseSetGroup component",
+      "commit": "419d904",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**ui:** improve mobile UX for exercise cards and set details",
+      "commit": "c038c31",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**ui:** restructure set history by exercise grouping",
+      "commit": "eea2e75",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**ui:** update input with mobile-first height and enhanced focus ring",
+      "commit": "955502c",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**ui:** update select components for mobile touch targets",
+      "commit": "e35dd07",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "update Tailwind config for shadcn",
+      "commit": "fecdf37",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "use listSetsForDateRange in Dashboard for 100x payload reduction",
+      "commit": "b34302e",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**users:** add user management mutations with timezone support",
+      "commit": "b42e8ce",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**ux:** fix autofocus using Radix onOpenChange event pattern",
+      "commit": "8048c99",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "Visual Body Map Widget for Analytics",
+      "pr": 58,
+      "commit": "e1bd96c",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "description": "**weight-utils:** extract weight conversion module from dashboard-utils",
+      "commit": "f230bed",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "add _creationTime field to domain types",
+      "commit": "e062698",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "add CLERK_JWT_ISSUER_DOMAIN to E2E test environment",
+      "commit": "1beeadf",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "add missing @radix-ui/react-icons dependency",
+      "commit": "1fade1b",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "add withOptimisticUpdate to useMutation mock",
+      "commit": "07ba750",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "address all PR [#27](https://github.com/misty-step/volume/issues/27) review feedback (7 critical/in-scope fixes)",
+      "commit": "7a857cc",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "address CodeRabbit review feedback (3 of 4 items)",
+      "commit": "d307e77",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "address PR [#20](https://github.com/misty-step/volume/issues/20) review feedback",
+      "commit": "b248b08",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "address PR review feedback for testing infrastructure",
+      "commit": "efd4589",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "address PR[#26](https://github.com/misty-step/volume/issues/26) review feedback - critical bugs and UX improvements",
+      "commit": "5ebb355",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "allow metadata routes public access and remove invalid sitemap entry",
+      "commit": "f33bdb0",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**analytics:** remove duplicate legend from activity heatmap",
+      "commit": "1c0768b",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**analytics:** remove orphaned instrumentConvex infrastructure",
+      "commit": "8314173",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**analytics:** resolve ESM spy issues and improve type safety",
+      "commit": "cea67ce",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**analytics:** resolve PR review feedback - P1 + 3 improvements",
+      "commit": "74d59d2",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**analytics:** stop logging pii from report navigator",
+      "commit": "4bdb8ce",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**auth:** prevent timezone sync race condition with Clerk auth",
+      "commit": "6dad555",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**ci:** add otel externals for dev server",
+      "commit": "e59b9c5",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**ci:** add required environment variables for build step",
+      "commit": "609659b",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**ci:** move E2E tests after build, use pnpm start",
+      "commit": "1cb78be",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**ci:** remove duplicate --run flag from test script",
+      "commit": "079a387",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**ci:** remove redundant Convex validation step",
+      "commit": "d36505f",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**ci:** remove scheduler calls incompatible with convex-test",
+      "commit": "05652fc",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**ci:** resolve E2E env var issues and robustness",
+      "commit": "65f6254",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**ci:** skip E2E test requiring Playwright auth setup",
+      "commit": "6d353f7",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "configure Convex to inject NEXT_PUBLIC_CONVEX_URL during build",
+      "commit": "2b2b857",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "consolidate toast system and add context-aware focus rings",
+      "commit": "ade32a1",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**convex:** remove unused track action importing Node.js deps",
+      "commit": "a809165",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "correct Convex deployment names in migration script",
+      "commit": "5c921f6",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "correct testMatch pattern in Playwright config",
+      "commit": "af7c32d",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**csp:** add Clerk production custom domain to CSP headers",
+      "commit": "7eb816d",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**csp:** allow wildcard Convex domains for preview deployments",
+      "commit": "92a6901",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**e2e:** increase test timeouts for CI",
+      "commit": "d4e4954",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**e2e:** increase test timeouts to 120s",
+      "commit": "81145e7",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "eliminate flaky Clerk authentication in E2E tests",
+      "commit": "a3f39e2",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**exercises:** convert createExercise to action-based architecture",
+      "commit": "132268d",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**exercises:** preserve user casing in exercise names",
+      "commit": "8f8f17a",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "handle undefined env vars in Playwright config",
+      "commit": "f8b6fb2",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "match dashboard skeleton to actual content structure",
+      "pr": 156,
+      "commit": "0f87b61",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**observability:** address PR review feedback",
+      "commit": "103be9a",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**og-image:** use default export per Next.js metadata convention",
+      "commit": "94aa857",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "pass Clerk env vars to Playwright webServer",
+      "commit": "dd0aaa1",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "prevent hour-24 edge case in timezone calculation",
+      "commit": "552c62a",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "relax env typing in version resolver",
+      "commit": "9cbf6e9",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "remove deprecated package-name from release-please config",
+      "commit": "a316ab8",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "remove empty string fallbacks for required env vars",
+      "commit": "345b514",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "remove unused typography-utils.ts (CodeRabbit critical issue)",
+      "commit": "f8a7ab8",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "rename Convex modules to use underscores instead of hyphens",
+      "commit": "ee95fae",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "replace hardcoded durations with PRECISION_TIMING in BrutalistProgress",
+      "commit": "80709e6",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "replace hardcoded Tailwind colors with design tokens in focus-suggestions-widget",
+      "commit": "6a534f9",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "replace inline animation with motionPresets in UnauthenticatedLanding",
+      "commit": "d558b0e",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "reps input resets when user clears value",
+      "pr": 59,
+      "commit": "bcb0c28",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "resolve PR [#30](https://github.com/misty-step/volume/issues/30) review comments from CodeRabbit",
+      "commit": "8d757a8",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "resolve PR review feedback - timezone bugs and type safety",
+      "commit": "baf3591",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "resolve production footer showing \"vdev\" instead of version",
+      "commit": "62457e7",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "resolve Sentry type compatibility issues",
+      "commit": "80a5588",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "resolve TypeScript errors and add Analytics to navigation",
+      "commit": "2b4071c",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "resolve TypeScript errors in test infrastructure",
+      "commit": "a42583f",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "sanitize request bodies and cookies in Sentry events (2 critical PII leaks)",
+      "commit": "791e4b1",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**schema:** add performedAt field to prs array in AI report schema",
+      "commit": "a55574c",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**scripts:** add validation to export script before destructive import",
+      "commit": "2139c72",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "show time totals for duration-based sets",
+      "pr": 62,
+      "commit": "d409f8b",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**test:** exclude instrumentation wrappers from coverage thresholds",
+      "commit": "4d26716",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**test:** exclude type tests and adjust coverage thresholds",
+      "commit": "d064a98",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**test:** resolve flaky timestamp comparison in users.test.ts",
+      "commit": "80a7b17",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**tests:** add deterministic fallback for exercise classification in tests",
+      "commit": "dbf4c44",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**ui:** remove daily PR badges from set history",
+      "commit": "07b1a16",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "Update dependencies to resolve CVE-2025-64756",
+      "pr": 45,
+      "commit": "e6b8dc6",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "upgrade from deprecated gpt-4o-mini to GPT-5 mini with reasoning",
+      "commit": "931a6df",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "use dev server for E2E tests in CI",
+      "commit": "08bfd5f",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "use official Clerk pattern for E2E auth and fix CSP",
+      "commit": "275c9f5",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "use specific selector for Today heading in E2E test",
+      "commit": "4aac4d1",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**ux:** restore auto-focus after exercise selection in combobox",
+      "commit": "7e809b4",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "workout frequency heatmap showing empty despite activity",
+      "commit": "b577fa3",
+      "breaking": false
+    },
+    {
+      "type": "perf",
+      "description": "optimize analytics queries with Map lookups (O(n²) → O(n))",
+      "commit": "ea3ad5e",
+      "breaking": false
+    }
+  ]
+}

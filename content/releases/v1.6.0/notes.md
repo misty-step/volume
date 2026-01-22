@@ -1,0 +1,3 @@
+In version 1.6.0, you can now take advantage of our new useUndoableAction feature, which streamlines the process of undoing actions within the app. This centralized undo functionality allows you to quickly revert changes, making it easier to correct mistakes and refine your workout logs without hassle.
+
+With this enhancement, your fitness journey becomes even more efficient as you can focus more on your progress rather than worrying about accidental entries. Enjoy a smoother user experience as you track your workouts with greater confidence and ease. Happy training!

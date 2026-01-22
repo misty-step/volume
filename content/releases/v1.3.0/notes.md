@@ -1,0 +1,3 @@
+We're excited to introduce a new subscription model in Volume, allowing you to unlock premium features with a Stripe subscription. You can now enjoy a free trial, giving you the opportunity to explore the full potential of our workout tracking app without any upfront commitment.
+
+In this update, we've also resolved a couple of issues to enhance your experience. We've fixed a problem that caused errors during subscription checkout, ensuring a smoother payment process. Additionally, we've addressed a race condition that could occur post-checkout, improving the reliability of your subscription access. Enjoy your workouts with confidence, knowing that Volume is now even more stable and user-friendly!

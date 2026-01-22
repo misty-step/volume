@@ -1,0 +1,21 @@
+{
+  "version": "1.1.0",
+  "compareUrl": "https://github.com/misty-step/volume/compare/v1.0.0...v1.1.0",
+  "date": "2026-01-09",
+  "changes": [
+    {
+      "type": "feat",
+      "description": "**ux:** add spinner and loading text for AI exercise classification",
+      "pr": 164,
+      "commit": "5fd086c",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "validate muscle groups against canonical list",
+      "pr": 230,
+      "commit": "cc6be1d",
+      "breaking": false
+    }
+  ]
+}

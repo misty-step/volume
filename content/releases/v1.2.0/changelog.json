@@ -1,0 +1,14 @@
+{
+  "version": "1.2.0",
+  "compareUrl": "https://github.com/misty-step/volume/compare/v1.1.0...v1.2.0",
+  "date": "2026-01-11",
+  "changes": [
+    {
+      "type": "feat",
+      "description": "**testing:** add unit tests for coverage verifier",
+      "pr": 234,
+      "commit": "5186283",
+      "breaking": false
+    }
+  ]
+}

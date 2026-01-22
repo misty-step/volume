@@ -1,0 +1,14 @@
+{
+  "version": "1.6.0",
+  "compareUrl": "https://github.com/misty-step/volume/compare/v1.5.1...v1.6.0",
+  "date": "2026-01-19",
+  "changes": [
+    {
+      "type": "feat",
+      "description": "add useUndoableAction hook for centralized undo pattern",
+      "pr": 263,
+      "commit": "9cb4d06",
+      "breaking": false
+    }
+  ]
+}

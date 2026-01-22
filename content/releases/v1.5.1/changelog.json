@@ -1,0 +1,14 @@
+{
+  "version": "1.5.1",
+  "compareUrl": "https://github.com/misty-step/volume/compare/v1.5.0...v1.5.1",
+  "date": "2026-01-17",
+  "changes": [
+    {
+      "type": "fix",
+      "description": "**a11y:** remove empty heading that confused screen readers",
+      "pr": 193,
+      "commit": "f66e424",
+      "breaking": false
+    }
+  ]
+}

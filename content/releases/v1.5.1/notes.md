@@ -1,0 +1,3 @@
+In this update, we’ve enhanced the accessibility of Volume by removing an empty heading that caused confusion for screen readers. This improvement ensures that all users, including those relying on assistive technologies, can navigate the app more effectively. 
+
+With a more streamlined experience, you can now log your workouts without encountering unnecessary barriers, making it easier to focus on your fitness journey. We’re committed to making Volume a welcoming and accessible tool for everyone, helping you track your progress with confidence. Thank you for your continued support!
