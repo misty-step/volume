@@ -193,9 +193,7 @@ export default function SettingsPage() {
             subtitle={`Version ${clientVersion}`}
             actions={
               <a
-                href={`https://github.com/misty-step/volume/releases/tag/v${clientVersion}`}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={`/releases/${clientVersion}`}
                 className="text-xs text-muted-foreground hover:text-primary transition-colors"
               >
                 Release Notes

@@ -57,9 +57,7 @@ export function Footer() {
             <div className="font-mono text-sm text-muted-foreground space-y-0.5">
               <p>© {currentYear} Volume</p>
               <a
-                href={`https://github.com/misty-step/volume/releases/tag/v${version}`}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={`/releases/${version}`}
                 className="text-xs text-muted-foreground/80 hover:text-primary transition-colors"
               >
                 v{version}
