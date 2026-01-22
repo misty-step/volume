@@ -1,3 +1,3 @@
-You need a workout tracker that works every time you step into the gym. We’ve strengthened our internal quality checks to make Volume more stable and reliable than ever. These improvements work behind the scenes to ensure your experience is smooth and glitch-free, so you can focus on hitting your PRs instead of worrying about the app.
+We’ve been working behind the scenes to make Volume the most reliable partner for your training. This update introduces a more rigorous verification process for every new feature we build, ensuring that your workout data stays safe and the app performs exactly as it should.
 
-This update is all about dependability. By reinforcing the core of the app, we’ve made it more resilient for your daily sessions. It’s part of our commitment to making sure Volume remains the most consistent and trustworthy tool in your gym bag.
+By hardening the foundation of the app, we’re cutting down on those annoying glitches and making sure your experience remains seamless from your first warm-up to your final set. You can focus entirely on hitting your PRs while we handle the heavy lifting to keep everything running smoothly.

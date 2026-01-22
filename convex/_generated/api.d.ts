@@ -27,6 +27,7 @@ import type * as crons from "../crons.js";
 import type * as exercises from "../exercises.js";
 import type * as http from "../http.js";
 import type * as lib_muscleGroups from "../lib/muscleGroups.js";
+import type * as lib_openrouter from "../lib/openrouter.js";
 import type * as lib_pr_detection from "../lib/pr_detection.js";
 import type * as lib_rateLimit from "../lib/rateLimit.js";
 import type * as lib_streak_calculator from "../lib/streak_calculator.js";
@@ -66,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   exercises: typeof exercises;
   http: typeof http;
   "lib/muscleGroups": typeof lib_muscleGroups;
+  "lib/openrouter": typeof lib_openrouter;
   "lib/pr_detection": typeof lib_pr_detection;
   "lib/rateLimit": typeof lib_rateLimit;
   "lib/streak_calculator": typeof lib_streak_calculator;

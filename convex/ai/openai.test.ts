@@ -60,18 +60,18 @@ describe("OpenAI Integration", () => {
   };
 
   // Store original env var
-  const originalApiKey = process.env.OPENAI_API_KEY;
+  const originalApiKey = process.env.OPENROUTER_API_KEY;
 
   beforeEach(() => {
     // Reset all mocks before each test
     vi.clearAllMocks();
     // Set test API key
-    process.env.OPENAI_API_KEY = "test-api-key-12345";
+    process.env.OPENROUTER_API_KEY = "test-api-key-12345";
   });
 
   afterEach(() => {
     // Restore original API key
-    process.env.OPENAI_API_KEY = originalApiKey;
+    process.env.OPENROUTER_API_KEY = originalApiKey;
   });
 
   describe("generateAnalysis - Success Cases", () => {
@@ -114,7 +114,7 @@ describe("OpenAI Integration", () => {
       expect(result.content).toContain("Recommendations");
 
       // Verify model
-      expect(result.model).toBe("gpt-5-mini");
+      expect(result.model).toBe("google/gemini-3-flash-preview");
     });
 
     test("should calculate token usage correctly", async () => {
@@ -161,8 +161,8 @@ describe("OpenAI Integration", () => {
 
       const result = await generateAnalysis(sampleMetrics);
 
-      // Cost = (1M * $0.25/1M) + (1M * $2.00/1M) = $2.25
-      expect(result.tokenUsage.costUSD).toBe(2.25);
+      // Cost = (1M * $0.10/1M) + (1M * $0.40/1M) = $0.50
+      expect(result.tokenUsage.costUSD).toBe(0.5);
     });
 
     test("should trim whitespace from content", async () => {
@@ -190,11 +190,11 @@ describe("OpenAI Integration", () => {
   });
 
   describe("generateAnalysis - Error Handling", () => {
-    test("should throw error if OPENAI_API_KEY not set", async () => {
-      delete process.env.OPENAI_API_KEY;
+    test("should throw error if OPENROUTER_API_KEY not set", async () => {
+      delete process.env.OPENROUTER_API_KEY;
 
       await expect(generateAnalysis(sampleMetrics)).rejects.toThrow(
-        "OPENAI_API_KEY environment variable not set"
+        "OPENROUTER_API_KEY environment variable not set"
       );
     });
 
@@ -214,7 +214,7 @@ describe("OpenAI Integration", () => {
       }));
 
       await expect(generateAnalysis(sampleMetrics)).rejects.toThrow(
-        "OpenAI returned empty response"
+        "OpenRouter returned empty response"
       );
     });
 
@@ -234,7 +234,7 @@ describe("OpenAI Integration", () => {
       }));
 
       await expect(generateAnalysis(sampleMetrics)).rejects.toThrow(
-        "OpenAI did not return token usage information"
+        "OpenRouter did not return token usage information"
       );
     });
 
@@ -353,9 +353,9 @@ describe("OpenAI Integration", () => {
 
       // Verify createMock was called with correct structure
       const callArgs = createMock.mock.calls[0][0];
-      expect(callArgs.model).toBe("gpt-5-mini");
-      expect(callArgs.max_completion_tokens).toBe(3000);
-      expect(callArgs.reasoning_effort).toBe("medium"); // Lowered from "high" to prevent connection timeouts
+      expect(callArgs.model).toBe("google/gemini-3-flash-preview");
+      expect(callArgs.max_tokens).toBe(3000);
+      expect(callArgs.temperature).toBe(0.7);
 
       // Verify messages array has exactly 2 messages
       expect(callArgs.messages).toHaveLength(2);
@@ -396,12 +396,12 @@ describe("OpenAI Integration", () => {
 
   describe("Configuration Helpers", () => {
     test("isConfigured should return true when API key is set", () => {
-      process.env.OPENAI_API_KEY = "test-key";
+      process.env.OPENROUTER_API_KEY = "test-key";
       expect(isConfigured()).toBe(true);
     });
 
     test("isConfigured should return false when API key is not set", () => {
-      delete process.env.OPENAI_API_KEY;
+      delete process.env.OPENROUTER_API_KEY;
       expect(isConfigured()).toBe(false);
     });
 
@@ -410,8 +410,8 @@ describe("OpenAI Integration", () => {
 
       expect(pricing).toHaveProperty("inputPerMillion");
       expect(pricing).toHaveProperty("outputPerMillion");
-      expect(pricing.inputPerMillion).toBe(0.25);
-      expect(pricing.outputPerMillion).toBe(2.0);
+      expect(pricing.inputPerMillion).toBe(0.10);
+      expect(pricing.outputPerMillion).toBe(0.40);
     });
   });
 
@@ -437,9 +437,9 @@ describe("OpenAI Integration", () => {
       const result = await generateAnalysis(sampleMetrics);
 
       // Cost should be very small but non-zero
-      // 10 input tokens: (10 * 0.25) / 1M = 0.0000025
-      // 10 output tokens: (10 * 2.0) / 1M = 0.00002
-      // Total: 0.0000225, rounds to 0.0000
+      // 10 input tokens: (10 * 0.10) / 1M = 0.000001
+      // 10 output tokens: (10 * 0.40) / 1M = 0.000004
+      // Total: 0.000005, rounds to 0.0000
       expect(result.tokenUsage.costUSD).toBeGreaterThanOrEqual(0);
       expect(result.tokenUsage.costUSD).toBeLessThan(0.0001);
     });

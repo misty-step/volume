@@ -6,28 +6,30 @@
  * 1. Structured JSON for each release (technical)
  * 2. LLM-synthesized product notes (user-focused)
  *
+ * Uses OpenRouter as unified LLM gateway with Gemini 3 Flash.
+ *
  * Usage:
  *   pnpm generate:releases           # Generate missing releases
  *   pnpm generate:releases --dry-run # Parse only, no LLM calls
  *   pnpm generate:releases --force   # Regenerate all releases
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
-import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 import {
   parseChangelog,
-  formatReleaseMarkdown,
 } from "../src/lib/releases/parser";
-import type { Release, ReleaseManifest, ChangelogEntry } from "../src/lib/releases/types";
+import type { Release, ReleaseManifest } from "../src/lib/releases/types";
 
 /**
- * Model configuration
+ * OpenRouter configuration
  *
- * Using Gemini 3 Flash for optimal cost/performance balance.
- * Fast, cheap, and state-of-the-art for simple creative tasks.
+ * Using Gemini 3 Flash via OpenRouter for optimal cost/performance balance.
+ * OpenRouter provides unified access to 400+ models with OpenAI-compatible API.
  */
-const MODEL = "gemini-3-flash-preview";
+const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+const MODEL = "google/gemini-3-flash-preview";
 
 const CONTENT_DIR = join(process.cwd(), "content/releases");
 const CHANGELOG_PATH = join(process.cwd(), "CHANGELOG.md");
@@ -74,11 +76,11 @@ CRITICAL RULES - NEVER VIOLATE:
 }
 
 /**
- * Generate product-focused release notes using Gemini.
+ * Generate product-focused release notes using OpenRouter.
  */
 async function generateProductNotes(
   release: Release,
-  ai: GoogleGenAI
+  openai: OpenAI
 ): Promise<string> {
   // Format changes for the prompt - strip technical markers
   const changesSummary = release.changes
@@ -107,22 +109,22 @@ REQUIREMENTS:
 - If only internal changes, write about improved reliability/stability
 - Remember: NO technical jargon, hook names, or implementation details`;
 
-  const response = await ai.models.generateContent({
+  const completion = await openai.chat.completions.create({
     model: MODEL,
-    contents: userPrompt,
-    config: {
-      systemInstruction: buildSystemPrompt(),
-      temperature: 0.7,
-      maxOutputTokens: 1000,
-    },
+    messages: [
+      { role: "system", content: buildSystemPrompt() },
+      { role: "user", content: userPrompt },
+    ],
+    temperature: 0.7,
+    max_tokens: 1000,
   });
 
   // Debug: log finish reason if not completed normally
-  if (response.candidates?.[0]?.finishReason !== "STOP") {
-    console.log(`    ⚠ Finish reason: ${response.candidates?.[0]?.finishReason}`);
+  if (completion.choices[0]?.finish_reason !== "stop") {
+    console.log(`    ⚠ Finish reason: ${completion.choices[0]?.finish_reason}`);
   }
 
-  return response.text?.trim() || "";
+  return completion.choices[0]?.message?.content?.trim() || "";
 }
 
 /**
@@ -194,16 +196,25 @@ async function main() {
   // Ensure content directory exists
   mkdirSync(CONTENT_DIR, { recursive: true });
 
-  // Initialize Gemini
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  // Initialize OpenRouter client (OpenAI-compatible)
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    console.error("ERROR: GEMINI_API_KEY or GOOGLE_API_KEY not set");
+    console.error("ERROR: OPENROUTER_API_KEY not set");
     console.error("Set it in your environment or .env.local");
     process.exit(1);
   }
-  const ai = new GoogleGenAI({ apiKey });
+
+  const openai = new OpenAI({
+    baseURL: OPENROUTER_BASE_URL,
+    apiKey,
+    defaultHeaders: {
+      "HTTP-Referer": "https://volume.fitness",
+      "X-Title": "Volume",
+    },
+  });
 
   // Generate missing releases
+  console.log(`Using model: ${MODEL} via OpenRouter`);
   console.log("Generating release notes...");
   let generated = 0;
   let skipped = 0;
@@ -215,7 +226,7 @@ async function main() {
     }
 
     console.log(`  Generating v${release.version}...`);
-    const productNotes = await generateProductNotes(release, ai);
+    const productNotes = await generateProductNotes(release, openai);
     saveRelease(release, productNotes);
     generated++;
 

@@ -70,7 +70,7 @@ Ensure production environment variables are set correctly:
 
 ### Convex Environment (set via `npx convex env set <key> <value> --prod`)
 
-- [ ] `OPENAI_API_KEY` - OpenAI API key for AI features
+- [ ] `OPENROUTER_API_KEY` - OpenRouter API key for AI features (Gemini 3 Flash)
 - [ ] Any new environment variables added since last deployment
 
 ### Vercel Environment (set via Vercel dashboard)

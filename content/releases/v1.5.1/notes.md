@@ -1,1 +1,3 @@
-Volume should be easy for everyone to use. We’ve cleaned up some hidden clutter that was making navigation confusing if you use assistive tools to get around the app. Now, moving through your workout
+We’ve made the app more reliable so you can stay focused on your training without distractions. This update cleans up how information is presented to ensure that everyone, including those using assistive tools to navigate the app, has a smoother and clearer experience. 
+
+By removing unnecessary clutter, we’ve made the interface more intuitive and dependable. You can get back to hitting your personal bests knowing everything is working exactly as it should. Happy lifting!

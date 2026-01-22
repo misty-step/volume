@@ -1,1 +1,3 @@
-Welcome to the all-new Volume. We’ve completely redesigned the app with a bold look and a powerful Analytics tab to help you train smarter. You can now visualize your recovery with
+Volume v1.0.0 is here to give you a clearer view of your progress than ever before. We’ve added a dedicated Analytics tab featuring a visual body map and a workout heatmap so you can see exactly which muscles you’re hitting and how consistent you’ve been. Your hard work is now easier to track with automatic personal record detection and a new streak counter to keep your momentum high.
+
+The entire app feels faster and more responsive with a bold new look and smoother animations. Logging sets is effortless with a searchable exercise list and better support for timed movements. We’ve also improved the mobile experience with larger touch targets and smarter layouts, ensuring your focus stays on your workout, not your screen.

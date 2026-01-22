@@ -1,3 +1,3 @@
-You can now unlock the full Volume experience with our new subscription options. If you want to see what’s possible before committing, start a free trial to explore every feature at your own pace. It’s the best way to support the app’s growth while taking your training to the next level.
+You can now experience everything Volume has to offer with our new free trial. We want you to see exactly how these tools transform your training before you commit, so we’ve made it simple to start a trial and unlock every feature today.
 
-We also smoothed out the upgrade process to ensure everything works perfectly the moment you join. Your transition to premium is now faster and more reliable, letting you get right back to your workout without missing a beat.
+We also polished the entire upgrade process to make it as smooth as possible. We cleared out some behind-the-scenes friction to ensure that once you decide to level up, your Pro access activates instantly without any hiccups. It’s faster, more reliable, and ready to help you hit your next PR.

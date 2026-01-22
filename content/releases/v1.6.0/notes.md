@@ -1,3 +1,3 @@
-We’ve all been there—you’re mid-set, your hands are sweaty, and you accidentally delete a set or an exercise you just finished. Now, you can breathe easy. You can now undo accidental deletions with a single tap, keeping your workout data safe and your focus exactly where it should be.
+Mistakes happen, especially when you’re mid-workout and moving fast. We’ve made it much easier to fix accidental taps so you can stay focused on your training. If you accidentally delete a set or an exercise, you can now undo the action with a single tap. 
 
-This update is all about making your logging experience more forgiving. Whether you're moving fast or just had a slip of the thumb, you can fix mistakes instantly and get right back to your training without missing a beat.
+This update ensures your data stays safe and your workout flow remains uninterrupted. Whether it’s a wrong weight entry or a misplaced swipe, you’re always in control of your progress. We’ve also smoothed out several areas of the app to keep everything running fast and reliable while you crush your goals.

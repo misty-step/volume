@@ -1,3 +1,3 @@
-Your hard work shouldn't be locked away. You can now take your entire workout history with you to analyze, share with a coach, or keep for your own records. Whether you want to build custom charts in a spreadsheet or just want a backup of every PR you’ve ever hit, your data is now yours to move wherever you like.
+Your workout data belongs to you, and now it’s easier than ever to take it wherever you need. You can now export your entire workout history as a spreadsheet, making it simple to dive deep into your progress, create custom charts, or share your gains with a coach.
 
-We’ve also polished the experience to keep everything running smoothly while you train. Your progress is personal, and now you have total control over how you view and use it.
+Whether you’re archiving your milestones or just want a hard copy of your consistency, your training stats are now just a tap away. We’ve also polished the experience to keep your tracking smooth and reliable so you can stay focused on your next set. Happy training.

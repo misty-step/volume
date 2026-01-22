@@ -24,7 +24,7 @@ src/app/(app)/page.tsx     →  useQuickLogForm hook  →  convex/sets.ts
 **Three domains:**
 - `src/` - React UI, no business logic
 - `convex/` - All data mutations, auth checks, subscriptions
-- External: Clerk (auth), Stripe (payments), OpenAI (AI features)
+- External: Clerk (auth), Stripe (payments), OpenRouter/Gemini (AI features)
 
 **Deep modules:** `useQuickLogForm`, `convex/analytics.ts`
 
@@ -47,7 +47,7 @@ CONVEX_DEPLOYMENT=prod:whimsical-marten-631 pnpm convex deploy -y
 
 **Next.js (Vercel):** `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_*_PRICE_ID`, `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 
-**Convex (both deployments):** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `CLERK_JWT_ISSUER_DOMAIN`, `OPENAI_API_KEY`
+**Convex (both deployments):** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `CLERK_JWT_ISSUER_DOMAIN`, `OPENROUTER_API_KEY`
 
 ## Pitfalls
 

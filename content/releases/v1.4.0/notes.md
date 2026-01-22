@@ -1,3 +1,3 @@
-Mistakes happen when you’re mid-set and moving fast. If you accidentally delete an exercise or a set, you can now bring it back instantly. You no longer have to worry about losing your progress to a stray swipe or re-entering your heavy lifts from memory.
+Mistakes happen, especially when you're mid-set and focused on your gains. We’ve added a safety net so you can train with total confidence. If you accidentally delete a set, exercise, or routine, you can now undo the action with a single tap.
 
-We’ve also tightened things up across the app to ensure your tracking stays as reliable as your routine. You focus on hitting your PRs, and we’ll make sure every rep is accounted for.
+Your data is safer than ever, allowing you to manage your workouts quickly without the fear of losing your progress. This update also includes several improvements to keep the app running smoothly and reliably while you're at the gym. It’s all about making sure nothing gets in the way of your next PR.
