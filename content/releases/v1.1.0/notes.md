@@ -1,3 +1,3 @@
-In this update, you can now enjoy a smoother experience when using AI exercise classification. The newly added spinner and loading text will keep you informed while your exercises are being analyzed, so you’ll know exactly when the information is ready for you. 
+In this update, you’ll notice a smoother experience when classifying your exercises with AI. We’ve added a loading spinner and text, so you’ll know exactly what's happening while you wait. 
 
-Additionally, we've improved the app's reliability by validating muscle groups against a canonical list. This ensures that your workout logs are accurate and meaningful, enabling you to track your fitness journey with confidence. With these enhancements, you can focus more on your workouts and less on the details.
+We also improved the accuracy of muscle group classifications, ensuring you get reliable feedback on your workouts. This means you can trust that your exercise data is spot on, helping you stay focused on your fitness goals. Enjoy the enhancements in Volume and keep pushing towards your best self!

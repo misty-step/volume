@@ -1,3 +1,3 @@
-In this update, we’ve enhanced the reliability of Volume with the addition of unit tests for our coverage verifier. This means you can expect a more stable app experience as you track your workouts and log your sets. 
+With this update, you can feel even more confident in your workout tracking experience. We’ve made some important improvements to ensure that everything runs smoothly and reliably, so you can focus on what matters most—your fitness journey.
 
-With these improvements, you can focus on what truly matters—your fitness journey. Enjoy smoother functionality and increased confidence that the app is performing optimally, allowing you to analyze your progress without interruptions. Thank you for being a part of the Volume community!
+You can expect a more stable app, which means fewer interruptions and a smoother experience as you log your workouts and track your progress. Enjoy the peace of mind that comes with knowing your data is safe and your app is performing at its best. Keep pushing towards your goals!

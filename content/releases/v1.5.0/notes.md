@@ -1,3 +1,3 @@
-We're excited to announce a significant new feature in Volume 1.5.0: you can now export your workout history as a CSV file. This allows you to easily analyze your fitness progress and share your data with trainers or fitness apps of your choice.
+You asked, and we delivered! With the latest update, you can now export your workout history as a CSV file. This means you can easily keep track of your progress, share your achievements, or analyze your performance in a way that works best for you.
 
-With the CSV export, you can take control of your workout data and gain deeper insights into your performance trends. Whether you're tracking personal records or analyzing workout frequency, this feature empowers you to make informed decisions about your fitness journey. Enjoy streamlined data management and enhance your workout experience with this powerful new tool!
+This update not only makes managing your workout data simpler, but it also gives you more control over how you use that information. Dive into your fitness journey with this new feature and take your tracking to the next level!

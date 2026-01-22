@@ -1,3 +1,3 @@
-With the release of version 1.4.0, you can now easily undo delete operations within the Volume app. This new feature empowers you to manage your workout logs with greater confidence, knowing that if you accidentally remove a set or workout, you can quickly restore it with just a tap.
+With our latest update, you can now easily undo any accidental deletions. Made a mistake? No problem—just tap to restore what you lost and keep your workout history intact. This means you can focus more on your fitness journey without worrying about losing important information.
 
-This enhancement not only prevents the frustration of losing important data but also streamlines your workout tracking process. You can focus more on your fitness journey and less on the worry of making mistakes while logging your progress. Enjoy a more seamless experience as you track what works best for you!
+We’ve also made some behind-the-scenes improvements to ensure a smoother and more reliable experience. Enjoy tracking your workouts with confidence, knowing that we’re always working to make Volume better for you. Happy training!

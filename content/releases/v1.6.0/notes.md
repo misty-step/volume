@@ -1,3 +1,3 @@
-In version 1.6.0, you can now take advantage of our new useUndoableAction feature, which streamlines the process of undoing actions within the app. This centralized undo functionality allows you to quickly revert changes, making it easier to correct mistakes and refine your workout logs without hassle.
+Exciting news in Volume v1.6.0! You can now easily undo accidental deletions with just one tap, making it simpler than ever to manage your workouts. Whether you’ve removed an exercise by mistake or changed your mind about a recent entry, it’s all easily reversible.
 
-With this enhancement, your fitness journey becomes even more efficient as you can focus more on your progress rather than worrying about accidental entries. Enjoy a smoother user experience as you track your workouts with greater confidence and ease. Happy training!
+This update is all about giving you more control and peace of mind as you track your fitness journey. Enjoy the confidence that comes with knowing you can fix mistakes effortlessly!

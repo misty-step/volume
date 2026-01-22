@@ -30,40 +30,81 @@ const DRY_RUN = args.includes("--dry-run");
 const FORCE = args.includes("--force");
 
 /**
+ * Build the system prompt for release notes generation.
+ * Encodes Volume's voice and strict rules for user-focused copy.
+ */
+function buildSystemPrompt(): string {
+  return `You are a product writer for Volume, a workout tracking app. Your job is to translate technical changes into benefits users care about.
+
+VOICE:
+- Direct, confident, no hedging
+- Friendly but not overly casual
+- Celebrate wins without being cheesy
+- Second person: "you" not "users"
+
+CRITICAL RULES - NEVER VIOLATE:
+1. NO TECHNICAL JARGON. Never mention:
+   - Hook names (useX, useSomething)
+   - Component names (ExerciseCard, SettingsPanel)
+   - Internal APIs, functions, or implementation details
+   - Technical patterns (centralized, abstraction, refactor)
+
+2. BENEFITS OVER MECHANISMS. Always ask "so what does this mean for the user?"
+   - BAD: "Added a useUndoableAction hook that centralizes undo logic"
+   - GOOD: "Made a mistake? You can now undo accidental deletions with one tap"
+
+3. VALUE OVER FEATURES. Focus on what users can DO, not what we built.
+   - BAD: "Implemented soft delete with automatic restore functionality"
+   - GOOD: "Accidentally delete an exercise? No problem—just add it again and your history comes back"
+
+4. SKIP INTERNAL CHANGES. Don't mention:
+   - Refactoring, code cleanup, or "under the hood" work
+   - Dependencies, libraries, or technical debt
+   - Unless they directly improve speed, reliability, or user experience
+
+5. KEEP IT REAL. Write like you're telling a friend what's new, not writing a press release.`;
+}
+
+/**
  * Generate product-focused release notes using OpenAI.
  */
 async function generateProductNotes(
   release: Release,
   openai: OpenAI
 ): Promise<string> {
-  // Format changes for the prompt
+  // Format changes for the prompt - strip technical markers
   const changesSummary = release.changes
+    .filter((c) => c.type === "feat" || c.type === "fix" || c.type === "perf")
     .map((c) => {
-      const scope = c.scope ? `[${c.scope}] ` : "";
-      const type = c.type === "feat" ? "NEW" : c.type === "fix" ? "FIX" : c.type.toUpperCase();
-      return `- ${type}: ${scope}${c.description}`;
+      const type = c.type === "feat" ? "NEW" : c.type === "fix" ? "FIXED" : "FASTER";
+      return `- ${type}: ${c.description}`;
     })
     .join("\n");
 
-  const prompt = `You are writing release notes for Volume, a workout tracking app that helps users log sets quickly and see what's working in their fitness journey.
+  // Count internal-only changes
+  const internalCount = release.changes.filter(
+    (c) => c.type === "chore" || c.type === "refactor" || c.type === "docs"
+  ).length;
 
-Given this technical changelog for version ${release.version} (released ${release.date}):
+  const userPrompt = `Write release notes for Volume v${release.version} (${release.date}).
 
-${changesSummary}
+TECHNICAL CHANGELOG (translate these into user benefits):
+${changesSummary || "(No user-facing changes listed)"}
+${internalCount > 0 ? `\n(Plus ${internalCount} internal improvements for stability)` : ""}
 
-Write 2-3 short paragraphs of release notes that:
-1. Lead with the most impactful user-facing change
-2. Explain benefits to the user, not implementation details
-3. Use second person ("you can now...")
-4. Be concise and direct - no fluff
-5. Skip internal/chore changes unless they improve reliability or performance
-6. If the only changes are internal, focus on reliability/stability improvements
-
-Format: Plain markdown paragraphs, no headers or bullet points. Keep it under 150 words total.`;
+REQUIREMENTS:
+- 2-3 short paragraphs, under 120 words total
+- Lead with the most valuable change for users
+- No bullet points, no headers—just conversational paragraphs
+- If only internal changes, write about improved reliability/stability
+- Remember: NO technical jargon, hook names, or implementation details`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
+    messages: [
+      { role: "system", content: buildSystemPrompt() },
+      { role: "user", content: userPrompt },
+    ],
     temperature: 0.7,
     max_tokens: 300,
   });
