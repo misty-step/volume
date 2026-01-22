@@ -1,8 +1,9 @@
 import { v } from "convex/values";
 import { action, internalMutation, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 import { getPeriodEndMs, mapStripeStatus } from "./http";
+import { getStripe } from "./lib/stripeConfig";
 
 /**
  * Admin mutation: Create or update user with subscription data
@@ -80,15 +81,15 @@ export const syncCheckoutSession = action({
       return { success: false, error: "Unauthorized" };
     }
 
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
-    if (!stripeKey) {
-      console.error("STRIPE_SECRET_KEY not configured");
+    let stripe: Stripe;
+    try {
+      stripe = getStripe();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Stripe not configured";
+      console.error(message);
       return { success: false, error: "Stripe not configured" };
     }
-
-    const stripe = new Stripe(stripeKey, {
-      apiVersion: "2025-12-15.clover",
-    });
 
     try {
       // Fetch checkout session from Stripe
@@ -154,14 +155,15 @@ export const syncUserByEmail = action({
       return { success: false, error: "Unauthorized" };
     }
 
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
-    if (!stripeKey) {
+    let stripe: Stripe;
+    try {
+      stripe = getStripe();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Stripe not configured";
+      console.error(message);
       return { success: false, error: "Stripe not configured" };
     }
-
-    const stripe = new Stripe(stripeKey, {
-      apiVersion: "2025-12-15.clover",
-    });
 
     try {
       // Find customer by email in Stripe

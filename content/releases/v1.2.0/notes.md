@@ -1,0 +1,3 @@
+We’ve been working behind the scenes to make Volume the most reliable partner for your training. This update introduces a more rigorous verification process for every new feature we build, ensuring that your workout data stays safe and the app performs exactly as it should.
+
+By hardening the foundation of the app, we’re cutting down on those annoying glitches and making sure your experience remains seamless from your first warm-up to your final set. You can focus entirely on hitting your PRs while we handle the heavy lifting to keep everything running smoothly.

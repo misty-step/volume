@@ -1,7 +1,18 @@
 import { NextResponse } from "next/server";
 import { resolveVersion } from "@/lib/version";
+import { getDeploymentEnvironment } from "@/lib/environment";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Parse Stripe key mode from prefix.
+ */
+function getStripeKeyMode(key: string | undefined): "live" | "test" | "unknown" {
+  if (!key) return "unknown";
+  if (key.startsWith("sk_live_")) return "live";
+  if (key.startsWith("sk_test_")) return "test";
+  return "unknown";
+}
 
 /**
  * Health check endpoint for uptime monitoring.
@@ -27,8 +38,17 @@ export async function GET() {
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
   const monthlyPriceId = process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID;
   const annualPriceId = process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID;
-  const stripeHealthy = Boolean(stripeSecretKey && monthlyPriceId && annualPriceId);
+  const stripeConfigured = Boolean(stripeSecretKey && monthlyPriceId && annualPriceId);
 
+  // Check key type matches environment
+  const keyMode = getStripeKeyMode(stripeSecretKey);
+  const deploymentEnv = getDeploymentEnvironment();
+  const isProd = deploymentEnv === "production";
+  const keyEnvMismatch =
+    keyMode !== "unknown" &&
+    ((isProd && keyMode === "test") || (!isProd && keyMode === "live"));
+
+  const stripeHealthy = stripeConfigured && !keyEnvMismatch;
   const isHealthy = convexHealthy && stripeHealthy;
 
   const response = {
@@ -39,16 +59,19 @@ export async function GET() {
       convex: { status: convexHealthy ? "pass" : "fail" },
       stripe: {
         status: stripeHealthy ? "pass" : "fail",
+        keyMode,
+        environment: deploymentEnv,
         // Only expose missing config names, never values
-        ...(stripeHealthy
-          ? {}
-          : {
-              missing: [
-                !stripeSecretKey && "STRIPE_SECRET_KEY",
-                !monthlyPriceId && "NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID",
-                !annualPriceId && "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID",
-              ].filter(Boolean),
-            }),
+        ...(!stripeConfigured && {
+          missing: [
+            !stripeSecretKey && "STRIPE_SECRET_KEY",
+            !monthlyPriceId && "NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID",
+            !annualPriceId && "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID",
+          ].filter(Boolean),
+        }),
+        ...(keyEnvMismatch && {
+          warning: `KEY/ENV MISMATCH: ${keyMode} key in ${deploymentEnv}`,
+        }),
       },
     },
   };

@@ -1,8 +1,10 @@
 /**
- * OpenAI Integration Module
+ * OpenRouter Integration Module
  *
- * Handles API communication with OpenAI for generating workout analysis.
+ * Handles API communication via OpenRouter for generating workout analysis.
  * Includes retry logic, error handling, token tracking, and cost calculation.
+ *
+ * Uses Gemini 3 Flash for analysis and GPT-5 nano for classification.
  *
  * @module ai/openai
  */
@@ -11,57 +13,23 @@ import OpenAI from "openai";
 import { systemPrompt, formatMetricsPrompt } from "./prompts";
 import type { AnalyticsMetrics } from "./prompts";
 import { filterValidMuscleGroups } from "../lib/muscleGroups";
+import {
+  createOpenRouterClient,
+  MODELS,
+  calculateCost,
+  isConfigured,
+} from "../lib/openrouter";
 
 /**
- * OpenAI Model Selection
- *
- * GPT-5-mini: Faster, cheaper (~$0.003/report), good for simple analysis
- * GPT-5: More capable, 4x cost (~$0.012/report), better context handling
- *
- * Set OPENAI_MODEL_TIER in Convex environment:
- * - "mini" (default): Use gpt-5-mini
- * - "full": Use gpt-5
- */
-const MODEL_TIER = (process.env.OPENAI_MODEL_TIER || "mini") as "mini" | "full";
-
-const MODEL_CONFIGS = {
-  mini: {
-    model: "gpt-5-mini" as const,
-    reasoningEffort: "medium" as const, // Lowered from "high" to prevent connection timeouts
-  },
-  full: {
-    model: "gpt-5" as const,
-    reasoningEffort: "low" as const, // Lowered from "medium" for faster, more reliable bulk generation
-  },
-} as const;
-
-/**
- * OpenAI API configuration
+ * Configuration for workout analysis
  */
 const CONFIG = {
-  ...MODEL_CONFIGS[MODEL_TIER],
-  maxTokens: 3000, // Reasoning models use tokens for BOTH reasoning AND content
+  model: MODELS.MAIN,
+  maxTokens: 3000,
   timeout: 30000, // 30 seconds
   maxRetries: 3,
-  // Note: gpt-5 models only support default temperature (1.0) and cannot be customized
+  temperature: 0.7,
 } as const;
-
-/**
- * Pricing per 1M tokens (as of October 2025)
- * Source: https://openai.com/api/pricing/
- */
-const PRICING_BY_MODEL = {
-  mini: {
-    inputPerMillion: 0.25, // $0.25 per 1M input tokens (GPT-5 mini)
-    outputPerMillion: 2.0, // $2.00 per 1M output tokens (GPT-5 mini)
-  },
-  full: {
-    inputPerMillion: 1.0, // $1.00 per 1M input tokens (GPT-5)
-    outputPerMillion: 8.0, // $8.00 per 1M output tokens (GPT-5)
-  },
-} as const;
-
-const PRICING = PRICING_BY_MODEL[MODEL_TIER];
 
 /**
  * Token usage and cost information
@@ -73,25 +41,12 @@ export interface TokenUsage {
 }
 
 /**
- * Analysis result from OpenAI
+ * Analysis result from OpenRouter
  */
 export interface AnalysisResult {
   content: string;
   tokenUsage: TokenUsage;
   model: string;
-}
-
-/**
- * Calculate cost in USD from token usage
- *
- * @param inputTokens - Number of input tokens consumed
- * @param outputTokens - Number of output tokens generated
- * @returns Cost in USD (to 4 decimal places)
- */
-function calculateCost(inputTokens: number, outputTokens: number): number {
-  const inputCost = (inputTokens * PRICING.inputPerMillion) / 1_000_000;
-  const outputCost = (outputTokens * PRICING.outputPerMillion) / 1_000_000;
-  return Number((inputCost + outputCost).toFixed(4));
 }
 
 /**
@@ -109,17 +64,16 @@ function sleep(attempt: number): Promise<void> {
   const delayMs = baseDelay + jitter;
 
   console.log(
-    `[OpenAI] Retry backoff: ${delayMs.toFixed(0)}ms (attempt ${attempt + 1})`
+    `[OpenRouter] Retry backoff: ${delayMs.toFixed(0)}ms (attempt ${attempt + 1})`
   );
   return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
 /**
- * Generate workout analysis using OpenAI
+ * Generate workout analysis using OpenRouter (Gemini 3 Flash)
  *
- * Sends analytics metrics to GPT-5 mini for technical analysis and insights.
+ * Sends analytics metrics for technical analysis and insights.
  * Includes automatic retry with exponential backoff for transient failures.
- * Uses medium reasoning effort for balanced depth and cost.
  *
  * @param metrics - Structured workout analytics data
  * @returns Analysis content, token usage, and cost information
@@ -141,18 +95,12 @@ function sleep(attempt: number): Promise<void> {
 export async function generateAnalysis(
   metrics: AnalyticsMetrics
 ): Promise<AnalysisResult> {
-  // Initialize OpenAI client
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  const client = createOpenRouterClient();
+  if (!client) {
     throw new Error(
-      "OPENAI_API_KEY environment variable not set. Add it to Convex environment variables."
+      "OPENROUTER_API_KEY environment variable not set. Add it to Convex environment variables."
     );
   }
-
-  const openai = new OpenAI({
-    apiKey,
-    timeout: CONFIG.timeout,
-  });
 
   // Format metrics into prompt
   const userPrompt = formatMetricsPrompt(metrics);
@@ -162,40 +110,39 @@ export async function generateAnalysis(
   for (let attempt = 0; attempt < CONFIG.maxRetries; attempt++) {
     try {
       console.log(
-        `[OpenAI] Generating analysis (attempt ${attempt + 1}/${CONFIG.maxRetries})...`
+        `[OpenRouter] Generating analysis (attempt ${attempt + 1}/${CONFIG.maxRetries})...`
       );
 
-      const completion = await openai.chat.completions.create({
+      const completion = await client.chat.completions.create({
         model: CONFIG.model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        // Note: gpt-5-mini uses max_completion_tokens instead of max_tokens
-        max_completion_tokens: CONFIG.maxTokens,
-        reasoning_effort: CONFIG.reasoningEffort,
+        max_tokens: CONFIG.maxTokens,
+        temperature: CONFIG.temperature,
       });
 
       // Extract response content
       const content = completion.choices[0]?.message?.content;
       if (!content) {
-        throw new Error("OpenAI returned empty response");
+        throw new Error("OpenRouter returned empty response");
       }
 
       // Extract token usage
       const usage = completion.usage;
       if (!usage) {
-        throw new Error("OpenAI did not return token usage information");
+        throw new Error("OpenRouter did not return token usage information");
       }
 
       const tokenUsage: TokenUsage = {
         input: usage.prompt_tokens,
         output: usage.completion_tokens,
-        costUSD: calculateCost(usage.prompt_tokens, usage.completion_tokens),
+        costUSD: calculateCost(MODELS.MAIN, usage.prompt_tokens, usage.completion_tokens),
       };
 
       console.log(
-        `[OpenAI] Success! Tokens: ${tokenUsage.input} in, ${tokenUsage.output} out, Cost: $${tokenUsage.costUSD}`
+        `[OpenRouter] Success! Tokens: ${tokenUsage.input} in, ${tokenUsage.output} out, Cost: $${tokenUsage.costUSD}`
       );
 
       return {
@@ -208,16 +155,17 @@ export async function generateAnalysis(
 
       // Log error details
       console.error(
-        `[OpenAI] Attempt ${attempt + 1} failed:`,
+        `[OpenRouter] Attempt ${attempt + 1} failed:`,
         lastError.message
       );
 
       // Don't retry on certain error types
       if (
         lastError.message.includes("API key") ||
-        lastError.message.includes("invalid_request")
+        lastError.message.includes("invalid_request") ||
+        lastError.message.includes("authentication")
       ) {
-        console.error("[OpenAI] Non-retriable error detected, aborting");
+        console.error("[OpenRouter] Non-retriable error detected, aborting");
         throw lastError;
       }
 
@@ -229,7 +177,7 @@ export async function generateAnalysis(
   }
 
   // All retries exhausted
-  console.error(`[OpenAI] All ${CONFIG.maxRetries} attempts failed`);
+  console.error(`[OpenRouter] All ${CONFIG.maxRetries} attempts failed`);
   throw new Error(
     `Failed to generate analysis after ${CONFIG.maxRetries} attempts: ${lastError?.message || "Unknown error"}`
   );
@@ -310,11 +258,9 @@ function classifyExerciseFallback(exerciseName: string): string[] {
 }
 
 /**
- * Classify exercise into muscle groups using GPT-5-nano
+ * Classify exercise into muscle groups using GPT-5 nano via OpenRouter
  *
- * Uses minimal reasoning effort for simple classification task.
- * Cost: ~$0.0001 per exercise (10x cheaper than gpt-5-mini).
- *
+ * Uses the cheapest available model for simple classification tasks.
  * Falls back to pattern matching if API key is not configured (test environments).
  *
  * @param exerciseName - Name of exercise to classify
@@ -329,28 +275,16 @@ function classifyExerciseFallback(exerciseName: string): string[] {
 export async function classifyExercise(
   exerciseName: string
 ): Promise<string[]> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  const client = createOpenRouterClient();
+  if (!client) {
     // Use deterministic fallback in test environments
     console.log(
-      `[Exercise] No API key - using fallback classification for "${exerciseName}"`
+      `[OpenRouter] No API key - using fallback classification for "${exerciseName}"`
     );
     return classifyExerciseFallback(exerciseName);
   }
 
-  // Try to create OpenAI client - if it fails (browser environment), use fallback
-  let openai: OpenAI;
-  try {
-    openai = new OpenAI({ apiKey, timeout: 10000 });
-  } catch (error) {
-    // Browser environment or other OpenAI constructor error
-    console.log(
-      `[Exercise] OpenAI unavailable (browser env) - using fallback for "${exerciseName}"`
-    );
-    return classifyExerciseFallback(exerciseName);
-  }
-
-  const systemPrompt = `You are a fitness exercise classifier. Classify exercises into one or more of these muscle groups:
+  const systemPromptText = `You are a fitness exercise classifier. Classify exercises into one or more of these muscle groups:
 
 Chest, Back, Shoulders, Biceps, Triceps, Quads, Hamstrings, Glutes, Calves, Core
 
@@ -368,15 +302,14 @@ Examples:
 - "Hammer Curls" → "Biceps"`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-5-nano",
+    const completion = await client.chat.completions.create({
+      model: MODELS.CLASSIFICATION,
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: systemPromptText },
         { role: "user", content: `Classify: ${exerciseName}` },
       ],
-      // Note: gpt-5-nano only supports default temperature (1) and reasoning_effort
-      max_completion_tokens: 50, // Short response (gpt-5-nano uses max_completion_tokens, not max_tokens)
-      reasoning_effort: "minimal", // Fastest, cheapest
+      max_tokens: 50, // Short response
+      temperature: 0.3, // Low temperature for consistent classification
     });
 
     const content = completion.choices[0]?.message?.content?.trim();
@@ -391,21 +324,19 @@ Examples:
     // Filter AI response to canonical muscle groups (garbage like "(and possibly...)" → "Other")
     return filterValidMuscleGroups(rawGroups);
   } catch (error) {
-    console.error(`[OpenAI] Exercise classification failed:`, error);
+    console.error(`[OpenRouter] Exercise classification failed:`, error);
     return classifyExerciseFallback(exerciseName); // Fallback to prevent blocking exercise creation
   }
 }
 
 /**
- * Check if OpenAI API is configured and accessible
+ * Check if OpenRouter API is configured and accessible
  *
  * Useful for health checks and configuration validation.
  *
  * @returns True if API key is set, false otherwise
  */
-export function isConfigured(): boolean {
-  return !!process.env.OPENAI_API_KEY;
-}
+export { isConfigured };
 
 /**
  * Get current pricing configuration
@@ -415,5 +346,8 @@ export function isConfigured(): boolean {
  * @returns Pricing structure in dollars per 1M tokens
  */
 export function getPricing() {
-  return PRICING;
+  return {
+    inputPerMillion: 0.10,
+    outputPerMillion: 0.40,
+  };
 }

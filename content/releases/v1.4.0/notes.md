@@ -1,0 +1,3 @@
+Mistakes happen, especially when you're mid-set and focused on your gains. We’ve added a safety net so you can train with total confidence. If you accidentally delete a set, exercise, or routine, you can now undo the action with a single tap.
+
+Your data is safer than ever, allowing you to manage your workouts quickly without the fear of losing your progress. This update also includes several improvements to keep the app running smoothly and reliably while you're at the gym. It’s all about making sure nothing gets in the way of your next PR.

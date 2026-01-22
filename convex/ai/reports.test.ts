@@ -34,7 +34,7 @@ vi.mock("./openai", () => ({
       output: 150,
       costUSD: 0.0001,
     },
-    model: "gpt-5-mini",
+    model: "google/gemini-3-flash-preview",
   }),
   isConfigured: vi.fn().mockReturnValue(true),
   getPricing: vi.fn().mockReturnValue({
@@ -48,7 +48,7 @@ describe("AI Report Queries and Mutations", () => {
   const user1 = "user_1_test";
   const user2 = "user_2_test";
 
-  const originalApiKey = process.env.OPENAI_API_KEY;
+  const originalApiKey = process.env.OPENROUTER_API_KEY;
 
   // Type workaround for skipped tests - api.ai namespace not in generated types
   const aiApi = api as any;
@@ -64,13 +64,13 @@ describe("AI Report Queries and Mutations", () => {
       "lib/rateLimit": () => Promise.resolve(rateLimit),
     });
 
-    // Set OPENAI_API_KEY for tests
-    process.env.OPENAI_API_KEY = "test-key-12345";
+    // Set OPENROUTER_API_KEY for tests
+    process.env.OPENROUTER_API_KEY = "test-key-12345";
   });
 
   afterEach(() => {
     // Restore original API key
-    process.env.OPENAI_API_KEY = originalApiKey;
+    process.env.OPENROUTER_API_KEY = originalApiKey;
   });
 
   // Helper to create a test report directly in database
@@ -98,7 +98,7 @@ describe("AI Report Queries and Mutations", () => {
           streak: { currentStreak: 5, longestStreak: 10, totalWorkouts: 50 },
           frequency: { workoutDays: 5, restDays: 2, avgSetsPerDay: 12 },
         },
-        model: "gpt-5-mini",
+        model: "google/gemini-3-flash-preview",
         tokenUsage: { input: 250, output: 150, costUSD: 0.0001 },
       });
     });
@@ -310,7 +310,7 @@ describe("AI Report Queries and Mutations", () => {
       expect(latestReport?.generatedAt).toBeDefined();
       expect(latestReport?.content).toBeDefined();
       expect(latestReport?.metricsSnapshot).toBeDefined();
-      expect(latestReport?.model).toBe("gpt-5-mini");
+      expect(latestReport?.model).toBe("google/gemini-3-flash-preview");
       expect(latestReport?.tokenUsage).toBeDefined();
     });
 

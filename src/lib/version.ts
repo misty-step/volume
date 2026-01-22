@@ -5,6 +5,10 @@
  * which environment variable provided it. This hides deployment details
  * (Sentry release vs. git SHA vs. package version) and keeps UI/server
  * consumers consistent.
+ *
+ * IMPORTANT: Next.js only replaces process.env.NEXT_PUBLIC_* at build time
+ * when accessed with LITERAL strings. Dynamic access like env[key] doesn't
+ * work for client-side code. This module handles that complexity internally.
  */
 
 type EnvSource = Partial<
@@ -38,39 +42,28 @@ function normalizeSha(value: string): string {
  *
  * Note: Empty strings and whitespace-only values are treated as absent.
  *
- * @param env - Optional environment source (defaults to process.env)
+ * @param env - Environment source. Server-side can omit (uses process.env).
+ *              Client-side MUST pass pre-extracted values using literal access.
  */
-export function resolveVersion(
-  env: EnvSource = process.env as EnvSource
-): string {
+export function resolveVersion(env: EnvSource = process.env as EnvSource): string {
   // Helper to filter empty strings and whitespace
-  const getEnv = (key: keyof EnvSource) => env[key]?.trim() || undefined;
+  const get = (key: keyof EnvSource) => env[key]?.trim() || undefined;
 
   // Priority 1: Sentry release (explicit override)
-  const sentryRelease = getEnv("SENTRY_RELEASE");
-  if (sentryRelease) {
-    return sentryRelease;
-  }
+  const sentryRelease = get("SENTRY_RELEASE");
+  if (sentryRelease) return sentryRelease;
 
   // Priority 2: Git commit SHA (Vercel auto-injected)
-  const gitSha =
-    getEnv("VERCEL_GIT_COMMIT_SHA") ||
-    getEnv("NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA");
-  if (gitSha) {
-    return normalizeSha(gitSha);
-  }
+  const gitSha = get("VERCEL_GIT_COMMIT_SHA") || get("NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA");
+  if (gitSha) return normalizeSha(gitSha);
 
   // Priority 3: Build-time injected package version
-  const packageVersion = getEnv("NEXT_PUBLIC_PACKAGE_VERSION");
-  if (packageVersion) {
-    return packageVersion;
-  }
+  const packageVersion = get("NEXT_PUBLIC_PACKAGE_VERSION");
+  if (packageVersion) return packageVersion;
 
   // Priority 4: npm package version (local dev with npm run)
-  const npmVersion = getEnv("npm_package_version");
-  if (npmVersion) {
-    return npmVersion;
-  }
+  const npmVersion = get("npm_package_version");
+  if (npmVersion) return npmVersion;
 
   // Priority 5: Fallback for development
   return "dev";
@@ -79,6 +72,14 @@ export function resolveVersion(
 /**
  * Client-safe, eagerly-resolved version string.
  *
- * Keep all env access inside this module; other callers import the value.
+ * Uses LITERAL process.env access so webpack replaces values at build time.
+ * This is the workaround for Next.js's static replacement limitation.
  */
-export const clientVersion = resolveVersion();
+export const clientVersion = resolveVersion({
+  // Literal access required for Next.js build-time replacement
+  SENTRY_RELEASE: process.env.SENTRY_RELEASE,
+  VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
+  NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA,
+  NEXT_PUBLIC_PACKAGE_VERSION: process.env.NEXT_PUBLIC_PACKAGE_VERSION,
+  npm_package_version: process.env.npm_package_version,
+});

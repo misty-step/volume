@@ -191,6 +191,14 @@ export default function SettingsPage() {
           <SettingsListItem
             title="Volume"
             subtitle={`Version ${clientVersion}`}
+            actions={
+              <a
+                href={`/releases/${clientVersion}`}
+                className="text-xs text-muted-foreground hover:text-primary transition-colors"
+              >
+                Release Notes
+              </a>
+            }
           />
           <SettingsListItem
             title="A Misty Step Project"

@@ -1,0 +1,3 @@
+You can now experience everything Volume has to offer with our new free trial. We want you to see exactly how these tools transform your training before you commit, so we’ve made it simple to start a trial and unlock every feature today.
+
+We also polished the entire upgrade process to make it as smooth as possible. We cleared out some behind-the-scenes friction to ensure that once you decide to level up, your Pro access activates instantly without any hiccups. It’s faster, more reliable, and ready to help you hit your next PR.

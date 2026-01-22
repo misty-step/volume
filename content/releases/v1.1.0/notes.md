@@ -1,0 +1,3 @@
+When you're using our AI to categorize your exercises, you’ll now see exactly what’s happening in real-time. We’ve added clear status updates so you aren't left wondering if the app is working—you’ll know the second your workout data is being processed and sorted.
+
+We also tightened up how your workouts are organized. Your muscle group data is now more accurate than ever, ensuring your progress charts and body stats stay clean and consistent. This update keeps your tracking reliable so you can focus entirely on hitting your next PR.

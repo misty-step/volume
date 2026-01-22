@@ -1,0 +1,3 @@
+This update is all about making your experience smoother and more reliable. We’ve fine-tuned the app to ensure everything runs exactly as expected, whether you’re logging a heavy set or checking your progress.
+
+By tightening up how the app handles your data behind the scenes, we’ve eliminated small glitches that could slow you down. You can focus entirely on your training knowing that Volume is more stable and responsive than ever. Turn up the intensity—we’ve got the rest covered.

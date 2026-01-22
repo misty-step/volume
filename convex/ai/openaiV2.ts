@@ -1,33 +1,36 @@
 /**
- * OpenAI V2 Integration with Structured Outputs
+ * OpenRouter V2 Integration with JSON Mode
  *
- * Uses OpenAI's native JSON schema enforcement for 100% schema compliance.
+ * Uses Gemini 3 Flash via OpenRouter for creative content generation.
+ * Validates responses with Zod for schema compliance.
  * Only generates creative content (celebration + action)—metrics are computed.
  *
  * @module ai/openaiV2
  */
 
-import OpenAI from "openai";
-import { zodResponseFormat } from "openai/helpers/zod";
 import {
   AICreativeOutputSchema,
   type AICreativeContext,
   type AICreativeResult,
 } from "./reportV2Schema";
 import { systemPromptV2, formatCreativePrompt } from "./promptsV2";
+import {
+  createOpenRouterClient,
+  MODELS,
+  calculateCost,
+} from "../lib/openrouter";
 
 /**
  * Model configuration for v2 reports
  *
- * Uses gpt-5-mini with structured outputs for guaranteed JSON compliance.
- * Lower token limits since we're only generating creative content.
+ * Uses Gemini 3 Flash via OpenRouter with JSON mode.
+ * Zod validates responses after parsing.
  */
 const CONFIG = {
-  model: "gpt-5-mini" as const,
-  maxCompletionTokens: 1500, // Structured JSON needs more tokens than plain text
-  reasoningEffort: "low" as const, // Simple creative task
-  timeout: 30000, // 30 seconds to match v1
-  maxRetries: 3, // Retry on transient failures
+  model: MODELS.MAIN,
+  maxTokens: 1500,
+  temperature: 0.7,
+  maxRetries: 3,
 } as const;
 
 /**
@@ -41,7 +44,7 @@ function sleep(attempt: number): Promise<void> {
   const delayMs = baseDelay + jitter;
 
   console.log(
-    `[OpenAI V2] Retry backoff: ${delayMs.toFixed(0)}ms (attempt ${attempt + 1})`
+    `[OpenRouter V2] Retry backoff: ${delayMs.toFixed(0)}ms (attempt ${attempt + 1})`
   );
   return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
@@ -60,26 +63,27 @@ function isNonRetriableError(error: Error): boolean {
 }
 
 /**
- * Pricing per 1M tokens (GPT-5 mini, October 2025)
+ * JSON schema instruction for the prompt
+ * Ensures the model returns valid JSON matching our schema.
  */
-const PRICING = {
-  inputPerMillion: 0.25,
-  outputPerMillion: 2.0,
-} as const;
-
-/**
- * Calculate cost from token usage
- */
-function calculateCost(inputTokens: number, outputTokens: number): number {
-  const inputCost = (inputTokens * PRICING.inputPerMillion) / 1_000_000;
-  const outputCost = (outputTokens * PRICING.outputPerMillion) / 1_000_000;
-  return Number((inputCost + outputCost).toFixed(4));
+const JSON_SCHEMA_INSTRUCTION = `
+IMPORTANT: Respond with ONLY valid JSON matching this exact structure:
+{
+  "prCelebration": null | { "headline": string, "celebrationCopy": string, "nextMilestone": string },
+  "prEmptyMessage": null | string,
+  "action": { "directive": string, "rationale": string }
 }
 
+Rules:
+- If hasPR is true: set prCelebration object, set prEmptyMessage to null
+- If hasPR is false: set prCelebration to null, set prEmptyMessage to a string
+- action is always required with both directive and rationale
+- Return ONLY the JSON object, no markdown, no explanation`;
+
 /**
- * Generate creative content using OpenAI Structured Outputs
+ * Generate creative content using OpenRouter (Gemini 3 Flash)
  *
- * Uses native JSON schema enforcement for 100% compliance.
+ * Uses JSON mode with Zod validation for schema compliance.
  * Only generates celebration copy and action directive.
  *
  * @param context - Workout context for creative generation
@@ -88,67 +92,69 @@ function calculateCost(inputTokens: number, outputTokens: number): number {
 export async function generateCreativeContent(
   context: AICreativeContext
 ): Promise<AICreativeResult> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    console.log("[OpenAI V2] No API key - using fallback content");
+  const client = createOpenRouterClient();
+  if (!client) {
+    console.log("[OpenRouter V2] No API key - using fallback content");
     return fallbackCreativeContent(context);
   }
 
-  const openai = new OpenAI({
-    apiKey,
-    timeout: CONFIG.timeout,
-  });
-
   const userPrompt = formatCreativePrompt(context);
+  const fullPrompt = `${userPrompt}\n\n${JSON_SCHEMA_INSTRUCTION}`;
 
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < CONFIG.maxRetries; attempt++) {
     try {
       console.log(
-        `[OpenAI V2] Generating creative content (attempt ${attempt + 1}/${CONFIG.maxRetries})...`
+        `[OpenRouter V2] Generating creative content (attempt ${attempt + 1}/${CONFIG.maxRetries})...`
       );
 
-      const completion = await openai.chat.completions.parse({
+      const completion = await client.chat.completions.create({
         model: CONFIG.model,
         messages: [
           { role: "system", content: systemPromptV2 },
-          { role: "user", content: userPrompt },
+          { role: "user", content: fullPrompt },
         ],
-        response_format: zodResponseFormat(
-          AICreativeOutputSchema,
-          "creative_content"
-        ),
-        max_completion_tokens: CONFIG.maxCompletionTokens,
-        reasoning_effort: CONFIG.reasoningEffort,
+        response_format: { type: "json_object" },
+        max_tokens: CONFIG.maxTokens,
+        temperature: CONFIG.temperature,
       });
 
-      // Handle refusal (safety content)
-      const message = completion.choices[0]?.message;
-      if (message?.refusal) {
-        console.error("[OpenAI V2] Refusal:", message.refusal);
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        console.error("[OpenRouter V2] No content received");
         return fallbackCreativeContent(context);
       }
 
-      // Parsed response is already validated by Zod
-      const parsed = message?.parsed;
-      if (!parsed) {
-        console.error("[OpenAI V2] No parsed content received");
-        return fallbackCreativeContent(context);
+      // Parse JSON and validate with Zod
+      let rawJson: unknown;
+      try {
+        rawJson = JSON.parse(content);
+      } catch (parseError) {
+        console.error("[OpenRouter V2] Invalid JSON:", content.slice(0, 200));
+        throw new Error("Invalid JSON response from model");
       }
 
+      const parseResult = AICreativeOutputSchema.safeParse(rawJson);
+      if (!parseResult.success) {
+        console.error("[OpenRouter V2] Schema validation failed:", parseResult.error.issues);
+        throw new Error(`Schema validation failed: ${parseResult.error.issues[0]?.message}`);
+      }
+
+      const parsed = parseResult.data;
       const usage = completion.usage;
       const tokenUsage = {
         input: usage?.prompt_tokens ?? 0,
         output: usage?.completion_tokens ?? 0,
         costUSD: calculateCost(
+          CONFIG.model,
           usage?.prompt_tokens ?? 0,
           usage?.completion_tokens ?? 0
         ),
       };
 
       console.log(
-        `[OpenAI V2] Success! Tokens: ${tokenUsage.input} in, ${tokenUsage.output} out, Cost: $${tokenUsage.costUSD}`
+        `[OpenRouter V2] Success! Tokens: ${tokenUsage.input} in, ${tokenUsage.output} out, Cost: $${tokenUsage.costUSD}`
       );
 
       return {
@@ -162,14 +168,14 @@ export async function generateCreativeContent(
       // Don't retry non-retriable errors
       if (isNonRetriableError(lastError)) {
         console.error(
-          "[OpenAI V2] Non-retriable error, aborting:",
+          "[OpenRouter V2] Non-retriable error, aborting:",
           lastError.message
         );
         return fallbackCreativeContent(context);
       }
 
       console.warn(
-        `[OpenAI V2] Attempt ${attempt + 1} failed:`,
+        `[OpenRouter V2] Attempt ${attempt + 1} failed:`,
         lastError.message
       );
 
@@ -182,7 +188,7 @@ export async function generateCreativeContent(
 
   // All retries exhausted
   console.error(
-    `[OpenAI V2] All ${CONFIG.maxRetries} attempts failed:`,
+    `[OpenRouter V2] All ${CONFIG.maxRetries} attempts failed:`,
     lastError?.message
   );
   return fallbackCreativeContent(context);

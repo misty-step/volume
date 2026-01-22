@@ -1,0 +1,14 @@
+{
+  "version": "1.5.0",
+  "compareUrl": "https://github.com/misty-step/volume/compare/v1.4.0...v1.5.0",
+  "date": "2026-01-17",
+  "changes": [
+    {
+      "type": "feat",
+      "description": "Add CSV data export for workout history",
+      "pr": 258,
+      "commit": "ef9d3a0",
+      "breaking": false
+    }
+  ]
+}

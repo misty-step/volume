@@ -2,6 +2,7 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import Stripe from "stripe";
+import { getRequiredEnv, getStripe } from "./lib/stripeConfig";
 
 const http = httpRouter();
 
@@ -64,17 +65,17 @@ http.route({
   path: "/stripe/webhook",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-    if (!stripeSecretKey || !webhookSecret) {
-      console.error("Missing Stripe configuration");
+    let stripe: Stripe;
+    let webhookSecret: string;
+    try {
+      stripe = getStripe();
+      webhookSecret = getRequiredEnv("STRIPE_WEBHOOK_SECRET");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Stripe not configured";
+      console.error("Missing Stripe configuration:", message);
       return new Response("Server configuration error", { status: 500 });
     }
-
-    const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2025-12-15.clover",
-    });
 
     const body = await request.text();
     const signature = request.headers.get("stripe-signature");
