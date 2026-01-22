@@ -1,3 +1,3 @@
-Exciting news in Volume v1.6.0! You can now easily undo accidental deletions with just one tap, making it simpler than ever to manage your workouts. Whether you’ve removed an exercise by mistake or changed your mind about a recent entry, it’s all easily reversible.
+We’ve all been there—you’re mid-set, your hands are sweaty, and you accidentally delete a set or an exercise you just finished. Now, you can breathe easy. You can now undo accidental deletions with a single tap, keeping your workout data safe and your focus exactly where it should be.
 
-This update is all about giving you more control and peace of mind as you track your fitness journey. Enjoy the confidence that comes with knowing you can fix mistakes effortlessly!
+This update is all about making your logging experience more forgiving. Whether you're moving fast or just had a slip of the thumb, you can fix mistakes instantly and get right back to your training without missing a beat.

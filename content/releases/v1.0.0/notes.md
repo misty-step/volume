@@ -1,3 +1,1 @@
-Volume v1.0.0 is here, and it's packed with features that elevate your workout experience! You can now easily track your personal records with a dedicated badge, and celebrate your workout streaks right in your daily stats. Plus, we've introduced an intuitive analytics tab that offers insights into your progress, helping you stay motivated and informed.
-
-Navigating the app is smoother than ever, with updated designs and enhanced animations that make logging your workouts a breeze. We've also optimized loading times, so you can focus on what matters most: your workouts. Dive in and explore all the improvements that make Volume better than ever!
+Welcome to the all-new Volume. We’ve completely redesigned the app with a bold look and a powerful Analytics tab to help you train smarter. You can now visualize your recovery with

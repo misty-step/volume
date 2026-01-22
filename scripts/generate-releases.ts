@@ -14,12 +14,20 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
-import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 import {
   parseChangelog,
   formatReleaseMarkdown,
 } from "../src/lib/releases/parser";
 import type { Release, ReleaseManifest, ChangelogEntry } from "../src/lib/releases/types";
+
+/**
+ * Model configuration
+ *
+ * Using Gemini 3 Flash for optimal cost/performance balance.
+ * Fast, cheap, and state-of-the-art for simple creative tasks.
+ */
+const MODEL = "gemini-3-flash-preview";
 
 const CONTENT_DIR = join(process.cwd(), "content/releases");
 const CHANGELOG_PATH = join(process.cwd(), "CHANGELOG.md");
@@ -66,11 +74,11 @@ CRITICAL RULES - NEVER VIOLATE:
 }
 
 /**
- * Generate product-focused release notes using OpenAI.
+ * Generate product-focused release notes using Gemini.
  */
 async function generateProductNotes(
   release: Release,
-  openai: OpenAI
+  ai: GoogleGenAI
 ): Promise<string> {
   // Format changes for the prompt - strip technical markers
   const changesSummary = release.changes
@@ -99,17 +107,22 @@ REQUIREMENTS:
 - If only internal changes, write about improved reliability/stability
 - Remember: NO technical jargon, hook names, or implementation details`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: buildSystemPrompt() },
-      { role: "user", content: userPrompt },
-    ],
-    temperature: 0.7,
-    max_tokens: 300,
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: userPrompt,
+    config: {
+      systemInstruction: buildSystemPrompt(),
+      temperature: 0.7,
+      maxOutputTokens: 1000,
+    },
   });
 
-  return response.choices[0]?.message?.content?.trim() || "";
+  // Debug: log finish reason if not completed normally
+  if (response.candidates?.[0]?.finishReason !== "STOP") {
+    console.log(`    ⚠ Finish reason: ${response.candidates?.[0]?.finishReason}`);
+  }
+
+  return response.text?.trim() || "";
 }
 
 /**
@@ -181,14 +194,14 @@ async function main() {
   // Ensure content directory exists
   mkdirSync(CONTENT_DIR, { recursive: true });
 
-  // Initialize OpenAI
-  const apiKey = process.env.OPENAI_API_KEY;
+  // Initialize Gemini
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey) {
-    console.error("ERROR: OPENAI_API_KEY not set");
+    console.error("ERROR: GEMINI_API_KEY or GOOGLE_API_KEY not set");
     console.error("Set it in your environment or .env.local");
     process.exit(1);
   }
-  const openai = new OpenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey });
 
   // Generate missing releases
   console.log("Generating release notes...");
@@ -202,7 +215,7 @@ async function main() {
     }
 
     console.log(`  Generating v${release.version}...`);
-    const productNotes = await generateProductNotes(release, openai);
+    const productNotes = await generateProductNotes(release, ai);
     saveRelease(release, productNotes);
     generated++;
 

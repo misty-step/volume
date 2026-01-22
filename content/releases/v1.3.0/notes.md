@@ -1,3 +1,3 @@
-With the latest update, you can now enjoy a seamless subscription experience with a free trial, letting you explore all our premium features without any commitment. This means you can dive in and see how Volume can elevate your workouts before making any decisions.
+You can now unlock the full Volume experience with our new subscription options. If you want to see what’s possible before committing, start a free trial to explore every feature at your own pace. It’s the best way to support the app’s growth while taking your training to the next level.
 
-We also fixed a couple of issues that could have interrupted your experience during checkout. Now, signing up is smoother than ever, ensuring you can focus on what really matters—tracking your progress and crushing your fitness goals. Enjoy the improvements and happy training!
+We also smoothed out the upgrade process to ensure everything works perfectly the moment you join. Your transition to premium is now faster and more reliable, letting you get right back to your workout without missing a beat.

@@ -1,3 +1,3 @@
-In this update, we’ve made adjustments that enhance the app's reliability and stability, so you can focus on your workouts without interruptions. You’ll notice smoother performance as you track your progress, ensuring you get the most out of every session.
+We’ve focused this update on making Volume more reliable than ever. By sharpening how we catch potential issues before they reach your phone, we’re ensuring your workout tracking stays smooth and uninterrupted.
 
-We’re committed to providing you with a seamless experience, and these improvements help us deliver just that. Your workout journey is our priority, and we’re here to support you every step of the way!
+You should notice a more stable experience every time you open the app. We’re committed to making sure the tools you rely on to hit your PRs work exactly as they should, every single session.

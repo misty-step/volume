@@ -1,3 +1,3 @@
-With our latest update, you can now easily undo any accidental deletions. Made a mistake? No problem—just tap to restore what you lost and keep your workout history intact. This means you can focus more on your fitness journey without worrying about losing important information.
+Mistakes happen when you’re mid-set and moving fast. If you accidentally delete an exercise or a set, you can now bring it back instantly. You no longer have to worry about losing your progress to a stray swipe or re-entering your heavy lifts from memory.
 
-We’ve also made some behind-the-scenes improvements to ensure a smoother and more reliable experience. Enjoy tracking your workouts with confidence, knowing that we’re always working to make Volume better for you. Happy training!
+We’ve also tightened things up across the app to ensure your tracking stays as reliable as your routine. You focus on hitting your PRs, and we’ll make sure every rep is accounted for.

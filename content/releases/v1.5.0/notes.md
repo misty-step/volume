@@ -1,3 +1,3 @@
-You asked, and we delivered! With the latest update, you can now export your workout history as a CSV file. This means you can easily keep track of your progress, share your achievements, or analyze your performance in a way that works best for you.
+Your hard work shouldn't be locked away. You can now take your entire workout history with you to analyze, share with a coach, or keep for your own records. Whether you want to build custom charts in a spreadsheet or just want a backup of every PR you’ve ever hit, your data is now yours to move wherever you like.
 
-This update not only makes managing your workout data simpler, but it also gives you more control over how you use that information. Dive into your fitness journey with this new feature and take your tracking to the next level!
+We’ve also polished the experience to keep everything running smoothly while you train. Your progress is personal, and now you have total control over how you view and use it.
