@@ -19,6 +19,9 @@ const isPublicRoute = createRouteMatcher([
   "/apple-icon",
   // Health check for uptime monitoring
   "/api/health",
+  // Public release notes
+  "/releases",
+  "/releases/(.*)",
 ]);
 
 const cspHeader = `
