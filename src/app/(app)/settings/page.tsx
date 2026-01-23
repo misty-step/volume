@@ -144,13 +144,26 @@ export default function SettingsPage() {
         <SettingsList>
           <SettingsListItem
             title="Plan"
-            subtitle={
-              subscriptionStatus?.status === "active"
-                ? "Pro"
-                : subscriptionStatus?.status === "trial"
-                  ? `Trial (${subscriptionStatus.trialDaysRemaining} days left)`
-                  : "Expired"
-            }
+            subtitle={(() => {
+              const status = subscriptionStatus?.status;
+              const periodEnd = subscriptionStatus?.subscriptionPeriodEnd;
+              const formatDate = (ms: number) =>
+                new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+              if (status === "active" && periodEnd) {
+                return `Pro (renews ${formatDate(periodEnd)})`;
+              }
+              if (status === "canceled" && periodEnd && periodEnd > Date.now()) {
+                return `Pro (access until ${formatDate(periodEnd)})`;
+              }
+              if (status === "trial") {
+                return `Trial (${subscriptionStatus?.trialDaysRemaining ?? 0} days left)`;
+              }
+              if (status === "past_due") {
+                return "Pro (payment past due)";
+              }
+              return "Expired";
+            })()}
             actions={
               billingInfo?.stripeCustomerId ? (
                 <Button
