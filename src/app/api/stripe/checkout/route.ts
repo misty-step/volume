@@ -44,10 +44,16 @@ export async function POST(request: Request) {
 
   // Calculate remaining trial time to honor on upgrade
   // Business rule: User upgrading mid-trial finishes trial before billing starts
+  // Stripe constraint: trial_end must be at least 48 hours in the future
   const now = Date.now();
+  const nowSeconds = Math.floor(now / 1000);
+  const MIN_TRIAL_LEAD_TIME_SECONDS = 48 * 60 * 60; // 48 hours per Stripe docs
   const trialEndsAt = user?.trialEndsAt ?? (user?._creationTime ? user._creationTime + TRIAL_PERIOD_MS : null);
-  const hasRemainingTrial = trialEndsAt && trialEndsAt > now;
-  const trialEndSeconds = hasRemainingTrial ? Math.floor(trialEndsAt / 1000) : undefined;
+  const trialEndSeconds = trialEndsAt ? Math.floor(trialEndsAt / 1000) : undefined;
+  // Only pass trial_end if user has enough remaining trial (Stripe rejects <48h)
+  const validTrialEnd = trialEndSeconds && (trialEndSeconds - nowSeconds) >= MIN_TRIAL_LEAD_TIME_SECONDS
+    ? trialEndSeconds
+    : undefined;
 
   if (!priceId) {
     return NextResponse.json({ error: "Price ID required" }, { status: 400 });
@@ -77,7 +83,8 @@ export async function POST(request: Request) {
           clerkUserId: userId,
         },
         // Honor remaining trial: user upgrading mid-trial finishes trial before billing
-        ...(trialEndSeconds && { trial_end: trialEndSeconds }),
+        // (only if ≥48h remaining, per Stripe's minimum lead time requirement)
+        ...(validTrialEnd && { trial_end: validTrialEnd }),
       },
     };
 

@@ -91,11 +91,11 @@ fi
 get_convex_env() {
   local deployment="$1"
   # Use --prod flag for production, no flag for dev (project default)
+  local prod_flag=""
   if [[ "$deployment" == *"prod:"* ]]; then
-    npx convex env list --prod 2>/dev/null || echo ""
-  else
-    npx convex env list 2>/dev/null || echo ""
+    prod_flag="--prod"
   fi
+  npx convex env list $prod_flag 2>/dev/null || echo ""
 }
 
 # Check if a var exists in env list

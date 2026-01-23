@@ -64,7 +64,7 @@ export const handleCheckoutCompleted = internalMutation({
       subscriptionStatus: args.status,
       subscriptionPeriodEnd: args.periodEnd,
       // Clear trial when subscription activates to prevent zombie trial access after cancellation
-      ...(args.status === "active" && { trialEndsAt: 0 }),
+      ...(args.status === "active" && { trialEndsAt: undefined }),
       // Track event for idempotency
       lastStripeEventId: args.eventId,
       lastStripeEventTimestamp: args.eventTimestamp,
@@ -117,7 +117,7 @@ export const updateSubscriptionFromStripe = internalMutation({
       stripeSubscriptionId: args.stripeSubscriptionId,
       subscriptionPeriodEnd: args.periodEnd,
       // Clear trial when subscription activates to prevent zombie trial access after cancellation
-      ...(args.status === "active" && { trialEndsAt: 0 }),
+      ...(args.status === "active" && { trialEndsAt: undefined }),
       // Track event for idempotency
       lastStripeEventId: args.eventId,
       lastStripeEventTimestamp: args.eventTimestamp,
