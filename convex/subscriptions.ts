@@ -22,6 +22,9 @@ export const handleCheckoutCompleted = internalMutation({
       v.literal("canceled")
     ),
     periodEnd: v.number(),
+    // Idempotency fields
+    eventId: v.string(),
+    eventTimestamp: v.number(),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
@@ -36,11 +39,28 @@ export const handleCheckoutCompleted = internalMutation({
       );
     }
 
+    // Idempotency check: skip if we've already processed this event
+    if (user.lastStripeEventId === args.eventId) {
+      console.log(`Skipping duplicate event: ${args.eventId}`);
+      return;
+    }
+
+    // Stale event check: skip if this event is older than last processed
+    if (user.lastStripeEventTimestamp && args.eventTimestamp < user.lastStripeEventTimestamp) {
+      console.log(`Skipping stale event: ${args.eventId} (ts: ${args.eventTimestamp} < ${user.lastStripeEventTimestamp})`);
+      return;
+    }
+
     await ctx.db.patch(user._id, {
       stripeCustomerId: args.stripeCustomerId,
       stripeSubscriptionId: args.stripeSubscriptionId,
       subscriptionStatus: args.status,
       subscriptionPeriodEnd: args.periodEnd,
+      // Clear trial when subscription activates to prevent zombie trial access after cancellation
+      ...(args.status === "active" && { trialEndsAt: 0 }),
+      // Track event for idempotency
+      lastStripeEventId: args.eventId,
+      lastStripeEventTimestamp: args.eventTimestamp,
       updatedAt: Date.now(),
     });
   },
@@ -64,6 +84,9 @@ export const updateSubscriptionFromStripe = internalMutation({
       v.literal("expired")
     ),
     periodEnd: v.optional(v.number()),
+    // Idempotency fields
+    eventId: v.string(),
+    eventTimestamp: v.number(),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
@@ -80,10 +103,27 @@ export const updateSubscriptionFromStripe = internalMutation({
       );
     }
 
+    // Idempotency check: skip if we've already processed this event
+    if (user.lastStripeEventId === args.eventId) {
+      console.log(`Skipping duplicate event: ${args.eventId}`);
+      return;
+    }
+
+    // Stale event check: skip if this event is older than last processed
+    if (user.lastStripeEventTimestamp && args.eventTimestamp < user.lastStripeEventTimestamp) {
+      console.log(`Skipping stale event: ${args.eventId} (ts: ${args.eventTimestamp} < ${user.lastStripeEventTimestamp})`);
+      return;
+    }
+
     await ctx.db.patch(user._id, {
       subscriptionStatus: args.status,
       stripeSubscriptionId: args.stripeSubscriptionId,
       subscriptionPeriodEnd: args.periodEnd,
+      // Clear trial when subscription activates to prevent zombie trial access after cancellation
+      ...(args.status === "active" && { trialEndsAt: 0 }),
+      // Track event for idempotency
+      lastStripeEventId: args.eventId,
+      lastStripeEventTimestamp: args.eventTimestamp,
       updatedAt: Date.now(),
     });
   },

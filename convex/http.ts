@@ -123,6 +123,8 @@ http.route({
               stripeSubscriptionId: subscription.id,
               status: stripeStatus,
               periodEnd: getPeriodEndMs(subscription),
+              eventId: event.id,
+              eventTimestamp: event.created,
             });
           }
           break;
@@ -139,6 +141,8 @@ http.route({
               stripeSubscriptionId: subscription.id,
               status,
               periodEnd: getPeriodEndMs(subscription),
+              eventId: event.id,
+              eventTimestamp: event.created,
             }
           );
           break;
@@ -154,6 +158,8 @@ http.route({
               stripeSubscriptionId: undefined,
               status: "expired",
               periodEnd: undefined,
+              eventId: event.id,
+              eventTimestamp: event.created,
             }
           );
           break;

@@ -8,6 +8,9 @@ import { api } from "@/../convex/_generated/api";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
+/** 14-day trial period in milliseconds */
+const TRIAL_PERIOD_MS = 14 * 24 * 60 * 60 * 1000;
+
 /**
  * Create a Stripe Checkout session for the authenticated user.
  */
@@ -32,10 +35,19 @@ export async function POST(request: Request) {
   }
   const { priceId } = body;
 
-  // Fetch stripeCustomerId server-side to prevent IDOR attacks
+  // Fetch user data server-side to prevent IDOR attacks and get trial info
   convex.setAuth(token);
-  const stripeCustomerId =
-    (await convex.query(api.subscriptions.getStripeCustomerId)) ?? undefined;
+  const [stripeCustomerId, user] = await Promise.all([
+    convex.query(api.subscriptions.getStripeCustomerId),
+    convex.query(api.users.getCurrentUser),
+  ]);
+
+  // Calculate remaining trial time to honor on upgrade
+  // Business rule: User upgrading mid-trial finishes trial before billing starts
+  const now = Date.now();
+  const trialEndsAt = user?.trialEndsAt ?? (user?._creationTime ? user._creationTime + TRIAL_PERIOD_MS : null);
+  const hasRemainingTrial = trialEndsAt && trialEndsAt > now;
+  const trialEndSeconds = hasRemainingTrial ? Math.floor(trialEndsAt / 1000) : undefined;
 
   if (!priceId) {
     return NextResponse.json({ error: "Price ID required" }, { status: 400 });
@@ -64,6 +76,8 @@ export async function POST(request: Request) {
         metadata: {
           clerkUserId: userId,
         },
+        // Honor remaining trial: user upgrading mid-trial finishes trial before billing
+        ...(trialEndSeconds && { trial_end: trialEndSeconds }),
       },
     };
 

@@ -120,12 +120,15 @@ export const syncCheckoutSession = action({
       const periodEnd = getPeriodEndMs(subscription);
 
       // Update database (same as webhook handler, idempotent)
+      // Backup sync uses synthetic event ID to avoid conflicts with real webhook events
       await ctx.runMutation(internal.subscriptions.handleCheckoutCompleted, {
         clerkUserId: identity.subject,
         stripeCustomerId: session.customer as string,
         stripeSubscriptionId: subscription.id,
         status,
         periodEnd,
+        eventId: `backup_sync_${args.sessionId}`,
+        eventTimestamp: Math.floor(Date.now() / 1000),
       });
 
       console.log(`Backup sync successful for user ${identity.subject}`);
