@@ -1,6 +1,23 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
+/** Check if webhook event should be skipped (duplicate or stale) */
+function shouldSkipEvent(
+  user: { lastStripeEventId?: string; lastStripeEventTimestamp?: number },
+  eventId: string,
+  eventTimestamp: number
+): boolean {
+  if (user.lastStripeEventId === eventId) {
+    console.log(`Skipping duplicate event: ${eventId}`);
+    return true;
+  }
+  if (user.lastStripeEventTimestamp && eventTimestamp < user.lastStripeEventTimestamp) {
+    console.log(`Skipping stale event: ${eventId}`);
+    return true;
+  }
+  return false;
+}
+
 /**
  * Internal mutation to handle checkout.session.completed
  *
@@ -39,17 +56,7 @@ export const handleCheckoutCompleted = internalMutation({
       );
     }
 
-    // Idempotency check: skip if we've already processed this event
-    if (user.lastStripeEventId === args.eventId) {
-      console.log(`Skipping duplicate event: ${args.eventId}`);
-      return;
-    }
-
-    // Stale event check: skip if this event is older than last processed
-    if (user.lastStripeEventTimestamp && args.eventTimestamp < user.lastStripeEventTimestamp) {
-      console.log(`Skipping stale event: ${args.eventId} (ts: ${args.eventTimestamp} < ${user.lastStripeEventTimestamp})`);
-      return;
-    }
+    if (shouldSkipEvent(user, args.eventId, args.eventTimestamp)) return;
 
     await ctx.db.patch(user._id, {
       stripeCustomerId: args.stripeCustomerId,
@@ -103,17 +110,7 @@ export const updateSubscriptionFromStripe = internalMutation({
       );
     }
 
-    // Idempotency check: skip if we've already processed this event
-    if (user.lastStripeEventId === args.eventId) {
-      console.log(`Skipping duplicate event: ${args.eventId}`);
-      return;
-    }
-
-    // Stale event check: skip if this event is older than last processed
-    if (user.lastStripeEventTimestamp && args.eventTimestamp < user.lastStripeEventTimestamp) {
-      console.log(`Skipping stale event: ${args.eventId} (ts: ${args.eventTimestamp} < ${user.lastStripeEventTimestamp})`);
-      return;
-    }
+    if (shouldSkipEvent(user, args.eventId, args.eventTimestamp)) return;
 
     await ctx.db.patch(user._id, {
       subscriptionStatus: args.status,

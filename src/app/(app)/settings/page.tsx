@@ -15,6 +15,28 @@ import { PageLayout } from "@/components/layout/page-layout";
 import { Plus, ExternalLink, Mail, CreditCard, Loader2 } from "lucide-react";
 import { clientVersion } from "@/lib/version";
 
+/** Format subscription status for display */
+function formatPlanSubtitle(sub: {
+  status?: string;
+  subscriptionPeriodEnd?: number | null;
+  trialDaysRemaining?: number;
+} | null | undefined): string {
+  if (!sub) return "Loading...";
+  const { status, subscriptionPeriodEnd, trialDaysRemaining } = sub;
+  const formatDate = (ms: number) =>
+    new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+  if (status === "active" && subscriptionPeriodEnd) {
+    return `Pro (renews ${formatDate(subscriptionPeriodEnd)})`;
+  }
+  if (status === "canceled" && subscriptionPeriodEnd && subscriptionPeriodEnd > Date.now()) {
+    return `Pro (access until ${formatDate(subscriptionPeriodEnd)})`;
+  }
+  if (status === "trial") return `Trial (${trialDaysRemaining ?? 0} days left)`;
+  if (status === "past_due") return "Pro (payment past due)";
+  return "Expired";
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const [showCreator, setShowCreator] = useState(false);
@@ -144,26 +166,7 @@ export default function SettingsPage() {
         <SettingsList>
           <SettingsListItem
             title="Plan"
-            subtitle={(() => {
-              const status = subscriptionStatus?.status;
-              const periodEnd = subscriptionStatus?.subscriptionPeriodEnd;
-              const formatDate = (ms: number) =>
-                new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-
-              if (status === "active" && periodEnd) {
-                return `Pro (renews ${formatDate(periodEnd)})`;
-              }
-              if (status === "canceled" && periodEnd && periodEnd > Date.now()) {
-                return `Pro (access until ${formatDate(periodEnd)})`;
-              }
-              if (status === "trial") {
-                return `Trial (${subscriptionStatus?.trialDaysRemaining ?? 0} days left)`;
-              }
-              if (status === "past_due") {
-                return "Pro (payment past due)";
-              }
-              return "Expired";
-            })()}
+            subtitle={formatPlanSubtitle(subscriptionStatus)}
             actions={
               billingInfo?.stripeCustomerId ? (
                 <Button
@@ -216,13 +219,7 @@ export default function SettingsPage() {
           <SettingsListItem
             title="A Misty Step Project"
             icon={<ExternalLink className="w-4 h-4" />}
-            onClick={() => {
-              const link = document.createElement("a");
-              link.href = "https://mistystep.io";
-              link.target = "_blank";
-              link.rel = "noopener noreferrer";
-              link.click();
-            }}
+            onClick={() => window.open("https://mistystep.io", "_blank", "noopener,noreferrer")}
           />
           <SettingsListItem
             title="Feedback & Support"
