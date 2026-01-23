@@ -1,6 +1,23 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
+/** Check if webhook event should be skipped (duplicate or stale) */
+function shouldSkipEvent(
+  user: { lastStripeEventId?: string; lastStripeEventTimestamp?: number },
+  eventId: string,
+  eventTimestamp: number
+): boolean {
+  if (user.lastStripeEventId === eventId) {
+    console.log(`Skipping duplicate event: ${eventId}`);
+    return true;
+  }
+  if (user.lastStripeEventTimestamp && eventTimestamp < user.lastStripeEventTimestamp) {
+    console.log(`Skipping stale event: ${eventId}`);
+    return true;
+  }
+  return false;
+}
+
 /**
  * Internal mutation to handle checkout.session.completed
  *
@@ -22,6 +39,9 @@ export const handleCheckoutCompleted = internalMutation({
       v.literal("canceled")
     ),
     periodEnd: v.number(),
+    // Idempotency fields
+    eventId: v.string(),
+    eventTimestamp: v.number(),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
@@ -36,11 +56,18 @@ export const handleCheckoutCompleted = internalMutation({
       );
     }
 
+    if (shouldSkipEvent(user, args.eventId, args.eventTimestamp)) return;
+
     await ctx.db.patch(user._id, {
       stripeCustomerId: args.stripeCustomerId,
       stripeSubscriptionId: args.stripeSubscriptionId,
       subscriptionStatus: args.status,
       subscriptionPeriodEnd: args.periodEnd,
+      // Clear trial when subscription activates to prevent zombie trial access after cancellation
+      ...(args.status === "active" && { trialEndsAt: undefined }),
+      // Track event for idempotency
+      lastStripeEventId: args.eventId,
+      lastStripeEventTimestamp: args.eventTimestamp,
       updatedAt: Date.now(),
     });
   },
@@ -64,6 +91,9 @@ export const updateSubscriptionFromStripe = internalMutation({
       v.literal("expired")
     ),
     periodEnd: v.optional(v.number()),
+    // Idempotency fields
+    eventId: v.string(),
+    eventTimestamp: v.number(),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
@@ -80,10 +110,17 @@ export const updateSubscriptionFromStripe = internalMutation({
       );
     }
 
+    if (shouldSkipEvent(user, args.eventId, args.eventTimestamp)) return;
+
     await ctx.db.patch(user._id, {
       subscriptionStatus: args.status,
       stripeSubscriptionId: args.stripeSubscriptionId,
       subscriptionPeriodEnd: args.periodEnd,
+      // Clear trial when subscription activates to prevent zombie trial access after cancellation
+      ...(args.status === "active" && { trialEndsAt: undefined }),
+      // Track event for idempotency
+      lastStripeEventId: args.eventId,
+      lastStripeEventTimestamp: args.eventTimestamp,
       updatedAt: Date.now(),
     });
   },

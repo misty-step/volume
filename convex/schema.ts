@@ -57,6 +57,9 @@ export default defineSchema({
       )
     ),
     subscriptionPeriodEnd: v.optional(v.number()), // Current period end timestamp
+    // Webhook idempotency: prevent duplicate/stale event processing
+    lastStripeEventId: v.optional(v.string()),
+    lastStripeEventTimestamp: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

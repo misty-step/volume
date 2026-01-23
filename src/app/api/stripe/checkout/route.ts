@@ -8,6 +8,9 @@ import { api } from "@/../convex/_generated/api";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
+/** 14-day trial period in milliseconds */
+const TRIAL_PERIOD_MS = 14 * 24 * 60 * 60 * 1000;
+
 /**
  * Create a Stripe Checkout session for the authenticated user.
  */
@@ -32,10 +35,25 @@ export async function POST(request: Request) {
   }
   const { priceId } = body;
 
-  // Fetch stripeCustomerId server-side to prevent IDOR attacks
+  // Fetch user data server-side to prevent IDOR attacks and get trial info
   convex.setAuth(token);
-  const stripeCustomerId =
-    (await convex.query(api.subscriptions.getStripeCustomerId)) ?? undefined;
+  const [stripeCustomerId, user] = await Promise.all([
+    convex.query(api.subscriptions.getStripeCustomerId),
+    convex.query(api.users.getCurrentUser),
+  ]);
+
+  // Calculate remaining trial time to honor on upgrade
+  // Business rule: User upgrading mid-trial finishes trial before billing starts
+  // Stripe constraint: trial_end must be at least 48 hours in the future
+  const now = Date.now();
+  const nowSeconds = Math.floor(now / 1000);
+  const MIN_TRIAL_LEAD_TIME_SECONDS = 48 * 60 * 60; // 48 hours per Stripe docs
+  const trialEndsAt = user?.trialEndsAt ?? (user?._creationTime ? user._creationTime + TRIAL_PERIOD_MS : null);
+  const trialEndSeconds = trialEndsAt ? Math.floor(trialEndsAt / 1000) : undefined;
+  // Only pass trial_end if user has enough remaining trial (Stripe rejects <48h)
+  const validTrialEnd = trialEndSeconds && (trialEndSeconds - nowSeconds) >= MIN_TRIAL_LEAD_TIME_SECONDS
+    ? trialEndSeconds
+    : undefined;
 
   if (!priceId) {
     return NextResponse.json({ error: "Price ID required" }, { status: 400 });
@@ -64,6 +82,9 @@ export async function POST(request: Request) {
         metadata: {
           clerkUserId: userId,
         },
+        // Honor remaining trial: user upgrading mid-trial finishes trial before billing
+        // (only if ≥48h remaining, per Stripe's minimum lead time requirement)
+        ...(validTrialEnd && { trial_end: validTrialEnd }),
       },
     };
 
