@@ -90,7 +90,12 @@ fi
 # Returns: newline-separated list of VAR_NAME=value
 get_convex_env() {
   local deployment="$1"
-  CONVEX_DEPLOYMENT="$deployment" npx convex env list 2>/dev/null || echo ""
+  # Use --prod flag for production, no flag for dev (project default)
+  if [[ "$deployment" == *"prod:"* ]]; then
+    npx convex env list --prod 2>/dev/null || echo ""
+  else
+    npx convex env list 2>/dev/null || echo ""
+  fi
 }
 
 # Check if a var exists in env list
