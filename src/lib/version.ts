@@ -83,3 +83,22 @@ export const clientVersion = resolveVersion({
   NEXT_PUBLIC_PACKAGE_VERSION: process.env.NEXT_PUBLIC_PACKAGE_VERSION,
   npm_package_version: process.env.npm_package_version,
 });
+
+/**
+ * Display version for user-facing UI (footer, about page).
+ * Uses semantic version from package.json, never git SHA.
+ *
+ * Git SHAs don't have corresponding release pages (/releases/ce83be4 404s).
+ * This skips the Vercel git SHA that `clientVersion` would pick up.
+ */
+export const displayVersion = (() => {
+  // Priority: package version > npm version > "dev"
+  // Skip git SHA - it doesn't map to release pages
+  const packageVersion = process.env.NEXT_PUBLIC_PACKAGE_VERSION?.trim();
+  if (packageVersion) return packageVersion;
+
+  const npmVersion = process.env.npm_package_version?.trim();
+  if (npmVersion) return npmVersion;
+
+  return "dev";
+})();

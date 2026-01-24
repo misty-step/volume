@@ -1,10 +1,10 @@
 "use client";
 
-import { clientVersion } from "@/lib/version";
+import { displayVersion } from "@/lib/version";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
-  const version = clientVersion;
+  const version = displayVersion;
 
   return (
     <footer className="hidden md:block border-t-[3px] border-border mt-auto bg-background">
