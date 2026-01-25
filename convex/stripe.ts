@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { action, internalMutation, mutation } from "./_generated/server";
+import { action, internalAction, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type Stripe from "stripe";
 import { getPeriodEndMs, mapStripeStatus } from "./http";
@@ -10,8 +10,10 @@ import { getStripe } from "./lib/stripeConfig";
  *
  * Used for one-time fixes when users pay but their record wasn't created.
  * Creates user if missing, then updates subscription fields.
+ *
+ * INTERNAL ONLY - not callable from client. Use Convex dashboard to invoke.
  */
-export const adminFixUserSubscription = mutation({
+export const adminFixUserSubscription = internalMutation({
   args: {
     clerkUserId: v.string(),
     stripeCustomerId: v.string(),
@@ -148,15 +150,12 @@ export const syncCheckoutSession = action({
  *
  * Used to fix affected users who paid but got stuck.
  * Fetches subscription from Stripe and updates Convex database.
+ *
+ * INTERNAL ONLY - not callable from client. Use Convex dashboard to invoke.
  */
-export const syncUserByEmail = action({
+export const syncUserByEmail = internalAction({
   args: { email: v.string() },
   handler: async (ctx, args) => {
-    // Note: This is an admin-only action - should add proper admin auth check
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return { success: false, error: "Unauthorized" };
-    }
 
     let stripe: Stripe;
     try {
