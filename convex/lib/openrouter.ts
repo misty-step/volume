@@ -56,15 +56,21 @@ export function createOpenRouterClient(): OpenAI | null {
     return null;
   }
 
-  return new OpenAI({
-    baseURL: OPENROUTER_BASE_URL,
-    apiKey,
-    defaultHeaders: {
-      "HTTP-Referer": "https://volume.fitness",
-      "X-Title": "Volume",
-    },
-    timeout: 30000, // 30 seconds
-  });
+  try {
+    return new OpenAI({
+      baseURL: OPENROUTER_BASE_URL,
+      apiKey,
+      defaultHeaders: {
+        "HTTP-Referer": "https://volume.fitness",
+        "X-Title": "Volume",
+      },
+      timeout: 30000, // 30 seconds
+    });
+  } catch {
+    // OpenAI SDK throws in browser-like environments (e.g., vitest with jsdom)
+    // Return null to trigger fallback classification
+    return null;
+  }
 }
 
 /**
