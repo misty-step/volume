@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2](https://github.com/misty-step/volume/compare/v1.6.1...v1.6.2) (2026-01-25)
+
+
+### Bug Fixes
+
+* **ai:** handle OpenAI SDK browser environment error in tests ([#291](https://github.com/misty-step/volume/issues/291)) ([0934545](https://github.com/misty-step/volume/commit/093454516b30ec33830cf7fc34c8ce2066cecb2d))
+
 ## [1.6.1](https://github.com/misty-step/volume/compare/v1.6.0...v1.6.1) (2026-01-24)
 
 
