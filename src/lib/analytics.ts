@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import posthog from "posthog-js";
+import { sanitizeEmail } from "./sanitize";
 import { shouldEnableSentry } from "./sentry";
 
 /**
@@ -100,8 +101,7 @@ export type AnalyticsEventProperties<Name extends AnalyticsEventName> =
  * // => "[EMAIL_REDACTED] sent message"
  */
 function sanitizeString(value: string): string {
-  const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-  return value.replace(emailPattern, "[EMAIL_REDACTED]");
+  return sanitizeEmail(value);
 }
 
 /**
@@ -184,10 +184,13 @@ function sanitizeEventProperties(
 function isAnalyticsEnabled(): boolean {
   if (process.env.NEXT_PUBLIC_DISABLE_ANALYTICS === "true") return false;
   if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return false;
-  if (process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true") return true;
   if (process.env.NODE_ENV === "test") return false;
-  if (process.env.NODE_ENV === "development") return false;
-  return true;
+
+  // Explicit enable overrides dev default-off
+  if (process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true") return true;
+
+  // Default: disabled in development, enabled elsewhere
+  return process.env.NODE_ENV !== "development";
 }
 
 /**

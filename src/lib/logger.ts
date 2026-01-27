@@ -1,4 +1,5 @@
 import { getDeploymentEnvironment } from "./environment";
+import { sanitizeEmail } from "./sanitize";
 
 /**
  * Structured logger with PII redaction and environment-aware formatting.
@@ -18,9 +19,6 @@ export type Logger = {
   error: LogMethod;
 };
 
-const EMAIL_REDACTION_PATTERN =
-  /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?<!\[EMAIL_REDACTED\])/g;
-const EMAIL_REDACTED = "[EMAIL_REDACTED]";
 const CIRCULAR_PLACEHOLDER = "[CIRCULAR]";
 
 const LEVEL_RANK: Record<LogLevel, number> = {
@@ -40,7 +38,7 @@ const LEVEL_COLOR: Record<LogLevel, string> = {
 const COLOR_RESET = "\u001b[0m";
 
 function sanitizeString(value: string): string {
-  return value.replace(EMAIL_REDACTION_PATTERN, EMAIL_REDACTED);
+  return sanitizeEmail(value);
 }
 
 function sanitizeValue(value: unknown, seen: WeakSet<object>): unknown {
@@ -142,14 +140,13 @@ function emitLog(
       })
     : formatDevLine(level, sanitizedMessage, sanitizedContext);
 
-  const writer =
-    level === "error"
-      ? console.error
-      : level === "warn"
-        ? console.warn
-        : console.log;
-
-  writer(output);
+  if (level === "error") {
+    console.error(output);
+  } else if (level === "warn") {
+    console.warn(output);
+  } else {
+    console.log(output);
+  }
 }
 
 function createLogger(baseContext?: LogContext): Logger {
