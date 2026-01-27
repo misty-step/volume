@@ -8,33 +8,16 @@ import { PageLayout } from "@/components/layout/page-layout";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useMobileViewport } from "@/hooks/useMobileViewport";
 
-export function Dashboard() {
+export function Dashboard(): React.ReactElement | null {
   const isMobile = useMobileViewport();
-  const {
-    isHydrated,
-    formOpen,
-    setFormOpen,
-    formRef,
-    historyRef,
-    unit,
-    todaysSets,
-    exercises,
-    exerciseGroups,
-    exerciseMap,
-    activeExercisesByRecency,
-    handleDeleteSet,
-    handleRepeatSet,
-    handleSetLogged,
-    handleUndo,
-    handleUndoDelete,
-    handlePRFlash,
-    handleHapticFeedback,
-    handleFirstExerciseCreated,
-  } = useDashboard({ isMobile });
+  const dashboard = useDashboard({ isMobile });
+  const { isHydrated, todaysSets, exercises } = dashboard;
+
+  const title = isMobile ? undefined : "Today";
 
   if (!isHydrated) {
     return (
-      <PageLayout title={isMobile ? undefined : "Today"} fullHeight={isMobile}>
+      <PageLayout title={title} fullHeight={isMobile}>
         <DashboardSkeleton isMobile={isMobile} />
       </PageLayout>
     );
@@ -44,48 +27,44 @@ export function Dashboard() {
     return null;
   }
 
+  // First-run: no exercises yet
+  if (exercises.length === 0) {
+    return (
+      <PageLayout title={title} fullHeight={isMobile}>
+        <FirstRunExperience onExerciseCreated={dashboard.handleFirstExerciseCreated} />
+      </PageLayout>
+    );
+  }
+
+  // Normal dashboard view
+  const sharedProps = {
+    todaysSets,
+    unit: dashboard.unit,
+    exerciseGroups: dashboard.exerciseGroups,
+    exerciseMap: dashboard.exerciseMap,
+    activeExercisesByRecency: dashboard.activeExercisesByRecency,
+    formRef: dashboard.formRef,
+    historyRef: dashboard.historyRef,
+    isHydrated,
+    handleDeleteSet: dashboard.handleDeleteSet,
+    handleRepeatSet: dashboard.handleRepeatSet,
+    handleSetLogged: dashboard.handleSetLogged,
+    handleUndo: dashboard.handleDeleteSet, // Same operation: delete the set
+    handleUndoDelete: dashboard.handleUndoDelete,
+    handlePRFlash: dashboard.handlePRFlash,
+    handleHapticFeedback: dashboard.handleHapticFeedback,
+  } as const;
+
   return (
-    <PageLayout title={isMobile ? undefined : "Today"} fullHeight={isMobile}>
-      {exercises.length === 0 ? (
-        <FirstRunExperience onExerciseCreated={handleFirstExerciseCreated} />
-      ) : isMobile ? (
+    <PageLayout title={title} fullHeight={isMobile}>
+      {isMobile ? (
         <DashboardMobile
-          todaysSets={todaysSets}
-          unit={unit}
-          exerciseGroups={exerciseGroups}
-          exerciseMap={exerciseMap}
-          activeExercisesByRecency={activeExercisesByRecency}
-          formOpen={formOpen}
-          setFormOpen={setFormOpen}
-          formRef={formRef}
-          historyRef={historyRef}
-          isHydrated={isHydrated}
-          handleDeleteSet={handleDeleteSet}
-          handleRepeatSet={handleRepeatSet}
-          handleSetLogged={handleSetLogged}
-          handleUndo={handleUndo}
-          handleUndoDelete={handleUndoDelete}
-          handlePRFlash={handlePRFlash}
-          handleHapticFeedback={handleHapticFeedback}
+          {...sharedProps}
+          formOpen={dashboard.formOpen}
+          setFormOpen={dashboard.setFormOpen}
         />
       ) : (
-        <DashboardDesktop
-          todaysSets={todaysSets}
-          unit={unit}
-          exerciseGroups={exerciseGroups}
-          exerciseMap={exerciseMap}
-          activeExercisesByRecency={activeExercisesByRecency}
-          formRef={formRef}
-          historyRef={historyRef}
-          isHydrated={isHydrated}
-          handleDeleteSet={handleDeleteSet}
-          handleRepeatSet={handleRepeatSet}
-          handleSetLogged={handleSetLogged}
-          handleUndo={handleUndo}
-          handleUndoDelete={handleUndoDelete}
-          handlePRFlash={handlePRFlash}
-          handleHapticFeedback={handleHapticFeedback}
-        />
+        <DashboardDesktop {...sharedProps} />
       )}
     </PageLayout>
   );

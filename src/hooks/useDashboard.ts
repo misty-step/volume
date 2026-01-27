@@ -46,7 +46,6 @@ export interface UseDashboardReturn {
   handleSetLogged: () => void;
   handlePRFlash: () => void;
   handleHapticFeedback: () => void;
-  handleUndo: (setId: Id<"sets">) => Promise<void>;
   handleUndoDelete: (setData: DeletedSetData) => Promise<void>;
   handleFirstExerciseCreated: (exerciseId: Id<"exercises">) => void;
 }
@@ -123,65 +122,43 @@ export function useDashboard({
     [exercisesByRecency]
   );
 
-  // Handle delete set
-  const handleDeleteSet = async (setId: Id<"sets">) => {
+  // Delete a set (used for both direct delete and undo-create)
+  async function handleDeleteSet(setId: Id<"sets">): Promise<void> {
     try {
       await deleteSet({ id: setId });
     } catch (error) {
       handleMutationError(error, "Delete Set");
     }
-  };
+  }
 
-  // Handle repeat set
-  const handleRepeatSet = (set: WorkoutSet) => {
+  function handleRepeatSet(set: WorkoutSet): void {
     formRef.current?.repeatSet(set);
-  };
+  }
 
-  // Handle set logged - scroll to history (mobile: also close modal)
-  const handleSetLogged = () => {
-    // Mobile: close form modal after successful log
-    if (isMobile) {
-      setFormOpen(false);
-    }
+  // Scroll to history after logging; on mobile, also close the modal
+  function handleSetLogged(): void {
+    if (isMobile) setFormOpen(false);
 
-    // 100ms delay ensures React finishes rendering the newly logged set
-    // in the history section before scrolling to it
+    // Brief delay ensures React renders the new set before scrolling
     setTimeout(() => {
-      historyRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
+      historyRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }, 100);
-  };
+  }
 
-  const handlePRFlash = () => {
+  function handlePRFlash(): void {
     if (typeof document === "undefined") return;
-    const PR_FLASH_DURATION_MS = 300;
     document.body.classList.add("animate-pr-flash");
-    setTimeout(
-      () => document.body.classList.remove("animate-pr-flash"),
-      PR_FLASH_DURATION_MS
-    );
-  };
+    setTimeout(() => document.body.classList.remove("animate-pr-flash"), 300);
+  }
 
-  const handleHapticFeedback = () => {
-    const HAPTIC_FEEDBACK_DURATION_MS = 50;
+  function handleHapticFeedback(): void {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate(HAPTIC_FEEDBACK_DURATION_MS);
+      navigator.vibrate(50);
     }
-  };
+  }
 
-  // Handle undo - delete the set (called from toast action when undoing a create)
-  const handleUndo = async (setId: Id<"sets">) => {
-    try {
-      await deleteSet({ id: setId });
-    } catch (error) {
-      handleMutationError(error, "Undo Set");
-    }
-  };
-
-  // Handle undo delete - recreate the set (called from toast action when undoing a delete)
-  const handleUndoDelete = async (setData: DeletedSetData) => {
+  // Recreate a deleted set (undo delete action)
+  async function handleUndoDelete(setData: DeletedSetData): Promise<void> {
     try {
       await logSet({
         exerciseId: setData.exerciseId,
@@ -194,12 +171,11 @@ export function useDashboard({
     } catch (error) {
       handleMutationError(error, "Restore Set");
     }
-  };
+  }
 
-  // Handle first exercise created - auto-select it and focus form
-  const handleFirstExerciseCreated = (exerciseId: Id<"exercises">) => {
-    // 100ms delay waits for React to render the new exercise in the dropdown
-    // before auto-selecting it via repeatSet with a dummy set
+  // Auto-select newly created exercise in form
+  function handleFirstExerciseCreated(exerciseId: Id<"exercises">): void {
+    // Brief delay lets React render the new exercise in dropdown
     setTimeout(() => {
       formRef.current?.repeatSet({
         _id: "" as Id<"sets">,
@@ -208,7 +184,7 @@ export function useDashboard({
         performedAt: Date.now(),
       });
     }, 100);
-  };
+  }
 
   return {
     authReady,
@@ -229,7 +205,6 @@ export function useDashboard({
     handleSetLogged,
     handlePRFlash,
     handleHapticFeedback,
-    handleUndo,
     handleUndoDelete,
     handleFirstExerciseCreated,
   };
