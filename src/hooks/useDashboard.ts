@@ -37,7 +37,6 @@ export interface UseDashboardReturn {
   exercises: Exercise[] | undefined;
   exerciseGroups: ExerciseGroup[];
   exerciseMap: Map<Id<"exercises">, Exercise>;
-  exercisesByRecency: Exercise[];
   activeExercisesByRecency: Exercise[];
   formRef: RefObject<QuickLogFormHandle | null>;
   historyRef: RefObject<HTMLDivElement | null>;
@@ -196,7 +195,6 @@ export function useDashboard({
     exercises,
     exerciseGroups,
     exerciseMap,
-    exercisesByRecency,
     activeExercisesByRecency,
     formRef,
     historyRef,
