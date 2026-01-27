@@ -48,6 +48,11 @@ function sanitizeValue(value: unknown, seen: WeakSet<object>): unknown {
     return sanitizeString(value);
   }
 
+  // BigInt cannot be JSON.stringify'd - convert to string
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+
   if (value instanceof Error) {
     return {
       name: value.name,
@@ -57,7 +62,8 @@ function sanitizeValue(value: unknown, seen: WeakSet<object>): unknown {
   }
 
   if (value instanceof Date) {
-    return value.toISOString();
+    const time = value.getTime();
+    return Number.isNaN(time) ? value.toString() : value.toISOString();
   }
 
   if (Array.isArray(value)) {

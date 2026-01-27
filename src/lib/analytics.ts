@@ -1,7 +1,19 @@
 import * as Sentry from "@sentry/nextjs";
-import posthog from "posthog-js";
 import { sanitizeEmail } from "./sanitize";
 import { shouldEnableSentry } from "./sentry";
+
+// Lazy-loaded PostHog client to avoid server-side import issues
+// posthog-js pulls in DOM dependencies that throw on server
+let posthogClient: typeof import("posthog-js").default | null = null;
+
+function getPostHog() {
+  if (typeof window === "undefined") return null;
+  if (!posthogClient) {
+    // Dynamic import would be cleaner but requires async
+    posthogClient = require("posthog-js").default;
+  }
+  return posthogClient;
+}
 
 /**
  * Type-safe analytics event catalog.
@@ -265,7 +277,7 @@ export function setUserContext(
     ...sanitizedMetadata,
   });
 
-  posthog.identify(sanitizedUserId, sanitizedMetadata);
+  getPostHog()?.identify(sanitizedUserId, sanitizedMetadata);
 }
 
 /**
@@ -291,7 +303,7 @@ export function clearUserContext(): void {
 
   currentUserContext = null;
   Sentry.setUser(null);
-  posthog.reset();
+  getPostHog()?.reset();
 }
 
 /**
@@ -377,7 +389,7 @@ export function trackEvent<Name extends AnalyticsEventName>(
   // Client-side tracking
   if (typeof window !== "undefined") {
     try {
-      posthog.capture(name, enriched);
+      getPostHog()?.capture(name, enriched);
     } catch (error) {
       if (isDev) console.warn("Analytics trackEvent failed:", error);
     }
