@@ -39,6 +39,8 @@ interface QuickLogFormProps {
   todaysSets?: Set[];
   onSetLogged?: (setId: Id<"sets">) => void;
   onUndo?: (setId: Id<"sets">) => void;
+  onPRFlash?: () => void;
+  onHapticFeedback?: () => void;
 }
 
 export interface QuickLogFormHandle {
@@ -54,7 +56,10 @@ export interface QuickLogFormHandle {
 const FOCUS_DELAY_MS = 100;
 
 const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
-  function QuickLogForm({ exercises, todaysSets, onSetLogged, onUndo }, ref) {
+  function QuickLogForm(
+    { exercises, todaysSets, onSetLogged, onUndo, onPRFlash, onHapticFeedback },
+    ref
+  ) {
     const [showInlineCreator, setShowInlineCreator] = useState(false);
     const [comboboxOpen, setComboboxOpen] = useState(false);
     const [isDurationMode, setIsDurationMode] = useState(false);
@@ -73,6 +78,8 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
         // Focus appropriate input based on mode
         focusElement(isDurationMode ? durationInputRef : repsInputRef);
       },
+      onPRFlash,
+      onHapticFeedback,
     });
 
     // Watch for changes in form values to clear opposing fields

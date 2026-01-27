@@ -41,6 +41,8 @@ export interface UseQuickLogFormOptions {
   onSetLogged?: (setId: Id<"sets">) => void;
   onUndo?: (setId: Id<"sets">) => void;
   onSuccess?: () => void;
+  onPRFlash?: () => void;
+  onHapticFeedback?: () => void;
 }
 
 export function useQuickLogForm({
@@ -49,6 +51,8 @@ export function useQuickLogForm({
   onSetLogged,
   onUndo,
   onSuccess,
+  onPRFlash,
+  onHapticFeedback,
 }: UseQuickLogFormOptions) {
   const logSet = useMutation(api.sets.logSet);
 
@@ -139,14 +143,7 @@ export function useQuickLogForm({
 
         if (prResult) {
           isPR = true;
-          // Trigger screen flash effect for visceral PR impact
-          if (typeof document !== "undefined") {
-            document.body.classList.add("animate-pr-flash");
-            setTimeout(
-              () => document.body.classList.remove("animate-pr-flash"),
-              300
-            );
-          }
+          onPRFlash?.();
           // Find exercise name for celebration message
           const exercise = exercises.find((e) => e._id === values.exerciseId);
           if (exercise) {
@@ -157,10 +154,7 @@ export function useQuickLogForm({
 
       // Show success toast with undo action (skip if PR celebration shown)
       if (!isPR) {
-        // Haptic feedback on mobile
-        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-          navigator.vibrate(50); // Short, sharp vibration
-        }
+        onHapticFeedback?.();
 
         toast.success("Set logged!", {
           duration: 3000, // 3s instead of 10s - quick confirmation

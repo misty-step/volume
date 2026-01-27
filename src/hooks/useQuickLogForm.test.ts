@@ -4,6 +4,8 @@ import { useQuickLogForm } from "./useQuickLogForm";
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
 import * as convexReact from "convex/react";
+import { checkForPR } from "@/lib/pr-detection";
+import { showPRCelebration } from "@/components/dashboard/pr-celebration";
 
 // Mock dependencies
 vi.mock("sonner", () => ({
@@ -170,6 +172,70 @@ describe("useQuickLogForm", () => {
         "Set logged!",
         expect.objectContaining({ duration: 3000 })
       );
+    });
+  });
+
+  it("calls onHapticFeedback on non-PR success", async () => {
+    mockLogSet.mockResolvedValue("set-haptic");
+    const onHapticFeedback = vi.fn();
+
+    const { result } = renderHook(() =>
+      useQuickLogForm({
+        unit: "lbs",
+        exercises: mockExercises,
+        onSetLogged: mockOnSetLogged,
+        onSuccess: mockOnSuccess,
+        onHapticFeedback,
+      })
+    );
+
+    result.current.form.setValue("exerciseId", "exercise1");
+    result.current.form.setValue("reps", 6);
+
+    await result.current.onSubmit(result.current.form.getValues());
+
+    await waitFor(() => {
+      expect(onHapticFeedback).toHaveBeenCalledTimes(1);
+      expect(toast.success).toHaveBeenCalledWith(
+        "Set logged!",
+        expect.objectContaining({ duration: 3000 })
+      );
+    });
+  });
+
+  it("calls onPRFlash and skips toast on PR", async () => {
+    mockLogSet.mockResolvedValue("set-pr");
+    const onPRFlash = vi.fn();
+    vi.mocked(checkForPR).mockReturnValueOnce({
+      type: "weight",
+      currentValue: 200,
+      previousValue: 190,
+    });
+
+    const { result } = renderHook(() =>
+      useQuickLogForm({
+        unit: "lbs",
+        exercises: mockExercises,
+        onSetLogged: mockOnSetLogged,
+        onSuccess: mockOnSuccess,
+        onPRFlash,
+      })
+    );
+
+    result.current.form.setValue("exerciseId", "exercise1");
+    result.current.form.setValue("reps", 5);
+    result.current.form.setValue("weight", 200);
+
+    await result.current.onSubmit(result.current.form.getValues());
+
+    await waitFor(() => {
+      expect(onPRFlash).toHaveBeenCalledTimes(1);
+      expect(showPRCelebration).toHaveBeenCalledWith(
+        "Squats",
+        expect.objectContaining({ type: "weight" }),
+        "lbs"
+      );
+      expect(toast.success).not.toHaveBeenCalled();
     });
   });
 
