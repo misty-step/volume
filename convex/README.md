@@ -39,7 +39,6 @@ Internal utilities. Not imported by frontend.
 
 - `validate.ts` - Input validation + auth guards
 - `rateLimit.ts` - Per-user rate limiting
-- `streak_calculator.ts` - Workout streak detection
 - `muscleGroups.ts` - Valid muscle group constants
 
 ### migrations/

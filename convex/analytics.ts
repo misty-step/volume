@@ -5,7 +5,7 @@ import {
   calculateCurrentStreak,
   calculateLongestStreak,
   calculateTotalWorkouts,
-} from "./lib/streak_calculator";
+} from "../packages/core/src/streak";
 import { checkForPR } from "../packages/core/src/pr-detection";
 import type { PRType } from "../packages/core/src/types";
 import type { RecoveryStatus, MuscleGroup } from "./analyticsRecovery";

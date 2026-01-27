@@ -5,9 +5,10 @@
  * Extracted for testability - no Convex dependencies.
  */
 
-import type { Doc } from "../_generated/dataModel";
-
-type SetDoc = Doc<"sets">;
+import {
+  calculateCurrentStreak,
+  calculateLongestStreak,
+} from "../../packages/core/src/streak";
 
 /**
  * Calculate Monday 00:00 UTC for a given date
@@ -110,98 +111,4 @@ export function calculateDateRange(
   return { startDate, endDate };
 }
 
-/**
- * Calculate current workout streak
- *
- * @param sets - All user sets sorted by performedAt
- * @returns Number of consecutive days with workouts (including today if active)
- */
-export function calculateCurrentStreak(
-  sets: Array<Pick<SetDoc, "performedAt">>
-): number {
-  if (sets.length === 0) return 0;
-
-  const workoutDays = Array.from(
-    new Set(
-      sets.map((s) => new Date(s.performedAt).toISOString().split("T")[0])
-    )
-  ).sort();
-
-  const lastWorkout = workoutDays.at(-1);
-  if (!lastWorkout) return 0;
-
-  const today = new Date().toISOString().split("T")[0];
-  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
-
-  // Check if streak is active (today or yesterday)
-  if (lastWorkout !== today && lastWorkout !== yesterday) {
-    return 0;
-  }
-
-  let streak = 1;
-  for (let i = workoutDays.length - 2; i >= 0; i--) {
-    const currentDay = workoutDays[i];
-    const nextDay = workoutDays[i + 1];
-    if (!currentDay || !nextDay) break;
-
-    const current = new Date(currentDay);
-    const next = new Date(nextDay);
-    const diffDays = Math.floor(
-      (next.getTime() - current.getTime()) / (24 * 60 * 60 * 1000)
-    );
-
-    if (diffDays === 1) {
-      streak++;
-    } else {
-      break;
-    }
-  }
-
-  return streak;
-}
-
-/**
- * Calculate longest streak in history
- *
- * @param sets - All user sets
- * @returns Maximum consecutive days with workouts ever achieved
- */
-export function calculateLongestStreak(
-  sets: Array<Pick<SetDoc, "performedAt">>
-): number {
-  if (sets.length === 0) return 0;
-
-  const workoutDays = Array.from(
-    new Set(
-      sets.map((s) => new Date(s.performedAt).toISOString().split("T")[0])
-    )
-  ).sort();
-
-  if (workoutDays.length === 0) return 0;
-
-  let maxStreak = 1;
-  let currentStreak = 1;
-
-  for (let i = 1; i < workoutDays.length; i++) {
-    const prevDay = workoutDays[i - 1];
-    const currDay = workoutDays[i];
-    if (!prevDay || !currDay) break;
-
-    const prev = new Date(prevDay);
-    const curr = new Date(currDay);
-    const diffDays = Math.floor(
-      (curr.getTime() - prev.getTime()) / (24 * 60 * 60 * 1000)
-    );
-
-    if (diffDays === 1) {
-      currentStreak++;
-      maxStreak = Math.max(maxStreak, currentStreak);
-    } else {
-      currentStreak = 1;
-    }
-  }
-
-  return maxStreak;
-}
+export { calculateCurrentStreak, calculateLongestStreak };
