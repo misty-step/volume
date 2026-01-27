@@ -20,7 +20,7 @@ export function PostHogProvider({ children }: PostHogProviderProps) {
     });
   }, []);
 
-  if (process.env.NODE_ENV === "test") {
+  if (process.env.NODE_ENV === "test" || !process.env.NEXT_PUBLIC_POSTHOG_KEY) {
     return <>{children}</>;
   }
 

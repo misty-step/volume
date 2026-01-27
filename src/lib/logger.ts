@@ -105,6 +105,11 @@ function shouldOutputJson(): boolean {
   return getDeploymentEnvironment() !== "development";
 }
 
+// Memoize at module load (env vars are constant)
+const MIN_LOG_LEVEL = resolveLogLevel();
+const IS_LOGGING_ENABLED = shouldLog();
+const USE_JSON_OUTPUT = shouldOutputJson();
+
 function formatDevLine(
   level: LogLevel,
   message: string,
@@ -125,13 +130,13 @@ function emitLog(
   context: LogContext | undefined,
   minLevel: LogLevel
 ): void {
-  if (!shouldLog()) return;
+  if (!IS_LOGGING_ENABLED) return;
   if (LEVEL_RANK[level] < LEVEL_RANK[minLevel]) return;
 
   const sanitizedMessage = sanitizeString(message);
   const sanitizedContext = sanitizeContext(context);
 
-  const output = shouldOutputJson()
+  const output = USE_JSON_OUTPUT
     ? JSON.stringify({
         ...(sanitizedContext ?? {}),
         level,
@@ -156,28 +161,28 @@ function createLogger(baseContext?: LogContext): Logger {
         "debug",
         message,
         { ...baseContext, ...context },
-        resolveLogLevel()
+        MIN_LOG_LEVEL
       ),
     info: (message, context) =>
       emitLog(
         "info",
         message,
         { ...baseContext, ...context },
-        resolveLogLevel()
+        MIN_LOG_LEVEL
       ),
     warn: (message, context) =>
       emitLog(
         "warn",
         message,
         { ...baseContext, ...context },
-        resolveLogLevel()
+        MIN_LOG_LEVEL
       ),
     error: (message, context) =>
       emitLog(
         "error",
         message,
         { ...baseContext, ...context },
-        resolveLogLevel()
+        MIN_LOG_LEVEL
       ),
   };
 }
