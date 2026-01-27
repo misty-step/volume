@@ -6,8 +6,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { WeightUnitProvider } from "@/contexts/WeightUnitContext";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { AnalyticsWrapper } from "@/components/analytics-wrapper";
 import { ToasterProvider } from "@/components/toaster-provider";
+import { PostHogProvider } from "@/components/posthog-provider";
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -65,14 +65,15 @@ export default function RootLayout({
         className={`${bebasNeue.variable} ${jetbrainsMono.variable} ${inter.variable}`}
       >
         <body className="antialiased font-sans">
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <WeightUnitProvider>
-              <ConvexClientProvider>{children}</ConvexClientProvider>
-            </WeightUnitProvider>
-          </ThemeProvider>
-          <ToasterProvider />
-          <AnalyticsWrapper />
-          <SpeedInsights />
+          <PostHogProvider>
+            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+              <WeightUnitProvider>
+                <ConvexClientProvider>{children}</ConvexClientProvider>
+              </WeightUnitProvider>
+            </ThemeProvider>
+            <ToasterProvider />
+            <SpeedInsights />
+          </PostHogProvider>
         </body>
       </html>
     </ClerkProvider>

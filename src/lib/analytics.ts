@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
-import { track as trackClient } from "@vercel/analytics";
+import posthog from "posthog-js";
 import { shouldEnableSentry } from "./sentry";
 
 /**
@@ -178,11 +178,12 @@ function sanitizeEventProperties(
 /**
  * Check if analytics should be enabled.
  *
- * Respects explicit enable/disable flags and auto-disables in dev/test
- * environments to avoid polluting production analytics.
+ * Respects explicit enable/disable flags, requires a PostHog key, and
+ * auto-disables in dev/test environments to avoid polluting analytics.
  */
 function isAnalyticsEnabled(): boolean {
   if (process.env.NEXT_PUBLIC_DISABLE_ANALYTICS === "true") return false;
+  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return false;
   if (process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true") return true;
   if (process.env.NODE_ENV === "test") return false;
   if (process.env.NODE_ENV === "development") return false;
@@ -199,37 +200,6 @@ function isAnalyticsEnabled(): boolean {
 function isSentryEnabled(): boolean {
   const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN;
   return shouldEnableSentry(dsn);
-}
-
-/**
- * Cached promise for server-side track function.
- *
- * Prevents multiple dynamic imports of @vercel/analytics/server.
- */
-let serverTrackPromise: Promise<
-  typeof import("@vercel/analytics/server").track | null
-> | null = null;
-
-/**
- * Dynamically load Vercel Analytics server track function.
- *
- * Only works on server - returns null on client to prevent errors.
- * Caches the import promise to avoid repeated dynamic imports.
- *
- * @returns Promise resolving to track function on server, null on client
- */
-function loadServerTrack() {
-  // Client-side check - return null immediately
-  if (typeof window !== "undefined") return Promise.resolve(null);
-
-  // Server-side - load once and cache
-  if (!serverTrackPromise) {
-    serverTrackPromise = import("@vercel/analytics/server")
-      .then((m) => m.track)
-      .catch(() => null);
-  }
-
-  return serverTrackPromise;
 }
 
 /**
@@ -291,6 +261,8 @@ export function setUserContext(
     id: sanitizedUserId,
     ...sanitizedMetadata,
   });
+
+  posthog.identify(sanitizedUserId, sanitizedMetadata);
 }
 
 /**
@@ -316,6 +288,7 @@ export function clearUserContext(): void {
 
   currentUserContext = null;
   Sentry.setUser(null);
+  posthog.reset();
 }
 
 /**
@@ -360,7 +333,7 @@ function withUserContext(
 /**
  * Track analytics event with type safety and automatic PII sanitization.
  *
- * Main public API for analytics tracking. Works on both client and server.
+ * Main public API for analytics tracking. No-op on the server.
  * Automatically enriches events with user context if set via setUserContext().
  *
  * TypeScript enforces required properties: events with required fields MUST
@@ -401,21 +374,14 @@ export function trackEvent<Name extends AnalyticsEventName>(
   // Client-side tracking
   if (typeof window !== "undefined") {
     try {
-      trackClient(name, enriched);
+      posthog.capture(name, enriched);
     } catch (error) {
       if (isDev) console.warn("Analytics trackEvent failed:", error);
     }
     return;
   }
 
-  // Server-side tracking (fire-and-forget)
-  loadServerTrack()
-    .then((track) => {
-      if (track) track(name, enriched);
-    })
-    .catch((error) => {
-      if (isDev) console.warn("Analytics server track failed:", error);
-    });
+  // Server-side tracking: skip (PostHog client handles capture in browser)
 }
 
 /**
@@ -458,4 +424,3 @@ export function reportError(
     }
   }
 }
-
