@@ -15,5 +15,5 @@ export * from "./pr-detection";
 export * from "./streak";
 export * from "./date-calc";
 export * from "./validation";
-// export * from "./muscle-groups";
-// export * from "./weight-conversion";
+export * from "./muscle-groups";
+export * from "./weight-conversion";
