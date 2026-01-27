@@ -20,11 +20,6 @@ vi.mock("@sentry/nextjs", () => ({
   captureException: vi.fn(),
 }));
 
-// Mock Vercel Analytics
-vi.mock("@vercel/analytics", () => ({
-  track: vi.fn(),
-}));
-
 describe("analytics - server-side safety guards", () => {
   // Save original window to restore after tests
   const originalWindow = global.window;
