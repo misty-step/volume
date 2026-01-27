@@ -15,8 +15,11 @@ Lefthook enforces quality gates on commit/push.
 ## Architecture Map
 
 ```
-src/app/(app)/page.tsx     →  useQuickLogForm hook  →  convex/sets.ts
-       (UI)                      (behavior)              (persistence)
+src/app/(app)/page.tsx  →  Dashboard  →  useDashboard hook  →  convex/sets.ts
+       (route)            (orchestrator)    (behavior)           (persistence)
+                              ↓
+                    DashboardMobile / DashboardDesktop
+                           (platform views)
 ```
 
 **Start here:** `convex/schema.ts:1` (data shapes), then `convex/sets.ts:1` (core mutations)
@@ -26,7 +29,7 @@ src/app/(app)/page.tsx     →  useQuickLogForm hook  →  convex/sets.ts
 - `convex/` - All data mutations, auth checks, subscriptions
 - External: Clerk (auth), Stripe (payments), OpenRouter/Gemini (AI features)
 
-**Deep modules:** `useQuickLogForm`, `convex/analytics.ts`
+**Deep modules:** `useDashboard`, `useQuickLogForm`, `convex/analytics.ts`
 
 ## Deployments
 
