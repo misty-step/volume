@@ -87,7 +87,7 @@ CONVEX_DEPLOYMENT=prod:whimsical-marten-631 npx convex logs --history 100
 | [docs/adr/](docs/adr/) | 7 ADRs: rate limits, soft delete, Stripe, AI, subscriptions |
 | [docs/state-diagrams/](docs/state-diagrams/) | Checkout, auth, paywall, quick-log flows |
 | [docs/postmortems/](docs/postmortems/) | Incident analyses |
-| [BACKLOG.md](BACKLOG.md) | Planned features |
+| [GitHub Issues](https://github.com/misty-step/volume/issues) | Planned features |
 
 ## Commits
 
