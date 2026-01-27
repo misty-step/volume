@@ -11,7 +11,7 @@
 export * from "./types";
 
 // Modules will be exported as they are implemented:
-// export * from "./pr-detection";
+export * from "./pr-detection";
 // export * from "./streak";
 // export * from "./date-calc";
 // export * from "./validation";
