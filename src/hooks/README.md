@@ -14,7 +14,7 @@ Custom React hooks for the Volume app. Each hook encapsulates a specific concern
 
 | Hook | Purpose |
 |------|---------|
-| `useQuickLogForm` | Form state for logging sets. Handles validation, PR detection, celebrations. |
+| `useQuickLogForm` | Form state for logging sets. Handles validation, PR detection, celebrations, platform feedback via callbacks. |
 
 ## Environment
 

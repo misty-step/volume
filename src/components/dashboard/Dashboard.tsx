@@ -132,6 +132,18 @@ export function Dashboard() {
     }, 100);
   };
 
+  const handlePRFlash = () => {
+    if (typeof document === "undefined") return;
+    document.body.classList.add("animate-pr-flash");
+    setTimeout(() => document.body.classList.remove("animate-pr-flash"), 300);
+  };
+
+  const handleHapticFeedback = () => {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate(50);
+    }
+  };
+
   // Handle undo - delete the set (called from toast action when undoing a create)
   const handleUndo = async (setId: Id<"sets">) => {
     try {
@@ -292,6 +304,8 @@ export function Dashboard() {
                         todaysSets={todaysSets}
                         onSetLogged={handleSetLogged}
                         onUndo={handleUndo}
+                        onPRFlash={handlePRFlash}
+                        onHapticFeedback={handleHapticFeedback}
                       />
                     </div>
                   </motion.div>
@@ -320,6 +334,8 @@ export function Dashboard() {
                 todaysSets={todaysSets}
                 onSetLogged={handleSetLogged}
                 onUndo={handleUndo}
+                onPRFlash={handlePRFlash}
+                onHapticFeedback={handleHapticFeedback}
               />
             </motion.div>
 
