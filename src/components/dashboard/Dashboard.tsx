@@ -134,13 +134,18 @@ export function Dashboard() {
 
   const handlePRFlash = () => {
     if (typeof document === "undefined") return;
+    const PR_FLASH_DURATION_MS = 300;
     document.body.classList.add("animate-pr-flash");
-    setTimeout(() => document.body.classList.remove("animate-pr-flash"), 300);
+    setTimeout(
+      () => document.body.classList.remove("animate-pr-flash"),
+      PR_FLASH_DURATION_MS
+    );
   };
 
   const handleHapticFeedback = () => {
+    const HAPTIC_FEEDBACK_DURATION_MS = 50;
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate(50);
+      navigator.vibrate(HAPTIC_FEEDBACK_DURATION_MS);
     }
   };
 
