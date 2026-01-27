@@ -13,7 +13,7 @@ export * from "./types";
 // Modules will be exported as they are implemented:
 export * from "./pr-detection";
 export * from "./streak";
-// export * from "./date-calc";
+export * from "./date-calc";
 // export * from "./validation";
 // export * from "./muscle-groups";
 // export * from "./weight-conversion";
