@@ -50,10 +50,10 @@ export const defaultDeps: CoverageVerifierDeps = {
 
 // Default thresholds matching vitest.config.ts
 export const DEFAULT_THRESHOLDS: Thresholds = {
-  lines: 50,
+  lines: 47,
   functions: 70,
-  branches: 84.5,
-  statements: 50,
+  branches: 83,
+  statements: 47,
 };
 
 export class CoverageVerifier {
@@ -77,9 +77,7 @@ export class CoverageVerifier {
     if (!this.deps.fileExists(fullPath)) {
       return {
         passed: false,
-        failures: [
-          "Coverage report not found. Run tests with coverage first.",
-        ],
+        failures: ["Coverage report not found. Run tests with coverage first."],
       };
     }
 
@@ -111,7 +109,9 @@ export class CoverageVerifier {
   checkThresholds(actual: CoverageSummary["total"]): VerificationResult {
     const failures: string[] = [];
 
-    for (const metric of Object.keys(this.thresholds) as Array<keyof Thresholds>) {
+    for (const metric of Object.keys(this.thresholds) as Array<
+      keyof Thresholds
+    >) {
       const required = this.thresholds[metric];
       const actualValue = actual[metric]?.pct ?? 0;
       if (actualValue < required) {

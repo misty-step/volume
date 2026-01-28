@@ -2,7 +2,7 @@
  * Validation
  */
 
-type ValidationResult = { valid: boolean; error?: string };
+export type ValidationResult = { valid: boolean; error?: string };
 
 const valid = (): ValidationResult => ({ valid: true });
 

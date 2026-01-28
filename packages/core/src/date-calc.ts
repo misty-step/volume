@@ -81,22 +81,28 @@ export function calculateDateRange(
         startDate = endDate - 7 * 24 * 60 * 60 * 1000;
       }
       break;
-    case "monthly":
+    case "monthly": {
       // Last calendar month (1st to last day of previous month)
       const lastMonth = new Date(now);
-      lastMonth.setMonth(lastMonth.getMonth() - 1);
-      lastMonth.setDate(1);
-      lastMonth.setHours(0, 0, 0, 0);
+      lastMonth.setUTCMonth(lastMonth.getUTCMonth() - 1);
+      lastMonth.setUTCDate(1);
+      lastMonth.setUTCHours(0, 0, 0, 0);
       startDate = lastMonth.getTime();
 
       // End date is last day of that month
       const lastDayOfMonth = new Date(
-        lastMonth.getFullYear(),
-        lastMonth.getMonth() + 1,
-        0
+        Date.UTC(
+          lastMonth.getUTCFullYear(),
+          lastMonth.getUTCMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999
+        )
       );
-      lastDayOfMonth.setHours(23, 59, 59, 999);
       return { startDate, endDate: lastDayOfMonth.getTime() };
+    }
   }
 
   return { startDate, endDate };

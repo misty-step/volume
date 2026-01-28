@@ -5,7 +5,7 @@
  * PRs can be for max weight, max reps, or max volume in a single set.
  */
 
-import type { PRResult, SetData } from "./types";
+import type { PRResult, SetData, WeightUnit } from "./types";
 
 /**
  * Check if a set represents a new personal record
@@ -125,7 +125,7 @@ export function checkForPR(
 export function formatPRMessage(
   exerciseName: string,
   prResult: PRResult,
-  unit: string = "lbs"
+  unit: WeightUnit = "lbs"
 ): string {
   const { type, currentValue, previousValue } = prResult;
 
@@ -138,5 +138,10 @@ export function formatPRMessage(
 
     case "reps":
       return `🎉 NEW PR! ${exerciseName}: ${currentValue} reps (previous: ${previousValue} reps)`;
+
+    default: {
+      const _exhaustiveCheck: never = type;
+      throw new Error(`Unhandled PR type: ${_exhaustiveCheck}`);
+    }
   }
 }
