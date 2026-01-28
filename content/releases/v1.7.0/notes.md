@@ -1,0 +1,3 @@
+We’re constantly working to make your experience smoother and more reliable. In this update, we’ve improved how we identify and resolve hiccups behind the scenes. This means if you ever run into a snag while logging a workout, we’ll be able to see exactly what went wrong and fix it faster than ever before. You get a more stable app and less downtime, so you can stay focused on your training.
+
+We also tightened up our payment security to ensure your subscription data stays locked down and private. These changes keep your account safer while making the entire app feel faster and more responsive. It’s all about making sure Volume is ready to go the moment you hit the gym.
