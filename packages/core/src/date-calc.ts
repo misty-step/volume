@@ -83,13 +83,13 @@ export function calculateDateRange(
       break;
     case "monthly": {
       // Last calendar month (1st to last day of previous month)
-      const lastMonth = new Date(now);
-      lastMonth.setUTCMonth(lastMonth.getUTCMonth() - 1);
-      lastMonth.setUTCDate(1);
-      lastMonth.setUTCHours(0, 0, 0, 0);
+      // Use atomic Date.UTC to avoid month rollover bugs (e.g., Mar 31 → Feb 31 → Mar 3)
+      const lastMonth = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)
+      );
       startDate = lastMonth.getTime();
 
-      // End date is last day of that month
+      // End date is last day of that month (day 0 of next month = last day of current)
       const lastDayOfMonth = new Date(
         Date.UTC(
           lastMonth.getUTCFullYear(),

@@ -176,6 +176,26 @@ describe("calculateDateRange", () => {
 
       vi.useRealTimers();
     });
+
+    it("handles month rollover edge case (March 31 -> February)", () => {
+      vi.useFakeTimers();
+      // Critical edge case: March 31 doesn't exist in February
+      // Without atomic Date.UTC, setUTCMonth(-1) on Mar 31 rolls to Mar 3
+      vi.setSystemTime(new Date("2025-03-31T12:00:00Z"));
+
+      const { startDate, endDate } = calculateDateRange("monthly");
+
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      // Should be February 1-28, not March 1-3
+      expect(start.getUTCMonth()).toBe(1); // February
+      expect(start.getUTCDate()).toBe(1);
+      expect(end.getUTCMonth()).toBe(1); // February
+      expect(end.getUTCDate()).toBe(28);
+
+      vi.useRealTimers();
+    });
   });
 });
 
