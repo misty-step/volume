@@ -23,6 +23,8 @@
       }
     ],
     "paths": {
+      "@volume/core": ["./packages/core/src"],
+      "@volume/core/*": ["./packages/core/src/*"],
       "@/*": ["./src/*"]
     }
   },

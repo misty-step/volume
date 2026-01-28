@@ -1,3 +1,13 @@
+/**
+ * ⚠️ IMPORTANT: Convex Import Pattern
+ *
+ * This file uses relative imports from packages/core instead of @volume/core.
+ * This is required because Convex's esbuild bundler does not resolve pnpm
+ * workspace symlinks correctly.
+ *
+ * DO NOT change these to @volume/core imports - the build will fail.
+ * See ARCHITECTURE.md for details.
+ */
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -5,9 +15,14 @@ import {
   calculateCurrentStreak,
   calculateLongestStreak,
   calculateTotalWorkouts,
-} from "./lib/streak_calculator";
-import { checkForPR, PRType } from "./lib/pr_detection";
-import type { RecoveryStatus, MuscleGroup } from "./analyticsRecovery";
+} from "../packages/core/src/streak";
+import { checkForPR } from "../packages/core/src/pr-detection";
+import type { PRType } from "../packages/core/src/types";
+import {
+  ANALYTICS_MUSCLE_GROUPS,
+  type MuscleGroup,
+} from "../packages/core/src/muscle-groups";
+import type { RecoveryStatus } from "./analyticsRecovery";
 import type { FocusSuggestion, SuggestionPriority } from "./analyticsFocus";
 
 /**
@@ -694,18 +709,7 @@ function calculateRecovery(
 ): RecoveryData[] {
   const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
 
-  const allGroups: MuscleGroup[] = [
-    "Chest",
-    "Back",
-    "Shoulders",
-    "Biceps",
-    "Triceps",
-    "Quads",
-    "Hamstrings",
-    "Glutes",
-    "Calves",
-    "Core",
-  ];
+  const allGroups = ANALYTICS_MUSCLE_GROUPS;
 
   // Initialize metrics
   const metrics = new Map<

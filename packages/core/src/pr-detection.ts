@@ -1,30 +1,17 @@
 /**
- * PR (Personal Record) Detection for Convex
+ * PR (Personal Record) Detection
  *
- * Detects when a set represents a new personal record for an exercise.
+ * Detects when a user achieves a new personal record for an exercise.
  * PRs can be for max weight, max reps, or max volume in a single set.
  */
 
-export type PRType = "weight" | "reps" | "volume";
-
-export interface PRResult {
-  type: PRType;
-  currentValue: number;
-  previousValue: number;
-}
-
-interface SetData {
-  reps?: number; // Optional - may be undefined for duration-based exercises
-  weight?: number;
-  performedAt: number;
-}
+import type { PRResult, SetData, WeightUnit } from "./types";
 
 /**
  * Check if a set represents a new personal record
  *
  * Compares the current set against all previous sets for the same exercise
  * to determine if it's a PR for weight, reps, or volume.
- * Only works for rep-based exercises - returns null for duration-based exercises.
  *
  * @param currentSet - The set to check for PR
  * @param previousSets - All previous sets for the same exercise (excluding current)
@@ -34,7 +21,7 @@ export function checkForPR(
   currentSet: SetData,
   previousSets: SetData[]
 ): PRResult | null {
-  // PR detection only works for rep-based exercises
+  // PR detection only works for rep-based exercises currently
   if (currentSet.reps === undefined) {
     return null;
   }
@@ -125,4 +112,36 @@ export function checkForPR(
 
   // No PR achieved
   return null;
+}
+
+/**
+ * Format PR message for display
+ *
+ * @param exerciseName - Name of the exercise
+ * @param prResult - The PR result
+ * @param unit - Weight unit (lbs or kg)
+ * @returns Formatted message string
+ */
+export function formatPRMessage(
+  exerciseName: string,
+  prResult: PRResult,
+  unit: WeightUnit = "lbs"
+): string {
+  const { type, currentValue, previousValue } = prResult;
+
+  switch (type) {
+    case "weight":
+      return `🎉 NEW PR! ${exerciseName}: ${currentValue} ${unit} (previous: ${previousValue} ${unit})`;
+
+    case "volume":
+      return `🎉 NEW PR! ${exerciseName}: ${currentValue} ${unit} total volume (previous: ${previousValue} ${unit})`;
+
+    case "reps":
+      return `🎉 NEW PR! ${exerciseName}: ${currentValue} reps (previous: ${previousValue} reps)`;
+
+    default: {
+      const _exhaustiveCheck: never = type;
+      throw new Error(`Unhandled PR type: ${_exhaustiveCheck}`);
+    }
+  }
 }

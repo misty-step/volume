@@ -3,7 +3,7 @@
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
 import { Trophy } from "lucide-react";
-import type { PRType } from "../../../convex/lib/pr_detection";
+import type { PRType } from "@volume/core";
 import { motion } from "framer-motion";
 import { motionPresets } from "@/lib/brutalist-motion";
 import { BRUTALIST_TYPOGRAPHY } from "@/config/design-tokens";

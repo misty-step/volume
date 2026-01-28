@@ -1,4 +1,20 @@
+/**
+ * ⚠️ IMPORTANT: Convex Import Pattern
+ *
+ * This file uses relative imports from packages/core instead of @volume/core.
+ * This is required because Convex's esbuild bundler does not resolve pnpm
+ * workspace symlinks correctly.
+ *
+ * DO NOT change these to @volume/core imports - the build will fail.
+ * See ARCHITECTURE.md for details.
+ */
 import type { QueryCtx, MutationCtx } from "../_generated/server";
+import {
+  validateReps as coreValidateReps,
+  validateWeight as coreValidateWeight,
+  validateDuration as coreValidateDuration,
+  validateExerciseName as coreValidateExerciseName,
+} from "../../packages/core/src/validation";
 
 /**
  * Validate reps input.
@@ -8,10 +24,9 @@ import type { QueryCtx, MutationCtx } from "../_generated/server";
  * @throws Error if validation fails
  */
 export function validateReps(reps: number): void {
-  if (!Number.isInteger(reps) || reps <= 0 || reps > 1000) {
-    throw new Error(
-      "Reps must be a whole number between 1 and 1000 (no half reps—round to the nearest whole rep)."
-    );
+  const result = coreValidateReps(reps);
+  if (!result.valid) {
+    throw new Error(result.error);
   }
 }
 
@@ -30,10 +45,9 @@ export function validateWeight(weight: number | undefined): number | undefined {
     return undefined;
   }
 
-  if (!isFinite(weight) || weight < 0.1 || weight > 10000) {
-    throw new Error(
-      "Weight must be between 0.1 and 10000—leave weight empty for bodyweight instead of entering 0."
-    );
+  const result = coreValidateWeight(weight);
+  if (!result.valid) {
+    throw new Error(result.error);
   }
 
   // Round to 2 decimal places
@@ -78,20 +92,13 @@ export function validateDuration(
     return undefined;
   }
 
-  if (!isFinite(duration) || duration <= 0 || duration > 86400) {
-    throw new Error(
-      "Duration must be between 1 and 86400 seconds (24 hours)—restart the timer and try again."
-    );
+  const result = coreValidateDuration(duration);
+  if (!result.valid) {
+    throw new Error(result.error);
   }
 
-  // Round to nearest second and ensure it stays within bounds
-  const rounded = Math.round(duration);
-  if (rounded < 1) {
-    throw new Error(
-      "Duration must be between 1 and 86400 seconds (24 hours)—restart the timer and try again."
-    );
-  }
-  return rounded;
+  // Round to nearest second
+  return Math.round(duration);
 }
 
 /**
@@ -104,19 +111,12 @@ export function validateDuration(
  * @throws Error if validation fails
  */
 export function validateExerciseName(name: string): string {
-  const trimmed = name.trim();
-
-  if (trimmed.length === 0) {
-    throw new Error("Exercise name cannot be empty—add at least two letters.");
+  const result = coreValidateExerciseName(name);
+  if (!result.valid) {
+    throw new Error(result.error);
   }
 
-  if (trimmed.length < 2 || trimmed.length > 100) {
-    throw new Error(
-      "Exercise name must be 2-100 characters; shorten or extend it."
-    );
-  }
-
-  return trimmed;
+  return name.trim();
 }
 
 /**

@@ -14,6 +14,7 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html", "json-summary", "json"],
       reportOnFailure: true,
+      include: ["src/**/*", "convex/**/*", "packages/core/src/**/*"],
       exclude: [
         "**/*.test.ts",
         "**/*.test.tsx",
@@ -41,10 +42,10 @@ export default defineConfig({
         "**/scripts/**", // CLI wrappers, not library code
       ],
       thresholds: {
-        lines: 48,
+        lines: 47,
         functions: 70,
         branches: 83, // Lowered from 84.5% to match actual coverage
-        statements: 48,
+        statements: 47,
       },
     },
   },

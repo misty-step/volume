@@ -1,0 +1,21 @@
+{
+  "version": "1.7.0",
+  "compareUrl": "https://github.com/misty-step/volume/compare/v1.6.2...v1.7.0",
+  "date": "2026-01-27",
+  "changes": [
+    {
+      "type": "feat",
+      "description": "**observability:** add PostHog analytics and structured logging",
+      "pr": 296,
+      "commit": "7611514",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "description": "**stripe:** make admin functions internal-only",
+      "pr": 294,
+      "commit": "61086fa",
+      "breaking": false
+    }
+  ]
+}

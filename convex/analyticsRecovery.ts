@@ -1,18 +1,10 @@
 import { query } from "./_generated/server";
+import {
+  MUSCLE_GROUPS,
+  type MuscleGroup,
+} from "../packages/core/src/muscle-groups";
 
-// Muscle group type definition (no longer using mapping file)
-export type MuscleGroup =
-  | "Chest"
-  | "Back"
-  | "Shoulders"
-  | "Biceps"
-  | "Triceps"
-  | "Quads"
-  | "Hamstrings"
-  | "Glutes"
-  | "Calves"
-  | "Core"
-  | "Other";
+export type { MuscleGroup };
 
 /**
  * Recovery Analytics

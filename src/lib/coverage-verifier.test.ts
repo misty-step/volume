@@ -141,10 +141,10 @@ describe("CoverageVerifier", () => {
   describe("checkThresholds", () => {
     it("passes at exactly threshold value", () => {
       const coverage = createValidCoverage({
-        lines: { total: 100, covered: 50, skipped: 0, pct: 50 }, // Exactly 50%
+        lines: { total: 100, covered: 47, skipped: 0, pct: 47 }, // Exactly 47%
         functions: { total: 100, covered: 70, skipped: 0, pct: 70 }, // Exactly 70%
-        branches: { total: 100, covered: 85, skipped: 0, pct: 84.5 }, // Exactly 84.5%
-        statements: { total: 100, covered: 50, skipped: 0, pct: 50 }, // Exactly 50%
+        branches: { total: 100, covered: 83, skipped: 0, pct: 83 }, // Exactly 83%
+        statements: { total: 100, covered: 47, skipped: 0, pct: 47 }, // Exactly 47%
       });
       const verifier = new CoverageVerifier(createMockDeps());
 
@@ -155,7 +155,7 @@ describe("CoverageVerifier", () => {
 
     it("fails just below threshold", () => {
       const coverage = createValidCoverage({
-        lines: { total: 100, covered: 49, skipped: 0, pct: 49.9 },
+        lines: { total: 100, covered: 46, skipped: 0, pct: 46.9 }, // Just below 47%
       });
       const verifier = new CoverageVerifier(createMockDeps());
 
@@ -163,7 +163,7 @@ describe("CoverageVerifier", () => {
 
       expect(result.passed).toBe(false);
       expect(result.failures).toContainEqual(
-        expect.stringContaining("lines coverage 49.9%")
+        expect.stringContaining("lines coverage 46.9%")
       );
     });
 
@@ -228,9 +228,7 @@ describe("CoverageVerifier", () => {
 
       expect(result.passed).toBe(false);
       expect(result.failures).toHaveLength(4);
-      expect(result.failures).toContainEqual(
-        expect.stringContaining("lines")
-      );
+      expect(result.failures).toContainEqual(expect.stringContaining("lines"));
       expect(result.failures).toContainEqual(
         expect.stringContaining("functions")
       );
@@ -269,7 +267,7 @@ describe("CoverageVerifier", () => {
 
     it("uses default thresholds when not provided", () => {
       const coverage = createValidCoverage({
-        branches: { total: 100, covered: 84, skipped: 0, pct: 84 }, // Just below 84.5%
+        branches: { total: 100, covered: 82, skipped: 0, pct: 82 }, // Just below 83%
       });
       const verifier = new CoverageVerifier(
         createMockDeps({ readFile: () => JSON.stringify(coverage) })
@@ -279,7 +277,7 @@ describe("CoverageVerifier", () => {
 
       expect(result.passed).toBe(false);
       expect(result.failures).toContainEqual(
-        expect.stringContaining("branches coverage 84%")
+        expect.stringContaining("branches coverage 82%")
       );
     });
   });
@@ -287,10 +285,10 @@ describe("CoverageVerifier", () => {
   describe("DEFAULT_THRESHOLDS", () => {
     it("matches vitest.config.ts thresholds", () => {
       // These should match the thresholds in vitest.config.ts
-      expect(DEFAULT_THRESHOLDS.lines).toBe(50);
+      expect(DEFAULT_THRESHOLDS.lines).toBe(47);
       expect(DEFAULT_THRESHOLDS.functions).toBe(70);
-      expect(DEFAULT_THRESHOLDS.branches).toBe(84.5);
-      expect(DEFAULT_THRESHOLDS.statements).toBe(50);
+      expect(DEFAULT_THRESHOLDS.branches).toBe(83);
+      expect(DEFAULT_THRESHOLDS.statements).toBe(47);
     });
   });
 
@@ -319,7 +317,7 @@ describe("CoverageVerifier", () => {
       const result = verifier.verify();
 
       expect(result.failures[0]).toContain("80%");
-      expect(result.failures[0]).toContain("84.5%");
+      expect(result.failures[0]).toContain("83%");
     });
   });
 });

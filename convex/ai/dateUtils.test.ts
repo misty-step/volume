@@ -138,10 +138,10 @@ describe("calculateDateRange", () => {
       const start = new Date(startDate);
       const end = new Date(endDate);
 
-      expect(start.getMonth()).toBe(0); // January
-      expect(start.getDate()).toBe(1);
-      expect(end.getMonth()).toBe(0); // January
-      expect(end.getDate()).toBe(31);
+      expect(start.getUTCMonth()).toBe(0); // January
+      expect(start.getUTCDate()).toBe(1);
+      expect(end.getUTCMonth()).toBe(0); // January
+      expect(end.getUTCDate()).toBe(31);
 
       vi.useRealTimers();
     });
@@ -155,10 +155,10 @@ describe("calculateDateRange", () => {
       const start = new Date(startDate);
       const end = new Date(endDate);
 
-      expect(start.getFullYear()).toBe(2024);
-      expect(start.getMonth()).toBe(11); // December
-      expect(end.getMonth()).toBe(11); // December
-      expect(end.getDate()).toBe(31);
+      expect(start.getUTCFullYear()).toBe(2024);
+      expect(start.getUTCMonth()).toBe(11); // December
+      expect(end.getUTCMonth()).toBe(11); // December
+      expect(end.getUTCDate()).toBe(31);
 
       vi.useRealTimers();
     });
@@ -171,8 +171,28 @@ describe("calculateDateRange", () => {
       const { startDate, endDate } = calculateDateRange("monthly");
 
       const end = new Date(endDate);
-      expect(end.getMonth()).toBe(1); // February
-      expect(end.getDate()).toBe(28); // 2025 is not a leap year
+      expect(end.getUTCMonth()).toBe(1); // February
+      expect(end.getUTCDate()).toBe(28); // 2025 is not a leap year
+
+      vi.useRealTimers();
+    });
+
+    it("handles month rollover edge case (March 31 -> February)", () => {
+      vi.useFakeTimers();
+      // Critical edge case: March 31 doesn't exist in February
+      // Without atomic Date.UTC, setUTCMonth(-1) on Mar 31 rolls to Mar 3
+      vi.setSystemTime(new Date("2025-03-31T12:00:00Z"));
+
+      const { startDate, endDate } = calculateDateRange("monthly");
+
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      // Should be February 1-28, not March 1-3
+      expect(start.getUTCMonth()).toBe(1); // February
+      expect(start.getUTCDate()).toBe(1);
+      expect(end.getUTCMonth()).toBe(1); // February
+      expect(end.getUTCDate()).toBe(28);
 
       vi.useRealTimers();
     });
