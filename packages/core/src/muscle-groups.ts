@@ -27,6 +27,14 @@ export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
 export const MUSCLE_GROUP_SET = new Set<string>(MUSCLE_GROUPS);
 
 /**
+ * Muscle groups for analytics calculations.
+ * Excludes "Other" which is only used for uncategorized exercises.
+ */
+export const ANALYTICS_MUSCLE_GROUPS = MUSCLE_GROUPS.filter(
+  (g): g is Exclude<MuscleGroup, "Other"> => g !== "Other"
+);
+
+/**
  * Filters raw strings to valid muscle groups only.
  * Returns ["Other"] if no valid groups found.
  *

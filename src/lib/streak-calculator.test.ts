@@ -5,17 +5,22 @@ import {
   formatStreak,
 } from "./streak-calculator";
 import { Set } from "@/types/domain";
-import { startOfDay, subDays } from "date-fns";
 
-// Helper to create a set for a specific day offset from today
+// Helper to create a set for a specific day offset from today (UTC)
 function createSetForDay(daysAgo: number): Set {
-  const date = subDays(startOfDay(new Date()), daysAgo);
+  const now = new Date();
+  const todayUtc = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate()
+  );
+  const targetTimestamp = todayUtc - daysAgo * 24 * 60 * 60 * 1000;
   return {
     _id: `set-${daysAgo}` as any,
     exerciseId: "ex1" as any,
     reps: 10,
     weight: 135,
-    performedAt: date.getTime(),
+    performedAt: targetTimestamp,
     userId: "user1",
   };
 }
@@ -71,14 +76,19 @@ describe("calculateStreak", () => {
   });
 
   it("handles multiple sets on same day", () => {
-    const today = startOfDay(new Date()).getTime();
+    const now = new Date();
+    const todayUtcMidnight = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate()
+    );
     const sets: Set[] = [
       {
         _id: "set1" as any,
         exerciseId: "ex1" as any,
         reps: 10,
         weight: 135,
-        performedAt: today + 1000, // 1 second after midnight
+        performedAt: todayUtcMidnight + 1000, // 1 second after UTC midnight
         userId: "user1",
       },
       {
@@ -86,7 +96,7 @@ describe("calculateStreak", () => {
         exerciseId: "ex1" as any,
         reps: 12,
         weight: 135,
-        performedAt: today + 3600000, // 1 hour after midnight
+        performedAt: todayUtcMidnight + 3600000, // 1 hour after UTC midnight
         userId: "user1",
       },
       {
@@ -94,7 +104,7 @@ describe("calculateStreak", () => {
         exerciseId: "ex1" as any,
         reps: 8,
         weight: 135,
-        performedAt: today + 86399000, // 1 second before end of day
+        performedAt: todayUtcMidnight + 86399000, // 1 second before UTC day ends
         userId: "user1",
       },
     ];
@@ -134,8 +144,13 @@ describe("calculateStreak", () => {
   });
 
   it("timezone edge case: handles sets near midnight", () => {
-    const today = startOfDay(new Date());
-    const yesterday = subDays(today, 1);
+    const now = new Date();
+    const todayUtcMidnight = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate()
+    );
+    const yesterdayUtcMidnight = todayUtcMidnight - 24 * 60 * 60 * 1000;
 
     const sets: Set[] = [
       {
@@ -143,7 +158,7 @@ describe("calculateStreak", () => {
         exerciseId: "ex1" as any,
         reps: 10,
         weight: 135,
-        performedAt: today.getTime() + 1000, // Just after midnight today
+        performedAt: todayUtcMidnight + 1000, // Just after UTC midnight today
         userId: "user1",
       },
       {
@@ -151,7 +166,7 @@ describe("calculateStreak", () => {
         exerciseId: "ex1" as any,
         reps: 10,
         weight: 135,
-        performedAt: yesterday.getTime() + 86399000, // Just before midnight yesterday
+        performedAt: yesterdayUtcMidnight + 86399000, // Just before UTC midnight yesterday ends
         userId: "user1",
       },
     ];

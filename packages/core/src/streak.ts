@@ -1,21 +1,25 @@
 /**
  * Streak Calculation
  *
- * Shared, timezone-aware streak utilities.
+ * All calculations use UTC day boundaries to match database storage.
+ * This ensures consistent behavior regardless of user's local timezone.
+ * A "day" is defined as 00:00:00Z to 23:59:59Z UTC.
  */
 
-import { differenceInCalendarDays, startOfDay } from "date-fns";
+import { differenceInCalendarDays } from "date-fns";
 
 type SetLike = { performedAt: number };
+
+/** Extract UTC day key (YYYY-MM-DD) from timestamp. Internal use only. */
+function getUtcDayKey(timestamp: number): string {
+  return new Date(timestamp).toISOString().split("T")[0]!;
+}
 
 const getUniqueDayKeys = (sets: SetLike[]): string[] => {
   const uniqueDays = new globalThis.Set<string>();
 
   for (const set of sets) {
-    const [dayKey] = startOfDay(new Date(set.performedAt))
-      .toISOString()
-      .split("T");
-    if (dayKey) uniqueDays.add(dayKey);
+    uniqueDays.add(getUtcDayKey(set.performedAt));
   }
 
   return Array.from(uniqueDays);
@@ -28,8 +32,9 @@ export function calculateCurrentStreak(sets: SetLike[]): number {
 
   if (sortedDays.length === 0) return 0;
 
-  const today = startOfDay(new Date());
-  const mostRecentDay = new Date(sortedDays[0] + "T00:00:00");
+  const todayKey = getUtcDayKey(Date.now());
+  const today = new Date(todayKey + "T00:00:00Z");
+  const mostRecentDay = new Date(sortedDays[0] + "T00:00:00Z");
   const daysSinceLastWorkout = differenceInCalendarDays(today, mostRecentDay);
 
   if (daysSinceLastWorkout > 1) {
@@ -40,7 +45,7 @@ export function calculateCurrentStreak(sets: SetLike[]): number {
   let currentDate = mostRecentDay;
 
   for (let i = 1; i < sortedDays.length; i++) {
-    const prevDay = new Date(sortedDays[i] + "T00:00:00");
+    const prevDay = new Date(sortedDays[i] + "T00:00:00Z");
     const gap = differenceInCalendarDays(currentDate, prevDay);
 
     if (gap === 1) {
@@ -69,8 +74,8 @@ export function calculateLongestStreak(sets: SetLike[]): number {
     const currentKey = sortedDays[i];
     if (!prevKey || !currentKey) continue;
 
-    const prevDay = new Date(prevKey + "T00:00:00");
-    const currentDay = new Date(currentKey + "T00:00:00");
+    const prevDay = new Date(prevKey + "T00:00:00Z");
+    const currentDay = new Date(currentKey + "T00:00:00Z");
     const gap = differenceInCalendarDays(currentDay, prevDay);
 
     if (gap === 1) {
