@@ -14,7 +14,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "analyze": "ANALYZE=true pnpm build",
-    "prepare": "lefthook install",
+    "prepare": "lefthook install || true",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage --run",
