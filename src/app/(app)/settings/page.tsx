@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { api } from "../../../../convex/_generated/api";
 import { ExerciseManager } from "@/components/dashboard/exercise-manager";
 import { InlineExerciseCreator } from "@/components/dashboard/inline-exercise-creator";
+import { CoachNotesForm } from "@/components/settings/coach-notes-form";
+import { GoalsForm } from "@/components/settings/goals-form";
 import { SettingsSection } from "@/components/ui/settings-section";
 import { SettingsList } from "@/components/ui/settings-list";
 import { SettingsListItem } from "@/components/ui/settings-list-item";
@@ -16,20 +18,32 @@ import { Plus, ExternalLink, Mail, CreditCard, Loader2 } from "lucide-react";
 import { clientVersion } from "@/lib/version";
 
 /** Format subscription status for display */
-function formatPlanSubtitle(sub: {
-  status?: string;
-  subscriptionPeriodEnd?: number | null;
-  trialDaysRemaining?: number;
-} | null | undefined): string {
+function formatPlanSubtitle(
+  sub:
+    | {
+        status?: string;
+        subscriptionPeriodEnd?: number | null;
+        trialDaysRemaining?: number;
+      }
+    | null
+    | undefined
+): string {
   if (!sub) return "Loading...";
   const { status, subscriptionPeriodEnd, trialDaysRemaining } = sub;
   const formatDate = (ms: number) =>
-    new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    new Date(ms).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
 
   if (status === "active" && subscriptionPeriodEnd) {
     return `Pro (renews ${formatDate(subscriptionPeriodEnd)})`;
   }
-  if (status === "canceled" && subscriptionPeriodEnd && subscriptionPeriodEnd > Date.now()) {
+  if (
+    status === "canceled" &&
+    subscriptionPeriodEnd &&
+    subscriptionPeriodEnd > Date.now()
+  ) {
     return `Pro (access until ${formatDate(subscriptionPeriodEnd)})`;
   }
   if (status === "trial") return `Trial (${trialDaysRemaining ?? 0} days left)`;
@@ -52,6 +66,7 @@ export default function SettingsPage() {
   // Subscription data
   const billingInfo = useQuery(api.subscriptions.getBillingInfo);
   const subscriptionStatus = useQuery(api.users.getSubscriptionStatus);
+  const currentUser = useQuery(api.users.getCurrentUser);
 
   // Weight unit preference
   const { unit, setUnit } = useWeightUnit();
@@ -161,6 +176,14 @@ export default function SettingsPage() {
         </SettingsList>
       </SettingsSection>
 
+      {/* Goals & Coaching Section */}
+      <SettingsSection title="GOALS & COACHING">
+        <div className="space-y-4">
+          <GoalsForm user={currentUser} />
+          <CoachNotesForm user={currentUser} />
+        </div>
+      </SettingsSection>
+
       {/* Subscription Section */}
       <SettingsSection title="SUBSCRIPTION">
         <SettingsList>
@@ -219,7 +242,13 @@ export default function SettingsPage() {
           <SettingsListItem
             title="A Misty Step Project"
             icon={<ExternalLink className="w-4 h-4" />}
-            onClick={() => window.open("https://mistystep.io", "_blank", "noopener,noreferrer")}
+            onClick={() =>
+              window.open(
+                "https://mistystep.io",
+                "_blank",
+                "noopener,noreferrer"
+              )
+            }
           />
           <SettingsListItem
             title="Feedback & Support"
