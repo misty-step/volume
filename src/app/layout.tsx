@@ -32,6 +32,9 @@ export const metadata: Metadata = {
   title: "Volume - Workout Tracker",
   description:
     "Simple workout tracking app for tracking sets, reps, and weight",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "https://volume.fitness"
+  ),
   applicationName: "Volume",
   authors: [{ name: "Volume" }],
   generator: "Next.js",
@@ -39,6 +42,14 @@ export const metadata: Metadata = {
   icons: {
     icon: [{ url: "/icon", type: "image/png" }],
     apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
+  },
+  openGraph: {
+    type: "website",
+    siteName: "Volume",
+    url: "https://volume.fitness",
+  },
+  twitter: {
+    card: "summary_large_image",
   },
 };
 
