@@ -4,7 +4,17 @@ export const runtime = "edge";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default function OpenGraphImage() {
+export default async function OpenGraphImage() {
+  // Note: Satori (ImageResponse) doesn't support woff2, must use TTF
+  // Bebas Neue v16 (latin) - for display title
+  const bebasNeueData = await fetch(
+    "https://fonts.gstatic.com/s/bebasneue/v16/JTUSjIg69CK48gW7PXoo9Wlhzg.ttf"
+  ).then((response) => response.arrayBuffer());
+  // Inter v20 (latin, wght@500) - for tagline
+  const interData = await fetch(
+    "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hjQ.ttf"
+  ).then((response) => response.arrayBuffer());
+
   return new ImageResponse(
     <div
       style={{
@@ -92,6 +102,22 @@ export default function OpenGraphImage() {
         </div>
       </div>
     </div>,
-    { ...size }
+    {
+      ...size,
+      fonts: [
+        {
+          name: "Bebas Neue",
+          data: bebasNeueData,
+          weight: 400,
+          style: "normal",
+        },
+        {
+          name: "Inter",
+          data: interData,
+          weight: 500,
+          style: "normal",
+        },
+      ],
+    }
   );
 }
