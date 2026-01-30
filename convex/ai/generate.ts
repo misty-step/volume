@@ -3,6 +3,7 @@ import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { generateAnalysis } from "./openai";
+import { formatUserProfileContext } from "./prompts";
 import type { AnalyticsMetrics } from "./prompts";
 import {
   getWeekStartDate,
@@ -81,12 +82,17 @@ export const generateReport = internalAction({
     );
 
     // Fetch workout data via internal query
-    const { volumeData, recentPRs, allSets, exercises }: WorkoutData =
-      await ctx.runQuery(internal.ai.data.getWorkoutData, {
-        userId,
-        startDate,
-        endDate,
-      });
+    const [{ volumeData, recentPRs, allSets, exercises }, userPreferences] =
+      await Promise.all([
+        ctx.runQuery(internal.ai.data.getWorkoutData, {
+          userId,
+          startDate,
+          endDate,
+        }),
+        ctx.runQuery(internal.ai.data.getUserPreferences, { userId }),
+      ]);
+
+    const userProfileContext = formatUserProfileContext(userPreferences);
 
     const exerciseMap = new Map(exercises.map((ex) => [ex._id, ex.name]));
 
@@ -203,7 +209,7 @@ export const generateReport = internalAction({
     );
 
     // Generate AI analysis
-    const analysis = await generateAnalysis(metrics);
+    const analysis = await generateAnalysis(metrics, userProfileContext);
 
     console.log(
       `[AI Reports] AI analysis generated: ${analysis.content.length} chars, $${analysis.tokenUsage.costUSD}`

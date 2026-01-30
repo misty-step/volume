@@ -94,6 +94,26 @@ export const getWorkoutData = internalQuery({
 });
 
 /**
+ * Internal query to get user preferences for AI context
+ *
+ * @param userId - User ID
+ * @returns User preferences or null
+ */
+export const getUserPreferences = internalQuery({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkUserId", args.userId))
+      .first();
+
+    return user?.preferences ?? null;
+  },
+});
+
+/**
  * Internal mutation to save an AI report to the database
  *
  * Separated out to support action-based report generation (actions can't write to DB directly).
