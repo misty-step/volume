@@ -6,14 +6,23 @@ export const contentType = "image/png";
 
 export default async function OpenGraphImage() {
   // Note: Satori (ImageResponse) doesn't support woff2, must use TTF
-  // Bebas Neue v16 (latin) - for display title
-  const bebasNeueData = await fetch(
-    "https://fonts.gstatic.com/s/bebasneue/v16/JTUSjIg69CK48gW7PXoo9Wlhzg.ttf"
-  ).then((response) => response.arrayBuffer());
-  // Inter v20 (latin, wght@500) - for tagline
-  const interData = await fetch(
-    "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hjQ.ttf"
-  ).then((response) => response.arrayBuffer());
+  // Parallel fetch with error handling - if CDN fails, errors will surface in logs
+  const [bebasNeueData, interData] = await Promise.all([
+    // Bebas Neue v16 (latin) - for display title
+    fetch(
+      "https://fonts.gstatic.com/s/bebasneue/v16/JTUSjIg69CK48gW7PXoo9Wlhzg.ttf"
+    ).then((res) => {
+      if (!res.ok) throw new Error(`Failed to fetch Bebas Neue: ${res.status}`);
+      return res.arrayBuffer();
+    }),
+    // Inter v20 (latin, wght@500) - for tagline
+    fetch(
+      "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hjQ.ttf"
+    ).then((res) => {
+      if (!res.ok) throw new Error(`Failed to fetch Inter: ${res.status}`);
+      return res.arrayBuffer();
+    }),
+  ]);
 
   return new ImageResponse(
     <div
