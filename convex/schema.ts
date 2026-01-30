@@ -43,6 +43,24 @@ export default defineSchema({
     dailyReportsEnabled: v.optional(v.boolean()), // Default: false (opt-in)
     weeklyReportsEnabled: v.optional(v.boolean()), // Default: true
     monthlyReportsEnabled: v.optional(v.boolean()), // Default: false
+    preferences: v.optional(
+      v.object({
+        goals: v.optional(
+          v.array(
+            v.union(
+              v.literal("build_muscle"),
+              v.literal("lose_weight"),
+              v.literal("maintain_fitness"),
+              v.literal("get_stronger")
+            )
+          )
+        ),
+        customGoal: v.optional(v.string()),
+        trainingSplit: v.optional(v.string()),
+        coachNotes: v.optional(v.string()),
+      })
+    ),
+    onboardingDismissedAt: v.optional(v.number()),
     // Subscription fields
     trialEndsAt: v.optional(v.number()), // Unix timestamp when trial expires
     stripeCustomerId: v.optional(v.string()), // Stripe customer ID
