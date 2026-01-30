@@ -119,7 +119,18 @@ export const getCurrentUser = query({
       .withIndex("by_clerk_id", (q) => q.eq("clerkUserId", identity.subject))
       .first();
 
-    return user || null;
+    if (!user) return null;
+
+    const preferences = user.preferences;
+    const isProfileComplete =
+      (preferences?.goals?.length ?? 0) > 0 ||
+      Boolean(
+        preferences?.customGoal ||
+        preferences?.trainingSplit ||
+        preferences?.coachNotes
+      );
+
+    return { ...user, isProfileComplete };
   },
 });
 

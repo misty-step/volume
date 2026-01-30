@@ -1,9 +1,12 @@
 "use client";
 
+import { useQuery } from "convex/react";
+import { api } from "@/../convex/_generated/api";
 import { DashboardDesktop } from "@/components/dashboard/DashboardDesktop";
 import { DashboardMobile } from "@/components/dashboard/DashboardMobile";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { FirstRunExperience } from "@/components/dashboard/first-run-experience";
+import { ProfileNudgeBanner } from "@/components/dashboard/profile-nudge-banner";
 import { PageLayout } from "@/components/layout/page-layout";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useMobileViewport } from "@/hooks/useMobileViewport";
@@ -12,6 +15,7 @@ export function Dashboard(): React.ReactElement | null {
   const isMobile = useMobileViewport();
   const dashboard = useDashboard({ isMobile });
   const { isHydrated, todaysSets, exercises } = dashboard;
+  const currentUser = useQuery(api.users.getCurrentUser);
 
   const title = isMobile ? undefined : "Today";
 
@@ -31,7 +35,9 @@ export function Dashboard(): React.ReactElement | null {
   if (exercises.length === 0) {
     return (
       <PageLayout title={title} fullHeight={isMobile}>
-        <FirstRunExperience onExerciseCreated={dashboard.handleFirstExerciseCreated} />
+        <FirstRunExperience
+          onExerciseCreated={dashboard.handleFirstExerciseCreated}
+        />
       </PageLayout>
     );
   }
@@ -57,6 +63,7 @@ export function Dashboard(): React.ReactElement | null {
 
   return (
     <PageLayout title={title} fullHeight={isMobile}>
+      <ProfileNudgeBanner user={currentUser} />
       {isMobile ? (
         <DashboardMobile
           {...sharedProps}
