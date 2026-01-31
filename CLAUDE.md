@@ -25,6 +25,7 @@ src/app/(app)/page.tsx  →  Dashboard  →  useDashboard hook  →  convex/sets
 **Start here:** `convex/schema.ts:1` (data shapes), then `convex/sets.ts:1` (core mutations)
 
 **Three domains:**
+
 - `src/` - React UI, no business logic
 - `convex/` - All data mutations, auth checks, subscriptions
 - External: Clerk (auth), Stripe (payments), OpenRouter/Gemini (AI features)
@@ -54,13 +55,16 @@ CONVEX_DEPLOYMENT=prod:whimsical-marten-631 pnpm convex deploy -y
 
 ## Pitfalls
 
-| Don't | Do |
-|-------|-----|
-| Deploy with uncommitted code | `git status` clean, then deploy |
-| Assume code bug on service failure | Check env vars first: `./scripts/verify-env.sh` |
-| Hard-delete exercises | Use soft delete (`deleteExercise` mutation) |
-| Skip `includeDeleted` param | History views need `includeDeleted: true` |
-| Trust Stripe TypeScript types fully | Docs > types (mode-dependent params) |
+| Don't                                  | Do                                              |
+| -------------------------------------- | ----------------------------------------------- |
+| Deploy with uncommitted code           | `git status` clean, then deploy                 |
+| Assume code bug on service failure     | Check env vars first: `./scripts/verify-env.sh` |
+| Hard-delete exercises                  | Use soft delete (`deleteExercise` mutation)     |
+| Skip `includeDeleted` param            | History views need `includeDeleted: true`       |
+| Trust Stripe TypeScript types fully    | Docs > types (mode-dependent params)            |
+| Re-validate in handler after `v.union` | Convex validates args before handler runs       |
+| Use relative imports in `convex/`      | Use `@/lib/...` alias (works in convex too)     |
+| Use fake timers in Convex tests        | Prefer time window assertions (before/after)    |
 
 ## Key Patterns
 
@@ -84,13 +88,13 @@ CONVEX_DEPLOYMENT=prod:whimsical-marten-631 npx convex logs --history 100
 
 ## References
 
-| Doc | What |
-|-----|------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | System shape, data flow |
-| [docs/adr/](docs/adr/) | 7 ADRs: rate limits, soft delete, Stripe, AI, subscriptions |
-| [docs/state-diagrams/](docs/state-diagrams/) | Checkout, auth, paywall, quick-log flows |
-| [docs/postmortems/](docs/postmortems/) | Incident analyses |
-| [GitHub Issues](https://github.com/misty-step/volume/issues) | Planned features |
+| Doc                                                          | What                                                        |
+| ------------------------------------------------------------ | ----------------------------------------------------------- |
+| [ARCHITECTURE.md](ARCHITECTURE.md)                           | System shape, data flow                                     |
+| [docs/adr/](docs/adr/)                                       | 7 ADRs: rate limits, soft delete, Stripe, AI, subscriptions |
+| [docs/state-diagrams/](docs/state-diagrams/)                 | Checkout, auth, paywall, quick-log flows                    |
+| [docs/postmortems/](docs/postmortems/)                       | Incident analyses                                           |
+| [GitHub Issues](https://github.com/misty-step/volume/issues) | Planned features                                            |
 
 ## Commits
 
