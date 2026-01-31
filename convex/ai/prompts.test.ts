@@ -1,5 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { formatUserProfileContext } from "./prompts";
+import { formatUserProfileContext, sanitizeForPrompt } from "./prompts";
+
+describe("sanitizeForPrompt", () => {
+  it("strips standard < and > characters", () => {
+    expect(sanitizeForPrompt("<tag>content</tag>")).toBe("tagcontent/tag");
+  });
+
+  it("strips fullwidth < and > characters", () => {
+    expect(sanitizeForPrompt("＜tag＞content＜/tag＞")).toBe("tagcontent/tag");
+  });
+});
 
 describe("formatUserProfileContext", () => {
   it("returns empty string for undefined preferences", () => {
@@ -49,5 +59,28 @@ describe("formatUserProfileContext", () => {
     expect(result).not.toContain("Goals:");
     expect(result).not.toContain("Custom target:");
     expect(result).not.toContain("User notes:");
+  });
+
+  it("truncates extremely long inputs", () => {
+    const longValue = "a".repeat(1200);
+    const result = formatUserProfileContext({
+      customGoal: longValue,
+    });
+
+    const line = result
+      .split("\n")
+      .find((entry) => entry.startsWith("Custom target:"));
+    expect(line).toBeDefined();
+    expect(line?.replace("Custom target: ", "").length).toBe(500);
+  });
+
+  it("handles empty, null, and undefined fields gracefully", () => {
+    const result = formatUserProfileContext({
+      customGoal: undefined,
+      trainingSplit: null as unknown as string,
+      coachNotes: "   ",
+    });
+
+    expect(result).toBe("");
   });
 });

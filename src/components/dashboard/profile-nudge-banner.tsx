@@ -25,7 +25,6 @@ export function ProfileNudgeBanner({
 }: ProfileNudgeBannerProps) {
   const dismissOnboardingNudge = useMutation(api.users.dismissOnboardingNudge);
   const [isDismissing, setIsDismissing] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(false);
 
   const shouldShow = useMemo(() => {
     if (!user || user.isProfileComplete) return false;
@@ -34,13 +33,12 @@ export function ProfileNudgeBanner({
     return Date.now() - dismissedAt > DISMISSAL_WINDOW_MS;
   }, [user]);
 
-  if (!shouldShow || isDismissed) return null;
+  if (!shouldShow) return null;
 
   const handleDismiss = async () => {
     setIsDismissing(true);
     try {
       await dismissOnboardingNudge({});
-      setIsDismissed(true);
     } catch (error) {
       handleMutationError(error, "Dismiss Onboarding Nudge");
     } finally {

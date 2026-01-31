@@ -243,8 +243,8 @@ type UserPreferences = {
   coachNotes?: string;
 };
 
-function sanitizeForPrompt(value: string): string {
-  return value.replace(/[<>]/g, "");
+export function sanitizeForPrompt(value: string): string {
+  return value.replace(/[<>＜＞]/g, "").slice(0, 500);
 }
 
 export function formatUserProfileContext(

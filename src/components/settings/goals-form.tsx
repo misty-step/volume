@@ -30,7 +30,8 @@ export function GoalsForm({ user }: GoalsFormProps) {
     const preferences = user?.preferences;
     setGoals(preferences?.goals ?? []);
     setCustomGoal(preferences?.customGoal ?? "");
-  }, [user?.preferences]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when user changes
+  }, [user?._id]);
 
   const handleToggleGoal = (goal: GoalType, checked: boolean) => {
     setGoals((prev) => {
@@ -91,6 +92,7 @@ export function GoalsForm({ user }: GoalsFormProps) {
               onChange={(event) => setCustomGoal(event.target.value)}
               maxLength={MAX_CUSTOM_GOAL_LENGTH}
               placeholder="e.g. Run a 5k under 25 minutes"
+              aria-label="Custom goal"
               rows={4}
             />
             <div className="flex justify-end text-xs text-muted-foreground">

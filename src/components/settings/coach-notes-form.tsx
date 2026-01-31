@@ -29,7 +29,8 @@ export function CoachNotesForm({ user }: CoachNotesFormProps) {
     const preferences = user?.preferences;
     setTrainingSplit(preferences?.trainingSplit ?? "");
     setCoachNotes(preferences?.coachNotes ?? "");
-  }, [user?.preferences]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when user changes
+  }, [user?._id]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -57,6 +58,7 @@ export function CoachNotesForm({ user }: CoachNotesFormProps) {
               onChange={(event) => setTrainingSplit(event.target.value)}
               maxLength={MAX_TRAINING_SPLIT_LENGTH}
               placeholder="e.g. Push/Pull/Legs, 4 days per week"
+              aria-label="Training split"
               rows={4}
             />
             <div className="flex justify-end text-xs text-muted-foreground">
@@ -75,6 +77,7 @@ export function CoachNotesForm({ user }: CoachNotesFormProps) {
               onChange={(event) => setCoachNotes(event.target.value)}
               maxLength={MAX_COACH_NOTES_LENGTH}
               placeholder="Share constraints, injuries, or coaching focus"
+              aria-label="Coach notes"
               rows={5}
             />
             <div className="flex justify-end text-xs text-muted-foreground">
