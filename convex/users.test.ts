@@ -381,23 +381,21 @@ describe("User Management", () => {
         });
       });
 
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date("2026-01-30T12:00:00Z"));
-      try {
-        await t
-          .withIdentity({ subject: userSubject, name: "Test User" })
-          .mutation(api.users.dismissOnboardingNudge, {});
-      } finally {
-        vi.useRealTimers();
-      }
+      const beforeMutation = Date.now();
+      await t
+        .withIdentity({ subject: userSubject, name: "Test User" })
+        .mutation(api.users.dismissOnboardingNudge, {});
+      const afterMutation = Date.now();
 
       const user = await t.run(async (ctx) => {
         return await ctx.db.get(userId);
       });
 
-      const expectedTimestamp = new Date("2026-01-30T12:00:00Z").getTime();
-      expect(user?.onboardingDismissedAt).toBe(expectedTimestamp);
-      expect(user?.updatedAt).toBe(expectedTimestamp);
+      expect(user?.onboardingDismissedAt).toBeGreaterThanOrEqual(
+        beforeMutation
+      );
+      expect(user?.onboardingDismissedAt).toBeLessThanOrEqual(afterMutation);
+      expect(user?.updatedAt).toBe(user?.onboardingDismissedAt);
     });
   });
 

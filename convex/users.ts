@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { GOAL_TYPES, type GoalType } from "../src/lib/goals";
+import { GOAL_TYPES, type GoalType } from "@/lib/goals";
 
 /** Number of days for free trial period */
 const TRIAL_PERIOD_DAYS = 14;
@@ -251,20 +251,7 @@ function validatePreferenceText(
 
 function validateGoals(goals: GoalType[] | undefined): GoalType[] | undefined {
   if (!goals) return undefined;
-
-  const goalSet = new Set(GOAL_TYPES);
-  const deduped: GoalType[] = [];
-
-  for (const goal of goals) {
-    if (!goalSet.has(goal)) {
-      throw new Error("Invalid goal type");
-    }
-    if (!deduped.includes(goal)) {
-      deduped.push(goal);
-    }
-  }
-
-  return deduped;
+  return Array.from(new Set(goals));
 }
 
 export const updatePreferences = mutation({

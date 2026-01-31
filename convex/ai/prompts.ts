@@ -1,4 +1,4 @@
-import { GOAL_LABELS, type GoalType } from "../../src/lib/goals";
+import { GOAL_LABELS, type GoalType } from "@/lib/goals";
 
 /**
  * AI Prompt Templates for Workout Analysis
