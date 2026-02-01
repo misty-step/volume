@@ -1,6 +1,15 @@
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, Validator } from "convex/values";
 import { GOAL_TYPES, type GoalType } from "@/lib/goals";
+
+// Derive validator from GOAL_TYPES constant (single source of truth)
+// Type assertion needed because v.union loses literal inference with spread
+const goalValidator = v.union(
+  ...(GOAL_TYPES.map((g) => v.literal(g)) as unknown as [
+    Validator<GoalType>,
+    ...Validator<GoalType>[],
+  ])
+) as unknown as Validator<GoalType>;
 
 /** Number of days for free trial period */
 const TRIAL_PERIOD_DAYS = 14;
@@ -256,16 +265,7 @@ function validateGoals(goals: GoalType[] | undefined): GoalType[] | undefined {
 
 export const updatePreferences = mutation({
   args: {
-    goals: v.optional(
-      v.array(
-        v.union(
-          v.literal("build_muscle"),
-          v.literal("lose_weight"),
-          v.literal("maintain_fitness"),
-          v.literal("get_stronger")
-        )
-      )
-    ),
+    goals: v.optional(v.array(goalValidator)),
     customGoal: v.optional(v.string()),
     trainingSplit: v.optional(v.string()),
     coachNotes: v.optional(v.string()),
