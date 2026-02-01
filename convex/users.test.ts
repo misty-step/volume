@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { expect, test, describe, beforeEach } from "vitest";
+import { expect, test, describe, beforeEach, vi } from "vitest";
 import schema from "./schema";
 import { api } from "./_generated/api";
 import type { TestConvex } from "convex-test";
@@ -153,7 +153,12 @@ describe("User Management", () => {
       subscriptionPeriodEnd,
     }: {
       clerkUserId: string;
-      subscriptionStatus: "trial" | "active" | "past_due" | "canceled" | "expired";
+      subscriptionStatus:
+        | "trial"
+        | "active"
+        | "past_due"
+        | "canceled"
+        | "expired";
       trialEndsAt?: number;
       subscriptionPeriodEnd?: number;
     }) {
@@ -236,6 +241,161 @@ describe("User Management", () => {
 
       expect(result?.hasAccess).toBe(false);
       expect(result?.status).toBe("trial");
+    });
+  });
+
+  describe("updatePreferences", () => {
+    async function seedUser(preferences?: {
+      goals?: (
+        | "build_muscle"
+        | "lose_weight"
+        | "maintain_fitness"
+        | "get_stronger"
+      )[];
+      customGoal?: string;
+      trainingSplit?: string;
+      coachNotes?: string;
+    }) {
+      const now = Date.now();
+      return await t.run(async (ctx) => {
+        return await ctx.db.insert("users", {
+          clerkUserId: userSubject,
+          dailyReportsEnabled: true,
+          weeklyReportsEnabled: true,
+          monthlyReportsEnabled: false,
+          preferences,
+          createdAt: now,
+          updatedAt: now,
+        });
+      });
+    }
+
+    test("rejects customGoal over 280 chars", async () => {
+      await seedUser();
+      const longCustomGoal = "a".repeat(281);
+
+      await expect(
+        t
+          .withIdentity({ subject: userSubject, name: "Test User" })
+          .mutation(api.users.updatePreferences, { customGoal: longCustomGoal })
+      ).rejects.toThrow("Custom goal must be 280 characters or fewer");
+    });
+
+    test("rejects trainingSplit over 280 chars", async () => {
+      await seedUser();
+      const longTrainingSplit = "b".repeat(281);
+
+      await expect(
+        t
+          .withIdentity({ subject: userSubject, name: "Test User" })
+          .mutation(api.users.updatePreferences, {
+            trainingSplit: longTrainingSplit,
+          })
+      ).rejects.toThrow("Training split must be 280 characters or fewer");
+    });
+
+    test("rejects coachNotes over 500 chars", async () => {
+      await seedUser();
+      const longCoachNotes = "c".repeat(501);
+
+      await expect(
+        t
+          .withIdentity({ subject: userSubject, name: "Test User" })
+          .mutation(api.users.updatePreferences, { coachNotes: longCoachNotes })
+      ).rejects.toThrow("Coach notes must be 500 characters or fewer");
+    });
+
+    test("rejects invalid goals", async () => {
+      await seedUser();
+
+      await expect(
+        t
+          .withIdentity({ subject: userSubject, name: "Test User" })
+          .mutation(api.users.updatePreferences, {
+            goals: ["build_muscle", "invalid_goal" as "build_muscle"],
+          })
+      ).rejects.toThrow(/Validator error/);
+    });
+
+    test("dedupes goals array", async () => {
+      const userId = await seedUser();
+
+      await t
+        .withIdentity({ subject: userSubject, name: "Test User" })
+        .mutation(api.users.updatePreferences, {
+          goals: [
+            "build_muscle",
+            "build_muscle",
+            "get_stronger",
+            "build_muscle",
+          ],
+        });
+
+      const user = await t.run(async (ctx) => {
+        return await ctx.db.get(userId);
+      });
+
+      expect(user?.preferences?.goals).toEqual([
+        "build_muscle",
+        "get_stronger",
+      ]);
+    });
+
+    test("shallow merges with existing preferences", async () => {
+      const userId = await seedUser({
+        goals: ["lose_weight"],
+        trainingSplit: "PPL",
+        coachNotes: "Keep form strict.",
+      });
+
+      await t
+        .withIdentity({ subject: userSubject, name: "Test User" })
+        .mutation(api.users.updatePreferences, {
+          customGoal: "Run a 5k",
+        });
+
+      const user = await t.run(async (ctx) => {
+        return await ctx.db.get(userId);
+      });
+
+      expect(user?.preferences).toEqual({
+        goals: ["lose_weight"],
+        trainingSplit: "PPL",
+        coachNotes: "Keep form strict.",
+        customGoal: "Run a 5k",
+      });
+    });
+  });
+
+  describe("dismissOnboardingNudge", () => {
+    test("sets onboardingDismissedAt to current timestamp", async () => {
+      const userId = await t.run(async (ctx) => {
+        const now = Date.now();
+        return await ctx.db.insert("users", {
+          clerkUserId: userSubject,
+          dailyReportsEnabled: true,
+          weeklyReportsEnabled: true,
+          monthlyReportsEnabled: false,
+          createdAt: now,
+          updatedAt: now,
+        });
+      });
+
+      const beforeMutation = Date.now();
+      await t
+        .withIdentity({ subject: userSubject, name: "Test User" })
+        .mutation(api.users.dismissOnboardingNudge, {});
+      const afterMutation = Date.now();
+
+      const user = await t.run(async (ctx) => {
+        return await ctx.db.get(userId);
+      });
+
+      expect(user?.onboardingDismissedAt).toBeGreaterThanOrEqual(
+        beforeMutation
+      );
+      expect(user?.onboardingDismissedAt).toBeLessThanOrEqual(afterMutation);
+      expect(user?.updatedAt).toBe(user?.onboardingDismissedAt);
     });
   });
 

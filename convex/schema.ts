@@ -1,5 +1,15 @@
 import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
+import { v, Validator } from "convex/values";
+import { GOAL_TYPES, type GoalType } from "@/lib/goals";
+
+// Derive validator from GOAL_TYPES constant (single source of truth)
+// Type assertion needed because v.union loses literal inference with spread
+const goalValidator = v.union(
+  ...(GOAL_TYPES.map((g) => v.literal(g)) as unknown as [
+    Validator<GoalType>,
+    ...Validator<GoalType>[],
+  ])
+) as unknown as Validator<GoalType>;
 
 export default defineSchema({
   exercises: defineTable({
@@ -43,6 +53,15 @@ export default defineSchema({
     dailyReportsEnabled: v.optional(v.boolean()), // Default: false (opt-in)
     weeklyReportsEnabled: v.optional(v.boolean()), // Default: true
     monthlyReportsEnabled: v.optional(v.boolean()), // Default: false
+    preferences: v.optional(
+      v.object({
+        goals: v.optional(v.array(goalValidator)),
+        customGoal: v.optional(v.string()),
+        trainingSplit: v.optional(v.string()),
+        coachNotes: v.optional(v.string()),
+      })
+    ),
+    onboardingDismissedAt: v.optional(v.number()),
     // Subscription fields
     trialEndsAt: v.optional(v.number()), // Unix timestamp when trial expires
     stripeCustomerId: v.optional(v.string()), // Stripe customer ID

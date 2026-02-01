@@ -1,5 +1,15 @@
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, Validator } from "convex/values";
+import { GOAL_TYPES, type GoalType } from "@/lib/goals";
+
+// Derive validator from GOAL_TYPES constant (single source of truth)
+// Type assertion needed because v.union loses literal inference with spread
+const goalValidator = v.union(
+  ...(GOAL_TYPES.map((g) => v.literal(g)) as unknown as [
+    Validator<GoalType>,
+    ...Validator<GoalType>[],
+  ])
+) as unknown as Validator<GoalType>;
 
 /** Number of days for free trial period */
 const TRIAL_PERIOD_DAYS = 14;
@@ -118,7 +128,18 @@ export const getCurrentUser = query({
       .withIndex("by_clerk_id", (q) => q.eq("clerkUserId", identity.subject))
       .first();
 
-    return user || null;
+    if (!user) return null;
+
+    const preferences = user.preferences;
+    const isProfileComplete =
+      (preferences?.goals?.length ?? 0) > 0 ||
+      Boolean(
+        preferences?.customGoal ||
+        preferences?.trainingSplit ||
+        preferences?.coachNotes
+      );
+
+    return { ...user, isProfileComplete };
   },
 });
 
@@ -220,5 +241,102 @@ export const getSubscriptionStatus = query({
       trialDaysRemaining,
       subscriptionPeriodEnd: user.subscriptionPeriodEnd ?? null,
     };
+  },
+});
+
+const MAX_SHORT_PREFERENCE_LENGTH = 280;
+const MAX_COACH_NOTES_LENGTH = 500;
+
+function validatePreferenceText(
+  value: string | undefined,
+  field: string,
+  maxLength: number
+) {
+  if (value === undefined) return;
+  if (value.length > maxLength) {
+    throw new Error(`${field} must be ${maxLength} characters or fewer`);
+  }
+}
+
+function validateGoals(goals: GoalType[] | undefined): GoalType[] | undefined {
+  if (!goals) return undefined;
+  return Array.from(new Set(goals));
+}
+
+export const updatePreferences = mutation({
+  args: {
+    goals: v.optional(v.array(goalValidator)),
+    customGoal: v.optional(v.string()),
+    trainingSplit: v.optional(v.string()),
+    coachNotes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkUserId", identity.subject))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    validatePreferenceText(
+      args.customGoal,
+      "Custom goal",
+      MAX_SHORT_PREFERENCE_LENGTH
+    );
+    validatePreferenceText(
+      args.trainingSplit,
+      "Training split",
+      MAX_SHORT_PREFERENCE_LENGTH
+    );
+    validatePreferenceText(
+      args.coachNotes,
+      "Coach notes",
+      MAX_COACH_NOTES_LENGTH
+    );
+
+    const goals = validateGoals(args.goals);
+
+    const existingPreferences = user.preferences ?? {};
+    const nextPreferences = {
+      ...existingPreferences,
+      ...(goals !== undefined ? { goals } : {}),
+      ...(args.customGoal !== undefined ? { customGoal: args.customGoal } : {}),
+      ...(args.trainingSplit !== undefined
+        ? { trainingSplit: args.trainingSplit }
+        : {}),
+      ...(args.coachNotes !== undefined ? { coachNotes: args.coachNotes } : {}),
+    };
+
+    await ctx.db.patch(user._id, {
+      preferences: nextPreferences,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+export const dismissOnboardingNudge = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkUserId", identity.subject))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await ctx.db.patch(user._id, {
+      onboardingDismissedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
   },
 });

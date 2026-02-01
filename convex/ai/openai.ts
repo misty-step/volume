@@ -93,7 +93,8 @@ function sleep(attempt: number): Promise<void> {
  * ```
  */
 export async function generateAnalysis(
-  metrics: AnalyticsMetrics
+  metrics: AnalyticsMetrics,
+  userProfileContext?: string
 ): Promise<AnalysisResult> {
   const client = createOpenRouterClient();
   if (!client) {
@@ -103,7 +104,7 @@ export async function generateAnalysis(
   }
 
   // Format metrics into prompt
-  const userPrompt = formatMetricsPrompt(metrics);
+  const userPrompt = formatMetricsPrompt(metrics, userProfileContext);
 
   // Retry loop with exponential backoff
   let lastError: Error | null = null;
@@ -138,7 +139,11 @@ export async function generateAnalysis(
       const tokenUsage: TokenUsage = {
         input: usage.prompt_tokens,
         output: usage.completion_tokens,
-        costUSD: calculateCost(MODELS.MAIN, usage.prompt_tokens, usage.completion_tokens),
+        costUSD: calculateCost(
+          MODELS.MAIN,
+          usage.prompt_tokens,
+          usage.completion_tokens
+        ),
       };
 
       console.log(
@@ -347,7 +352,7 @@ export { isConfigured };
  */
 export function getPricing() {
   return {
-    inputPerMillion: 0.10,
-    outputPerMillion: 0.40,
+    inputPerMillion: 0.1,
+    outputPerMillion: 0.4,
   };
 }
