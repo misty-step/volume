@@ -21,7 +21,7 @@ import {
 } from "../lib/openrouter";
 
 /**
- * Model configuration for v2 reports
+ * Model configuration
  *
  * Uses Gemini 3 Flash via OpenRouter with JSON mode.
  * Zod validates responses after parsing.

@@ -383,13 +383,13 @@ function calculateMuscleBalance(
 // ============================================================================
 
 /**
- * Generate V2 structured report
+ * Generate structured report
  *
  * Orchestrates the full report generation workflow:
  * 1. Compute period, metrics, PR data from database
  * 2. Call AI for creative content (celebration + action)
  * 3. Merge computed + AI data
- * 4. Store with reportVersion: "2.0"
+ * 4. Store report
  *
  * @param userId - User to generate report for
  * @param reportType - Report type: daily, weekly, or monthly (default: weekly)
@@ -411,10 +411,10 @@ export const generateReport = internalAction({
       args.periodStartDate ?? getDefaultPeriodStart(reportType);
 
     console.log(
-      `[AI Reports V2] Generating ${reportType} report for user ${userId}, period ${new Date(periodStartDate).toISOString()}`
+      `[AI Reports] Generating ${reportType} report for user ${userId}, period ${new Date(periodStartDate).toISOString()}`
     );
 
-    // Check for existing v2 report (deduplication)
+    // Check for existing report (deduplication)
     const existingReportId = await ctx.runQuery(
       internal.ai.data.checkExistingReport,
       { userId, reportType, periodStartDate }
@@ -422,7 +422,7 @@ export const generateReport = internalAction({
 
     if (existingReportId) {
       console.log(
-        `[AI Reports V2] Report already exists for this period: ${existingReportId}`
+        `[AI Reports] Report already exists for this period: ${existingReportId}`
       );
       return existingReportId;
     }
@@ -571,7 +571,7 @@ export const generateReport = internalAction({
       }
     );
 
-    console.log(`[AI Reports V2] Report saved: ${reportId}`);
+    console.log(`[AI Reports] Report saved: ${reportId}`);
 
     return reportId;
   },

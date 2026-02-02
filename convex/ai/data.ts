@@ -70,10 +70,9 @@ export const getWorkoutData = internalQuery({
 });
 
 /**
- * Check for existing v2 report (deduplication)
+ * Check for existing report (deduplication)
  *
- * Only matches v2 reports (reportVersion: "2.0") to allow regeneration
- * from v1 to v2 format.
+ * Only matches current format reports (reportVersion: "2.0").
  *
  * @param userId - User ID
  * @param reportType - Report type (daily, weekly, monthly)
@@ -107,12 +106,11 @@ export const checkExistingReport = internalQuery({
 });
 
 /**
- * Save a v2 structured report
+ * Save a structured report
  *
- * Stores the report with structured JSON content instead of markdown.
+ * Stores the report with structured JSON content.
  * Uses reportVersion: "2.0" for frontend version detection.
  *
- * @param report - V2 report data
  * @returns Report ID
  */
 export const saveReport = internalMutation({
