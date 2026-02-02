@@ -26,12 +26,15 @@ requireOwnership(record, identity.subject);
 
 ### ai/
 
-AI report generation (OpenAI). Two versions:
+AI report generation via OpenRouter (Gemini 3 Flash).
 
-- v1: Markdown reports (`generate.ts`, `openai.ts`, `prompts.ts`)
-- v2: Structured JSON reports (`generateV2.ts`, `openaiV2.ts`, `reportV2Schema.ts`)
-
-Entry: `reports.ts` (public queries/actions)
+- `reports.ts` - Public queries/actions (entry point)
+- `generate.ts` - Report orchestration
+- `llm.ts` - LLM API integration
+- `prompts.ts` - System/user prompts
+- `data.ts` - Data access layer
+- `reportSchema.ts` - Zod schemas
+- `classify.ts` - Exercise classification
 
 ### lib/
 

@@ -80,7 +80,7 @@ export const getWorkoutData = internalQuery({
  * @param periodStartDate - Period start timestamp
  * @returns Existing report ID or null
  */
-export const checkExistingReportV2 = internalQuery({
+export const checkExistingReport = internalQuery({
   args: {
     userId: v.string(),
     reportType: v.union(
@@ -115,7 +115,7 @@ export const checkExistingReportV2 = internalQuery({
  * @param report - V2 report data
  * @returns Report ID
  */
-export const saveReportV2 = internalMutation({
+export const saveReport = internalMutation({
   args: {
     userId: v.string(),
     reportType: v.union(

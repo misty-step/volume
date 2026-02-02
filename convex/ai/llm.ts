@@ -1,19 +1,19 @@
 /**
- * OpenRouter V2 Integration with JSON Mode
+ * LLM Integration for AI Reports
  *
  * Uses Gemini 3 Flash via OpenRouter for creative content generation.
  * Validates responses with Zod for schema compliance.
  * Only generates creative content (celebration + action)—metrics are computed.
  *
- * @module ai/openaiV2
+ * @module ai/llm
  */
 
 import {
   AICreativeOutputSchema,
   type AICreativeContext,
   type AICreativeResult,
-} from "./reportV2Schema";
-import { systemPromptV2, formatCreativePrompt } from "./promptsV2";
+} from "./reportSchema";
+import { systemPrompt, formatCreativePrompt } from "./prompts";
 import {
   createOpenRouterClient,
   MODELS,
@@ -44,7 +44,7 @@ function sleep(attempt: number): Promise<void> {
   const delayMs = baseDelay + jitter;
 
   console.log(
-    `[OpenRouter V2] Retry backoff: ${delayMs.toFixed(0)}ms (attempt ${attempt + 1})`
+    `[LLM] Retry backoff: ${delayMs.toFixed(0)}ms (attempt ${attempt + 1})`
   );
   return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
@@ -94,7 +94,7 @@ export async function generateCreativeContent(
 ): Promise<AICreativeResult> {
   const client = createOpenRouterClient();
   if (!client) {
-    console.log("[OpenRouter V2] No API key - using fallback content");
+    console.log("[LLM] No API key - using fallback content");
     return fallbackCreativeContent(context);
   }
 
@@ -106,13 +106,13 @@ export async function generateCreativeContent(
   for (let attempt = 0; attempt < CONFIG.maxRetries; attempt++) {
     try {
       console.log(
-        `[OpenRouter V2] Generating creative content (attempt ${attempt + 1}/${CONFIG.maxRetries})...`
+        `[LLM] Generating creative content (attempt ${attempt + 1}/${CONFIG.maxRetries})...`
       );
 
       const completion = await client.chat.completions.create({
         model: CONFIG.model,
         messages: [
-          { role: "system", content: systemPromptV2 },
+          { role: "system", content: systemPrompt },
           { role: "user", content: fullPrompt },
         ],
         response_format: { type: "json_object" },
@@ -122,7 +122,7 @@ export async function generateCreativeContent(
 
       const content = completion.choices[0]?.message?.content;
       if (!content) {
-        console.error("[OpenRouter V2] No content received");
+        console.error("[LLM] No content received");
         return fallbackCreativeContent(context);
       }
 
@@ -131,14 +131,19 @@ export async function generateCreativeContent(
       try {
         rawJson = JSON.parse(content);
       } catch (parseError) {
-        console.error("[OpenRouter V2] Invalid JSON:", content.slice(0, 200));
+        console.error("[LLM] Invalid JSON:", content.slice(0, 200));
         throw new Error("Invalid JSON response from model");
       }
 
       const parseResult = AICreativeOutputSchema.safeParse(rawJson);
       if (!parseResult.success) {
-        console.error("[OpenRouter V2] Schema validation failed:", parseResult.error.issues);
-        throw new Error(`Schema validation failed: ${parseResult.error.issues[0]?.message}`);
+        console.error(
+          "[LLM] Schema validation failed:",
+          parseResult.error.issues
+        );
+        throw new Error(
+          `Schema validation failed: ${parseResult.error.issues[0]?.message}`
+        );
       }
 
       const parsed = parseResult.data;
@@ -154,7 +159,7 @@ export async function generateCreativeContent(
       };
 
       console.log(
-        `[OpenRouter V2] Success! Tokens: ${tokenUsage.input} in, ${tokenUsage.output} out, Cost: $${tokenUsage.costUSD}`
+        `[LLM] Success! Tokens: ${tokenUsage.input} in, ${tokenUsage.output} out, Cost: $${tokenUsage.costUSD}`
       );
 
       return {
@@ -168,16 +173,13 @@ export async function generateCreativeContent(
       // Don't retry non-retriable errors
       if (isNonRetriableError(lastError)) {
         console.error(
-          "[OpenRouter V2] Non-retriable error, aborting:",
+          "[LLM] Non-retriable error, aborting:",
           lastError.message
         );
         return fallbackCreativeContent(context);
       }
 
-      console.warn(
-        `[OpenRouter V2] Attempt ${attempt + 1} failed:`,
-        lastError.message
-      );
+      console.warn(`[LLM] Attempt ${attempt + 1} failed:`, lastError.message);
 
       // Sleep before retry (except on last attempt)
       if (attempt < CONFIG.maxRetries - 1) {
@@ -188,7 +190,7 @@ export async function generateCreativeContent(
 
   // All retries exhausted
   console.error(
-    `[OpenRouter V2] All ${CONFIG.maxRetries} attempts failed:`,
+    `[LLM] All ${CONFIG.maxRetries} attempts failed:`,
     lastError?.message
   );
   return fallbackCreativeContent(context);

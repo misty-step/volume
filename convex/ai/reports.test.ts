@@ -19,13 +19,13 @@ import { api } from "../_generated/api";
 import type { TestConvex } from "convex-test";
 import type { Id } from "../_generated/dataModel";
 import * as aiReports from "./reports";
-import * as aiDataV2 from "./dataV2";
-import * as aiGenerateV2 from "./generateV2";
+import * as aiData from "./data";
+import * as aiGenerate from "./generate";
 import * as generatedApi from "../_generated/api";
 import * as rateLimit from "../lib/rateLimit";
 
-// Mock the OpenAI V2 creative content generation
-vi.mock("./openaiV2", () => ({
+// Mock the LLM creative content generation
+vi.mock("./llm", () => ({
   generateCreativeContent: vi.fn().mockResolvedValue({
     prCelebration: null,
     prEmptyMessage: "Keep pushing—PRs are built one rep at a time.",
@@ -57,8 +57,8 @@ describe("AI Report Queries and Mutations", () => {
     // Explicitly load modules to workaround convex-test globbing issues in subdirectories
     t = convexTest(schema, {
       "ai/reports": () => Promise.resolve(aiReports),
-      "ai/dataV2": () => Promise.resolve(aiDataV2),
-      "ai/generateV2": () => Promise.resolve(aiGenerateV2),
+      "ai/data": () => Promise.resolve(aiData),
+      "ai/generate": () => Promise.resolve(aiGenerate),
       "_generated/api": () => Promise.resolve(generatedApi),
       "lib/rateLimit": () => Promise.resolve(rateLimit),
     });

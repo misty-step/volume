@@ -1,21 +1,21 @@
 /**
- * AI Prompts for V2 Structured Reports
+ * AI Prompts for Structured Reports
  *
  * Slimmer prompts that only ask AI for creative content.
  * Metrics and PR data are computed server-side (not generated).
  *
- * @module ai/promptsV2
+ * @module ai/prompts
  */
 
-import type { AICreativeContext } from "./reportV2Schema";
+import type { AICreativeContext } from "./reportSchema";
 
 /**
  * System prompt for creative content generation
  *
  * Instructs AI to return structured JSON with celebration copy and action.
- * Much shorter than v1 prompt since we're not asking for metrics analysis.
+ * Much shorter than legacy prompts since we're not asking for metrics analysis.
  */
-export const systemPromptV2 = `You are a strength coach generating workout insights.
+export const systemPrompt = `You are a strength coach generating workout insights.
 
 OUTPUT STRICT JSON matching this schema:
 {

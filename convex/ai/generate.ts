@@ -1,24 +1,24 @@
 /**
- * V2 Report Generation Orchestration
+ * AI Report Generation Orchestration
  *
  * Hybrid compute + AI approach:
  * - Server computes metrics, PR history, muscle balance (reliable data)
  * - AI generates creative content only (celebration copy, action directive)
  *
- * @module ai/generateV2
+ * @module ai/generate
  */
 
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
-import { generateCreativeContent } from "./openaiV2";
+import { generateCreativeContent } from "./llm";
 import type {
   AIReportV2,
   AICreativeContext,
   AICreativeResult,
   ReportType,
-} from "./reportV2Schema";
+} from "./reportSchema";
 import {
   getDefaultPeriodStart,
   calculateDateRange,
@@ -396,7 +396,7 @@ function calculateMuscleBalance(
  * @param periodStartDate - Optional Unix timestamp for period start
  * @returns Report ID of newly generated or existing report
  */
-export const generateReportV2 = internalAction({
+export const generateReport = internalAction({
   args: {
     userId: v.string(),
     reportType: v.optional(
@@ -416,7 +416,7 @@ export const generateReportV2 = internalAction({
 
     // Check for existing v2 report (deduplication)
     const existingReportId = await ctx.runQuery(
-      internal.ai.dataV2.checkExistingReportV2,
+      internal.ai.data.checkExistingReport,
       { userId, reportType, periodStartDate }
     );
 
@@ -435,7 +435,7 @@ export const generateReportV2 = internalAction({
 
     // Fetch workout data
     const { volumeData, allSets, exercises }: WorkoutData = await ctx.runQuery(
-      internal.ai.dataV2.getWorkoutData,
+      internal.ai.data.getWorkoutData,
       { userId, startDate, endDate }
     );
 
@@ -560,7 +560,7 @@ export const generateReportV2 = internalAction({
     // Step 6: Store report
     // ========================================================================
     const reportId: ReportId = await ctx.runMutation(
-      internal.ai.dataV2.saveReportV2,
+      internal.ai.data.saveReport,
       {
         userId,
         reportType,

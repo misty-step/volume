@@ -113,7 +113,7 @@ export const generateWeeklyReports = internalAction({
         try {
           console.log(`[Cron] Generating report for user: ${userId}`);
 
-          await ctx.runAction(internal.ai.generateV2.generateReportV2, {
+          await ctx.runAction(internal.ai.generate.generateReport, {
             userId,
             reportType: "weekly",
             // periodStartDate will default to current week in generateReportV2
@@ -333,7 +333,7 @@ export const generateDailyReports = internalAction({
         // This is the report date.
         const reportDate = getPreviousDayStartInTimezone(timezone);
 
-        await ctx.runAction(internal.ai.generateV2.generateReportV2, {
+        await ctx.runAction(internal.ai.generate.generateReport, {
           userId,
           reportType: "daily",
           periodStartDate: reportDate, // Pass canonical day start for deduplication
@@ -439,7 +439,7 @@ export const generateMonthlyReports = internalAction({
 
     for (const userId of users) {
       try {
-        await ctx.runAction(internal.ai.generateV2.generateReportV2, {
+        await ctx.runAction(internal.ai.generate.generateReport, {
           userId,
           reportType: "monthly",
         });
