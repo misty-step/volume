@@ -1,13 +1,73 @@
 /**
- * Data Access Layer for V2 Reports
+ * Data Access Layer for AI Reports
  *
- * Internal queries and mutations for storing and retrieving v2 structured reports.
+ * Internal queries and mutations for storing and retrieving AI reports.
+ * Includes shared data fetching used by report generation.
  *
- * @module ai/dataV2
+ * @module ai/data
  */
 
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "../_generated/server";
+
+/**
+ * Internal query to get workout data for report generation
+ *
+ * @param userId - User ID
+ * @param startDate - Start of period
+ * @param endDate - End of period
+ * @returns Sets and exercises data
+ */
+export const getWorkoutData = internalQuery({
+  args: {
+    userId: v.string(),
+    startDate: v.number(),
+    endDate: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, startDate, endDate } = args;
+
+    const [volumeData, recentPRs, allSets, exercises] = await Promise.all([
+      // Volume by exercise
+      ctx.db
+        .query("sets")
+        .withIndex("by_user_performed", (q) => q.eq("userId", userId))
+        .filter((q) =>
+          q.and(
+            q.gte(q.field("performedAt"), startDate),
+            q.lt(q.field("performedAt"), endDate)
+          )
+        )
+        .collect(),
+
+      // Recent PRs (for the report period)
+      ctx.db
+        .query("sets")
+        .withIndex("by_user_performed", (q) => q.eq("userId", userId))
+        .filter((q) => q.gte(q.field("performedAt"), startDate))
+        .collect(),
+
+      // All sets for streak calculation
+      ctx.db
+        .query("sets")
+        .withIndex("by_user_performed", (q) => q.eq("userId", userId))
+        .collect(),
+
+      // Get exercises for name lookup
+      ctx.db
+        .query("exercises")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+    ]);
+
+    return {
+      volumeData,
+      recentPRs,
+      allSets,
+      exercises,
+    };
+  },
+});
 
 /**
  * Check for existing v2 report (deduplication)

@@ -253,7 +253,7 @@ function getExerciseProgression(
   let currentMax = 0;
 
   for (const set of exerciseSets) {
-    const value = prType === "weight" ? set.weight ?? 0 : set.reps ?? 0;
+    const value = prType === "weight" ? (set.weight ?? 0) : (set.reps ?? 0);
     if (value > currentMax) {
       currentMax = value;
       milestones.push(value);
@@ -278,7 +278,10 @@ function formatPRValue(value: number, prType: "weight" | "reps"): string {
 /**
  * Format PR improvement
  */
-function formatPRImprovement(improvement: number, prType: "weight" | "reps"): string {
+function formatPRImprovement(
+  improvement: number,
+  prType: "weight" | "reps"
+): string {
   const unit = prType === "weight" ? "lbs" : "reps";
   return `+${improvement} ${unit}`;
 }
@@ -317,11 +320,7 @@ function calculateVolumeTrend(
   const prevPeriodVolume = calculateTotalVolume(prevPeriodSets);
 
   const periodLabel =
-    reportType === "daily"
-      ? "day"
-      : reportType === "weekly"
-        ? "week"
-        : "month";
+    reportType === "daily" ? "day" : reportType === "weekly" ? "week" : "month";
 
   if (prevPeriodVolume === 0) return `first ${periodLabel} tracked`;
   const change =
@@ -429,11 +428,14 @@ export const generateReportV2 = internalAction({
     }
 
     // Calculate date range
-    const { startDate, endDate } = calculateDateRange(reportType, periodStartDate);
+    const { startDate, endDate } = calculateDateRange(
+      reportType,
+      periodStartDate
+    );
 
     // Fetch workout data
     const { volumeData, allSets, exercises }: WorkoutData = await ctx.runQuery(
-      internal.ai.data.getWorkoutData,
+      internal.ai.dataV2.getWorkoutData,
       { userId, startDate, endDate }
     );
 

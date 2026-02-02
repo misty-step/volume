@@ -19,27 +19,26 @@ import { api } from "../_generated/api";
 import type { TestConvex } from "convex-test";
 import type { Id } from "../_generated/dataModel";
 import * as aiReports from "./reports";
-import * as aiData from "./data";
-import * as aiGenerate from "./generate";
+import * as aiDataV2 from "./dataV2";
+import * as aiGenerateV2 from "./generateV2";
 import * as generatedApi from "../_generated/api";
 import * as rateLimit from "../lib/rateLimit";
 
-// Mock the OpenAI generateAnalysis function
-vi.mock("./openai", () => ({
-  generateAnalysis: vi.fn().mockResolvedValue({
-    content:
-      "## Training Volume\nGood distribution.\n\n## Progress\nSolid gains.\n\n## Recommendations\n1. Continue\n2. Rest",
+// Mock the OpenAI V2 creative content generation
+vi.mock("./openaiV2", () => ({
+  generateCreativeContent: vi.fn().mockResolvedValue({
+    prCelebration: null,
+    prEmptyMessage: "Keep pushing—PRs are built one rep at a time.",
+    action: {
+      directive: "Add a leg day Wednesday",
+      rationale: "Your push volume is 2x your leg volume",
+    },
+    model: "google/gemini-3-flash-preview",
     tokenUsage: {
       input: 250,
       output: 150,
       costUSD: 0.0001,
     },
-    model: "google/gemini-3-flash-preview",
-  }),
-  isConfigured: vi.fn().mockReturnValue(true),
-  getPricing: vi.fn().mockReturnValue({
-    inputPerMillion: 0.25,
-    outputPerMillion: 2.0,
   }),
 }));
 
@@ -58,8 +57,8 @@ describe("AI Report Queries and Mutations", () => {
     // Explicitly load modules to workaround convex-test globbing issues in subdirectories
     t = convexTest(schema, {
       "ai/reports": () => Promise.resolve(aiReports),
-      "ai/data": () => Promise.resolve(aiData),
-      "ai/generate": () => Promise.resolve(aiGenerate),
+      "ai/dataV2": () => Promise.resolve(aiDataV2),
+      "ai/generateV2": () => Promise.resolve(aiGenerateV2),
       "_generated/api": () => Promise.resolve(generatedApi),
       "lib/rateLimit": () => Promise.resolve(rateLimit),
     });

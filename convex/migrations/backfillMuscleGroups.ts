@@ -4,7 +4,7 @@ import {
   internalQuery,
 } from "../_generated/server";
 import { internal } from "../_generated/api";
-import { classifyExercise } from "../ai/openai";
+import { classifyExercise } from "../ai/classify";
 import { v } from "convex/values";
 import type { Doc } from "../_generated/dataModel";
 

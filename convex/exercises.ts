@@ -7,7 +7,7 @@ import {
   requireOwnership,
   validateExerciseName,
 } from "./lib/validate";
-import { classifyExercise } from "./ai/openai";
+import { classifyExercise } from "./ai/classify";
 import { getLimits } from "./lib/rateLimit";
 import { filterValidMuscleGroups } from "./lib/muscleGroups";
 
