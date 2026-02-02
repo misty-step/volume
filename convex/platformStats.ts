@@ -42,11 +42,15 @@ export const getPlatformStats = query({
   },
 });
 
+/** Maximum sets to process per batch to avoid timeouts */
+const BATCH_SIZE = 5000;
+
 /**
  * Internal mutation to compute and cache platform stats.
  * Called by daily cron job to avoid expensive queries on every page load.
  *
- * Overwrites the single cache document with fresh computed stats.
+ * Uses streaming pagination to avoid loading entire sets table into memory,
+ * which prevents OOM errors and timeouts as the dataset grows.
  */
 export const computePlatformStats = internalMutation({
   args: {},
@@ -54,19 +58,36 @@ export const computePlatformStats = internalMutation({
     console.log("[PlatformStats] Computing platform statistics...");
     const startTime = Date.now();
 
-    // Count all sets in the system (full table scan - but only once per day)
-    const allSets = await ctx.db.query("sets").collect();
-    const totalSets = allSets.length;
-
-    // Count unique users with at least one set
-    const uniqueUserIds = new Set(allSets.map((s) => s.userId));
-    const totalLifters = uniqueUserIds.size;
-
-    // Count sets logged in the last 7 days (activity indicator)
     const oneWeekAgo = Date.now() - SEVEN_DAYS_MS;
-    const setsThisWeek = allSets.filter(
-      (s) => s.performedAt >= oneWeekAgo
-    ).length;
+    const uniqueUserIds = new Set<string>();
+    let totalSets = 0;
+    let setsThisWeek = 0;
+    let batchCount = 0;
+
+    // Stream through sets in batches to avoid memory issues
+    let cursor: string | null = null;
+    let hasMore = true;
+
+    while (hasMore) {
+      // Paginate through the sets table
+      const result = await ctx.db
+        .query("sets")
+        .paginate({ numItems: BATCH_SIZE, cursor });
+
+      for (const set of result.page) {
+        totalSets++;
+        uniqueUserIds.add(set.userId);
+        if (set.performedAt >= oneWeekAgo) {
+          setsThisWeek++;
+        }
+      }
+
+      batchCount++;
+      hasMore = !result.isDone;
+      cursor = result.continueCursor;
+    }
+
+    const totalLifters = uniqueUserIds.size;
 
     // Upsert cache document (delete old, insert new)
     const existingCache = await ctx.db.query("platformStatsCache").first();
@@ -83,7 +104,7 @@ export const computePlatformStats = internalMutation({
 
     const durationMs = Date.now() - startTime;
     console.log(
-      `[PlatformStats] Computed: ${totalSets} sets, ${totalLifters} lifters, ${setsThisWeek} this week (${durationMs}ms)`
+      `[PlatformStats] Computed: ${totalSets} sets, ${totalLifters} lifters, ${setsThisWeek} this week (${batchCount} batches, ${durationMs}ms)`
     );
 
     return {

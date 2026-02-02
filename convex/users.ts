@@ -34,7 +34,13 @@ export const getOrCreateUser = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
+    if (!identity) {
+      // Provide actionable error context for debugging auth issues
+      // Common causes: token expired, auth still loading, invalid JWT
+      throw new Error(
+        "Unauthorized: No valid authentication token. Please sign in again."
+      );
+    }
 
     // Check if user exists
     const existing = await ctx.db
