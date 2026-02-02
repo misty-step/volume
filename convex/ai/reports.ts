@@ -147,7 +147,7 @@ export const generateOnDemandReport = action({
     // Generate report via internal action
     try {
       const reportId = await ctx.runAction(
-        internal.ai.generate.generateReport,
+        internal.ai.generateV2.generateReportV2,
         {
           userId,
         }
@@ -220,11 +220,11 @@ export const backfillWeeklyReports = action({
         );
 
         const reportId = await ctx.runAction(
-          internal.ai.generate.generateReport,
+          internal.ai.generateV2.generateReportV2,
           {
             userId,
             reportType: "weekly",
-            weekStartDate: week.timestamp,
+            periodStartDate: week.timestamp,
           }
         );
 
@@ -342,11 +342,11 @@ export const backfillDailyReports = action({
         );
 
         const reportId = await ctx.runAction(
-          internal.ai.generate.generateReport,
+          internal.ai.generateV2.generateReportV2,
           {
             userId,
             reportType: "daily",
-            weekStartDate: dayStart, // Use day start as identifier
+            periodStartDate: dayStart,
           }
         );
 
