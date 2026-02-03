@@ -32,7 +32,6 @@ type ReportId = Id<"aiReports">;
 
 interface WorkoutData {
   volumeData: SetDoc[];
-  recentPRs: SetDoc[];
   allSets: SetDoc[];
   exercises: ExerciseDoc[];
 }
@@ -347,10 +346,12 @@ function calculateMuscleBalance(
   }
 
   // Aggregate volume by muscle group
+  // Use same logic as calculateTotalVolume: bodyweight = reps, weighted = reps * weight
   const volumeByGroup = new Map<string, number>();
   for (const set of sets) {
     if (set.reps === undefined) continue;
-    const volume = set.reps * (set.weight ?? 0);
+    const weight = set.weight ?? 0;
+    const volume = weight > 0 ? set.reps * weight : set.reps;
     const groups = muscleGroupsByExercise.get(set.exerciseId) ?? [];
 
     for (const group of groups) {

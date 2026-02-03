@@ -27,8 +27,8 @@ export const getWorkoutData = internalQuery({
   handler: async (ctx, args) => {
     const { userId, startDate, endDate } = args;
 
-    const [volumeData, recentPRs, allSets, exercises] = await Promise.all([
-      // Volume by exercise
+    const [volumeData, allSets, exercises] = await Promise.all([
+      // Sets in report period (for volume/workout count)
       ctx.db
         .query("sets")
         .withIndex("by_user_performed", (q) => q.eq("userId", userId))
@@ -40,20 +40,13 @@ export const getWorkoutData = internalQuery({
         )
         .collect(),
 
-      // Recent PRs (for the report period)
-      ctx.db
-        .query("sets")
-        .withIndex("by_user_performed", (q) => q.eq("userId", userId))
-        .filter((q) => q.gte(q.field("performedAt"), startDate))
-        .collect(),
-
-      // All sets for streak calculation
+      // All sets (for streak, PR detection, trend calculation)
       ctx.db
         .query("sets")
         .withIndex("by_user_performed", (q) => q.eq("userId", userId))
         .collect(),
 
-      // Get exercises for name lookup
+      // Exercises for name lookup and muscle groups
       ctx.db
         .query("exercises")
         .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -62,7 +55,6 @@ export const getWorkoutData = internalQuery({
 
     return {
       volumeData,
-      recentPRs,
       allSets,
       exercises,
     };
