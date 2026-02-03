@@ -1,38 +1,14 @@
+/**
+ * Data Access Layer for AI Reports
+ *
+ * Internal queries and mutations for storing and retrieving AI reports.
+ * Includes shared data fetching used by report generation.
+ *
+ * @module ai/data
+ */
+
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "../_generated/server";
-
-/**
- * Internal query to check for existing report (deduplication)
- *
- * @param userId - User ID
- * @param reportType - Report type
- * @param weekStartDate - Week start date
- * @returns Existing report ID or null
- */
-export const checkExistingReport = internalQuery({
-  args: {
-    userId: v.string(),
-    reportType: v.union(
-      v.literal("daily"),
-      v.literal("weekly"),
-      v.literal("monthly")
-    ),
-    weekStartDate: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const existingReport = await ctx.db
-      .query("aiReports")
-      .withIndex("by_user_type_date", (q) =>
-        q
-          .eq("userId", args.userId)
-          .eq("reportType", args.reportType)
-          .eq("weekStartDate", args.weekStartDate)
-      )
-      .first();
-
-    return existingReport?._id || null;
-  },
-});
 
 /**
  * Internal query to get workout data for report generation
@@ -51,8 +27,8 @@ export const getWorkoutData = internalQuery({
   handler: async (ctx, args) => {
     const { userId, startDate, endDate } = args;
 
-    const [volumeData, recentPRs, allSets, exercises] = await Promise.all([
-      // Volume by exercise
+    const [volumeData, allSets, exercises] = await Promise.all([
+      // Sets in report period (for volume/workout count)
       ctx.db
         .query("sets")
         .withIndex("by_user_performed", (q) => q.eq("userId", userId))
@@ -64,20 +40,13 @@ export const getWorkoutData = internalQuery({
         )
         .collect(),
 
-      // Recent PRs (for the report period)
-      ctx.db
-        .query("sets")
-        .withIndex("by_user_performed", (q) => q.eq("userId", userId))
-        .filter((q) => q.gte(q.field("performedAt"), startDate))
-        .collect(),
-
-      // All sets for streak calculation
+      // All sets (for streak, PR detection, trend calculation)
       ctx.db
         .query("sets")
         .withIndex("by_user_performed", (q) => q.eq("userId", userId))
         .collect(),
 
-      // Get exercises for name lookup
+      // Exercises for name lookup and muscle groups
       ctx.db
         .query("exercises")
         .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -86,7 +55,6 @@ export const getWorkoutData = internalQuery({
 
     return {
       volumeData,
-      recentPRs,
       allSets,
       exercises,
     };
@@ -94,31 +62,47 @@ export const getWorkoutData = internalQuery({
 });
 
 /**
- * Internal query to get user preferences for AI context
+ * Check for existing report (deduplication)
+ *
+ * Only matches current format reports (reportVersion: "2.0").
  *
  * @param userId - User ID
- * @returns User preferences or null
+ * @param reportType - Report type (daily, weekly, monthly)
+ * @param periodStartDate - Period start timestamp
+ * @returns Existing report ID or null
  */
-export const getUserPreferences = internalQuery({
+export const checkExistingReport = internalQuery({
   args: {
     userId: v.string(),
+    reportType: v.union(
+      v.literal("daily"),
+      v.literal("weekly"),
+      v.literal("monthly")
+    ),
+    periodStartDate: v.number(),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkUserId", args.userId))
+    const existingReport = await ctx.db
+      .query("aiReports")
+      .withIndex("by_user_type_date", (q) =>
+        q
+          .eq("userId", args.userId)
+          .eq("reportType", args.reportType)
+          .eq("weekStartDate", args.periodStartDate)
+      )
+      .filter((q) => q.eq(q.field("reportVersion"), "2.0"))
       .first();
 
-    return user?.preferences ?? null;
+    return existingReport?._id ?? null;
   },
 });
 
 /**
- * Internal mutation to save an AI report to the database
+ * Save a structured report
  *
- * Separated out to support action-based report generation (actions can't write to DB directly).
+ * Stores the report with structured JSON content.
+ * Uses reportVersion: "2.0" for frontend version detection.
  *
- * @param report - Report data to save
  * @returns Report ID
  */
 export const saveReport = internalMutation({
@@ -129,37 +113,9 @@ export const saveReport = internalMutation({
       v.literal("weekly"),
       v.literal("monthly")
     ),
-    weekStartDate: v.number(),
-    content: v.string(),
+    periodStartDate: v.number(),
+    structuredContent: v.any(),
     model: v.string(),
-    metricsSnapshot: v.object({
-      volume: v.array(
-        v.object({
-          exerciseName: v.string(),
-          totalVolume: v.number(),
-          sets: v.number(),
-          isBodyweight: v.optional(v.boolean()), // Optional for backward compatibility
-        })
-      ),
-      prs: v.array(
-        v.object({
-          exerciseName: v.string(),
-          prType: v.string(),
-          improvement: v.number(),
-          performedAt: v.number(),
-        })
-      ),
-      streak: v.object({
-        currentStreak: v.number(),
-        longestStreak: v.number(),
-        totalWorkouts: v.number(),
-      }),
-      frequency: v.object({
-        workoutDays: v.number(),
-        restDays: v.number(),
-        avgSetsPerDay: v.number(),
-      }),
-    }),
     tokenUsage: v.object({
       input: v.number(),
       output: v.number(),
@@ -167,45 +123,75 @@ export const saveReport = internalMutation({
     }),
   },
   handler: async (ctx, args) => {
+    // Extract metrics for metricsSnapshot (for consistency with v1)
+    const content = args.structuredContent as {
+      metrics: {
+        volume: { value: string };
+        workouts: { value: number };
+        streak: { value: number };
+      };
+      pr: {
+        hasPR: boolean;
+        exercise?: string;
+        type?: string;
+        improvement?: string;
+      };
+    };
+
+    // Parse volume value (remove commas)
+    const volumeValue = parseInt(
+      content.metrics.volume.value.replace(/,/g, ""),
+      10
+    );
+
+    // Calculate rest days based on report type
+    const periodDays =
+      args.reportType === "daily" ? 1 : args.reportType === "weekly" ? 7 : 30;
+
     const reportId = await ctx.db.insert("aiReports", {
       userId: args.userId,
       reportType: args.reportType,
-      weekStartDate: args.weekStartDate,
+      weekStartDate: args.periodStartDate,
       generatedAt: Date.now(),
-      content: args.content,
-      metricsSnapshot: args.metricsSnapshot,
+      // V2: Structured content instead of markdown
+      structuredContent: args.structuredContent,
+      reportVersion: "2.0",
+      // Keep metricsSnapshot for consistency (used by some queries)
+      metricsSnapshot: {
+        volume: [
+          {
+            exerciseName: "Total",
+            totalVolume: isNaN(volumeValue) ? 0 : volumeValue,
+            sets: 0,
+          },
+        ],
+        prs: content.pr.hasPR
+          ? [
+              {
+                exerciseName: content.pr.exercise ?? "Unknown",
+                prType: content.pr.type ?? "weight",
+                improvement: parseFloat(
+                  content.pr.improvement?.replace(/[^0-9.]/g, "") ?? "0"
+                ),
+                performedAt: Date.now(),
+              },
+            ]
+          : [],
+        streak: {
+          currentStreak: content.metrics.streak.value,
+          longestStreak: content.metrics.streak.value,
+          totalWorkouts: content.metrics.workouts.value,
+        },
+        frequency: {
+          workoutDays: content.metrics.workouts.value,
+          restDays: Math.max(0, periodDays - content.metrics.workouts.value),
+          avgSetsPerDay: 0,
+        },
+      },
       model: args.model,
       tokenUsage: args.tokenUsage,
     });
 
     return reportId;
-  },
-});
-
-/**
- * Internal mutation to delete all reports for a user
- *
- * Utility for clearing reports before regeneration or testing.
- * CAUTION: This permanently deletes all AI reports for the user.
- *
- * @param userId - User ID whose reports should be deleted
- * @returns Number of reports deleted
- */
-export const deleteAllReportsForUser = internalMutation({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    const reports = await ctx.db
-      .query("aiReports")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .collect();
-
-    for (const report of reports) {
-      await ctx.db.delete(report._id);
-    }
-
-    console.log(
-      `[AI Reports] Deleted ${reports.length} reports for user ${args.userId}`
-    );
-    return { deleted: reports.length };
   },
 });

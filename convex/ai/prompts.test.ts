@@ -1,86 +1,135 @@
-import { describe, it, expect } from "vitest";
-import { formatUserProfileContext, sanitizeForPrompt } from "./prompts";
+/**
+ * AI Prompts Tests
+ *
+ * Tests for prompt generation functions.
+ */
 
-describe("sanitizeForPrompt", () => {
-  it("strips standard < and > characters", () => {
-    expect(sanitizeForPrompt("<tag>content</tag>")).toBe("tagcontent/tag");
+import { describe, it, expect } from "vitest";
+import { systemPrompt, formatCreativePrompt } from "./prompts";
+import type { AICreativeContext } from "./reportSchema";
+
+describe("systemPrompt", () => {
+  it("is a non-empty string", () => {
+    expect(typeof systemPrompt).toBe("string");
+    expect(systemPrompt.length).toBeGreaterThan(0);
   });
 
-  it("strips fullwidth < and > characters", () => {
-    expect(sanitizeForPrompt("＜tag＞content＜/tag＞")).toBe("tagcontent/tag");
+  it("includes JSON schema structure", () => {
+    expect(systemPrompt).toContain("prCelebration");
+    expect(systemPrompt).toContain("prEmptyMessage");
+    expect(systemPrompt).toContain("action");
+    expect(systemPrompt).toContain("directive");
+    expect(systemPrompt).toContain("rationale");
+  });
+
+  it("specifies directive tone rule", () => {
+    expect(systemPrompt).toContain("Directive tone");
+    expect(systemPrompt).toContain('not "consider adding"');
+  });
+
+  it("specifies one action rule", () => {
+    expect(systemPrompt).toContain("ONE action only");
   });
 });
 
-describe("formatUserProfileContext", () => {
-  it("returns empty string for undefined preferences", () => {
-    expect(formatUserProfileContext(undefined)).toBe("");
+describe("formatCreativePrompt", () => {
+  it("formats context with PR", () => {
+    const context: AICreativeContext = {
+      hasPR: true,
+      exerciseName: "Bench Press",
+      prType: "weight",
+      value: "225 lbs",
+      improvement: "+10 lbs",
+      progression: "185 → 205 → 225 lbs",
+      volumeTrend: "up 15%",
+      muscleBalance: "Push heavy, legs light",
+      workoutFrequency: 4,
+    };
+
+    const result = formatCreativePrompt(context);
+
+    expect(result).toContain("hasPR: true");
+    expect(result).toContain("exerciseName: Bench Press");
+    expect(result).toContain("prType: weight");
+    expect(result).toContain("value: 225 lbs");
+    expect(result).toContain("improvement: +10 lbs");
+    expect(result).toContain("progression: 185 → 205 → 225 lbs");
+    expect(result).toContain("volumeTrend: up 15%");
+    expect(result).toContain("muscleBalance: Push heavy, legs light");
+    expect(result).toContain("workoutFrequency: 4 days this week");
+    expect(result).toContain("Generate celebration/message and action.");
   });
 
-  it("returns empty string for null preferences", () => {
-    expect(formatUserProfileContext(null)).toBe("");
+  it("formats context without PR", () => {
+    const context: AICreativeContext = {
+      hasPR: false,
+      volumeTrend: "stable",
+      muscleBalance: "Balanced",
+      workoutFrequency: 3,
+    };
+
+    const result = formatCreativePrompt(context);
+
+    expect(result).toContain("hasPR: false");
+    expect(result).toContain("volumeTrend: stable");
+    expect(result).toContain("muscleBalance: Balanced");
+    expect(result).toContain("workoutFrequency: 3 days this week");
+
+    // Should NOT contain PR-specific fields
+    expect(result).not.toContain("exerciseName:");
+    expect(result).not.toContain("prType:");
+    expect(result).not.toContain("improvement:");
   });
 
-  it("returns empty string for empty preferences object", () => {
-    expect(formatUserProfileContext({})).toBe("");
+  it("handles reps PR type", () => {
+    const context: AICreativeContext = {
+      hasPR: true,
+      exerciseName: "Pull-ups",
+      prType: "reps",
+      value: "15 reps",
+      improvement: "+3 reps",
+      progression: "10 → 12 → 15 reps",
+      volumeTrend: "up 10%",
+      muscleBalance: "Upper dominant",
+      workoutFrequency: 5,
+    };
+
+    const result = formatCreativePrompt(context);
+
+    expect(result).toContain("prType: reps");
+    expect(result).toContain("value: 15 reps");
   });
 
-  it("formats goals correctly", () => {
-    const result = formatUserProfileContext({
-      goals: ["build_muscle", "get_stronger"],
-    });
+  it("handles missing optional fields gracefully", () => {
+    const context: AICreativeContext = {
+      hasPR: true,
+      exerciseName: "Squat",
+      prType: "weight",
+      value: "315 lbs",
+      improvement: "+20 lbs",
+      // progression is optional
+      volumeTrend: "up 20%",
+      muscleBalance: "Leg focused",
+      workoutFrequency: 3,
+    };
 
-    expect(result).toContain("Goals: Build muscle, Get stronger");
-    expect(result).toContain("<user_profile>");
+    const result = formatCreativePrompt(context);
+
+    expect(result).toContain("exerciseName: Squat");
+    expect(result).toContain("progression: undefined");
   });
 
-  it("sanitizes < and > characters from user input", () => {
-    const result = formatUserProfileContext({
-      customGoal: "<gain> lean mass",
-      trainingSplit: "Push > Pull > Legs",
-      coachNotes: "Notes < keep it light >",
-    });
+  it("wraps context in XML-style tags", () => {
+    const context: AICreativeContext = {
+      hasPR: false,
+      volumeTrend: "down 5%",
+      muscleBalance: "Push dominant",
+      workoutFrequency: 2,
+    };
 
-    expect(result).toContain("Custom target: gain lean mass");
-    expect(result).toContain("Training approach: Push  Pull  Legs");
-    expect(result).toContain("User notes: Notes  keep it light");
-    expect(result).not.toContain("<gain>");
-    expect(result).not.toContain("> Pull");
-  });
+    const result = formatCreativePrompt(context);
 
-  it("only includes non-empty fields", () => {
-    const result = formatUserProfileContext({
-      goals: [],
-      customGoal: "   ",
-      trainingSplit: "Upper/Lower",
-      coachNotes: "",
-    });
-
-    expect(result).toContain("Training approach: Upper/Lower");
-    expect(result).not.toContain("Goals:");
-    expect(result).not.toContain("Custom target:");
-    expect(result).not.toContain("User notes:");
-  });
-
-  it("truncates extremely long inputs", () => {
-    const longValue = "a".repeat(1200);
-    const result = formatUserProfileContext({
-      customGoal: longValue,
-    });
-
-    const line = result
-      .split("\n")
-      .find((entry) => entry.startsWith("Custom target:"));
-    expect(line).toBeDefined();
-    expect(line?.replace("Custom target: ", "").length).toBe(500);
-  });
-
-  it("handles empty, null, and undefined fields gracefully", () => {
-    const result = formatUserProfileContext({
-      customGoal: undefined,
-      trainingSplit: null as unknown as string,
-      coachNotes: "   ",
-    });
-
-    expect(result).toBe("");
+    expect(result).toContain("<context>");
+    expect(result).toContain("</context>");
   });
 });

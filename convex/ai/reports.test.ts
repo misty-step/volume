@@ -24,22 +24,21 @@ import * as aiGenerate from "./generate";
 import * as generatedApi from "../_generated/api";
 import * as rateLimit from "../lib/rateLimit";
 
-// Mock the OpenAI generateAnalysis function
-vi.mock("./openai", () => ({
-  generateAnalysis: vi.fn().mockResolvedValue({
-    content:
-      "## Training Volume\nGood distribution.\n\n## Progress\nSolid gains.\n\n## Recommendations\n1. Continue\n2. Rest",
+// Mock the LLM creative content generation
+vi.mock("./llm", () => ({
+  generateCreativeContent: vi.fn().mockResolvedValue({
+    prCelebration: null,
+    prEmptyMessage: "Keep pushing—PRs are built one rep at a time.",
+    action: {
+      directive: "Add a leg day Wednesday",
+      rationale: "Your push volume is 2x your leg volume",
+    },
+    model: "google/gemini-3-flash-preview",
     tokenUsage: {
       input: 250,
       output: 150,
       costUSD: 0.0001,
     },
-    model: "google/gemini-3-flash-preview",
-  }),
-  isConfigured: vi.fn().mockReturnValue(true),
-  getPricing: vi.fn().mockReturnValue({
-    inputPerMillion: 0.25,
-    outputPerMillion: 2.0,
   }),
 }));
 

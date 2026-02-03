@@ -1,10 +1,10 @@
 /**
- * AI Report V2 Schema Definitions
+ * AI Report Schema Definitions
  *
  * Zod schemas for structured AI report output. Separates computed data
  * (metrics, PR history) from AI-generated creative content (celebration copy, actions).
  *
- * @module ai/reportV2Schema
+ * @module ai/reportSchema
  */
 
 import { z } from "zod";

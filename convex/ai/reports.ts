@@ -224,7 +224,7 @@ export const backfillWeeklyReports = action({
           {
             userId,
             reportType: "weekly",
-            weekStartDate: week.timestamp,
+            periodStartDate: week.timestamp,
           }
         );
 
@@ -346,7 +346,7 @@ export const backfillDailyReports = action({
           {
             userId,
             reportType: "daily",
-            weekStartDate: dayStart, // Use day start as identifier
+            periodStartDate: dayStart,
           }
         );
 

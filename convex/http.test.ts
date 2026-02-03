@@ -49,4 +49,35 @@ describe("Stripe webhook helpers", () => {
       "current_period_end not found"
     );
   });
+
+  // Additional mapStripeStatus tests for complete coverage
+  test("mapStripeStatus maps active to active", () => {
+    const subscription = makeSubscription({ status: "active" });
+    expect(mapStripeStatus(subscription)).toBe("active");
+  });
+
+  test("mapStripeStatus maps canceled to canceled", () => {
+    const subscription = makeSubscription({ status: "canceled" });
+    expect(mapStripeStatus(subscription)).toBe("canceled");
+  });
+
+  test("mapStripeStatus maps unpaid to canceled", () => {
+    const subscription = makeSubscription({ status: "unpaid" });
+    expect(mapStripeStatus(subscription)).toBe("canceled");
+  });
+
+  test("mapStripeStatus maps incomplete to canceled", () => {
+    const subscription = makeSubscription({ status: "incomplete" });
+    expect(mapStripeStatus(subscription)).toBe("canceled");
+  });
+
+  test("mapStripeStatus maps incomplete_expired to canceled", () => {
+    const subscription = makeSubscription({ status: "incomplete_expired" });
+    expect(mapStripeStatus(subscription)).toBe("canceled");
+  });
+
+  test("mapStripeStatus maps paused to canceled", () => {
+    const subscription = makeSubscription({ status: "paused" });
+    expect(mapStripeStatus(subscription)).toBe("canceled");
+  });
 });
