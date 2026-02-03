@@ -66,9 +66,8 @@ export const computePlatformStats = internalMutation({
 
     // Stream through sets in batches to avoid memory issues
     let cursor: string | null = null;
-    let hasMore = true;
 
-    while (hasMore) {
+    while (true) {
       // Paginate through the sets table
       const result = await ctx.db
         .query("sets")
@@ -83,8 +82,10 @@ export const computePlatformStats = internalMutation({
       }
 
       batchCount++;
-      hasMore = !result.isDone;
       cursor = result.continueCursor;
+      if (result.isDone) {
+        break;
+      }
     }
 
     const totalLifters = uniqueUserIds.size;
