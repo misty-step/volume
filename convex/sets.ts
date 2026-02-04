@@ -141,14 +141,15 @@ export const listSetsForDateRange = query({
       return [];
     }
 
+    // Use compound index range query for efficient date filtering
+    // Index by_user_performed: ["userId", "performedAt"] supports range queries on performedAt
     const sets = await ctx.db
       .query("sets")
-      .withIndex("by_user_performed", (q) => q.eq("userId", identity.subject))
-      .filter((q) =>
-        q.and(
-          q.gte(q.field("performedAt"), args.startDate),
-          q.lte(q.field("performedAt"), args.endDate)
-        )
+      .withIndex("by_user_performed", (q) =>
+        q
+          .eq("userId", identity.subject)
+          .gte("performedAt", args.startDate)
+          .lte("performedAt", args.endDate)
       )
       .order("desc")
       .collect();
