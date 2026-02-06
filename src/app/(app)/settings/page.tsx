@@ -13,6 +13,7 @@ import { SettingsList } from "@/components/ui/settings-list";
 import { SettingsListItem } from "@/components/ui/settings-list-item";
 import { Button } from "@/components/ui/button";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
+import { useTactileSoundPreference } from "@/hooks/useTactileSoundPreference";
 import { PageLayout } from "@/components/layout/page-layout";
 import { Plus, ExternalLink, Mail, CreditCard, Loader2 } from "lucide-react";
 import { clientVersion } from "@/lib/version";
@@ -70,6 +71,9 @@ export default function SettingsPage() {
 
   // Weight unit preference
   const { unit, setUnit } = useWeightUnit();
+
+  // Tactile sound preference
+  const { soundEnabled, setSoundEnabled } = useTactileSoundPreference();
 
   const handleManageBilling = async () => {
     if (!billingInfo?.stripeCustomerId) return;
@@ -169,6 +173,28 @@ export default function SettingsPage() {
                   onClick={() => setUnit("kg")}
                 >
                   kg
+                </Button>
+              </div>
+            }
+          />
+          <SettingsListItem
+            title="Tactile Sounds"
+            subtitle="Play click sound on button presses"
+            actions={
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={soundEnabled ? "default" : "outline"}
+                  onClick={() => setSoundEnabled(true)}
+                >
+                  On
+                </Button>
+                <Button
+                  size="sm"
+                  variant={!soundEnabled ? "default" : "outline"}
+                  onClick={() => setSoundEnabled(false)}
+                >
+                  Off
                 </Button>
               </div>
             }

@@ -33,6 +33,8 @@ import { ExerciseSelectorDialog } from "./exercise-selector-dialog";
 import { useMobileViewport } from "@/hooks/useMobileViewport";
 import { WorkoutContextCarousel } from "./workout-context-carousel";
 import { SetSuggestion } from "@/lib/set-suggestion-engine";
+import { useTactileFeedback } from "@/hooks/useTactileFeedback";
+import { motion } from "framer-motion";
 
 interface QuickLogFormProps {
   exercises: Exercise[];
@@ -68,6 +70,8 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
     const durationInputRef = useRef<HTMLInputElement>(null);
 
     const { unit } = useWeightUnit();
+
+    const { triggerTactile, animationControls } = useTactileFeedback();
 
     const { form, onSubmit } = useQuickLogForm({
       unit,
@@ -427,23 +431,29 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
 
             {/* Submit button - parent handles sticky positioning on mobile */}
             <div className="pt-6 md:flex md:justify-end">
-              <BrutalistButton
-                type="submit"
-                variant="danger"
-                size="lg"
+              <motion.div
+                animate={animationControls}
                 className="w-full md:w-64"
-                disabled={form.formState.isSubmitting}
-                data-testid="quick-log-submit-btn"
               >
-                {form.formState.isSubmitting ? (
-                  <>
-                    <Loader2 className="animate-spin" />
-                    Logging...
-                  </>
-                ) : (
-                  "Log Set"
-                )}
-              </BrutalistButton>
+                <BrutalistButton
+                  type="submit"
+                  variant="danger"
+                  size="lg"
+                  className="w-full"
+                  disabled={form.formState.isSubmitting}
+                  data-testid="quick-log-submit-btn"
+                  onClick={() => triggerTactile()}
+                >
+                  {form.formState.isSubmitting ? (
+                    <>
+                      <Loader2 className="animate-spin" />
+                      Logging...
+                    </>
+                  ) : (
+                    "Log Set"
+                  )}
+                </BrutalistButton>
+              </motion.div>
             </div>
           </form>
         </Form>
