@@ -77,12 +77,13 @@ const commandList = (
     />
     <CommandList className={options?.listClassName}>
       <CommandEmpty>
-        <div className="flex flex-col gap-3 p-3">
+        <div className="flex flex-col gap-4 p-4">
           <span className="text-sm text-muted-foreground">
             No exercises found.
           </span>
           <BrutalistButton
             variant="outline"
+            className="min-h-[44px]"
             onClick={() => {
               close();
               onCreateNew();
@@ -93,7 +94,7 @@ const commandList = (
           </BrutalistButton>
         </div>
       </CommandEmpty>
-      <CommandGroup>
+      <CommandGroup className="[&_[cmdk-group-items]]:flex [&_[cmdk-group-items]]:flex-col [&_[cmdk-group-items]]:gap-1">
         {exercises.map((exercise) => (
           <CommandItem
             key={exercise._id}
@@ -103,14 +104,15 @@ const commandList = (
               close();
             }}
             data-testid={`exercise-option-${exercise._id}`}
+            className="min-h-[44px] px-3 py-2.5 text-base touch-manipulation"
           >
             <Check
               className={cn(
-                "mr-2 h-4 w-4",
+                "mr-3 h-5 w-5 shrink-0",
                 selectedId === exercise._id ? "opacity-100" : "opacity-0"
               )}
             />
-            {exercise.name}
+            <span className="truncate">{exercise.name}</span>
           </CommandItem>
         ))}
         <CommandItem
@@ -119,7 +121,7 @@ const commandList = (
             close();
             onCreateNew();
           }}
-          className="border-t"
+          className="border-t-2 min-h-[44px] px-3 py-2.5 text-base font-medium touch-manipulation mt-1"
           data-testid="exercise-create-new"
         >
           + Create New
@@ -172,8 +174,9 @@ export function ExerciseSelectorDialog({
                 size="icon"
                 aria-label="Close"
                 data-testid="exercise-dialog-close"
+                className="h-11 w-11 min-h-[44px] min-w-[44px]"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </BrutalistButton>
             </DialogClose>
           </div>
