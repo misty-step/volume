@@ -96,7 +96,7 @@ When a finding spans multiple perspectives, apply it ONLY to the primary owner:
 
 Verdict Criteria
 
-- FAIL if any critical or major correctness bug is found.
+- FAIL if any critical correctness bug is found, or if 2 or more major correctness bugs are found.
 - WARN if suspicious pattern could be a bug but impact is unclear.
 - PASS if logic is sound and error paths are handled.
 - Severity mapping:
