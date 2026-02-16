@@ -4,11 +4,11 @@ How workout analysis reports are generated, cached, and displayed.
 
 ## Report Types
 
-| Type | Period | Schedule |
-|------|--------|----------|
-| `daily` | Last 24 hours | On-demand |
-| `weekly` | Monday-Sunday | Cron + on-demand |
-| `monthly` | Calendar month | Cron |
+| Type      | Period         | Schedule         |
+| --------- | -------------- | ---------------- |
+| `daily`   | Last 24 hours  | On-demand        |
+| `weekly`  | Monday-Sunday  | Cron + on-demand |
+| `monthly` | Calendar month | Cron             |
 
 ## Generation Flow
 
@@ -20,8 +20,8 @@ stateDiagram-v2
     check_existing --> fetch_data: No existing report
 
     fetch_data --> aggregate: Workout data fetched
-    aggregate --> call_openai: Metrics computed
-    call_openai --> save_report: AI response received
+    aggregate --> call_llm: Metrics computed
+    call_llm --> save_report: AI response received
     save_report --> return_new: Report stored
 
     return_cached --> [*]
@@ -52,7 +52,7 @@ flowchart LR
     B --> D[Calculate PRs]
     B --> E[Compute streaks]
     C & D & E --> F[Build AnalyticsMetrics]
-    F --> G[OpenAI API]
+    F --> G[OpenRouter (LLM)]
     G --> H[Store in aiReports]
 ```
 
@@ -80,17 +80,19 @@ From `/convex/crons.ts`:
 
 ## Report Versions
 
-| Version | Content Field | Renderer |
-|---------|--------------|----------|
-| `1.0` (default) | `content` (markdown) | `AIInsightsCard` |
-| `2.0` | `structuredContent` (JSON) | `AIReportCardV2` |
+| Version         | Content Field              | Renderer         |
+| --------------- | -------------------------- | ---------------- |
+| `1.0` (default) | `content` (markdown)       | `AIInsightsCard` |
+| `2.0`           | `structuredContent` (JSON) | `AIReportCardV2` |
 
 ## Files
 
-- `/convex/ai/generate.ts` - Report generation action
-- `/convex/ai/generateV2.ts` - V2 structured reports
+- `/convex/ai/reports.ts` - Public queries/actions (entry point)
+- `/convex/ai/generate.ts` - Report generation orchestration
 - `/convex/ai/data.ts` - Data fetching queries
-- `/convex/ai/openai.ts` - OpenAI API wrapper
+- `/convex/ai/llm.ts` - LLM integration (OpenRouter)
+- `/convex/ai/prompts.ts` - Prompt templates
+- `/convex/ai/reportSchema.ts` - Zod schemas
 - `/src/components/analytics/report-navigator.tsx` - UI navigation
 - `/src/components/analytics/ai-insights-card.tsx` - V1 renderer
 - `/src/components/analytics/report-v2/` - V2 renderer

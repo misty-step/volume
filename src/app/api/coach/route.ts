@@ -19,7 +19,7 @@ import {
 import { parseCoachIntent } from "@/lib/coach/prototype-intent";
 
 const DEFAULT_COACH_MODEL =
-  process.env.COACH_AGENT_MODEL ?? "google/gemini-3-flash-preview";
+  process.env.COACH_AGENT_MODEL ?? "minimax/minimax-m2.5";
 const MAX_TOOL_ROUNDS = 6;
 const SSE_HEADERS = {
   "Content-Type": "text/event-stream; charset=utf-8",
@@ -29,14 +29,6 @@ const SSE_HEADERS = {
 } as const;
 
 function getCoachClient(): { client: OpenAI; model: string } | null {
-  const openAIKey = process.env.OPENAI_API_KEY;
-  if (openAIKey) {
-    return {
-      client: new OpenAI({ apiKey: openAIKey }),
-      model: process.env.COACH_AGENT_MODEL ?? "gpt-5-mini",
-    };
-  }
-
   const openRouterKey = process.env.OPENROUTER_API_KEY;
   if (openRouterKey) {
     return {

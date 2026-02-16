@@ -5,7 +5,7 @@ Status: proposed
 
 ## Context and Problem Statement
 
-Authenticated users can spam AI-backed endpoints (exercise creation and on-demand AI reports), driving OpenAI spend and DB churn. We need per-user rate limits in Convex without adding new infrastructure.
+Authenticated users can spam AI-backed endpoints (exercise creation and on-demand AI reports), driving OpenRouter spend and DB churn. We need per-user rate limits in Convex without adding new infrastructure.
 
 ## Considered Options
 

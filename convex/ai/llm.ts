@@ -1,7 +1,7 @@
 /**
  * LLM Integration for AI Reports
  *
- * Uses Gemini 3 Flash via OpenRouter for creative content generation.
+ * Uses MiniMax M2.5 via OpenRouter for creative content generation.
  * Validates responses with Zod for schema compliance.
  * Only generates creative content (celebration + action)—metrics are computed.
  *
@@ -23,7 +23,7 @@ import {
 /**
  * Model configuration
  *
- * Uses Gemini 3 Flash via OpenRouter with JSON mode.
+ * Uses MiniMax M2.5 via OpenRouter with JSON mode.
  * Zod validates responses after parsing.
  */
 const CONFIG = {
@@ -81,7 +81,7 @@ Rules:
 - Return ONLY the JSON object, no markdown, no explanation`;
 
 /**
- * Generate creative content using OpenRouter (Gemini 3 Flash)
+ * Generate creative content using OpenRouter (MiniMax M2.5)
  *
  * Uses JSON mode with Zod validation for schema compliance.
  * Only generates celebration copy and action directive.

@@ -89,9 +89,9 @@ function classifyExerciseFallback(exerciseName: string): string[] {
 }
 
 /**
- * Classify exercise into muscle groups using GPT-5 nano via OpenRouter
+ * Classify exercise into muscle groups using MiniMax M2.5 via OpenRouter
  *
- * Uses the cheapest available model for simple classification tasks.
+ * Uses a low-latency, tool-capable model for simple classification tasks.
  * Falls back to pattern matching if API key is not configured (test environments).
  *
  * @param exerciseName - Name of exercise to classify
