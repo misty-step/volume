@@ -134,7 +134,8 @@ function buildCoachTurnResponse({
 
 async function runDeterministicFallback(
   userInput: string,
-  ctx: CoachToolContext
+  ctx: CoachToolContext,
+  emitEvent?: (event: CoachStreamEvent) => void
 ): Promise<CoachTurnResponse> {
   const intent = parseCoachIntent(userInput);
   const toolsUsed: string[] = [];
@@ -143,58 +144,90 @@ async function runDeterministicFallback(
     "I can help with logging, summaries, reports, and focus suggestions.";
 
   try {
-    if (intent.type === "log_set") {
-      toolsUsed.push("log_set");
+    const callFromIntent: null | { toolName: string; args: unknown } = (() => {
+      switch (intent.type) {
+        case "log_set":
+          return {
+            toolName: "log_set",
+            args: {
+              exercise_name: intent.exerciseName,
+              reps: intent.reps,
+              duration_seconds: intent.durationSeconds,
+              weight: intent.weight,
+              unit: intent.unit,
+            },
+          };
+        case "today_summary":
+          return { toolName: "get_today_summary", args: {} };
+        case "exercise_report":
+          return {
+            toolName: "get_exercise_report",
+            args: { exercise_name: intent.exerciseName },
+          };
+        case "set_weight_unit":
+          return { toolName: "set_weight_unit", args: { unit: intent.unit } };
+        case "set_sound":
+          return { toolName: "set_sound", args: { enabled: intent.enabled } };
+        default:
+          return null;
+      }
+    })();
+
+    if (callFromIntent) {
+      toolsUsed.push(callFromIntent.toolName);
+      emitEvent?.({ type: "tool_start", toolName: callFromIntent.toolName });
+      let streamed = false;
+      const onBlocks = emitEvent
+        ? (nextBlocks: CoachBlock[]) => {
+            streamed = true;
+            emitEvent({
+              type: "tool_result",
+              toolName: callFromIntent.toolName,
+              blocks: nextBlocks,
+            });
+          }
+        : undefined;
       const result = await executeCoachTool(
-        "log_set",
-        {
-          exercise_name: intent.exerciseName,
-          reps: intent.reps,
-          duration_seconds: intent.durationSeconds,
-          weight: intent.weight,
-          unit: intent.unit,
-        },
-        ctx
+        callFromIntent.toolName,
+        callFromIntent.args,
+        ctx,
+        { onBlocks }
       );
-      blocks = result.blocks;
-      assistantText = result.summary;
-    } else if (intent.type === "today_summary") {
-      toolsUsed.push("get_today_summary");
-      const result = await executeCoachTool("get_today_summary", {}, ctx);
-      blocks = result.blocks;
-      assistantText = result.summary;
-    } else if (intent.type === "exercise_report") {
-      toolsUsed.push("get_exercise_report");
-      const result = await executeCoachTool(
-        "get_exercise_report",
-        { exercise_name: intent.exerciseName },
-        ctx
-      );
-      blocks = result.blocks;
-      assistantText = result.summary;
-    } else if (intent.type === "set_weight_unit") {
-      toolsUsed.push("set_weight_unit");
-      const result = await executeCoachTool(
-        "set_weight_unit",
-        { unit: intent.unit },
-        ctx
-      );
-      blocks = result.blocks;
-      assistantText = result.summary;
-    } else if (intent.type === "set_sound") {
-      toolsUsed.push("set_sound");
-      const result = await executeCoachTool(
-        "set_sound",
-        { enabled: intent.enabled },
-        ctx
-      );
+      if (emitEvent && !streamed) {
+        emitEvent({
+          type: "tool_result",
+          toolName: callFromIntent.toolName,
+          blocks: result.blocks,
+        });
+      }
       blocks = result.blocks;
       assistantText = result.summary;
     } else if (
       /\b(work on|focus|improve|today plan|what should i do)\b/i.test(userInput)
     ) {
       toolsUsed.push("get_focus_suggestions");
-      const result = await executeCoachTool("get_focus_suggestions", {}, ctx);
+      emitEvent?.({ type: "tool_start", toolName: "get_focus_suggestions" });
+      let streamed = false;
+      const onBlocks = emitEvent
+        ? (nextBlocks: CoachBlock[]) => {
+            streamed = true;
+            emitEvent({
+              type: "tool_result",
+              toolName: "get_focus_suggestions",
+              blocks: nextBlocks,
+            });
+          }
+        : undefined;
+      const result = await executeCoachTool("get_focus_suggestions", {}, ctx, {
+        onBlocks,
+      });
+      if (emitEvent && !streamed) {
+        emitEvent({
+          type: "tool_result",
+          toolName: "get_focus_suggestions",
+          blocks: result.blocks,
+        });
+      }
       blocks = result.blocks;
       assistantText = result.summary;
     } else {
@@ -255,7 +288,11 @@ async function runPlannerTurn({
 }: {
   runtime: PlannerRuntime;
   history: OpenAI.Chat.Completions.ChatCompletionMessageParam[];
-  preferences: { unit: string; soundEnabled: boolean };
+  preferences: {
+    unit: string;
+    soundEnabled: boolean;
+    timezoneOffsetMinutes?: number;
+  };
   ctx: CoachToolContext;
   emitEvent?: (event: CoachStreamEvent) => void;
 }): Promise<PlannerRunResult> {
@@ -407,6 +444,9 @@ export async function POST(request: Request) {
   const context: CoachToolContext = {
     convex,
     defaultUnit: parsed.data.preferences.unit,
+    timezoneOffsetMinutes:
+      parsed.data.preferences.timezoneOffsetMinutes ??
+      new Date().getTimezoneOffset(),
   };
 
   const latestUserMessage = [...parsed.data.messages]
@@ -449,12 +489,13 @@ export async function POST(request: Request) {
 
         try {
           if (!runtime) {
+            send({ type: "start", model: "fallback-deterministic" });
+            sendComment(" ".repeat(2048));
             const fallbackResponse = await runDeterministicFallback(
               latestUserMessage.content,
-              context
+              context,
+              send
             );
-            send({ type: "start", model: fallbackResponse.trace.model });
-            sendComment(" ".repeat(2048));
             send({ type: "final", response: fallbackResponse });
             return;
           }

@@ -10,11 +10,19 @@ describe("coach schema", () => {
     expect(
       CoachTurnRequestSchema.parse({
         messages: [{ role: "user", content: "10 pushups" }],
-        preferences: { unit: "lbs", soundEnabled: true },
+        preferences: {
+          unit: "lbs",
+          soundEnabled: true,
+          timezoneOffsetMinutes: 360,
+        },
       })
     ).toEqual({
       messages: [{ role: "user", content: "10 pushups" }],
-      preferences: { unit: "lbs", soundEnabled: true },
+      preferences: {
+        unit: "lbs",
+        soundEnabled: true,
+        timezoneOffsetMinutes: 360,
+      },
     });
   });
 

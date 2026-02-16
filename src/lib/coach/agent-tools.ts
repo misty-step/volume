@@ -3,9 +3,11 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
-import { getTodayRange } from "@/lib/date-utils";
+import {
+  formatDuration,
+  getTodayRangeForTimezoneOffset,
+} from "@/lib/date-utils";
 import type { Exercise } from "@/types/domain";
-import { formatDuration } from "@/lib/date-utils";
 import {
   aggregateExerciseTrend,
   formatSetMetric,
@@ -46,6 +48,7 @@ export type CoachToolExecutionOptions = {
 export interface CoachToolContext {
   convex: ConvexHttpClient;
   defaultUnit: WeightUnit;
+  timezoneOffsetMinutes: number;
 }
 
 const LogSetArgsSchema = z
@@ -132,7 +135,9 @@ async function listExercises(ctx: CoachToolContext): Promise<Exercise[]> {
 }
 
 async function getTodaySets(ctx: CoachToolContext): Promise<SetInput[]> {
-  const { start, end } = getTodayRange();
+  const { start, end } = getTodayRangeForTimezoneOffset(
+    ctx.timezoneOffsetMinutes
+  );
   return (await ctx.convex.query(api.sets.listSetsForDateRange, {
     startDate: start,
     endDate: end,

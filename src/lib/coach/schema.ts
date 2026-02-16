@@ -8,6 +8,7 @@ export const CoachMessageSchema = z.object({
 export const CoachPreferencesSchema = z.object({
   unit: z.enum(["lbs", "kg"]),
   soundEnabled: z.boolean(),
+  timezoneOffsetMinutes: z.number().int().min(-840).max(840).optional(),
 });
 
 export const CoachTurnRequestSchema = z.object({

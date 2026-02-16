@@ -28,6 +28,8 @@ type SseFrame = {
   data: string;
 };
 
+const MAX_COACH_MESSAGES = 24;
+
 async function* readSseFrames(
   body: ReadableStream<Uint8Array>
 ): AsyncGenerator<SseFrame, void, void> {
@@ -73,14 +75,27 @@ async function* readSseFrames(
   }
 }
 
-function createId(): string {
-  if (
-    typeof crypto !== "undefined" &&
-    typeof crypto.randomUUID === "function"
-  ) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const createId = (() => {
+  let counter = 0;
+  return (): string => {
+    if (
+      typeof crypto !== "undefined" &&
+      typeof crypto.randomUUID === "function"
+    ) {
+      return crypto.randomUUID();
+    }
+    counter += 1;
+    return `fallback-id-${Date.now()}-${counter}`;
+  };
+})();
+
+function trimCoachConversation(
+  messages: CoachMessageInput[]
+): CoachMessageInput[] {
+  if (messages.length <= MAX_COACH_MESSAGES) return messages;
+  const slice = messages.slice(messages.length - MAX_COACH_MESSAGES);
+  if (slice.length > 1 && slice[0]?.role === "assistant") return slice.slice(1);
+  return slice;
 }
 
 function toolProgressText(toolName: string): string {
@@ -222,9 +237,9 @@ function BlockRenderer({
           <CardTitle className="text-sm">{block.title}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {block.rows.map((row) => (
+          {block.rows.map((row, idx) => (
             <div
-              key={`${row.label}-${row.value}`}
+              key={`${row.label}-${row.value}-${idx}`}
               className="flex items-start justify-between gap-3 text-sm"
             >
               <div>
@@ -318,6 +333,7 @@ export function CoachPrototype() {
     const trimmed = prompt.trim();
     if (!trimmed || isWorking) return;
 
+    const timezoneOffsetMinutes = new Date().getTimezoneOffset();
     const assistantId = createId();
     const userMessage: CoachTimelineMessage = {
       id: createId(),
@@ -325,10 +341,10 @@ export function CoachPrototype() {
       text: trimmed,
     };
 
-    const nextConversation: CoachMessageInput[] = [
+    const nextConversation = trimCoachConversation([
       ...conversation,
       { role: "user", content: trimmed },
-    ];
+    ]);
 
     setTimeline((prev) => [
       ...prev,
@@ -356,6 +372,7 @@ export function CoachPrototype() {
           preferences: {
             unit,
             soundEnabled,
+            timezoneOffsetMinutes,
           },
         }),
       });

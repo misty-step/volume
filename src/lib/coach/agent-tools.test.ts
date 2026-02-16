@@ -91,6 +91,7 @@ function createFakeContext(options?: {
   const ctx: CoachToolContext = {
     convex: convex as ConvexHttpClient,
     defaultUnit: "lbs",
+    timezoneOffsetMinutes: 0,
   };
 
   return { ctx, convex, now };
