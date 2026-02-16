@@ -33,7 +33,8 @@ jobs:
         with:
           perspective: ${{ matrix.perspective }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          kimi-api-key: ${{ secrets.MOONSHOT_API_KEY }}
+          api-key: ${{ secrets.OPENROUTER_API_KEY }}
+          model: openrouter/moonshotai/kimi-k2.5
 
   verdict:
     name: "Council Verdict"
