@@ -3,7 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BarChart3, History, Settings } from "lucide-react";
+import { Home, Bot, BarChart3, History, Settings } from "lucide-react";
 
 type BottomNavProps = {
   initialUserId?: string | null;
@@ -11,6 +11,7 @@ type BottomNavProps = {
 
 const navItems = [
   { href: "/today", label: "Today", icon: Home },
+  { href: "/coach", label: "Coach", icon: Bot },
   { href: "/analytics", label: "Stats", icon: BarChart3 },
   { href: "/history", label: "History", icon: History },
   { href: "/settings", label: "Settings", icon: Settings },
