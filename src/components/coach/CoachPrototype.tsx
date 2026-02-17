@@ -27,7 +27,7 @@ export function CoachPrototype() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-6 space-y-4">
+    <main className="mx-auto w-full max-w-4xl px-4 py-6 flex flex-1 min-h-0 flex-col pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-6">
       <Card className="border-safety-orange">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -52,7 +52,7 @@ export function CoachPrototype() {
         </CardHeader>
       </Card>
 
-      <div className="space-y-4">
+      <div className="mt-4 flex-1 min-h-0 overflow-y-auto space-y-4 pb-6 md:pb-4">
         {timeline.map((message) => (
           <div
             key={message.id}
@@ -96,7 +96,10 @@ export function CoachPrototype() {
         <div ref={endRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="flex items-center gap-2">
+      <form
+        onSubmit={handleSubmit}
+        className="mt-4 flex items-center gap-2 pb-safe pt-2"
+      >
         <Input
           value={input}
           onChange={(event) => setInput(event.target.value)}
