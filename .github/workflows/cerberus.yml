@@ -101,8 +101,8 @@ jobs:
           fi
 
           if [[ -z "$verdict" || -z "$verdict_json" || ! -f "$verdict_json" ]]; then
-            echo "::warning::Cerberus ${{ matrix.perspective }} produced no verdict output. Skipping enforcement."
-            exit 0
+            echo "::error::Cerberus ${{ matrix.perspective }} produced no verdict output."
+            exit 1
           fi
 
           confidence="$(jq -r '.confidence // 0' "$verdict_json")"
@@ -113,8 +113,8 @@ jobs:
           fi
 
           if [[ "$confidence" == "0" || "$confidence" == "0.0" ]] && [[ "$summary" == Review\ output\ could\ not\ be\ parsed* ]]; then
-            echo "::warning::Cerberus ${{ matrix.perspective }} output could not be parsed; treating as SKIP to avoid flaky CI."
-            exit 0
+            echo "::error::Cerberus ${{ matrix.perspective }} output could not be parsed: $summary"
+            exit 1
           fi
 
           echo "::error::Cerberus ${{ matrix.perspective }} verdict: FAIL"
@@ -129,44 +129,3 @@ jobs:
       - uses: misty-step/cerberus/verdict@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          # Avoid blocking PRs on model/format flakiness (e.g. no ```json block found).
-          # Per-reviewer jobs still hard-fail on real FAIL verdicts.
-          fail-on-verdict: "false"
-
-      - name: Enforce council verdict (ignore parse failures)
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          verdict_files="$(find ./verdicts -type f -name '*-verdict.json' 2>/dev/null || true)"
-          if [[ -z "$verdict_files" ]]; then
-            echo "::warning::No Cerberus verdict artifacts found. Skipping enforcement."
-            exit 0
-          fi
-
-          failed=0
-          for f in $verdict_files; do
-            verdict="$(jq -r '.verdict // ""' "$f")"
-            confidence="$(jq -r '.confidence // 0' "$f")"
-            summary="$(jq -r '.summary // ""' "$f")"
-            reviewer="$(jq -r '.reviewer // "unknown"' "$f")"
-            perspective="$(jq -r '.perspective // "unknown"' "$f")"
-
-            if [[ "$verdict" != "FAIL" ]]; then
-              continue
-            fi
-
-            if [[ "$confidence" == "0" || "$confidence" == "0.0" ]] && [[ "$summary" == Review\ output\ could\ not\ be\ parsed* ]]; then
-              echo "::warning::Cerberus $reviewer ($perspective) output could not be parsed; treating as SKIP to avoid flaky CI."
-              continue
-            fi
-
-            echo "::error::Cerberus $reviewer ($perspective) verdict: FAIL"
-            echo "::error::Summary: $summary"
-            failed=1
-          done
-
-          if [[ "$failed" -ne 0 ]]; then
-            exit 1
-          fi
