@@ -62,12 +62,27 @@ export async function* readCoachStreamEvents(
     let parsedEvent: unknown;
     try {
       parsedEvent = JSON.parse(frame.data);
-    } catch {
+    } catch (error) {
+      // Don't swallow malformed events silently; surface an error so the UI can
+      // render something actionable (and keep the raw stream debuggable).
+      console.error("[coach stream] Failed to parse SSE event:", {
+        event: frame.event,
+        error: error instanceof Error ? error.message : String(error),
+        data: frame.data.slice(0, 200),
+      });
+      yield { type: "error", message: "Malformed stream event received." };
       continue;
     }
 
     const eventResult = CoachStreamEventSchema.safeParse(parsedEvent);
-    if (!eventResult.success) continue;
+    if (!eventResult.success) {
+      console.error("[coach stream] Invalid SSE event shape:", {
+        event: frame.event,
+        issue: eventResult.error.issues[0]?.message ?? "Unknown schema error",
+      });
+      yield { type: "error", message: "Invalid stream event received." };
+      continue;
+    }
     yield eventResult.data;
   }
 }

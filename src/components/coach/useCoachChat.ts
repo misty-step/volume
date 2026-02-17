@@ -170,6 +170,7 @@ export function useCoachChat() {
           throw new Error("Missing streaming response body");
         }
 
+        let streamedError = false;
         for await (const event of readCoachStreamEvents(response.body)) {
           if (event.type === "tool_start") {
             setTimeline((prev) =>
@@ -189,6 +190,28 @@ export function useCoachChat() {
                   ? {
                       ...message,
                       blocks: [...(message.blocks ?? []), ...event.blocks],
+                    }
+                  : message
+              )
+            );
+          }
+
+          if (event.type === "error" && !streamedError) {
+            streamedError = true;
+            setTimeline((prev) =>
+              prev.map((message) =>
+                message.id === assistantId
+                  ? {
+                      ...message,
+                      blocks: [
+                        ...(message.blocks ?? []),
+                        {
+                          type: "status",
+                          tone: "error",
+                          title: "Stream error",
+                          description: event.message,
+                        },
+                      ],
                     }
                   : message
               )

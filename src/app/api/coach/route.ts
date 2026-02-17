@@ -64,8 +64,9 @@ export async function POST(request: Request) {
     convex,
     defaultUnit: parsed.data.preferences.unit,
     timezoneOffsetMinutes:
-      parsed.data.preferences.timezoneOffsetMinutes ??
-      new Date().getTimezoneOffset(),
+      // If the client didn't provide a timezone offset, default to UTC instead of
+      // the server's timezone (which would be wrong for most users).
+      parsed.data.preferences.timezoneOffsetMinutes ?? 0,
   };
 
   const latestUserMessage = [...parsed.data.messages]

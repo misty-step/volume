@@ -77,13 +77,26 @@ export async function ensureExercise(
     );
   }
 
-  return {
-    exercise: {
-      _id: createdId,
-      userId: "",
-      name: normalizedName,
-      createdAt: Date.now(),
-    },
-    created: true,
-  };
+  const createdExercise = (await ctx.convex.query(api.exercises.getExercise, {
+    id: createdId,
+  })) as Exercise | null;
+  if (createdExercise) {
+    return { exercise: createdExercise, created: true };
+  }
+
+  // Should be immediate, but be defensive: if the freshly created exercise can't
+  // be fetched (auth or eventual consistency), fall back to a refreshed list.
+  const refreshed = await listExercises(ctx);
+  const matchedAfterCreate =
+    refreshed.find((exercise) => exercise._id === createdId) ??
+    findExercise(refreshed, normalizedName);
+  if (matchedAfterCreate) {
+    return { exercise: matchedAfterCreate, created: true };
+  }
+
+  throw new Error(
+    `Created exercise "${normalizedName}" but could not load it afterwards.`
+  );
+
+  // unreachable
 }

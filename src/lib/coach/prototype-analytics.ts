@@ -47,14 +47,15 @@ export interface ExercisePerformanceSummary {
 }
 
 function dayKey(timestamp: number): string {
-  return new Date(timestamp).toISOString().slice(0, 10);
+  // Use date-fns formatting so bucketing matches the date window keys.
+  return format(new Date(timestamp), "yyyy-MM-dd");
 }
 
 function buildDayWindow(
   days: number,
   referenceTime: number
 ): Array<{ key: string; label: string }> {
-  const start = startOfDay(addDays(referenceTime, -(days - 1)));
+  const start = startOfDay(addDays(new Date(referenceTime), -(days - 1)));
   return Array.from({ length: days }, (_, index) => {
     const current = addDays(start, index);
     return {
