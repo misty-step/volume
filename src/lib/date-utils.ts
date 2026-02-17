@@ -25,6 +25,43 @@ export function getTodayRange(): { start: number; end: number } {
 }
 
 /**
+ * Get "today" start/end boundaries for a given timezone offset (in minutes).
+ *
+ * Returns UTC timestamps (ms) that correspond to midnight-to-midnight in the
+ * user's timezone, using the JS `Date#getTimezoneOffset()` convention:
+ * - positive values are timezones behind UTC (e.g. America/Chicago ~ 360)
+ * - negative values are timezones ahead of UTC (e.g. Asia/Kolkata = -330)
+ *
+ * Notes:
+ * - Offset-based math is an approximation around DST boundaries (offset can
+ *   change within the same local day). For the coach prototype, this is
+ *   acceptable; for full accuracy, pass an IANA timezone name instead.
+ */
+export function getTodayRangeForTimezoneOffset(
+  timezoneOffsetMinutes: number,
+  nowMs: number = Date.now()
+): { start: number; end: number } {
+  const offsetMs = timezoneOffsetMinutes * 60 * 1000;
+
+  // Treat "local wall time" as UTC by shifting the instant, then use UTC
+  // accessors to compute the local calendar date.
+  const localAsUtc = nowMs - offsetMs;
+  const localDate = new Date(localAsUtc);
+
+  const year = localDate.getUTCFullYear();
+  const month = localDate.getUTCMonth();
+  const day = localDate.getUTCDate();
+
+  const startLocalAsUtc = Date.UTC(year, month, day, 0, 0, 0, 0);
+  const endLocalAsUtc = Date.UTC(year, month, day, 23, 59, 59, 999);
+
+  return {
+    start: startLocalAsUtc + offsetMs,
+    end: endLocalAsUtc + offsetMs,
+  };
+}
+
+/**
  * Format timestamp as time only (12-hour format with am/pm)
  *
  * @param timestamp - Unix timestamp in milliseconds

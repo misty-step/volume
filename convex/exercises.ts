@@ -19,7 +19,7 @@ import { filterValidMuscleGroups } from "./lib/muscleGroups";
  *
  * Flow:
  * 1. Validate exercise name
- * 2. Classify muscle groups via OpenAI (fallback to ["Other"] on error)
+ * 2. Classify muscle groups via OpenRouter (fallback to ["Other"] on error)
  * 3. Call internal mutation for database operations
  */
 export const createExercise = action({
@@ -48,7 +48,7 @@ export const createExercise = action({
     // Validate and normalize exercise name
     const normalizedName = validateExerciseName(args.name);
 
-    // Classify exercise with GPT-5-nano (fallback to ["Other"] on error)
+    // Classify exercise with OpenRouter model (fallback to ["Other"] on error)
     let muscleGroups: string[] = ["Other"];
     try {
       muscleGroups = await classifyExercise(normalizedName);

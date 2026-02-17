@@ -11,6 +11,7 @@ type NavProps = {
 
 const navLinks = [
   { href: "/today", label: "Today" },
+  { href: "/coach", label: "Coach" },
   { href: "/history", label: "History" },
   { href: "/analytics", label: "Analytics" },
   { href: "/settings", label: "Settings" },

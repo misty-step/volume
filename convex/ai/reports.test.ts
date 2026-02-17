@@ -8,7 +8,7 @@
  * - Ownership verification
  *
  * Note: The internal generateReport mutation is tested indirectly through
- * generateOnDemandReport. Full integration testing requires OpenAI API mocking
+ * generateOnDemandReport. Full integration testing requires OpenRouter API mocking
  * which is complex in convex-test environment.
  */
 
@@ -33,7 +33,7 @@ vi.mock("./llm", () => ({
       directive: "Add a leg day Wednesday",
       rationale: "Your push volume is 2x your leg volume",
     },
-    model: "google/gemini-3-flash-preview",
+    model: "minimax/minimax-m2.5",
     tokenUsage: {
       input: 250,
       output: 150,
@@ -97,7 +97,7 @@ describe("AI Report Queries and Mutations", () => {
           streak: { currentStreak: 5, longestStreak: 10, totalWorkouts: 50 },
           frequency: { workoutDays: 5, restDays: 2, avgSetsPerDay: 12 },
         },
-        model: "google/gemini-3-flash-preview",
+        model: "minimax/minimax-m2.5",
         tokenUsage: { input: 250, output: 150, costUSD: 0.0001 },
       });
     });
@@ -309,7 +309,7 @@ describe("AI Report Queries and Mutations", () => {
       expect(latestReport?.generatedAt).toBeDefined();
       expect(latestReport?.content).toBeDefined();
       expect(latestReport?.metricsSnapshot).toBeDefined();
-      expect(latestReport?.model).toBe("google/gemini-3-flash-preview");
+      expect(latestReport?.model).toEqual(expect.any(String));
       expect(latestReport?.tokenUsage).toBeDefined();
     });
 

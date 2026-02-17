@@ -75,6 +75,7 @@ const DEFAULT_LIMITS: Record<
   { limit: number; windowMs: number }
 > = {
   "exercise:create": { limit: 10, windowMs: 60_000 },
+  "coach:turn": { limit: 10, windowMs: 60_000 },
   "aiReport:onDemand": { limit: 5, windowMs: 86_400_000 },
 };
 
@@ -90,12 +91,17 @@ export function getLimits(): Record<
   { limit: number; windowMs: number }
 > {
   const exerciseDefaults = DEFAULT_LIMITS["exercise:create"]!;
+  const coachDefaults = DEFAULT_LIMITS["coach:turn"]!;
   const reportDefaults = DEFAULT_LIMITS["aiReport:onDemand"]!;
 
   return {
     "exercise:create": {
       limit: parseEnvInt("RATE_LIMIT_EXERCISE_PER_MIN", exerciseDefaults.limit),
       windowMs: exerciseDefaults.windowMs,
+    },
+    "coach:turn": {
+      limit: parseEnvInt("RATE_LIMIT_COACH_PER_MIN", coachDefaults.limit),
+      windowMs: coachDefaults.windowMs,
     },
     "aiReport:onDemand": {
       limit: parseEnvInt("RATE_LIMIT_REPORTS_PER_DAY", reportDefaults.limit),

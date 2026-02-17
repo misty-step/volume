@@ -24,7 +24,7 @@
     "test:affected": "vitest --related --run",
     "security:audit": "pnpm audit --audit-level moderate",
     "security:scan": "trufflehog git file://. --only-verified --fail --no-update",
-    "quality:check": "node scripts/verify-coverage.js",
+    "quality:check": "tsx scripts/verify-coverage.ts",
     "quality:full": "pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build",
     "generate:releases": "tsx scripts/generate-releases.ts"
   },

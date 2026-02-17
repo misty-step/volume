@@ -58,12 +58,12 @@ export const getActiveUserIds = internalQuery({
  *
  * **Rate Limiting**: Max 100 users per run
  * - Prevents long-running jobs and API rate limits
- * - Typical runtime: ~5 min for 100 users (OpenAI latency ~3s/user)
+ * - Typical runtime: ~5 min for 100 users (LLM latency ~3s/user)
  *
  * **Cost Management**:
  * - Only generates for active users (not entire user base)
  * - Deduplication prevents duplicate API calls
- * - ~$0.002 per report × active users
+ * - Token usage is stored per report (aiReports.tokenUsage)
  */
 export const generateWeeklyReports = internalAction({
   args: {},
