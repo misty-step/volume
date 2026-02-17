@@ -26,6 +26,20 @@ describe("coach schema", () => {
     });
   });
 
+  it("rejects oversized conversations", () => {
+    const messages = Array.from({ length: 20 }, () => ({
+      role: "user",
+      content: "x".repeat(3000),
+    }));
+
+    expect(() =>
+      CoachTurnRequestSchema.parse({
+        messages,
+        preferences: { unit: "lbs", soundEnabled: true },
+      })
+    ).toThrow(/Conversation too large/);
+  });
+
   it("parses a turn response", () => {
     const parsed = CoachTurnResponseSchema.parse({
       assistantText: "Logged.",
@@ -46,6 +60,50 @@ describe("coach schema", () => {
     });
 
     expect(parsed.trace.toolsUsed).toEqual(["log_set"]);
+  });
+
+  it("enforces client_action payload shape", () => {
+    expect(() =>
+      CoachTurnResponseSchema.parse({
+        assistantText: "ok",
+        blocks: [
+          {
+            type: "client_action",
+            action: "set_sound",
+            payload: { unit: "kg" },
+          },
+        ],
+        trace: { toolsUsed: [], model: "test", fallbackUsed: false },
+      })
+    ).toThrow(/set_sound payload/);
+
+    expect(() =>
+      CoachTurnResponseSchema.parse({
+        assistantText: "ok",
+        blocks: [
+          {
+            type: "client_action",
+            action: "set_weight_unit",
+            payload: { enabled: true },
+          },
+        ],
+        trace: { toolsUsed: [], model: "test", fallbackUsed: false },
+      })
+    ).toThrow(/set_weight_unit payload/);
+
+    expect(() =>
+      CoachTurnResponseSchema.parse({
+        assistantText: "ok",
+        blocks: [
+          {
+            type: "client_action",
+            action: "set_weight_unit",
+            payload: { unit: "kg", extra: "nope" },
+          },
+        ],
+        trace: { toolsUsed: [], model: "test", fallbackUsed: false },
+      })
+    ).toThrow();
   });
 
   it("parses a stream tool_result event", () => {

@@ -7,6 +7,7 @@ function createFakeContext(options?: {
   todaySets?: any[];
   recentByExerciseId?: Map<string, any[]>;
   focusSuggestions?: any[];
+  userInput?: string;
 }) {
   const now = Date.UTC(2026, 1, 16, 12, 0, 0); // Feb 16, 2026
 
@@ -92,6 +93,7 @@ function createFakeContext(options?: {
     convex: convex as ConvexHttpClient,
     defaultUnit: "lbs",
     timezoneOffsetMinutes: 0,
+    userInput: options?.userInput,
   };
 
   return { ctx, convex, now };
@@ -147,6 +149,21 @@ describe("executeCoachTool", () => {
     expect(streamed.length).toBe(4);
     expect(streamed[0]?.[0]?.type).toBe("status");
     expect(streamed[0]?.[0]?.title).toContain("48 sec");
+  });
+
+  it("prefers deterministically parsed durations when userInput is available", async () => {
+    const { ctx } = createFakeContext({
+      userInput: "i did a dead hang for 48 seconds",
+    });
+
+    const result = await executeCoachTool(
+      "log_set",
+      { exercise_name: "Dead Hang", duration_seconds: 60 },
+      ctx
+    );
+
+    expect(result.blocks[0]?.type).toBe("status");
+    expect(result.blocks[0]?.title).toContain("48 sec");
   });
 
   it("builds an exercise report when the exercise exists", async () => {
