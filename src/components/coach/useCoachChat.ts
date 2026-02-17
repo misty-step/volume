@@ -7,18 +7,22 @@ import { readCoachStreamEvents } from "@/lib/coach/sse-client";
 import {
   CoachTurnResponseSchema,
   DEFAULT_COACH_SUGGESTIONS,
+  MAX_COACH_MESSAGES,
   type CoachBlock,
   type CoachMessageInput,
 } from "@/lib/coach/schema";
+
+type CoachTimelineBlock = {
+  id: string;
+  block: CoachBlock;
+};
 
 type CoachTimelineMessage = {
   id: string;
   role: "user" | "assistant";
   text: string;
-  blocks?: CoachBlock[];
+  blocks?: CoachTimelineBlock[];
 };
-
-const MAX_COACH_MESSAGES = 24;
 
 const createId = (() => {
   let counter = 0;
@@ -33,6 +37,10 @@ const createId = (() => {
     return `fallback-id-${Date.now()}-${counter}`;
   };
 })();
+
+function withIds(blocks: CoachBlock[]): CoachTimelineBlock[] {
+  return blocks.map((block) => ({ id: createId(), block }));
+}
 
 function trimCoachConversation(
   messages: CoachMessageInput[]
@@ -64,7 +72,7 @@ export function useCoachChat() {
       id: createId(),
       role: "assistant",
       text: "Coach agent online. Ask in natural language and I will decide tools dynamically.",
-      blocks: [
+      blocks: withIds([
         {
           type: "status",
           tone: "info",
@@ -76,7 +84,7 @@ export function useCoachChat() {
           type: "suggestions",
           prompts: DEFAULT_COACH_SUGGESTIONS,
         },
-      ],
+      ]),
     },
   ]);
   const [conversation, setConversation] = useState<CoachMessageInput[]>([]);
@@ -202,12 +210,13 @@ export function useCoachChat() {
 
           if (event.type === "tool_result") {
             applyClientActions(event.blocks);
+            const nextBlocks = withIds(event.blocks);
             setTimeline((prev) =>
               prev.map((message) =>
                 message.id === assistantId
                   ? {
                       ...message,
-                      blocks: [...(message.blocks ?? []), ...event.blocks],
+                      blocks: [...(message.blocks ?? []), ...nextBlocks],
                     }
                   : message
               )
@@ -224,10 +233,13 @@ export function useCoachChat() {
                       blocks: [
                         ...(message.blocks ?? []),
                         {
-                          type: "status",
-                          tone: "error",
-                          title: "Stream error",
-                          description: event.message,
+                          id: createId(),
+                          block: {
+                            type: "status",
+                            tone: "error",
+                            title: "Stream error",
+                            description: event.message,
+                          },
                         },
                       ],
                     }
@@ -250,7 +262,7 @@ export function useCoachChat() {
                   ? {
                       ...message,
                       text: payload.assistantText,
-                      blocks: payload.blocks,
+                      blocks: withIds(payload.blocks),
                     }
                   : message
               )
@@ -275,7 +287,7 @@ export function useCoachChat() {
             ? {
                 ...message,
                 text: payload.assistantText,
-                blocks: payload.blocks,
+                blocks: withIds(payload.blocks),
               }
             : message
         )
@@ -295,7 +307,7 @@ export function useCoachChat() {
             ? {
                 ...entry,
                 text: "I hit an error while planning this turn.",
-                blocks: [
+                blocks: withIds([
                   {
                     type: "status",
                     tone: "error",
@@ -306,7 +318,7 @@ export function useCoachChat() {
                     type: "suggestions",
                     prompts: DEFAULT_COACH_SUGGESTIONS,
                   },
-                ],
+                ]),
               }
             : entry
         )

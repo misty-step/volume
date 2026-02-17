@@ -55,11 +55,11 @@ export function findExercise(
 export async function ensureExercise(
   ctx: CoachToolContext,
   exerciseName: string
-): Promise<{ exercise: Exercise; created: boolean }> {
+): Promise<{ exercise: Exercise; created: boolean; exercises: Exercise[] }> {
   const exercises = await listExercises(ctx);
   const matched = findExercise(exercises, exerciseName);
   if (matched) {
-    return { exercise: matched, created: false };
+    return { exercise: matched, created: false, exercises };
   }
 
   const normalizedName = titleCase(exerciseName);
@@ -81,7 +81,11 @@ export async function ensureExercise(
     id: createdId,
   })) as Exercise | null;
   if (createdExercise) {
-    return { exercise: createdExercise, created: true };
+    return {
+      exercise: createdExercise,
+      created: true,
+      exercises: [...exercises, createdExercise],
+    };
   }
 
   // Should be immediate, but be defensive: if the freshly created exercise can't
@@ -91,7 +95,11 @@ export async function ensureExercise(
     refreshed.find((exercise) => exercise._id === createdId) ??
     findExercise(refreshed, normalizedName);
   if (matchedAfterCreate) {
-    return { exercise: matchedAfterCreate, created: true };
+    return {
+      exercise: matchedAfterCreate,
+      created: true,
+      exercises: refreshed,
+    };
   }
 
   throw new Error(

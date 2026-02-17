@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const MAX_COACH_MESSAGES = 30;
+
 export const CoachMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   content: z.string().trim().min(1).max(4000),
@@ -15,7 +17,7 @@ const MAX_TOTAL_MESSAGE_CHARS = 50_000;
 
 export const CoachTurnRequestSchema = z
   .object({
-    messages: z.array(CoachMessageSchema).min(1).max(30),
+    messages: z.array(CoachMessageSchema).min(1).max(MAX_COACH_MESSAGES),
     preferences: CoachPreferencesSchema,
   })
   .refine(

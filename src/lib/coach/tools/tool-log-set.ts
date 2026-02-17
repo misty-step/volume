@@ -7,12 +7,7 @@ import {
 } from "@/lib/coach/prototype-analytics";
 import { parseCoachIntent } from "@/lib/coach/prototype-intent";
 import type { CoachBlock } from "@/lib/coach/schema";
-import {
-  ensureExercise,
-  getRecentExerciseSets,
-  getTodaySets,
-  listExercises,
-} from "./data";
+import { ensureExercise, getRecentExerciseSets, getTodaySets } from "./data";
 import {
   formatSecondsShort,
   normalizeLookup,
@@ -27,7 +22,7 @@ import type {
   ToolResult,
 } from "./types";
 
-function preferParsedSetArgs(
+export function preferParsedSetArgs(
   rawArgs: {
     exercise_name: string;
     reps?: number;
@@ -127,10 +122,7 @@ export async function runLogSetTool(
     ctx.userInput
   );
 
-  let ensured: {
-    exercise: { _id: Id<"exercises">; name: string };
-    created: boolean;
-  };
+  let ensured: Awaited<ReturnType<typeof ensureExercise>>;
   try {
     ensured = await ensureExercise(ctx, args.exercise_name);
   } catch (error) {
@@ -178,12 +170,10 @@ export async function runLogSetTool(
 
   let todaySets: SetInput[];
   let recentSets: SetInput[];
-  let exercises: Array<{ _id: Id<"exercises">; name: string }>;
   try {
-    [todaySets, recentSets, exercises] = await Promise.all([
+    [todaySets, recentSets] = await Promise.all([
       getTodaySets(ctx),
       getRecentExerciseSets(ctx, ensured.exercise._id),
-      listExercises(ctx),
     ]);
   } catch (error) {
     const message =
@@ -216,6 +206,7 @@ export async function runLogSetTool(
     };
   }
 
+  const exercises = ensured.exercises;
   const exerciseNames = buildExerciseNameMap(
     exercises,
     ensured.exercise._id,

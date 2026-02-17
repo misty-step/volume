@@ -72,10 +72,10 @@ export function CoachPrototype() {
               <p className="text-sm whitespace-pre-wrap">{message.text}</p>
               {message.blocks && message.blocks.length > 0 ? (
                 <div className="space-y-3 mt-3">
-                  {message.blocks.map((block, index) => (
+                  {message.blocks.map((entry) => (
                     <CoachBlockRenderer
-                      key={`${message.id}-${block.type}-${index}`}
-                      block={block}
+                      key={entry.id}
+                      block={entry.block}
                       onPrompt={(prompt) => {
                         void sendPrompt(prompt);
                       }}
