@@ -26,8 +26,10 @@ export function CoachPrototype() {
     void sendPrompt(input);
   }
 
+  // 5.5rem = mobile BottomNav height (h-16) + breathing room. Safe-area keeps
+  // the composer clear of iOS home indicator.
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-6 space-y-4">
+    <main className="mx-auto w-full max-w-4xl flex flex-1 min-h-0 flex-col px-4 pt-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-6">
       <Card className="border-safety-orange">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -52,7 +54,11 @@ export function CoachPrototype() {
         </CardHeader>
       </Card>
 
-      <div className="space-y-4">
+      {/* Scrollable timeline: keeps newest messages reachable above fixed mobile UI. */}
+      <div
+        data-testid="coach-timeline"
+        className="flex-1 min-h-0 overflow-y-auto mt-4 space-y-4 pb-6 md:pb-4"
+      >
         {timeline.map((message) => (
           <div
             key={message.id}
@@ -96,7 +102,11 @@ export function CoachPrototype() {
         <div ref={endRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="flex items-center gap-2">
+      <form
+        onSubmit={handleSubmit}
+        data-testid="coach-composer"
+        className="flex items-center gap-2 mt-4 pt-2"
+      >
         <Input
           value={input}
           onChange={(event) => setInput(event.target.value)}
