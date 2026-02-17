@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.1](https://github.com/misty-step/volume/compare/v1.10.0...v1.10.1) (2026-02-17)
+
+
+### Bug Fixes
+
+* reserve space for mobile coach chat ([#353](https://github.com/misty-step/volume/issues/353)) ([4f5f7d5](https://github.com/misty-step/volume/commit/4f5f7d51aac82366c2bef920d8b67a8398203e2b))
+
 ## [1.10.0](https://github.com/misty-step/volume/compare/v1.9.2...v1.10.0) (2026-02-17)
 
 
