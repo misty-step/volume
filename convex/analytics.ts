@@ -2,7 +2,7 @@
  * ⚠️ IMPORTANT: Convex Import Pattern
  *
  * This file uses relative imports from packages/core instead of @volume/core.
- * This is required because Convex's esbuild bundler does not resolve pnpm
+ * This is required because Convex's esbuild bundler does not resolve bun
  * workspace symlinks correctly.
  *
  * DO NOT change these to @volume/core imports - the build will fail.

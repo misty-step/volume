@@ -2,8 +2,11 @@
   "name": "volume",
   "version": "1.10.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "concurrently --kill-others-on-fail -n \"Next,Convex,Stripe\" -c \"cyan,magenta,yellow\" \"pnpm dev:next\" \"pnpm dev:convex\" \"pnpm dev:stripe\"",
+    "dev": "concurrently --kill-others-on-fail -n \"Next,Convex,Stripe\" -c \"cyan,magenta,yellow\" \"bun run dev:next\" \"bun run dev:convex\" \"bun run dev:stripe\"",
     "dev:next": "next dev --turbopack",
     "dev:convex": "convex dev",
     "dev:stripe": "./scripts/dev-stripe.sh",
@@ -13,7 +16,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "analyze": "ANALYZE=true pnpm build",
+    "analyze": "ANALYZE=true bun run build",
     "prepare": "lefthook install || true",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -22,13 +25,13 @@
     "sync:prod": "./scripts/pull-prod-data.sh",
     "lint:fix": "eslint . --fix --max-warnings=0",
     "test:affected": "vitest --related --run",
-    "security:audit": "pnpm audit --audit-level moderate",
+    "security:audit": "bun pm scan",
     "security:scan": "trufflehog git file://. --only-verified --fail --no-update",
     "quality:check": "tsx scripts/verify-coverage.ts",
-    "quality:full": "pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build",
+    "quality:full": "bun run typecheck && bun run lint && bun run test:coverage && bun run build",
     "generate:releases": "tsx scripts/generate-releases.ts"
   },
-  "packageManager": "pnpm@10.17.1",
+  "packageManager": "bun@1.3.9",
   "dependencies": {
     "@clerk/nextjs": "^6.37.4",
     "@hookform/resolvers": "^5.2.2",

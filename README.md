@@ -11,8 +11,8 @@ Workout tracker that makes logging sets fast and shows you what's working.
 ## Quick Start
 
 ```bash
-pnpm install
-pnpm dev        # Runs Next.js (port 3000) + Convex (cloud) together
+bun install
+bun run dev     # Runs Next.js (port 3000) + Convex (cloud) together
 ```
 
 Open [localhost:3000](http://localhost:3000).
@@ -37,11 +37,11 @@ Open [localhost:3000](http://localhost:3000).
 ## Development
 
 ```bash
-pnpm dev          # Both servers
-pnpm typecheck    # TypeScript
-pnpm lint         # ESLint
-pnpm test         # Vitest (watch mode)
-pnpm test --run   # Vitest (single run)
+bun run dev           # Both servers
+bun run typecheck     # TypeScript
+bun run lint          # ESLint
+bun run test          # Vitest (watch mode)
+bun run test --run    # Vitest (single run)
 ```
 
 Quality gates run automatically via Lefthook (pre-commit, pre-push).
@@ -51,7 +51,7 @@ Quality gates run automatically via Lefthook (pre-commit, pre-push).
 ### 1. Convex (backend)
 
 ```bash
-pnpm convex dev   # Creates project, generates .env.local
+bunx convex dev   # Creates project, generates .env.local
 ```
 
 ### 2. Clerk (auth)
@@ -66,20 +66,20 @@ CLERK_SECRET_KEY=sk_test_...
 Then sync the JWT issuer to Convex:
 
 ```bash
-pnpm convex env set CLERK_JWT_ISSUER_DOMAIN "https://<your-dev>.clerk.accounts.dev"
+bunx convex env set CLERK_JWT_ISSUER_DOMAIN "https://<your-dev>.clerk.accounts.dev"
 ```
 
 ### 3. Start development
 
 ```bash
-pnpm dev
+bun run dev
 ```
 
 ## Troubleshooting
 
-**"Could not find public function"** - Run `pnpm convex dev` to sync after pulling changes.
+**"Could not find public function"** - Run `bunx convex dev` to sync after pulling changes.
 
-**Servers separately** - `pnpm dev:next` or `pnpm dev:convex` when isolating issues.
+**Servers separately** - `bun run dev:next` or `bun run dev:convex` when isolating issues.
 
 ## Tech Stack
 

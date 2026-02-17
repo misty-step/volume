@@ -44,10 +44,6 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
-      - name: Install pnpm
-        run: |
-          npm i -g pnpm@10.17.1
-          mkdir -p "$(pnpm store path --silent)"
       - name: Cerberus review (primary)
         id: cerberus_primary
         continue-on-error: true

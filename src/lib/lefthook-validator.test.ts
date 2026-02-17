@@ -137,15 +137,15 @@ pre-commit:
     });
 
     it("handles NODE_ENV prefix", () => {
-      expect(
-        validator.extractCommandBinary("NODE_ENV=test pnpm test")
-      ).toBe("pnpm");
+      expect(validator.extractCommandBinary("NODE_ENV=test pnpm test")).toBe(
+        "pnpm"
+      );
     });
 
     it("handles CI=true prefix", () => {
-      expect(
-        validator.extractCommandBinary("CI=true pnpm test:coverage")
-      ).toBe("pnpm");
+      expect(validator.extractCommandBinary("CI=true pnpm test:coverage")).toBe(
+        "pnpm"
+      );
     });
 
     it("handles multiple env prefixes", () => {
@@ -170,7 +170,7 @@ echo "second"`;
 
     it("handles commands with quoted arguments", () => {
       expect(
-        validator.extractCommandBinary('trufflehog git file://. --fail')
+        validator.extractCommandBinary("trufflehog git file://. --fail")
       ).toBe("trufflehog");
     });
   });
@@ -198,6 +198,27 @@ echo "second"`;
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContainEqual(
+        expect.stringContaining("Security audit level mismatch")
+      );
+    });
+
+    it("passes when audit uses bun pm scan", () => {
+      const configBunScan = `
+pre-push:
+  commands:
+    security-audit:
+      run: bun pm scan
+`;
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: () => configBunScan,
+        })
+      );
+
+      const result = validator.validate();
+
+      expect(result.valid).toBe(true);
+      expect(result.errors).not.toContainEqual(
         expect.stringContaining("Security audit level mismatch")
       );
     });

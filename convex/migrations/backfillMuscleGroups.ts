@@ -16,7 +16,7 @@ import type { Doc } from "../_generated/dataModel";
  *
  * Usage:
  * ```bash
- * pnpm convex run migrations:backfillMuscleGroups
+ * bunx convex run migrations:backfillMuscleGroups
  * ```
  *
  * Safety:

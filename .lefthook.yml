@@ -13,7 +13,7 @@ pre-commit:
     # === Code Formatting (Auto-fixable) ===
     format:
       glob: "*.{ts,tsx,js,jsx,json,md,yml,yaml}"
-      run: pnpm prettier --write {staged_files}
+      run: bunx prettier --write {staged_files}
       stage_fixed: true
       fail_text: "Formatting issues auto-fixed. Review and re-commit."
 
@@ -21,19 +21,19 @@ pre-commit:
     lint:
       glob: "*.{ts,tsx,js,jsx}"
       exclude: "convex/_generated/**"
-      run: pnpm eslint --fix --max-warnings=0 {staged_files}
+      run: bunx eslint --fix --max-warnings=0 {staged_files}
       stage_fixed: true
       fail_text: "Linting issues auto-fixed. Review and re-commit."
 
     # === Type Safety (Fast Incremental) ===
     typecheck:
       glob: "*.{ts,tsx}"
-      run: pnpm typecheck
+      run: bun run typecheck
       fail_text: "TypeScript errors found. Fix before committing."
 
     # === Configuration Validation ===
     validate-config:
-      run: npx tsx scripts/validate-lefthook-config.ts
+      run: bunx tsx scripts/validate-lefthook-config.ts
       fail_text: "❌ Configuration validation failed. Fix issues before committing."
 
     # === Convex Integration (Project-specific) ===
@@ -42,7 +42,7 @@ pre-commit:
       run: |
         echo ""
         echo "⚠️  Convex function changes detected"
-        echo "   Ensure you've tested with: pnpm dev"
+        echo "   Ensure you've tested with: bun run dev"
         echo "   (runs both Next.js AND Convex)"
         echo ""
       interactive: false
@@ -51,7 +51,7 @@ pre-commit:
 commit-msg:
   commands:
     commitlint:
-      run: pnpm commitlint --edit {1}
+      run: bunx commitlint --edit {1}
       fail_text: "❌ Commit message doesn't follow conventional commit standard."
 
 # Comprehensive quality gates (full verification)
@@ -60,22 +60,22 @@ pre-push:
   commands:
     # === Test Suite (Correctness) ===
     test-suite:
-      run: "NODE_ENV=test CI=true pnpm test:coverage"
-      fail_text: "❌ Test suite failed. Run 'pnpm test' for details."
+      run: "NODE_ENV=test CI=true bun run test:coverage"
+      fail_text: "❌ Test suite failed. Run 'bun run test' for details."
 
     # === Build Verification (Integration) ===
     build-check:
-      run: pnpm build
+      run: bun run build
       fail_text: "❌ Build failed. Fix build errors before pushing."
 
     # === Security Audit (Vulnerabilities) ===
     security-audit:
-      run: pnpm audit --audit-level=high
-      fail_text: "❌ Security vulnerabilities found. Run 'pnpm audit' for details."
+      run: bun pm scan
+      fail_text: "❌ Security vulnerabilities found. Run 'bun pm scan' for details."
 
     # === Bundle Analysis (Performance) ===
     bundle-analysis:
-      run: pnpm analyze
+      run: bun run analyze
       fail_text: "❌ Bundle analysis failed. Review bundle size changes."
       only:
         - ref: master
@@ -97,7 +97,7 @@ post-checkout:
       run: |
         echo ""
         echo "⚠️  Convex functions changed between branches"
-        echo "   Run: pnpm dev (or pnpm dev:convex)"
+        echo "   Run: bun run dev (or bun run dev:convex)"
         echo "   to sync types and deployment"
         echo ""
       glob: "convex/**/*"

@@ -49,10 +49,10 @@
 
 ## Test Results
 
-- [ ] `pnpm test` passes
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
-- [ ] `pnpm build` succeeds
+- [ ] `bun run test` passes
+- [ ] `bun run typecheck` passes
+- [ ] `bun run lint` passes
+- [ ] `bun run build` succeeds
 
 ## Screenshots (if applicable)
 
