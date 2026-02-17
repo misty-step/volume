@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0](https://github.com/misty-step/volume/compare/v1.9.2...v1.10.0) (2026-02-17)
+
+
+### Features
+
+* agentic coach prototype ([#337](https://github.com/misty-step/volume/issues/337)) ([4614e90](https://github.com/misty-step/volume/commit/4614e9075487572b5ee8f901f7ec7a022bf76ef5))
+
 ## [1.9.2](https://github.com/misty-step/volume/compare/v1.9.1...v1.9.2) (2026-02-06)
 
 
