@@ -53,6 +53,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           api-key: ${{ secrets.OPENROUTER_API_KEY }}
           model: ${{ matrix.model }}
+          timeout: "1200"
 
       - name: Decide fallback rerun
         id: cerberus_fallback_decision
@@ -63,12 +64,17 @@ jobs:
           verdict_json="${{ steps.cerberus_primary.outputs.verdict-json }}"
 
           if [[ -z "$verdict" || -z "$verdict_json" || ! -f "$verdict_json" ]]; then
-            echo "rerun=false" >> "$GITHUB_OUTPUT"
+            echo "rerun=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           confidence="$(jq -r '.confidence // 0' "$verdict_json")"
           summary="$(jq -r '.summary // ""' "$verdict_json")"
+
+          if [[ "$verdict" == "SKIP" ]]; then
+            echo "rerun=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           if [[ "$verdict" == "FAIL" ]] && [[ "$confidence" == "0" || "$confidence" == "0.0" ]] && [[ "$summary" == Review\ output\ could\ not\ be\ parsed* ]]; then
             echo "rerun=true" >> "$GITHUB_OUTPUT"
@@ -87,6 +93,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           api-key: ${{ secrets.OPENROUTER_API_KEY }}
           model: ${{ matrix.fallbackModel }}
+          timeout: "1200"
 
       - name: Enforce verdict
         if: always()
@@ -107,6 +114,11 @@ jobs:
 
           confidence="$(jq -r '.confidence // 0' "$verdict_json")"
           summary="$(jq -r '.summary // ""' "$verdict_json")"
+
+          if [[ "$verdict" == "SKIP" ]]; then
+            echo "::error::Cerberus ${{ matrix.perspective }} skipped (timeout/API error): $summary"
+            exit 1
+          fi
 
           if [[ "$verdict" != "FAIL" ]]; then
             exit 0
