@@ -14,7 +14,7 @@ This keeps the system agentic without becoming fragile.
 ## Runtime Flow
 
 1. Client sends conversation history + local preferences to `POST /api/coach`.
-2. Server planner (`OpenAI/OpenRouter`) runs tool-calling loop.
+2. Server planner (OpenRouter via OpenAI-compatible SDK) runs tool-calling loop.
 3. Deterministic tool handlers execute against Convex.
 4. Tool outputs are converted into typed UI blocks.
 5. Client renders blocks and applies any declared local actions.
@@ -34,13 +34,23 @@ Events:
 ## Modules
 
 - `src/app/api/coach/route.ts`
-  - planner loop, auth, fallback mode, response assembly.
+  - HTTP entry point (auth, request parsing, streaming vs JSON response).
+- `src/lib/coach/server/*`
+  - planner loop, SSE utilities, deterministic fallback.
 - `src/lib/coach/agent-tools.ts`
-  - deterministic tool handlers and tool definitions.
+  - tool definitions and tool executor (facade).
+- `src/lib/coach/tools/*`
+  - deterministic tool handlers and Convex access helpers.
 - `src/lib/coach/schema.ts`
   - request/response + UI block contracts.
+- `src/lib/coach/sse-client.ts`
+  - client-side SSE parsing.
 - `src/components/coach/CoachPrototype.tsx`
   - thin chat client and typed block renderer.
+- `src/components/coach/useCoachChat.ts`
+  - chat state + streaming orchestration.
+- `src/components/coach/CoachBlockRenderer.tsx`
+  - typed UI block rendering.
 
 ## Tool Surface
 
