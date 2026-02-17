@@ -5,6 +5,7 @@ import {
   summarizeExercisePerformance,
   summarizeTodaySets,
 } from "@/lib/coach/prototype-analytics";
+import { parseCoachIntent } from "@/lib/coach/prototype-intent";
 import type { CoachBlock } from "@/lib/coach/schema";
 import {
   ensureExercise,
@@ -14,6 +15,7 @@ import {
 } from "./data";
 import {
   formatSecondsShort,
+  normalizeLookup,
   toAnalyticsSetInput,
   uniquePrompts,
 } from "./helpers";
@@ -24,6 +26,52 @@ import type {
   SetInput,
   ToolResult,
 } from "./types";
+
+function preferParsedSetArgs(
+  rawArgs: {
+    exercise_name: string;
+    reps?: number;
+    duration_seconds?: number;
+    weight?: number;
+    unit?: "lbs" | "kg";
+  },
+  userInput?: string
+): typeof rawArgs {
+  if (!userInput) return rawArgs;
+  const intent = parseCoachIntent(userInput);
+  if (intent.type !== "log_set") return rawArgs;
+  const parsedName = normalizeLookup(intent.exerciseName);
+  const toolName = normalizeLookup(rawArgs.exercise_name);
+  const matches =
+    parsedName === toolName ||
+    parsedName.includes(toolName) ||
+    toolName.includes(parsedName);
+  if (!matches) {
+    return rawArgs;
+  }
+
+  if (intent.reps !== undefined) {
+    return {
+      ...rawArgs,
+      reps: intent.reps,
+      duration_seconds: undefined,
+      weight: intent.weight ?? rawArgs.weight,
+      unit: intent.unit ?? rawArgs.unit,
+    };
+  }
+
+  if (intent.durationSeconds !== undefined) {
+    return {
+      ...rawArgs,
+      reps: undefined,
+      duration_seconds: intent.durationSeconds,
+      weight: intent.weight ?? rawArgs.weight,
+      unit: intent.unit ?? rawArgs.unit,
+    };
+  }
+
+  return rawArgs;
+}
 
 function toolErrorResult({
   title,
@@ -74,7 +122,10 @@ export async function runLogSetTool(
   ctx: CoachToolContext,
   options?: CoachToolExecutionOptions
 ): Promise<ToolResult> {
-  const args = LogSetArgsSchema.parse(rawArgs);
+  const args = preferParsedSetArgs(
+    LogSetArgsSchema.parse(rawArgs),
+    ctx.userInput
+  );
 
   let ensured: {
     exercise: { _id: Id<"exercises">; name: string };

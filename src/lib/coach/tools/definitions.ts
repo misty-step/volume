@@ -4,15 +4,15 @@ export const COACH_TOOL_DEFINITIONS = [
     function: {
       name: "log_set",
       description:
-        "Log a workout set. Exactly one of reps or duration_seconds is required. Use reps for rep-based movements and duration_seconds for timed holds.",
+        "Log a workout set. Exactly one of reps or duration_seconds is required. Use reps for rep-based movements and duration_seconds (integer seconds) for timed holds. Preserve exact user numbers; do not round.",
       parameters: {
         type: "object",
         additionalProperties: false,
         properties: {
           exercise_name: { type: "string" },
-          reps: { type: "number" },
-          duration_seconds: { type: "number" },
-          weight: { type: "number" },
+          reps: { type: "integer", minimum: 1, maximum: 1000 },
+          duration_seconds: { type: "integer", minimum: 1, maximum: 86400 },
+          weight: { type: "number", minimum: 0, maximum: 5000 },
           unit: { type: "string", enum: ["lbs", "kg"] },
         },
         required: ["exercise_name"],

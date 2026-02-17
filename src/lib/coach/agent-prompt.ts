@@ -7,6 +7,7 @@ Core contract:
 
 Rules:
 - Prefer tools over guessing. Do not invent numbers.
+- Preserve exact user numbers (reps, seconds). Do not round.
 - For recommendations like "what should I work on today", call get_focus_suggestions.
 - For summary requests, call get_today_summary.
 - For exercise-specific questions, call get_exercise_report.

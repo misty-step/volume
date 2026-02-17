@@ -98,13 +98,18 @@ export function useCoachChat() {
     for (const block of blocks) {
       if (
         block.type === "client_action" &&
-        block.action === "set_weight_unit"
+        block.action === "set_weight_unit" &&
+        "unit" in block.payload
       ) {
         if (block.payload.unit === "lbs" || block.payload.unit === "kg") {
           setUnit(block.payload.unit);
         }
       }
-      if (block.type === "client_action" && block.action === "set_sound") {
+      if (
+        block.type === "client_action" &&
+        block.action === "set_sound" &&
+        "enabled" in block.payload
+      ) {
         if (typeof block.payload.enabled === "boolean") {
           setSoundEnabled(block.payload.enabled);
         }
@@ -161,7 +166,20 @@ export function useCoachChat() {
       });
 
       if (!response.ok) {
-        throw new Error(`Coach API failed (${response.status})`);
+        let detail = "";
+        try {
+          const data = (await response.json()) as unknown;
+          if (data && typeof data === "object" && "error" in data) {
+            detail = String((data as { error: unknown }).error);
+          }
+        } catch {
+          // ignore parse errors
+        }
+        throw new Error(
+          detail
+            ? `Coach API failed (${response.status}): ${detail}`
+            : `Coach API failed (${response.status})`
+        );
       }
 
       const contentType = response.headers.get("content-type") ?? "";
