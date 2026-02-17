@@ -23,24 +23,24 @@ jobs:
         include:
           - reviewer: APOLLO
             perspective: correctness
-            model: openrouter/moonshotai/kimi-k2.5
-            fallbackModel: openrouter/minimax/minimax-m2.5
+            model: openrouter/qwen/qwen3.5-plus-02-15
+            fallbackModel: openrouter/anthropic/claude-sonnet-4.6
           - reviewer: ATHENA
             perspective: architecture
-            model: openrouter/moonshotai/kimi-k2.5
-            fallbackModel: openrouter/minimax/minimax-m2.5
+            model: openrouter/qwen/qwen3.5-plus-02-15
+            fallbackModel: openrouter/anthropic/claude-sonnet-4.6
           - reviewer: SENTINEL
             perspective: security
-            model: openrouter/moonshotai/kimi-k2.5
-            fallbackModel: openrouter/minimax/minimax-m2.5
+            model: openrouter/qwen/qwen3.5-plus-02-15
+            fallbackModel: openrouter/anthropic/claude-sonnet-4.6
           - reviewer: VULCAN
             perspective: performance
-            model: openrouter/moonshotai/kimi-k2.5
-            fallbackModel: openrouter/minimax/minimax-m2.5
+            model: openrouter/qwen/qwen3.5-plus-02-15
+            fallbackModel: openrouter/anthropic/claude-sonnet-4.6
           - reviewer: ARTEMIS
             perspective: maintainability
-            model: openrouter/moonshotai/kimi-k2.5
-            fallbackModel: openrouter/minimax/minimax-m2.5
+            model: openrouter/qwen/qwen3.5-plus-02-15
+            fallbackModel: openrouter/anthropic/claude-sonnet-4.6
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
