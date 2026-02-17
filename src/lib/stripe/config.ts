@@ -1,4 +1,4 @@
-export const STRIPE_API_VERSION = "2025-12-15.clover";
+export const STRIPE_API_VERSION = "2026-01-28.clover";
 
 export function getRequiredEnv(key: string): string {
   const value = process.env[key]?.trim();

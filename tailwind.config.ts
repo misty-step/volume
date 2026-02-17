@@ -2,7 +2,7 @@ import type { Config } from "tailwindcss";
 import {
   BRUTALIST_COLORS,
   BRUTALIST_SHADOWS,
-} from "./src/config/design-tokens";
+} from "./src/config/design-tokens.ts";
 
 export default {
   darkMode: ["class"],
