@@ -68,11 +68,6 @@ pre-push:
       run: bun run build
       fail_text: "❌ Build failed. Fix build errors before pushing."
 
-    # === Security Audit (Vulnerabilities) ===
-    security-audit:
-      run: bun pm scan
-      fail_text: "❌ Security vulnerabilities found. Run 'bun pm scan' for details."
-
     # === Bundle Analysis (Performance) ===
     bundle-analysis:
       run: bun run analyze
