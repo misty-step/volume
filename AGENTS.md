@@ -35,7 +35,7 @@ Vitest with `jsdom` and Testing Library covers unit tests; name suites `<feature
 
 Pre-commit includes automated configuration validation to prevent consistency issues between Lefthook, CI workflows, and related tools:
 
-- **Coverage thresholds**: Must match between verify-coverage.js and vitest.config.ts
+- **Coverage thresholds**: Must match between verify-coverage.ts and vitest.config.ts
 - **Security audit levels**: Must align between Lefthook and GitHub Actions workflows
 - **Branch references**: Must reference existing branches in repository
 - **Command validity**: All tool commands must use valid CLI flags

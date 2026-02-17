@@ -17,14 +17,21 @@ export const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 /**
  * Model configurations for different use cases
  *
- * - MAIN: Gemini 3 Flash - Best cost/performance for creative tasks
- * - CLASSIFICATION: GPT-5 nano - Cheapest option for simple classification
+ * - MAIN: MiniMax M2.5 - Strong default agentic model (tools + JSON mode)
+ * - CLASSIFICATION: MiniMax M2.5 - Simple + reliable for short classification calls
+ * - WRITER: Kimi K2.5 - Strong writing model (e.g. release notes)
+ * - FALLBACK: GLM-5 - Alternate provider for resiliency
  */
+const DEFAULT_MODEL = "minimax/minimax-m2.5" as const;
 export const MODELS = {
-  /** Gemini 3 Flash - optimal for analysis and report generation */
-  MAIN: "google/gemini-3-flash-preview",
-  /** GPT-5 nano - cheapest option for simple classification tasks */
-  CLASSIFICATION: "openai/gpt-5-nano",
+  /** MiniMax M2.5 - default for report generation and agentic flows */
+  MAIN: DEFAULT_MODEL,
+  /** MiniMax M2.5 - used for short classification calls */
+  CLASSIFICATION: DEFAULT_MODEL,
+  /** Kimi K2.5 - writing-focused tasks */
+  WRITER: "moonshotai/kimi-k2.5",
+  /** GLM-5 - alternate model for fallback paths */
+  FALLBACK: "z-ai/glm-5",
 } as const;
 
 /**
@@ -32,13 +39,17 @@ export const MODELS = {
  * Used for cost tracking and estimation
  */
 export const PRICING = {
-  [MODELS.MAIN]: {
-    inputPerMillion: 0.10,   // Gemini 3 Flash pricing
-    outputPerMillion: 0.40,
+  [DEFAULT_MODEL]: {
+    inputPerMillion: 0.3,
+    outputPerMillion: 1.2,
   },
-  [MODELS.CLASSIFICATION]: {
-    inputPerMillion: 0.10,   // GPT-5 nano pricing
-    outputPerMillion: 0.40,
+  [MODELS.WRITER]: {
+    inputPerMillion: 0.23,
+    outputPerMillion: 3.0,
+  },
+  [MODELS.FALLBACK]: {
+    inputPerMillion: 0.3,
+    outputPerMillion: 2.55,
   },
 } as const;
 

@@ -31,7 +31,7 @@ CONVEX_REQUIRED_DESCRIPTIONS=(
   "Stripe API key for payment processing"
   "Stripe webhook signature verification"
   "Clerk JWT issuer for auth validation"
-  "OpenRouter API for AI features (Gemini 3 Flash)"
+  "OpenRouter API for AI features"
 )
 
 CONVEX_OPTIONAL_VARS=(

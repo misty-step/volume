@@ -40,7 +40,7 @@
 - [ ] Check Stripe Dashboard for test events
 - [ ] Test subscription cancellation/billing portal
 
-### External Integration Deployment (if modifying Stripe, Clerk, OpenAI, etc.)
+### External Integration Deployment (if modifying Stripe, Clerk, OpenRouter, etc.)
 
 - [ ] Verify env vars exist on **production** Convex: `./scripts/verify-env.sh --prod-only`
 - [ ] Test against real API (not mocks) in test/sandbox mode

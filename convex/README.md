@@ -26,7 +26,7 @@ requireOwnership(record, identity.subject);
 
 ### ai/
 
-AI report generation via OpenRouter (Gemini 3 Flash).
+AI report generation via OpenRouter (MiniMax M2.5).
 
 - `reports.ts` - Public queries/actions (entry point)
 - `generate.ts` - Report orchestration

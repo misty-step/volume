@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { getTodayRange, formatTimeAgo } from "./date-utils";
+import {
+  formatTimeAgo,
+  getTodayRange,
+  getTodayRangeForTimezoneOffset,
+} from "./date-utils";
 
 describe("date-utils", () => {
   describe("getTodayRange", () => {
@@ -103,6 +107,22 @@ describe("date-utils", () => {
       // Should still be the same day
       expect(startDate.getDate()).toBe(endDate.getDate());
       expect(start).toBeLessThan(end);
+    });
+  });
+
+  describe("getTodayRangeForTimezoneOffset", () => {
+    it("returns UTC timestamps that map to the user's local midnight boundaries", () => {
+      const nowMs = Date.parse("2025-10-07T14:30:00.000Z");
+
+      // UTC-6 (behind UTC): local day starts at 06:00Z and ends next day 05:59:59.999Z
+      const chicago = getTodayRangeForTimezoneOffset(360, nowMs);
+      expect(chicago.start).toBe(Date.parse("2025-10-07T06:00:00.000Z"));
+      expect(chicago.end).toBe(Date.parse("2025-10-08T05:59:59.999Z"));
+
+      // UTC+5:30 (ahead of UTC): local day starts previous day 18:30Z and ends 18:29:59.999Z
+      const kolkata = getTodayRangeForTimezoneOffset(-330, nowMs);
+      expect(kolkata.start).toBe(Date.parse("2025-10-06T18:30:00.000Z"));
+      expect(kolkata.end).toBe(Date.parse("2025-10-07T18:29:59.999Z"));
     });
   });
 

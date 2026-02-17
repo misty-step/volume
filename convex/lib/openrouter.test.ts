@@ -20,8 +20,10 @@ describe("openrouter constants", () => {
   });
 
   it("exports model identifiers", () => {
-    expect(MODELS.MAIN).toBe("google/gemini-3-flash-preview");
-    expect(MODELS.CLASSIFICATION).toBe("openai/gpt-5-nano");
+    expect(MODELS.MAIN).toBe("minimax/minimax-m2.5");
+    expect(MODELS.CLASSIFICATION).toBe("minimax/minimax-m2.5");
+    expect(MODELS.WRITER).toBe("moonshotai/kimi-k2.5");
+    expect(MODELS.FALLBACK).toBe("z-ai/glm-5");
   });
 
   it("has pricing for all models", () => {
@@ -62,33 +64,33 @@ describe("calculateCost", () => {
   });
 
   it("calculates input token cost", () => {
-    // 1M input tokens at $0.10 = $0.10
+    // 1M input tokens at $0.30 = $0.30
     const cost = calculateCost(MODELS.MAIN, 1_000_000, 0);
-    expect(cost).toBeCloseTo(0.1, 4);
+    expect(cost).toBeCloseTo(0.3, 4);
   });
 
   it("calculates output token cost", () => {
-    // 1M output tokens at $0.40 = $0.40
+    // 1M output tokens at $1.20 = $1.20
     const cost = calculateCost(MODELS.MAIN, 0, 1_000_000);
-    expect(cost).toBeCloseTo(0.4, 4);
+    expect(cost).toBeCloseTo(1.2, 4);
   });
 
   it("calculates combined cost", () => {
-    // 1M input ($0.10) + 1M output ($0.40) = $0.50
+    // 1M input ($0.30) + 1M output ($1.20) = $1.50
     const cost = calculateCost(MODELS.MAIN, 1_000_000, 1_000_000);
-    expect(cost).toBeCloseTo(0.5, 4);
+    expect(cost).toBeCloseTo(1.5, 4);
   });
 
   it("calculates cost for small token counts", () => {
     // 1000 input + 500 output
     const cost = calculateCost(MODELS.MAIN, 1000, 500);
-    // 1000 * 0.10 / 1M + 500 * 0.40 / 1M = 0.0001 + 0.0002 = 0.0003
-    expect(cost).toBeCloseTo(0.0003, 4);
+    // 1000 * 0.30 / 1M + 500 * 1.20 / 1M = 0.0003 + 0.0006 = 0.0009
+    expect(cost).toBeCloseTo(0.0009, 4);
   });
 
   it("works with classification model", () => {
     const cost = calculateCost(MODELS.CLASSIFICATION, 1_000_000, 1_000_000);
-    expect(cost).toBeCloseTo(0.5, 4);
+    expect(cost).toBeCloseTo(1.5, 4);
   });
 
   it("returns number with max 4 decimal places", () => {

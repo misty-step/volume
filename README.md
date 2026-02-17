@@ -21,17 +21,18 @@ Open [localhost:3000](http://localhost:3000).
 
 ## Understanding the Codebase
 
-| Doc | Purpose |
-|-----|---------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | System shape, data flow, where to start reading |
-| [CLAUDE.md](CLAUDE.md) | Detailed reference (commands, env vars, observability) |
-| [AGENTS.md](AGENTS.md) | Conventions for AI assistants |
-| [docs/adr/](docs/adr/) | Architectural decisions |
+| Doc                                | Purpose                                                |
+| ---------------------------------- | ------------------------------------------------------ |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System shape, data flow, where to start reading        |
+| [CLAUDE.md](CLAUDE.md)             | Detailed reference (commands, env vars, observability) |
+| [AGENTS.md](AGENTS.md)             | Conventions for AI assistants                          |
+| [docs/adr/](docs/adr/)             | Architectural decisions                                |
 
 **TL;DR architecture:**
+
 - `src/` - Next.js frontend (React + Tailwind)
 - `convex/` - Backend functions (mutations, queries, crons)
-- Clerk handles auth, Stripe handles payments, OpenAI generates insights
+- Clerk handles auth, Stripe handles payments, OpenRouter generates insights
 
 ## Development
 
@@ -82,7 +83,7 @@ pnpm dev
 
 ## Tech Stack
 
-Next.js 15, TypeScript, Tailwind, Convex (BaaS), Clerk (auth), Stripe (payments), OpenAI (insights)
+Next.js 15, TypeScript, Tailwind, Convex (BaaS), Clerk (auth), Stripe (payments), OpenRouter (insights)
 
 ## Features
 
@@ -97,6 +98,7 @@ See `BACKLOG.md` for planned features.
 ## Rate Limits
 
 AI endpoints are rate-limited per user:
+
 - Exercise creation: 10/minute
 - AI reports: 5/day
 

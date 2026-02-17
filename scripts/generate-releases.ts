@@ -6,7 +6,7 @@
  * 1. Structured JSON for each release (technical)
  * 2. LLM-synthesized product notes (user-focused)
  *
- * Uses OpenRouter as unified LLM gateway with Gemini 3 Flash.
+ * Uses OpenRouter as unified LLM gateway with Kimi K2.5.
  *
  * Usage:
  *   pnpm generate:releases           # Generate missing releases
@@ -17,19 +17,17 @@
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 import OpenAI from "openai";
-import {
-  parseChangelog,
-} from "../src/lib/releases/parser";
+import { parseChangelog } from "../src/lib/releases/parser";
 import type { Release, ReleaseManifest } from "../src/lib/releases/types";
 
 /**
  * OpenRouter configuration
  *
- * Using Gemini 3 Flash via OpenRouter for optimal cost/performance balance.
+ * Using Kimi K2.5 via OpenRouter for strong product writing.
  * OpenRouter provides unified access to 400+ models with OpenAI-compatible API.
  */
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
-const MODEL = "google/gemini-3-flash-preview";
+const MODEL = "moonshotai/kimi-k2.5";
 
 const CONTENT_DIR = join(process.cwd(), "content/releases");
 const CHANGELOG_PATH = join(process.cwd(), "CHANGELOG.md");
@@ -86,7 +84,8 @@ async function generateProductNotes(
   const changesSummary = release.changes
     .filter((c) => c.type === "feat" || c.type === "fix" || c.type === "perf")
     .map((c) => {
-      const type = c.type === "feat" ? "NEW" : c.type === "fix" ? "FIXED" : "FASTER";
+      const type =
+        c.type === "feat" ? "NEW" : c.type === "fix" ? "FIXED" : "FASTER";
       return `- ${type}: ${c.description}`;
     })
     .join("\n");
@@ -132,7 +131,9 @@ REQUIREMENTS:
  */
 function releaseExists(version: string): boolean {
   const dir = join(CONTENT_DIR, `v${version}`);
-  return existsSync(join(dir, "changelog.json")) && existsSync(join(dir, "notes.md"));
+  return (
+    existsSync(join(dir, "changelog.json")) && existsSync(join(dir, "notes.md"))
+  );
 }
 
 /**
@@ -143,10 +144,7 @@ function saveRelease(release: Release, productNotes: string): void {
   mkdirSync(dir, { recursive: true });
 
   // Save structured changelog
-  writeFileSync(
-    join(dir, "changelog.json"),
-    JSON.stringify(release, null, 2)
-  );
+  writeFileSync(join(dir, "changelog.json"), JSON.stringify(release, null, 2));
 
   // Save product notes
   writeFileSync(join(dir, "notes.md"), productNotes);

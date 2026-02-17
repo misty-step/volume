@@ -12,7 +12,7 @@ import type { Doc } from "../_generated/dataModel";
  * Backfill muscle groups for existing exercises
  *
  * One-time migration to classify all exercises that don't have muscleGroups.
- * Uses GPT-5-nano ($0.0001 per exercise) to classify exercises.
+ * Uses the OpenRouter classification model to classify exercises.
  *
  * Usage:
  * ```bash

@@ -25,7 +25,7 @@ export default function PrivacyPolicy() {
               Privacy Policy
             </h1>
             <p className="font-mono text-sm text-muted-foreground uppercase">
-              Last Updated: January 23, 2025
+              Last Updated: February 17, 2026
             </p>
           </div>
 
@@ -128,7 +128,8 @@ export default function PrivacyPolicy() {
                   3. AI and Machine Learning
                 </h2>
                 <p className="text-foreground/90 leading-relaxed mb-4">
-                  Volume uses AI (powered by OpenAI) to:
+                  Volume uses AI (powered by OpenRouter and third-party model
+                  providers) to:
                 </p>
                 <ul className="list-disc pl-6 space-y-2 text-foreground/90">
                   <li>Generate weekly workout summaries and insights</li>
@@ -136,10 +137,10 @@ export default function PrivacyPolicy() {
                   <li>Provide personalized recommendations</li>
                 </ul>
                 <p className="text-foreground/90 leading-relaxed mt-4">
-                  Your workout data is processed by OpenAI&apos;s API to
-                  generate these insights. OpenAI does not use your data to
-                  train their models. All data sent to AI services is encrypted
-                  in transit.
+                  Your workout data may be processed by OpenRouter and the
+                  underlying model provider to generate these insights. We only
+                  send the data needed to generate insights, and all data sent
+                  to AI services is encrypted in transit.
                 </p>
               </section>
 
@@ -229,18 +230,18 @@ export default function PrivacyPolicy() {
 
                   <div className="bg-muted/30 border-l-[3px] border-primary p-4">
                     <h3 className="font-mono text-sm uppercase mb-2">
-                      OpenAI (AI Insights)
+                      OpenRouter (AI Gateway)
                     </h3>
                     <p className="text-foreground/90 text-sm leading-relaxed">
-                      Generates workout insights and summaries. Your data is not
-                      used for model training. See{" "}
+                      Routes AI requests to third-party model providers to
+                      generate workout insights and summaries. See{" "}
                       <a
-                        href="https://openai.com/privacy/"
+                        href="https://openrouter.ai/privacy"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary hover:underline"
                       >
-                        OpenAI&apos;s Privacy Policy
+                        OpenRouter&apos;s Privacy Policy
                       </a>
                       .
                     </p>

@@ -28,7 +28,7 @@ src/app/(app)/page.tsx  →  Dashboard  →  useDashboard hook  →  convex/sets
 
 - `src/` - React UI, no business logic
 - `convex/` - All data mutations, auth checks, subscriptions
-- External: Clerk (auth), Stripe (payments), OpenRouter/Gemini (AI features)
+- External: Clerk (auth), Stripe (payments), OpenRouter (AI features)
 
 **Deep modules:** `useDashboard`, `useQuickLogForm`, `convex/analytics.ts`
 
@@ -49,7 +49,7 @@ CONVEX_DEPLOYMENT=prod:whimsical-marten-631 pnpm convex deploy -y
 
 ## Env Vars
 
-**Next.js (Vercel):** `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_*_PRICE_ID`, `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+**Next.js (Vercel):** `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_*_PRICE_ID`, `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `OPENROUTER_API_KEY`
 
 **Convex (both deployments):** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `CLERK_JWT_ISSUER_DOMAIN`, `OPENROUTER_API_KEY`
 
