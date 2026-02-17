@@ -4,7 +4,7 @@ export const COACH_TOOL_DEFINITIONS = [
     function: {
       name: "log_set",
       description:
-        "Log a workout set. Use reps for rep-based movements and duration_seconds for timed holds.",
+        "Log a workout set. Exactly one of reps or duration_seconds is required. Use reps for rep-based movements and duration_seconds for timed holds.",
       parameters: {
         type: "object",
         additionalProperties: false,
@@ -16,6 +16,7 @@ export const COACH_TOOL_DEFINITIONS = [
           unit: { type: "string", enum: ["lbs", "kg"] },
         },
         required: ["exercise_name"],
+        oneOf: [{ required: ["reps"] }, { required: ["duration_seconds"] }],
       },
     },
   },

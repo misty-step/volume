@@ -60,6 +60,7 @@ export async function runPlannerTurn({
   const blocks: CoachBlock[] = [];
   let assistantText = "";
   let hitToolLimit = false;
+  const localHistory = [...history];
 
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
@@ -75,7 +76,7 @@ User local prefs:
 - tactile sounds: ${preferences.soundEnabled ? "enabled" : "disabled"}
 `,
           },
-          ...history,
+          ...localHistory,
         ],
         tools:
           COACH_TOOL_DEFINITIONS as unknown as OpenAI.Chat.Completions.ChatCompletionTool[],
@@ -96,7 +97,7 @@ User local prefs:
         break;
       }
 
-      history.push({
+      localHistory.push({
         role: "assistant",
         content: assistantMessage.content ?? "",
         tool_calls: toolCalls,
@@ -114,7 +115,7 @@ User local prefs:
           );
           blocks.push(...errorBlocks);
           emitEvent?.({ type: "tool_result", toolName, blocks: errorBlocks });
-          history.push({
+          localHistory.push({
             role: "tool",
             tool_call_id: call.id,
             content: JSON.stringify({
@@ -150,7 +151,7 @@ User local prefs:
           if (emitEvent && !streamed) {
             emitEvent({ type: "tool_result", toolName, blocks: result.blocks });
           }
-          history.push({
+          localHistory.push({
             role: "tool",
             tool_call_id: call.id,
             content: JSON.stringify(result.outputForModel),
@@ -161,7 +162,7 @@ User local prefs:
           const errorBlocks = toolErrorBlocks(message);
           blocks.push(...errorBlocks);
           emitEvent?.({ type: "tool_result", toolName, blocks: errorBlocks });
-          history.push({
+          localHistory.push({
             role: "tool",
             tool_call_id: call.id,
             content: JSON.stringify({
