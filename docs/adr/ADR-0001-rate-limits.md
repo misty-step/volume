@@ -51,7 +51,7 @@ Rationale: Maximizes simplicity and explicitness while meeting cost-control goal
 
 - Table: `rateLimits { userId, scope, windowStartMs, windowMs, count, expiresAt }` with indexes `by_user_scope_window`, `by_expires`.
 - Helper: `assertRateLimit(ctx, userId, { scope, windowMs, limit, exempt? })` with hashed-user logging and Sentry breadcrumb on deny.
-- Defaults: 10 exercise creates/min; 5 reports/day; env overrides `RATE_LIMIT_EXERCISE_PER_MIN`, `RATE_LIMIT_REPORTS_PER_DAY`.
+- Defaults: 10 exercise creates/min; 10 coach turns/min; 5 reports/day; env overrides `RATE_LIMIT_EXERCISE_PER_MIN`, `RATE_LIMIT_COACH_PER_MIN`, `RATE_LIMIT_REPORTS_PER_DAY`.
 - Exemptions: cron/backfill/admin may pass `exempt: true`.
 - Pruning: optional `pruneExpiredRateLimits` using `by_expires`.
 

@@ -19,6 +19,28 @@ This keeps the system agentic without becoming fragile.
 4. Tool outputs are converted into typed UI blocks.
 5. Client renders blocks and applies any declared local actions.
 
+## API Contract (Prototype)
+
+Request (`POST /api/coach`)
+
+- Body
+  - `messages`: `{ role: "user" | "assistant", content: string }[]`
+    - max 30 messages
+    - max 4000 chars per message
+    - max 50k chars total
+  - `preferences`
+    - `unit`: `"lbs" | "kg"`
+    - `soundEnabled`: `boolean`
+    - `timezoneOffsetMinutes?`: number (JS `Date#getTimezoneOffset()` convention)
+- Auth: Clerk session; server uses Convex token template `convex`
+- Rate limiting: per-user fixed-window (`coach:turn`, default 10/min) via Convex `rateLimits` table
+
+Response (JSON mode)
+
+- `assistantText`: string
+- `blocks`: typed UI blocks (`status`, `metrics`, `trend`, `table`, `suggestions`, `client_action`)
+- `trace`: `{ toolsUsed: string[], model: string, fallbackUsed: boolean }`
+
 ## Streaming
 
 `POST /api/coach` supports SSE when the request `Accept` header includes `text/event-stream`.
@@ -30,6 +52,15 @@ Events:
 - `tool_result` (append typed blocks; may repeat per tool as blocks are produced)
 - `final` (canonical full response: assistant text + blocks + trace)
 - `error` (planner failed; final still follows with partial/fallback response)
+
+Each SSE frame is:
+
+```text
+event: <event-type>
+data: <json>
+```
+
+Where `data` is a `CoachStreamEvent` JSON object (see `src/lib/coach/schema.ts`).
 
 ## Modules
 
