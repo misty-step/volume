@@ -45,6 +45,7 @@ export async function runPlannerTurn({
   preferences,
   ctx,
   emitEvent,
+  signal,
 }: {
   runtime: PlannerRuntime;
   history: OpenAI.Chat.Completions.ChatCompletionMessageParam[];
@@ -55,6 +56,7 @@ export async function runPlannerTurn({
   };
   ctx: CoachToolContext;
   emitEvent?: (event: CoachStreamEvent) => void;
+  signal?: AbortSignal;
 }): Promise<PlannerRunResult> {
   const toolsUsed: string[] = [];
   const blocks: CoachBlock[] = [];
@@ -62,26 +64,49 @@ export async function runPlannerTurn({
   let hitToolLimit = false;
   const localHistory = [...history];
 
+  const abortMessage = () => {
+    if (!signal?.aborted) return "Planner aborted";
+    try {
+      const reason = (signal as unknown as { reason?: unknown }).reason;
+      if (typeof reason === "string" && reason.trim()) {
+        return `Planner aborted: ${reason}`;
+      }
+      if (reason instanceof Error && reason.message) {
+        return `Planner aborted: ${reason.message}`;
+      }
+    } catch {
+      // ignore
+    }
+    return "Planner aborted";
+  };
+
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
-      const completion = await runtime.client.chat.completions.create({
-        model: runtime.model,
-        messages: [
-          {
-            role: "system",
-            content: `${COACH_AGENT_SYSTEM_PROMPT}
+      if (signal?.aborted) {
+        throw new Error(abortMessage());
+      }
+
+      const completion = await runtime.client.chat.completions.create(
+        {
+          model: runtime.model,
+          messages: [
+            {
+              role: "system",
+              content: `${COACH_AGENT_SYSTEM_PROMPT}
 
 User local prefs:
 - default weight unit: ${preferences.unit}
 - tactile sounds: ${preferences.soundEnabled ? "enabled" : "disabled"}
 `,
-          },
-          ...localHistory,
-        ],
-        tools:
-          COACH_TOOL_DEFINITIONS as unknown as OpenAI.Chat.Completions.ChatCompletionTool[],
-        tool_choice: "auto",
-      });
+            },
+            ...localHistory,
+          ],
+          tools:
+            COACH_TOOL_DEFINITIONS as unknown as OpenAI.Chat.Completions.ChatCompletionTool[],
+          tool_choice: "auto",
+        },
+        signal ? { signal } : undefined
+      );
 
       const assistantMessage = completion.choices[0]?.message;
       if (!assistantMessage) {
@@ -104,6 +129,10 @@ User local prefs:
       });
 
       for (const call of toolCalls) {
+        if (signal?.aborted) {
+          throw new Error(abortMessage());
+        }
+
         const toolName = call.function.name;
         toolsUsed.push(toolName);
         emitEvent?.({ type: "tool_start", toolName });

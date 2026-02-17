@@ -8,6 +8,9 @@ export type PlannerRuntime = { client: OpenAI; model: string };
 export function getCoachRuntime(): PlannerRuntime | null {
   const openRouterKey = process.env.OPENROUTER_API_KEY;
   if (!openRouterKey) {
+    console.warn(
+      "[Coach] OPENROUTER_API_KEY missing; using deterministic fallback."
+    );
     return null;
   }
 
@@ -19,6 +22,7 @@ export function getCoachRuntime(): PlannerRuntime | null {
         "HTTP-Referer": "https://volume.fitness",
         "X-Title": "Volume Coach",
       },
+      timeout: 30_000,
     }),
     model: DEFAULT_COACH_MODEL,
   };
