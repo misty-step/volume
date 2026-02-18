@@ -60,6 +60,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: misty-step/cerberus@v2
+        id: cerberus
         with:
           perspective: ${{ matrix.perspective }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -71,6 +72,23 @@ jobs:
             Volume is a workout tracker: log sets fast, see what's working.
             Stack: Next.js App Router, TypeScript, Tailwind, Convex (data), Clerk (auth), Stripe (billing), Vercel (deploy).
             Design policy: deep modules, small interfaces, prefer deletion/simplification when safe.
+      - name: Fail job on Cerberus FAIL verdict
+        if: steps.cerberus.outcome == 'success' && (steps.cerberus.outputs.verdict == 'FAIL' || steps.cerberus.outputs.verdict == 'SKIP')
+        shell: bash
+        env:
+          VERDICT: ${{ steps.cerberus.outputs.verdict }}
+          VERDICT_JSON: ${{ steps.cerberus.outputs.verdict-json }}
+        run: |
+          summary=""
+          if [[ -n "$VERDICT_JSON" && -f "$VERDICT_JSON" ]]; then
+            summary="$(jq -r '.summary // empty' "$VERDICT_JSON" 2>/dev/null || true)"
+          fi
+          if [[ -n "$summary" ]]; then
+            echo "::error::Cerberus verdict: $VERDICT - $summary"
+          else
+            echo "::error::Cerberus verdict: $VERDICT"
+          fi
+          exit 1
 
   verdict:
     name: "Council Verdict"
@@ -84,4 +102,5 @@ jobs:
       - uses: misty-step/cerberus/verdict@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          fail-on-verdict: "true"
           fail-on-skip: "true"
