@@ -13,9 +13,9 @@ Use this checklist before deploying Convex functions to production.
 
 ### 2. Testing
 
-- [ ] `pnpm typecheck` passes without errors
-- [ ] `pnpm test --run` passes all tests
-- [ ] `pnpm build` succeeds without errors
+- [ ] `bun run typecheck` passes without errors
+- [ ] `bun run test --run` passes all tests
+- [ ] `bun run build` succeeds without errors
 - [ ] Manual testing completed for new features
 
 ### 3. Deployment
@@ -24,13 +24,13 @@ Use this checklist before deploying Convex functions to production.
 
 ```bash
 # Deploy Convex functions to production
-CONVEX_DEPLOYMENT=prod:whimsical-marten-631 pnpm convex deploy -y
+CONVEX_DEPLOYMENT=prod:whimsical-marten-631 bunx convex deploy -y
 ```
 
 - [ ] Convex functions deployed successfully
 - [ ] Production logs checked for errors:
   ```bash
-  CONVEX_DEPLOYMENT=prod:whimsical-marten-631 pnpm convex logs --history 20
+  CONVEX_DEPLOYMENT=prod:whimsical-marten-631 bunx convex logs --history 20
   ```
 
 #### Next.js Frontend Deployment
@@ -58,7 +58,7 @@ If deployment causes issues:
 
    ```bash
    git checkout <previous-commit-sha>
-   CONVEX_DEPLOYMENT=prod:whimsical-marten-631 pnpm convex deploy -y
+   CONVEX_DEPLOYMENT=prod:whimsical-marten-631 bunx convex deploy -y
    git checkout master
    ```
 

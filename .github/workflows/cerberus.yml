@@ -4,132 +4,104 @@ name: Cerberus Council
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
-
-permissions:
-  contents: read
-  pull-requests: write
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
 
 concurrency:
   group: cerberus-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  review:
-    name: "${{ matrix.reviewer }}"
+  draft-check:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    outputs:
+      is_draft: ${{ steps.draft.outputs.is_draft }}
+    steps:
+      - uses: misty-step/cerberus/draft-check@v2
+        id: draft
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  validate:
+    needs: draft-check
+    if: github.event.pull_request.head.repo.full_name == github.repository && needs.draft-check.outputs.is_draft != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: misty-step/cerberus/validate@v2
+
+  matrix:
+    needs: validate
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.generate.outputs.matrix }}
+      count: ${{ steps.generate.outputs.count }}
+    steps:
+      - uses: misty-step/cerberus/matrix@v2
+        id: generate
+
+  review:
+    needs: [matrix, draft-check]
+    if: github.event.pull_request.head.repo.full_name == github.repository && needs.draft-check.outputs.is_draft != 'true'
+    permissions:
+      contents: read
+      pull-requests: read
+    name: "${{ matrix.reviewer_label || matrix.reviewer }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
-      matrix:
-        include:
-          - reviewer: APOLLO
-            perspective: correctness
-            model: openrouter/moonshotai/kimi-k2.5
-            fallbackModel: openrouter/minimax/minimax-m2.5
-          - reviewer: ATHENA
-            perspective: architecture
-            model: openrouter/moonshotai/kimi-k2.5
-            fallbackModel: openrouter/minimax/minimax-m2.5
-          - reviewer: SENTINEL
-            perspective: security
-            model: openrouter/moonshotai/kimi-k2.5
-            fallbackModel: openrouter/minimax/minimax-m2.5
-          - reviewer: VULCAN
-            perspective: performance
-            model: openrouter/moonshotai/kimi-k2.5
-            fallbackModel: openrouter/minimax/minimax-m2.5
-          - reviewer: ARTEMIS
-            perspective: maintainability
-            model: openrouter/moonshotai/kimi-k2.5
-            fallbackModel: openrouter/minimax/minimax-m2.5
+      matrix: ${{ fromJson(needs.matrix.outputs.matrix) }}
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
-      - name: Install pnpm
-        run: |
-          npm i -g pnpm@10.17.1
-          mkdir -p "$(pnpm store path --silent)"
-      - name: Cerberus review (primary)
-        id: cerberus_primary
-        continue-on-error: true
-        uses: misty-step/cerberus@v1
+      - uses: misty-step/cerberus@v2
+        id: cerberus
         with:
           perspective: ${{ matrix.perspective }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           api-key: ${{ secrets.OPENROUTER_API_KEY }}
-          model: ${{ matrix.model }}
-
-      - name: Decide fallback rerun
-        id: cerberus_fallback_decision
-        if: always()
+          comment-policy: "never"
+          timeout: ${{ (matrix.perspective == 'testing' || matrix.perspective == 'architecture') && '1500' || '1200' }}
+          max-steps: ${{ (matrix.perspective == 'testing' || matrix.perspective == 'architecture') && '15' || '25' }}
+          fail-on-skip: "true"
+          context: |
+            Volume is a workout tracker: log sets fast, see what's working.
+            Stack: Next.js App Router, TypeScript, Tailwind, Convex (data), Clerk (auth), Stripe (billing), Vercel (deploy).
+            Design policy: deep modules, small interfaces, prefer deletion/simplification when safe.
+      - name: Fail job on Cerberus FAIL verdict
+        if: steps.cerberus.outcome == 'success' && (steps.cerberus.outputs.verdict == 'FAIL' || steps.cerberus.outputs.verdict == 'SKIP')
         shell: bash
+        env:
+          VERDICT: ${{ steps.cerberus.outputs.verdict }}
+          VERDICT_JSON: ${{ steps.cerberus.outputs.verdict-json }}
         run: |
-          verdict="${{ steps.cerberus_primary.outputs.verdict }}"
-          verdict_json="${{ steps.cerberus_primary.outputs.verdict-json }}"
-
-          if [[ -z "$verdict" || -z "$verdict_json" || ! -f "$verdict_json" ]]; then
-            echo "rerun=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          summary=""
+          if [[ -n "$VERDICT_JSON" && -f "$VERDICT_JSON" ]]; then
+            summary="$(jq -r '.summary // empty' "$VERDICT_JSON" 2>/dev/null || true)"
           fi
-
-          confidence="$(jq -r '.confidence // 0' "$verdict_json")"
-          summary="$(jq -r '.summary // ""' "$verdict_json")"
-
-          if [[ "$verdict" == "FAIL" ]] && [[ "$confidence" == "0" || "$confidence" == "0.0" ]] && [[ "$summary" == Review\ output\ could\ not\ be\ parsed* ]]; then
-            echo "rerun=true" >> "$GITHUB_OUTPUT"
-            exit 0
+          if [[ -n "$summary" ]]; then
+            echo "::error::Cerberus verdict: $VERDICT - $summary"
+          else
+            echo "::error::Cerberus verdict: $VERDICT"
           fi
-
-          echo "rerun=false" >> "$GITHUB_OUTPUT"
-
-      - name: Cerberus review (fallback)
-        id: cerberus_fallback
-        if: steps.cerberus_fallback_decision.outputs.rerun == 'true'
-        continue-on-error: true
-        uses: misty-step/cerberus@v1
-        with:
-          perspective: ${{ matrix.perspective }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          api-key: ${{ secrets.OPENROUTER_API_KEY }}
-          model: ${{ matrix.fallbackModel }}
-
-      - name: Enforce verdict
-        if: always()
-        shell: bash
-        run: |
-          verdict="${{ steps.cerberus_primary.outputs.verdict }}"
-          verdict_json="${{ steps.cerberus_primary.outputs.verdict-json }}"
-
-          if [[ "${{ steps.cerberus_fallback_decision.outputs.rerun }}" == "true" ]]; then
-            verdict="${{ steps.cerberus_fallback.outputs.verdict }}"
-            verdict_json="${{ steps.cerberus_fallback.outputs.verdict-json }}"
-          fi
-
-          if [[ -z "$verdict" || -z "$verdict_json" || ! -f "$verdict_json" ]]; then
-            echo "::warning::Cerberus ${{ matrix.perspective }} produced no verdict output. Skipping enforcement."
-            exit 0
-          fi
-
-          confidence="$(jq -r '.confidence // 0' "$verdict_json")"
-          summary="$(jq -r '.summary // ""' "$verdict_json")"
-
-          if [[ "$verdict" != "FAIL" ]]; then
-            exit 0
-          fi
-
-          if [[ "$confidence" == "0" || "$confidence" == "0.0" ]] && [[ "$summary" == Review\ output\ could\ not\ be\ parsed* ]]; then
-            echo "::warning::Cerberus ${{ matrix.perspective }} output could not be parsed; treating as SKIP to avoid flaky CI."
-            exit 0
-          fi
-
-          echo "::error::Cerberus ${{ matrix.perspective }} verdict: FAIL"
           exit 1
 
   verdict:
     name: "Council Verdict"
-    needs: review
-    if: always()
+    needs: [review, draft-check]
+    if: always() && needs.review.result != 'skipped' && needs.draft-check.outputs.is_draft != 'true'
+    permissions:
+      contents: read
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - uses: misty-step/cerberus/verdict@v1
+      - uses: misty-step/cerberus/verdict@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          fail-on-verdict: "true"
+          fail-on-skip: "true"

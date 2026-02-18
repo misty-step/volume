@@ -46,7 +46,7 @@ The GitHub Actions runner currently uses Git version 2.52.0, which has known com
 
 1. **Verify Cache Key Uniqueness**:
    - Ensure cache keys include job identifier
-   - Use `key: ${{ runner.os }}-${{ github.sha }}-${{ hashFiles('**/pnpm-lock.yaml') }}`
+   - Use `key: ${{ runner.os }}-${{ github.sha }}-${{ hashFiles('**/bun.lock') }}`
 
 2. **Monitor Cache Conflicts**:
    - Check logs for "Unable to reserve cache with key" errors

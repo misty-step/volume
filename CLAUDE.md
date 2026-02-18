@@ -5,9 +5,9 @@ Volume: workout tracker. Log sets fast, see what's working.
 ## Run & Test
 
 ```bash
-pnpm dev              # Next.js + Convex together
-pnpm test --run       # Tests (single run)
-pnpm typecheck && pnpm lint && pnpm build  # Quality checks
+bun run dev           # Next.js + Convex together
+bun run test --run    # Tests (single run)
+bun run typecheck && bun run lint && bun run build  # Quality checks
 ```
 
 Lefthook enforces quality gates on commit/push.
@@ -38,10 +38,10 @@ Separate Convex dev/prod deployments. Env vars must be set on both.
 
 ```bash
 # Dev (automatic)
-pnpm convex dev
+bun run dev:convex
 
 # Production (manual)
-CONVEX_DEPLOYMENT=prod:whimsical-marten-631 pnpm convex deploy -y
+CONVEX_DEPLOYMENT=prod:whimsical-marten-631 bunx convex deploy -y
 
 # Check prod env vars
 ./scripts/verify-env.sh --prod-only
@@ -81,7 +81,7 @@ CONVEX_DEPLOYMENT=prod:whimsical-marten-631 pnpm convex deploy -y
 curl https://volume.fitness/api/health | jq
 
 # 2. Check logs
-CONVEX_DEPLOYMENT=prod:whimsical-marten-631 npx convex logs --history 100
+CONVEX_DEPLOYMENT=prod:whimsical-marten-631 bunx convex logs --history 100
 
 # 3. Check dashboards (Stripe webhooks, Clerk logs, Sentry)
 ```

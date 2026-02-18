@@ -93,7 +93,7 @@ export class LefthookConfigValidator {
   }
 
   /**
-   * Validate that security audit uses --audit-level=high
+   * Validate that security audit uses --audit-level=high (npm/pnpm) or bun pm scan (bun)
    */
   validateSecurityAuditLevel(config: LefthookConfig): void {
     const prePushConfig = config["pre-push"];
@@ -106,11 +106,13 @@ export class LefthookConfigValidator {
 
     if (auditCommands.length === 0) return;
 
-    const usesHighLevel = auditCommands.some(([, cmd]) =>
-      cmd.run?.includes("--audit-level=high")
+    const usesValidAudit = auditCommands.some(
+      ([, cmd]) =>
+        cmd.run?.includes("--audit-level=high") ||
+        cmd.run?.includes("bun pm scan") // bun's security scanner (no level flag needed)
     );
 
-    if (!usesHighLevel) {
+    if (!usesValidAudit) {
       this.errors.push(
         "❌ Security audit level mismatch: Lefthook should use --audit-level=high to match CI"
       );
@@ -128,7 +130,9 @@ export class LefthookConfigValidator {
 
     for (const { ref } of bundleAnalysis.only) {
       if (!validBranches.includes(ref)) {
-        this.errors.push(`❌ Invalid branch reference: ${ref} in bundle-analysis`);
+        this.errors.push(
+          `❌ Invalid branch reference: ${ref} in bundle-analysis`
+        );
       }
     }
   }
