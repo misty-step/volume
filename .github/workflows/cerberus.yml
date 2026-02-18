@@ -66,8 +66,8 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           api-key: ${{ secrets.OPENROUTER_API_KEY }}
           comment-policy: "never"
-          timeout: ${{ matrix.perspective == 'testing' && '1500' || '1200' }}
-          max-steps: ${{ matrix.perspective == 'testing' && '15' || '25' }}
+          timeout: ${{ (matrix.perspective == 'testing' || matrix.perspective == 'architecture') && '1500' || '1200' }}
+          max-steps: ${{ (matrix.perspective == 'testing' || matrix.perspective == 'architecture') && '15' || '25' }}
           fail-on-skip: "true"
           context: |
             Volume is a workout tracker: log sets fast, see what's working.
