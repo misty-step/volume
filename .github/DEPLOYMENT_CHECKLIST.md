@@ -68,7 +68,7 @@ If deployment causes issues:
 
 Ensure production environment variables are set correctly:
 
-### Convex Environment (set via `npx convex env set <key> <value> --prod`)
+### Convex Environment (set via `bunx convex env set <key> <value> --prod`)
 
 - [ ] `OPENROUTER_API_KEY` - OpenRouter API key for AI features
 - [ ] Any new environment variables added since last deployment

@@ -51,7 +51,7 @@ One-time data migrations. Run via Convex dashboard.
 ## Testing
 
 ```bash
-pnpm test convex/
+bun run test convex/
 ```
 
 Each domain file has a `.test.ts` companion.

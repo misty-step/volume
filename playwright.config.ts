@@ -48,7 +48,7 @@ export default defineConfig({
   webServer: {
     // Always use dev server for E2E tests - it respects runtime env vars
     // Production build bakes env vars at build time, so they can't be overridden
-    command: "pnpm dev:next",
+    command: "bun run dev:next",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     stdout: "ignore",

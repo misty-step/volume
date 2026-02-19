@@ -29,18 +29,18 @@ We use Playwright for end-to-end testing. Tests are located in `e2e/`.
 - **Interactive Mode** (opens UI):
 
   ```bash
-  pnpm test:ui
+  bun run test:ui
   ```
 
 - **Headless Mode** (CI style):
 
   ```bash
-  pnpm test:e2e
+  bun run test:e2e
   ```
 
 - **Specific Test File**:
   ```bash
-  pnpm test:e2e e2e/critical-flow.spec.ts
+  bun run test:e2e e2e/critical-flow.spec.ts
   ```
 
 ### Authentication
