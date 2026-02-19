@@ -26,7 +26,7 @@ echo "   Source: $DEV_DEPLOYMENT"
 echo "   Output: $DEV_EXPORT"
 echo ""
 
-npx convex export \
+bunx convex export \
   --deployment-name "$DEV_DEPLOYMENT" \
   --path "$DEV_EXPORT" \
   --include-file-storage
@@ -70,7 +70,7 @@ echo "   Using --replace-all (will clear existing prod data)"
 echo ""
 
 # Step 6: Import to production
-npx convex import \
+bunx convex import \
   --deployment-name "$PROD_DEPLOYMENT" \
   --replace-all \
   --yes \

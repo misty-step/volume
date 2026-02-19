@@ -16,7 +16,7 @@ echo ""
 
 # Export from production (read-only operation)
 echo "📤 Exporting from production..."
-npx convex export \
+bunx convex export \
   --deployment-name "$PROD" \
   --path "$TEMP_FILE" \
   --include-file-storage
@@ -42,7 +42,7 @@ echo "✓ Export validated: $(echo "scale=2; $FILE_SIZE / 1024 / 1024" | bc)MB"
 # Import to dev (wipes dev data)
 echo ""
 echo "📥 Importing to dev (replacing all data)..."
-npx convex import \
+bunx convex import \
   --deployment-name "$DEV" \
   --replace-all \
   --yes \
@@ -53,5 +53,5 @@ rm -f "$TEMP_FILE"
 
 echo ""
 echo "✅ Dev synced with production data!"
-echo "   Run 'pnpm dev' to start testing with real data"
+echo "   Run 'bun run dev' to start testing with real data"
 echo ""

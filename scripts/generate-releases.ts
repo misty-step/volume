@@ -9,9 +9,9 @@
  * Uses OpenRouter as unified LLM gateway with Kimi K2.5.
  *
  * Usage:
- *   pnpm generate:releases           # Generate missing releases
- *   pnpm generate:releases --dry-run # Parse only, no LLM calls
- *   pnpm generate:releases --force   # Regenerate all releases
+ *   bun run generate:releases           # Generate missing releases
+ *   bun run generate:releases --dry-run # Parse only, no LLM calls
+ *   bun run generate:releases --force   # Regenerate all releases
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "fs";

@@ -6,12 +6,12 @@ App router code lives under `src/app`, with shared UI in `src/components/{dashbo
 
 ## Build, Test, and Development Commands
 
-- `pnpm dev` runs Next.js and Convex together; use `pnpm dev:next` or `pnpm dev:convex` when isolating issues.
-- `pnpm build` creates the production bundle; add `ANALYZE=true pnpm build` when you need bundle stats.
-- `pnpm lint`, `pnpm lint:fix`, `pnpm typecheck`, and `pnpm format:check` enforce ESLint, TypeScript, and Prettier rules.
-- `pnpm test`, `pnpm test:ui`, `pnpm test:coverage`, and `pnpm test:affected` run Vitest, launch the UI runner, enforce coverage thresholds, and test only affected files.
-- `pnpm security:audit` and `pnpm security:scan` check for vulnerabilities and secrets.
-- `pnpm quality:check` and `pnpm quality:full` run comprehensive quality verification.
+- `bun run dev` runs Next.js and Convex together; use `bun run dev:next` or `bun run dev:convex` when isolating issues.
+- `bun run build` creates the production bundle; add `ANALYZE=true bun run build` when you need bundle stats.
+- `bun run lint`, `bun run lint:fix`, `bun run typecheck`, and `bun run format:check` enforce ESLint, TypeScript, and Prettier rules.
+- `bun run test`, `bun run test:ui`, `bun run test:coverage`, and `bun run test:affected` run Vitest, launch the UI runner, enforce coverage thresholds, and test only affected files.
+- `bun run security:audit` and `bun run security:scan` check for vulnerabilities and secrets.
+- `bun run quality:check` and `bun run quality:full` run comprehensive quality verification.
 
 ## Coding Style & Naming Conventions
 
@@ -19,7 +19,7 @@ Prettier (tab width 2, double quotes, trailing commas) governs formatting, and l
 
 ## Testing Guidelines
 
-Vitest with `jsdom` and Testing Library covers unit tests; name suites `<feature>.test.ts[x]` or `<feature>.spec.ts[x]`. Colocate Convex tests inside `convex/` to validate data guards. `pnpm test:coverage` enforces 70% minimums for lines, branches, functions, and statements—add focused cases when new logic dips below that bar.
+Vitest with `jsdom` and Testing Library covers unit tests; name suites `<feature>.test.ts[x]` or `<feature>.spec.ts[x]`. Colocate Convex tests inside `convex/` to validate data guards. `bun run test:coverage` enforces 70% minimums for lines, branches, functions, and statements—add focused cases when new logic dips below that bar.
 
 ## Commit & Pull Request Guidelines
 
@@ -50,7 +50,7 @@ SKIP_QUALITY_GATES=1 git push
 
 Use sparingly and document in PR comments when bypassed.
 
-Commits follow [Conventional Commits](https://www.conventionalcommits.org/) format, enforced by Lefthook commit-msg hook. Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`. Format: `<type>: <description>` (e.g., `fix: restore autofocus on mobile`). Each PR should supply a short summary, link related issues, document schema or environment changes, and include screenshots for UI updates. Lefthook runs quality gates, config validation, and surfaces Convex warnings; rerun `pnpm dev` before pushing to ensure both servers stay in sync.
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/) format, enforced by Lefthook commit-msg hook. Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`. Format: `<type>: <description>` (e.g., `fix: restore autofocus on mobile`). Each PR should supply a short summary, link related issues, document schema or environment changes, and include screenshots for UI updates. Lefthook runs quality gates, config validation, and surfaces Convex warnings; rerun `bun run dev` before pushing to ensure both servers stay in sync.
 
 ## Release Management
 
@@ -58,4 +58,4 @@ This project uses release-please for automated versioning. When commits merge to
 
 ## Environment & Sync Tips
 
-Store secrets in `.env.local` with Clerk keys and `NEXT_PUBLIC_CONVEX_URL`. After pulling backend updates, run `pnpm convex dev` once to regenerate types. The post-checkout hook already reminds you—follow it before testing or reviewing behavior.
+Store secrets in `.env.local` with Clerk keys and `NEXT_PUBLIC_CONVEX_URL`. After pulling backend updates, run `bunx convex dev` once to regenerate types. The post-checkout hook already reminds you—follow it before testing or reviewing behavior.
