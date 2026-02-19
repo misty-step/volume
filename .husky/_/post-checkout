@@ -16,6 +16,9 @@ call_lefthook()
   elif lefthook -h >/dev/null 2>&1
   then
     lefthook "$@"
+  elif [ -f /opt/homebrew/bin/lefthook ] && /opt/homebrew/bin/lefthook -h >/dev/null 2>&1
+  then
+    /opt/homebrew/bin/lefthook "$@"
   else
     dir="$(git rev-parse --show-toplevel)"
     osArch=$(uname | tr '[:upper:]' '[:lower:]')
