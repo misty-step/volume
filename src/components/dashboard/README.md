@@ -21,19 +21,20 @@ Dashboard
 
 ## Key Components
 
-| Component | Responsibility |
-|-----------|----------------|
-| `quick-log-form.tsx` | Form state, validation, PR detection, celebratory feedback |
-| `exercise-set-group.tsx` | Expandable exercise card with repeat/delete actions |
-| `exercise-selector-dialog.tsx` | Modal for choosing exercise (mobile-friendly) |
-| `ghost-set-display.tsx` | Suggestion UI for progressive overload |
-| `duration-input.tsx` | Time-based exercise input (mm:ss) |
+| Component                      | Responsibility                                             |
+| ------------------------------ | ---------------------------------------------------------- |
+| `quick-log-form.tsx`           | Form state, validation, PR detection, celebratory feedback |
+| `exercise-set-group.tsx`       | Expandable exercise card with repeat/delete actions        |
+| `exercise-selector-dialog.tsx` | Modal for choosing exercise (mobile-friendly)              |
+| `ghost-set-display.tsx`        | Suggestion UI for progressive overload                     |
+| `duration-input.tsx`           | Time-based exercise input (mm:ss)                          |
 
 ## Subdirectory
 
 ### workout-context-carousel/
 
 Charts and detail panels for expanded exercise view.
+
 - `data-block.tsx` - Key metrics display
 - `bar-chart.tsx` - Volume visualization
 - `details-section.tsx` - Session breakdown
@@ -48,5 +49,5 @@ Charts and detail panels for expanded exercise view.
 ## Testing
 
 ```bash
-pnpm test src/components/dashboard
+bun run test src/components/dashboard
 ```

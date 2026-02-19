@@ -31,7 +31,7 @@ echo "[Stripe] Setting up webhook forwarding..."
 # Get webhook secret and set in Convex (suppress convex output)
 WEBHOOK_SECRET=$(stripe listen --forward-to "$WEBHOOK_URL" --print-secret 2>/dev/null)
 if [[ -n "$WEBHOOK_SECRET" ]]; then
-  npx convex env set STRIPE_WEBHOOK_SECRET "$WEBHOOK_SECRET" > /dev/null 2>&1
+  bunx convex env set STRIPE_WEBHOOK_SECRET "$WEBHOOK_SECRET" > /dev/null 2>&1
   echo "[Stripe] Webhook secret configured"
 fi
 

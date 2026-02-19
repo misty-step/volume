@@ -73,10 +73,10 @@ fi
 VALUE=$(printf '%s' "$VALUE" | tr -d '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
 echo "Setting $VAR_NAME on $ENV deployment ($DEPLOYMENT)..."
-CONVEX_DEPLOYMENT="$DEPLOYMENT" npx convex env set "$VAR_NAME" "$VALUE"
+CONVEX_DEPLOYMENT="$DEPLOYMENT" bunx convex env set "$VAR_NAME" "$VALUE"
 
 echo ""
 echo "Success! Verifying..."
-CONVEX_DEPLOYMENT="$DEPLOYMENT" npx convex env list | grep "^$VAR_NAME=" | sed 's/=.*/=***/'
+CONVEX_DEPLOYMENT="$DEPLOYMENT" bunx convex env list | grep "^$VAR_NAME=" | sed 's/=.*/=***/'
 echo ""
 echo "To verify full setup, run: ./scripts/verify-env.sh"

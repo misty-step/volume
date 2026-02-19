@@ -1,4 +1,4 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env bun
 /**
  * CLI wrapper for Lefthook Configuration Validator
  *

@@ -81,8 +81,8 @@ log_error() {
 }
 
 # Check if convex CLI is available
-if ! command -v npx &> /dev/null; then
-  log_error "Error: npx not found. Install Node.js and npm."
+if ! command -v bunx &> /dev/null; then
+  log_error "Error: bunx not found. Install Bun."
   exit 2
 fi
 
@@ -95,7 +95,7 @@ get_convex_env() {
   if [[ "$deployment" == *"prod:"* ]]; then
     prod_flag="--prod"
   fi
-  npx convex env list $prod_flag 2>/dev/null || echo ""
+  bunx convex env list $prod_flag 2>/dev/null || echo ""
 }
 
 # Check if a var exists in env list
@@ -235,9 +235,9 @@ else
   done
   log ""
   log "To set a missing variable:"
-  log "  CONVEX_DEPLOYMENT=<deployment> npx convex env set <VAR_NAME> \"<value>\""
+  log "  CONVEX_DEPLOYMENT=<deployment> bunx convex env set <VAR_NAME> \"<value>\""
   log ""
   log "Example:"
-  log "  CONVEX_DEPLOYMENT=$CONVEX_PROD npx convex env set STRIPE_SECRET_KEY \"sk_live_...\""
+  log "  CONVEX_DEPLOYMENT=$CONVEX_PROD bunx convex env set STRIPE_SECRET_KEY \"sk_live_...\""
   exit 1
 fi
