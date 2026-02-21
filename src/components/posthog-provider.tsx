@@ -15,8 +15,10 @@ export function PostHogProvider({ children }: PostHogProviderProps) {
     if (!posthogKey) return;
 
     posthog.init(posthogKey, {
-      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "/ingest",
+      ui_host: "https://us.posthog.com",
       capture_pageview: "history_change",
+      respect_dnt: true,
     });
   }, []);
 

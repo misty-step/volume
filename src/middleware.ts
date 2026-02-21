@@ -6,6 +6,8 @@ const isPublicRoute = createRouteMatcher([
   "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
+  // Analytics proxy (PostHog /ingest rewrite)
+  "/ingest(.*)",
   // Legal pages
   "/terms",
   "/privacy",
