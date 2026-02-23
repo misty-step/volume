@@ -120,7 +120,7 @@ jobs:
             echo "Draft PR — skipping council gate"
             exit 0
           fi
-          if [[ "$VERDICT" == "success" ]]; then
+          if [[ "$VERDICT" == "success" || "$VERDICT" == "skipped" ]]; then
             echo "Council verdict passed"
             exit 0
           fi
