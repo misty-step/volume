@@ -28,6 +28,12 @@ export type PlannerRunResult =
 
 const MAX_TOOL_ROUNDS = 5;
 const MODEL_CALL_TIMEOUT_MS = 30_000;
+const BLOCKS_HANDLED_FLAG = "__coachBlocksHandled";
+
+function isBlocksHandledOutput(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) return false;
+  return (value as Record<string, unknown>)[BLOCKS_HANDLED_FLAG] === true;
+}
 
 export async function runPlannerTurn({
   runtime,
@@ -98,6 +104,21 @@ User local prefs:
               type: "tool_result",
               toolName: chunk.toolName,
               blocks: outputResult.data.blocks,
+            });
+          } else if (!isBlocksHandledOutput(chunk.output)) {
+            const toolBlocks: CoachBlock[] = [
+              {
+                type: "status",
+                tone: "error",
+                title: `Tool ${chunk.toolName} returned unexpected output`,
+                description: "The tool result was not in the expected format.",
+              },
+            ];
+            blocks.push(...toolBlocks);
+            emitEvent?.({
+              type: "tool_result",
+              toolName: chunk.toolName,
+              blocks: toolBlocks,
             });
           }
         }

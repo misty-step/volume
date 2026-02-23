@@ -18,6 +18,7 @@ import { runSetSoundTool } from "@/lib/coach/tools/tool-set-sound";
 export type ToolOutput = Record<string, unknown>;
 type ToolBlocksHandler = (toolName: string, blocks: CoachBlock[]) => void;
 type CreateCoachToolsOptions = { onBlocks?: ToolBlocksHandler };
+const BLOCKS_HANDLED_FLAG = "__coachBlocksHandled";
 
 function wrap(
   toolName: string,
@@ -25,7 +26,7 @@ function wrap(
   onBlocks?: ToolBlocksHandler
 ): ToolOutput {
   onBlocks?.(toolName, result.blocks);
-  return result.outputForModel;
+  return { [BLOCKS_HANDLED_FLAG]: true, ...result.outputForModel };
 }
 
 function toolError(
@@ -41,7 +42,7 @@ function toolError(
       description: message,
     } satisfies CoachBlock,
   ]);
-  return { error: message };
+  return { [BLOCKS_HANDLED_FLAG]: true, error: message };
 }
 
 export function createCoachTools(
