@@ -1,18 +1,13 @@
-import OpenAI from "openai";
+import { streamText, stepCountIs } from "ai";
 import { COACH_AGENT_SYSTEM_PROMPT } from "@/lib/coach/agent-prompt";
-import {
-  COACH_TOOL_DEFINITIONS,
-  executeCoachTool,
-  type CoachToolContext,
-} from "@/lib/coach/agent-tools";
 import type { CoachBlock, CoachStreamEvent } from "@/lib/coach/schema";
-import { normalizeAssistantText, toolErrorBlocks } from "./blocks";
-import type { PlannerRuntime } from "./runtime";
+import { normalizeAssistantText } from "./blocks";
+import { createCoachTools } from "./coach-tools";
+import type { CoachToolContext } from "@/lib/coach/tools/types";
+import type { CoachRuntime } from "./runtime";
 
-// Limit to prevent infinite loops while allowing multi-step plans.
-const MAX_TOOL_ROUNDS = 6;
-
-type PlannerRunResult =
+// Keep the same result shape so route.ts doesn't need structural changes.
+export type PlannerRunResult =
   | {
       kind: "ok";
       assistantText: string;
@@ -29,15 +24,7 @@ type PlannerRunResult =
       hitToolLimit: boolean;
     };
 
-function safeParseToolArgs(
-  raw: string
-): { ok: true; value: unknown } | { ok: false; error: string } {
-  try {
-    return { ok: true, value: JSON.parse(raw) };
-  } catch {
-    return { ok: false, error: "Tool arguments were not valid JSON." };
-  }
-}
+const MAX_TOOL_ROUNDS = 5;
 
 export async function runPlannerTurn({
   runtime,
@@ -47,8 +34,8 @@ export async function runPlannerTurn({
   emitEvent,
   signal,
 }: {
-  runtime: PlannerRuntime;
-  history: OpenAI.Chat.Completions.ChatCompletionMessageParam[];
+  runtime: CoachRuntime;
+  history: Array<{ role: "user" | "assistant"; content: string }>;
   preferences: {
     unit: string;
     soundEnabled: boolean;
@@ -60,176 +47,71 @@ export async function runPlannerTurn({
 }): Promise<PlannerRunResult> {
   const toolsUsed: string[] = [];
   const blocks: CoachBlock[] = [];
-  let assistantText = "";
-  let hitToolLimit = false;
-  const localHistory = [...history];
 
-  const abortMessage = () => {
-    if (!signal?.aborted) return "Planner aborted";
-    try {
-      const reason = (signal as unknown as { reason?: unknown }).reason;
-      if (typeof reason === "string" && reason.trim()) {
-        return `Planner aborted: ${reason}`;
-      }
-      if (reason instanceof Error && reason.message) {
-        return `Planner aborted: ${reason.message}`;
-      }
-    } catch {
-      // ignore
-    }
-    return "Planner aborted";
-  };
-
-  try {
-    for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
-      if (signal?.aborted) {
-        throw new Error(abortMessage());
-      }
-
-      const completion = await runtime.client.chat.completions.create(
-        {
-          model: runtime.model,
-          messages: [
-            {
-              role: "system",
-              content: `${COACH_AGENT_SYSTEM_PROMPT}
+  const systemPrompt = `${COACH_AGENT_SYSTEM_PROMPT}
 
 User local prefs:
 - default weight unit: ${preferences.unit}
-- tactile sounds: ${preferences.soundEnabled ? "enabled" : "disabled"}
-`,
-            },
-            ...localHistory,
-          ],
-          tools:
-            COACH_TOOL_DEFINITIONS as unknown as OpenAI.Chat.Completions.ChatCompletionTool[],
-          tool_choice: "auto",
-        },
-        signal ? { signal } : undefined
-      );
+- tactile sounds: ${preferences.soundEnabled ? "enabled" : "disabled"}`;
 
-      const assistantMessage = completion.choices[0]?.message;
-      if (!assistantMessage) {
-        throw new Error("Model returned no message");
-      }
+  const tools = createCoachTools(ctx);
 
-      const toolCalls = (assistantMessage.tool_calls ?? []).filter(
-        (call) => call.type === "function"
-      );
+  try {
+    const result = streamText({
+      model: runtime.model,
+      system: systemPrompt,
+      messages: history.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+      tools,
+      stopWhen: stepCountIs(MAX_TOOL_ROUNDS),
+      onChunk: ({ chunk }) => {
+        if (chunk.type === "tool-call") {
+          toolsUsed.push(chunk.toolName);
+          emitEvent?.({ type: "tool_start", toolName: chunk.toolName });
+        }
+        if (chunk.type === "tool-result") {
+          const raw = chunk.output as Record<string, unknown> | undefined;
+          const toolBlocks: CoachBlock[] = Array.isArray(raw?.blocks)
+            ? (raw.blocks as CoachBlock[])
+            : [];
+          blocks.push(...toolBlocks);
+          emitEvent?.({
+            type: "tool_result",
+            toolName: chunk.toolName,
+            blocks: toolBlocks,
+          });
+        }
+      },
+      abortSignal: signal,
+    });
 
-      if (toolCalls.length === 0) {
-        assistantText = normalizeAssistantText(assistantMessage.content);
-        break;
-      }
+    const [text, steps] = await Promise.all([result.text, result.steps]);
+    const assistantText = normalizeAssistantText(text);
+    const hitToolLimit = steps.length >= MAX_TOOL_ROUNDS;
 
-      localHistory.push({
-        role: "assistant",
-        content: assistantMessage.content ?? "",
-        tool_calls: toolCalls,
+    if (hitToolLimit) {
+      blocks.push({
+        type: "status",
+        tone: "info",
+        title: "Step limit reached",
+        description:
+          "I stopped early to avoid an infinite tool loop. Ask a follow-up and I will continue.",
       });
-
-      for (const call of toolCalls) {
-        if (signal?.aborted) {
-          throw new Error(abortMessage());
-        }
-
-        const toolName = call.function.name;
-        toolsUsed.push(toolName);
-        emitEvent?.({ type: "tool_start", toolName });
-
-        const parsedArgs = safeParseToolArgs(call.function.arguments);
-        if (!parsedArgs.ok) {
-          const errorBlocks = toolErrorBlocks(
-            `${parsedArgs.error} (tool: ${toolName})`
-          );
-          blocks.push(...errorBlocks);
-          emitEvent?.({ type: "tool_result", toolName, blocks: errorBlocks });
-          localHistory.push({
-            role: "tool",
-            tool_call_id: call.id,
-            content: JSON.stringify({
-              status: "error",
-              tool: toolName,
-              error: parsedArgs.error,
-            }),
-          });
-          continue;
-        }
-
-        try {
-          let streamed = false;
-          const onBlocks = emitEvent
-            ? (nextBlocks: CoachBlock[]) => {
-                streamed = true;
-                emitEvent({
-                  type: "tool_result",
-                  toolName,
-                  blocks: nextBlocks,
-                });
-              }
-            : undefined;
-          const result = await executeCoachTool(
-            toolName,
-            parsedArgs.value,
-            ctx,
-            {
-              onBlocks,
-            }
-          );
-          blocks.push(...result.blocks);
-          if (emitEvent && !streamed) {
-            emitEvent({ type: "tool_result", toolName, blocks: result.blocks });
-          }
-          localHistory.push({
-            role: "tool",
-            tool_call_id: call.id,
-            content: JSON.stringify(result.outputForModel),
-          });
-        } catch (error) {
-          const message =
-            error instanceof Error ? error.message : `Tool ${toolName} failed`;
-          const errorBlocks = toolErrorBlocks(message);
-          blocks.push(...errorBlocks);
-          emitEvent?.({ type: "tool_result", toolName, blocks: errorBlocks });
-          localHistory.push({
-            role: "tool",
-            tool_call_id: call.id,
-            content: JSON.stringify({
-              status: "error",
-              tool: toolName,
-              error: message,
-            }),
-          });
-        }
-      }
-
-      if (round === MAX_TOOL_ROUNDS - 1) {
-        hitToolLimit = true;
-        assistantText =
-          assistantText ||
-          "I hit a step limit while finishing that. Here is what I have so far.";
-        blocks.push({
-          type: "status",
-          tone: "info",
-          title: "Step limit reached",
-          description:
-            "I stopped early to avoid an infinite tool loop. Ask a follow-up and I will continue.",
-        });
-        break;
-      }
     }
+
+    return { kind: "ok", assistantText, blocks, toolsUsed, hitToolLimit };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown planner error";
     return {
       kind: "error",
-      assistantText,
+      assistantText: "",
       blocks,
       toolsUsed,
       errorMessage: message,
-      hitToolLimit,
+      hitToolLimit: false,
     };
   }
-
-  return { kind: "ok", assistantText, blocks, toolsUsed, hitToolLimit };
 }

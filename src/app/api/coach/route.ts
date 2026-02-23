@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import type OpenAI from "openai";
 import { ConvexHttpClient } from "convex/browser";
 import { auth } from "@clerk/nextjs/server";
 import { api } from "@/../convex/_generated/api";
@@ -187,13 +186,13 @@ export async function POST(request: Request) {
             return;
           }
 
-          send({ type: "start", model: runtime.model });
+          send({ type: "start", model: runtime.modelId });
           sendComment(" ".repeat(SSE_PADDING_BYTES));
 
           const history = parsed.data.messages.map((message) => ({
             role: message.role,
             content: message.content,
-          })) as OpenAI.Chat.Completions.ChatCompletionMessageParam[];
+          })) as Array<{ role: "user" | "assistant"; content: string }>;
 
           const plannerResult = await runPlannerTurn({
             runtime,
@@ -234,8 +233,8 @@ export async function POST(request: Request) {
           } else {
             const model =
               plannerResult.kind === "error"
-                ? `${runtime.model} (planner_failed_partial)`
-                : runtime.model;
+                ? `${runtime.modelId} (planner_failed_partial)`
+                : runtime.modelId;
 
             const assistantText =
               plannerResult.kind === "error"
@@ -280,7 +279,7 @@ export async function POST(request: Request) {
   const history = parsed.data.messages.map((message) => ({
     role: message.role,
     content: message.content,
-  })) as OpenAI.Chat.Completions.ChatCompletionMessageParam[];
+  })) as Array<{ role: "user" | "assistant"; content: string }>;
 
   const turnController = new AbortController();
   const timeoutId = setTimeout(() => {
@@ -354,8 +353,8 @@ export async function POST(request: Request) {
     toolsUsed: plannerResult.toolsUsed,
     model:
       plannerResult.kind === "error"
-        ? `${runtime.model} (planner_failed_partial)`
-        : runtime.model,
+        ? `${runtime.modelId} (planner_failed_partial)`
+        : runtime.modelId,
     fallbackUsed: false,
   });
 

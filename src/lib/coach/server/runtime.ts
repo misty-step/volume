@@ -1,11 +1,12 @@
-import OpenAI from "openai";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import type { LanguageModel } from "ai";
 
 const DEFAULT_COACH_MODEL =
   process.env.COACH_AGENT_MODEL ?? "minimax/minimax-m2.5";
 
-export type PlannerRuntime = { client: OpenAI; model: string };
+export type CoachRuntime = { model: LanguageModel; modelId: string };
 
-export function getCoachRuntime(): PlannerRuntime | null {
+export function getCoachRuntime(): CoachRuntime | null {
   const openRouterKey = process.env.OPENROUTER_API_KEY;
   if (!openRouterKey) {
     console.warn(
@@ -14,16 +15,16 @@ export function getCoachRuntime(): PlannerRuntime | null {
     return null;
   }
 
+  const openrouter = createOpenRouter({
+    apiKey: openRouterKey,
+    headers: {
+      "HTTP-Referer": "https://volume.fitness",
+      "X-Title": "Volume Coach",
+    },
+  });
+
   return {
-    client: new OpenAI({
-      apiKey: openRouterKey,
-      baseURL: "https://openrouter.ai/api/v1",
-      defaultHeaders: {
-        "HTTP-Referer": "https://volume.fitness",
-        "X-Title": "Volume Coach",
-      },
-      timeout: 30_000,
-    }),
-    model: DEFAULT_COACH_MODEL,
+    model: openrouter(DEFAULT_COACH_MODEL),
+    modelId: DEFAULT_COACH_MODEL,
   };
 }
