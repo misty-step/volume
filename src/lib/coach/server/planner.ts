@@ -74,11 +74,25 @@ User local prefs:
           emitEvent?.({ type: "tool_start", toolName: chunk.toolName });
         }
         if (chunk.type === "tool-result") {
-          const raw = chunk.output as Record<string, unknown> | undefined;
-          const parseResult = z.array(CoachBlockSchema).safeParse(raw?.blocks);
-          const toolBlocks: CoachBlock[] = parseResult.success
-            ? parseResult.data
-            : [];
+          const outputResult = z
+            .object({ blocks: z.array(CoachBlockSchema) })
+            .safeParse(chunk.output);
+          let toolBlocks: CoachBlock[];
+          if (outputResult.success) {
+            toolBlocks = outputResult.data.blocks;
+          } else {
+            console.error("[planner] Failed to parse tool output", {
+              toolName: chunk.toolName,
+            });
+            toolBlocks = [
+              {
+                type: "status",
+                tone: "error",
+                title: `Tool ${chunk.toolName} returned unexpected output`,
+                description: "The tool result was not in the expected format.",
+              },
+            ];
+          }
           blocks.push(...toolBlocks);
           emitEvent?.({
             type: "tool_result",

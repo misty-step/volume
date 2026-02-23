@@ -256,6 +256,94 @@ describe("runPlannerTurn", () => {
     expect(result.kind).toBe("error");
   });
 
+  it("emits error block when tool output has no blocks field", async () => {
+    const { runPlannerTurn } = await import("./planner");
+
+    // Tool returns without the 'blocks' key — misbehaving or outdated tool
+    mockLogSetExecute.mockResolvedValue({ status: "ok" });
+
+    let callCount = 0;
+    const runtime = makeRuntime(async () => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          stream: toolCallStream("log_set", {
+            exercise_name: "Squats",
+            reps: 5,
+          }),
+          rawCall: {},
+        };
+      }
+      return { stream: textStream("Done."), rawCall: {} };
+    });
+
+    const result = await runPlannerTurn({ runtime, ...DEFAULT_ARGS });
+
+    expect(result.kind).toBe("ok");
+    expect(
+      result.blocks.some((b) => b.type === "status" && b.tone === "error")
+    ).toBe(true);
+  });
+
+  it("emits error block when tool output is undefined", async () => {
+    const { runPlannerTurn } = await import("./planner");
+
+    mockLogSetExecute.mockResolvedValue(undefined);
+
+    let callCount = 0;
+    const runtime = makeRuntime(async () => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          stream: toolCallStream("log_set", {
+            exercise_name: "Squats",
+            reps: 5,
+          }),
+          rawCall: {},
+        };
+      }
+      return { stream: textStream("Done."), rawCall: {} };
+    });
+
+    const result = await runPlannerTurn({ runtime, ...DEFAULT_ARGS });
+
+    expect(result.kind).toBe("ok");
+    expect(
+      result.blocks.some((b) => b.type === "status" && b.tone === "error")
+    ).toBe(true);
+  });
+
+  it("emits error block when blocks field contains invalid schema", async () => {
+    const { runPlannerTurn } = await import("./planner");
+
+    // Blocks array present but items fail CoachBlockSchema discriminated union
+    mockLogSetExecute.mockResolvedValue({
+      blocks: [{ type: "not-a-valid-block-type", value: 42 }],
+    });
+
+    let callCount = 0;
+    const runtime = makeRuntime(async () => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          stream: toolCallStream("log_set", {
+            exercise_name: "Squats",
+            reps: 5,
+          }),
+          rawCall: {},
+        };
+      }
+      return { stream: textStream("Done."), rawCall: {} };
+    });
+
+    const result = await runPlannerTurn({ runtime, ...DEFAULT_ARGS });
+
+    expect(result.kind).toBe("ok");
+    expect(
+      result.blocks.some((b) => b.type === "status" && b.tone === "error")
+    ).toBe(true);
+  });
+
   it("stops after MAX_TOOL_ROUNDS and reports step limit", async () => {
     const { runPlannerTurn } = await import("./planner");
 
