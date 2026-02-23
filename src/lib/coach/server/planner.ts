@@ -1,5 +1,7 @@
 import { streamText, stepCountIs } from "ai";
+import { z } from "zod";
 import { COACH_AGENT_SYSTEM_PROMPT } from "@/lib/coach/agent-prompt";
+import { CoachBlockSchema } from "@/lib/coach/schema";
 import type { CoachBlock, CoachStreamEvent } from "@/lib/coach/schema";
 import { normalizeAssistantText } from "./blocks";
 import { createCoachTools } from "./coach-tools";
@@ -73,8 +75,9 @@ User local prefs:
         }
         if (chunk.type === "tool-result") {
           const raw = chunk.output as Record<string, unknown> | undefined;
-          const toolBlocks: CoachBlock[] = Array.isArray(raw?.blocks)
-            ? (raw.blocks as CoachBlock[])
+          const parseResult = z.array(CoachBlockSchema).safeParse(raw?.blocks);
+          const toolBlocks: CoachBlock[] = parseResult.success
+            ? parseResult.data
             : [];
           blocks.push(...toolBlocks);
           emitEvent?.({
@@ -88,8 +91,12 @@ User local prefs:
     });
 
     const [text, steps] = await Promise.all([result.text, result.steps]);
-    const assistantText = normalizeAssistantText(text);
     const hitToolLimit = steps.length >= MAX_TOOL_ROUNDS;
+    const assistantText =
+      normalizeAssistantText(text) ||
+      (hitToolLimit
+        ? "I reached the step limit. Ask a follow-up and I'll continue."
+        : "");
 
     if (hitToolLimit) {
       blocks.push({

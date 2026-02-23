@@ -189,10 +189,7 @@ export async function POST(request: Request) {
           send({ type: "start", model: runtime.modelId });
           sendComment(" ".repeat(SSE_PADDING_BYTES));
 
-          const history = parsed.data.messages.map((message) => ({
-            role: message.role,
-            content: message.content,
-          })) as Array<{ role: "user" | "assistant"; content: string }>;
+          const history = parsed.data.messages;
 
           const plannerResult = await runPlannerTurn({
             runtime,
@@ -276,10 +273,7 @@ export async function POST(request: Request) {
     return NextResponse.json(fallbackResponse);
   }
 
-  const history = parsed.data.messages.map((message) => ({
-    role: message.role,
-    content: message.content,
-  })) as Array<{ role: "user" | "assistant"; content: string }>;
+  const history = parsed.data.messages;
 
   const turnController = new AbortController();
   const timeoutId = setTimeout(() => {
