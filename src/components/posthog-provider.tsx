@@ -14,11 +14,15 @@ export function PostHogProvider({ children }: PostHogProviderProps) {
     const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
     if (!posthogKey) return;
 
+    const apiHost = process.env.NEXT_PUBLIC_POSTHOG_HOST || "/ingest";
+    // ui_host is the PostHog UI origin — needed when api_host is a proxy/different host.
+    // Configurable via NEXT_PUBLIC_POSTHOG_UI_HOST for EU/self-hosted deployments.
+    const uiHost =
+      process.env.NEXT_PUBLIC_POSTHOG_UI_HOST || "https://us.posthog.com";
     posthog.init(posthogKey, {
-      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "/ingest",
-      ui_host: "https://us.posthog.com",
+      api_host: apiHost,
+      ui_host: uiHost,
       capture_pageview: "history_change",
-      respect_dnt: true,
     });
   }, []);
 

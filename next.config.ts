@@ -17,17 +17,20 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
+      // Static assets — must come before catch-all
       {
         source: "/ingest/static/:path*",
         destination: "https://us-assets.i.posthog.com/static/:path*",
       },
-      {
-        source: "/ingest/:path*",
-        destination: "https://us.i.posthog.com/:path*",
-      },
+      // Decide endpoint — must come before catch-all or it is swallowed
       {
         source: "/ingest/decide",
         destination: "https://us.i.posthog.com/decide",
+      },
+      // Catch-all for all other ingest paths
+      {
+        source: "/ingest/:path*",
+        destination: "https://us.i.posthog.com/:path*",
       },
     ];
   },
