@@ -27,6 +27,7 @@ export type PlannerRunResult =
     };
 
 const MAX_TOOL_ROUNDS = 5;
+const MODEL_CALL_TIMEOUT_MS = 30_000;
 
 export async function runPlannerTurn({
   runtime,
@@ -56,9 +57,23 @@ User local prefs:
 - default weight unit: ${preferences.unit}
 - tactile sounds: ${preferences.soundEnabled ? "enabled" : "disabled"}`;
 
-  const tools = createCoachTools(ctx);
+  const tools = createCoachTools(ctx, {
+    onBlocks: (toolName, toolBlocks) => {
+      blocks.push(...toolBlocks);
+      emitEvent?.({
+        type: "tool_result",
+        toolName,
+        blocks: toolBlocks,
+      });
+    },
+  });
 
   try {
+    const timeoutSignal = AbortSignal.timeout(MODEL_CALL_TIMEOUT_MS);
+    const modelAbortSignal = signal
+      ? AbortSignal.any([signal, timeoutSignal])
+      : timeoutSignal;
+
     const result = streamText({
       model: runtime.model,
       system: systemPrompt,
@@ -77,31 +92,17 @@ User local prefs:
           const outputResult = z
             .object({ blocks: z.array(CoachBlockSchema) })
             .safeParse(chunk.output);
-          let toolBlocks: CoachBlock[];
           if (outputResult.success) {
-            toolBlocks = outputResult.data.blocks;
-          } else {
-            console.error("[planner] Failed to parse tool output", {
+            blocks.push(...outputResult.data.blocks);
+            emitEvent?.({
+              type: "tool_result",
               toolName: chunk.toolName,
+              blocks: outputResult.data.blocks,
             });
-            toolBlocks = [
-              {
-                type: "status",
-                tone: "error",
-                title: `Tool ${chunk.toolName} returned unexpected output`,
-                description: "The tool result was not in the expected format.",
-              },
-            ];
           }
-          blocks.push(...toolBlocks);
-          emitEvent?.({
-            type: "tool_result",
-            toolName: chunk.toolName,
-            blocks: toolBlocks,
-          });
         }
       },
-      abortSignal: signal,
+      abortSignal: modelAbortSignal,
     });
 
     const [text, steps] = await Promise.all([result.text, result.steps]);

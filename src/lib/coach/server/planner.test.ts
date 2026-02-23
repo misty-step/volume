@@ -70,10 +70,11 @@ function toolCallStream(toolName: string, input: Record<string, unknown>) {
       },
       {
         type: "finish" as const,
-        finishReason: { unified: "tool-calls" as const, raw: null },
+        finishReason: "tool-calls" as const,
         usage: {
-          inputTokens: { total: 10, other: {} },
-          outputTokens: { total: 5, other: {} },
+          inputTokens: 10,
+          outputTokens: 5,
+          totalTokens: 15,
         },
       },
     ],
@@ -88,10 +89,11 @@ function textStream(text: string) {
       { type: "text-end" as const, id: "t1" },
       {
         type: "finish" as const,
-        finishReason: { unified: "stop" as const, raw: null },
+        finishReason: "stop" as const,
         usage: {
-          inputTokens: { total: 10, other: {} },
-          outputTokens: { total: 5, other: {} },
+          inputTokens: 10,
+          outputTokens: 5,
+          totalTokens: 15,
         },
       },
     ],
