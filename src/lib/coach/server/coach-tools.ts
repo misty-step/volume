@@ -18,7 +18,7 @@ import { runSetSoundTool } from "@/lib/coach/tools/tool-set-sound";
 export type ToolOutput = Record<string, unknown>;
 type ToolBlocksHandler = (toolName: string, blocks: CoachBlock[]) => void;
 type CreateCoachToolsOptions = { onBlocks?: ToolBlocksHandler };
-const BLOCKS_HANDLED_FLAG = "__coachBlocksHandled";
+export const BLOCKS_HANDLED_FLAG = "__coachBlocksHandled";
 
 function wrap(
   toolName: string,

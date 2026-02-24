@@ -4,7 +4,7 @@ import { COACH_AGENT_SYSTEM_PROMPT } from "@/lib/coach/agent-prompt";
 import { CoachBlockSchema } from "@/lib/coach/schema";
 import type { CoachBlock, CoachStreamEvent } from "@/lib/coach/schema";
 import { normalizeAssistantText } from "./blocks";
-import { createCoachTools } from "./coach-tools";
+import { BLOCKS_HANDLED_FLAG, createCoachTools } from "./coach-tools";
 import type { CoachToolContext } from "@/lib/coach/tools/types";
 import type { CoachRuntime } from "./runtime";
 
@@ -28,7 +28,7 @@ export type PlannerRunResult =
 
 const MAX_TOOL_ROUNDS = 5;
 const MODEL_CALL_TIMEOUT_MS = 30_000;
-const BLOCKS_HANDLED_FLAG = "__coachBlocksHandled";
+const ToolResultOutputSchema = z.object({ blocks: z.array(CoachBlockSchema) });
 
 function isBlocksHandledOutput(value: unknown): boolean {
   if (typeof value !== "object" || value === null) return false;
@@ -56,12 +56,14 @@ export async function runPlannerTurn({
 }): Promise<PlannerRunResult> {
   const toolsUsed: string[] = [];
   const blocks: CoachBlock[] = [];
+  const promptUnit = preferences.unit === "kg" ? "kg" : "lbs";
+  const promptSound = preferences.soundEnabled ? "enabled" : "disabled";
 
   const systemPrompt = `${COACH_AGENT_SYSTEM_PROMPT}
 
 User local prefs:
-- default weight unit: ${preferences.unit}
-- tactile sounds: ${preferences.soundEnabled ? "enabled" : "disabled"}`;
+- default weight unit: ${promptUnit}
+- tactile sounds: ${promptSound}`;
 
   const tools = createCoachTools(ctx, {
     onBlocks: (toolName, toolBlocks) => {
@@ -83,10 +85,7 @@ User local prefs:
     const result = streamText({
       model: runtime.model,
       system: systemPrompt,
-      messages: history.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
+      messages: history,
       tools,
       stopWhen: stepCountIs(MAX_TOOL_ROUNDS),
       onChunk: ({ chunk }) => {
@@ -95,9 +94,9 @@ User local prefs:
           emitEvent?.({ type: "tool_start", toolName: chunk.toolName });
         }
         if (chunk.type === "tool-result") {
-          const outputResult = z
-            .object({ blocks: z.array(CoachBlockSchema) })
-            .safeParse(chunk.output);
+          if (isBlocksHandledOutput(chunk.output)) return;
+
+          const outputResult = ToolResultOutputSchema.safeParse(chunk.output);
           if (outputResult.success) {
             blocks.push(...outputResult.data.blocks);
             emitEvent?.({
@@ -105,7 +104,7 @@ User local prefs:
               toolName: chunk.toolName,
               blocks: outputResult.data.blocks,
             });
-          } else if (!isBlocksHandledOutput(chunk.output)) {
+          } else {
             const toolBlocks: CoachBlock[] = [
               {
                 type: "status",
@@ -127,9 +126,10 @@ User local prefs:
     });
 
     const [text, steps] = await Promise.all([result.text, result.steps]);
-    const hitToolLimit = steps.length >= MAX_TOOL_ROUNDS;
+    const normalizedText = normalizeAssistantText(text);
+    const hitToolLimit = steps.length >= MAX_TOOL_ROUNDS && !normalizedText;
     const assistantText =
-      normalizeAssistantText(text) ||
+      normalizedText ||
       (hitToolLimit
         ? "I reached the step limit. Ask a follow-up and I'll continue."
         : "");

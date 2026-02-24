@@ -367,4 +367,40 @@ describe("runPlannerTurn", () => {
       )
     ).toBe(true);
   });
+
+  it("does not report step limit when it exits before MAX_TOOL_ROUNDS", async () => {
+    const { runPlannerTurn } = await import("./planner");
+
+    mockGetTodaySummaryExecute.mockResolvedValue({
+      summary: "summary",
+      blocks: [],
+      outputForModel: { status: "ok" },
+    });
+
+    let callCount = 0;
+    const runtime = makeRuntime(async () => {
+      callCount++;
+      if (callCount <= 4) {
+        return {
+          stream: toolCallStream("get_today_summary", {}),
+          rawCall: {},
+        };
+      }
+      return { stream: textStream("Done."), rawCall: {} };
+    });
+
+    const result = await runPlannerTurn({
+      runtime,
+      ...DEFAULT_ARGS,
+      history: [{ role: "user", content: "loop but finish" }],
+    });
+
+    expect(result.kind).toBe("ok");
+    expect(result.hitToolLimit).toBe(false);
+    expect(
+      result.blocks.some(
+        (b) => b.type === "status" && b.title === "Step limit reached"
+      )
+    ).toBe(false);
+  });
 });

@@ -27,7 +27,8 @@ describe("createCoachTools", () => {
   });
 
   it("passes tool blocks through onBlocks and marks output handled", async () => {
-    const { createCoachTools } = await import("./coach-tools");
+    const { BLOCKS_HANDLED_FLAG, createCoachTools } =
+      await import("./coach-tools");
     const onBlocks = vi.fn();
     const toolBlocks: CoachBlock[] = [
       {
@@ -55,11 +56,12 @@ describe("createCoachTools", () => {
       TEST_CTX
     );
     expect(onBlocks).toHaveBeenCalledWith("log_set", toolBlocks);
-    expect(output).toEqual({ __coachBlocksHandled: true, status: "ok" });
+    expect(output).toEqual({ [BLOCKS_HANDLED_FLAG]: true, status: "ok" });
   });
 
   it("emits tool failure blocks and error output when a runner throws", async () => {
-    const { createCoachTools } = await import("./coach-tools");
+    const { BLOCKS_HANDLED_FLAG, createCoachTools } =
+      await import("./coach-tools");
     const onBlocks = vi.fn();
     mockRunLogSetTool.mockRejectedValue(new Error("boom"));
 
@@ -69,7 +71,7 @@ describe("createCoachTools", () => {
       reps: 10,
     });
 
-    expect(output).toEqual({ __coachBlocksHandled: true, error: "boom" });
+    expect(output).toEqual({ [BLOCKS_HANDLED_FLAG]: true, error: "boom" });
     expect(onBlocks).toHaveBeenCalledWith(
       "log_set",
       expect.arrayContaining([
@@ -84,7 +86,8 @@ describe("createCoachTools", () => {
   });
 
   it("supports tools with empty input schemas", async () => {
-    const { createCoachTools } = await import("./coach-tools");
+    const { BLOCKS_HANDLED_FLAG, createCoachTools } =
+      await import("./coach-tools");
     const onBlocks = vi.fn();
     const toolBlocks: CoachBlock[] = [
       {
@@ -105,6 +108,6 @@ describe("createCoachTools", () => {
 
     expect(mockRunTodaySummaryTool).toHaveBeenCalledWith(TEST_CTX);
     expect(onBlocks).toHaveBeenCalledWith("get_today_summary", toolBlocks);
-    expect(output).toEqual({ __coachBlocksHandled: true, total_sets: 5 });
+    expect(output).toEqual({ [BLOCKS_HANDLED_FLAG]: true, total_sets: 5 });
   });
 });
