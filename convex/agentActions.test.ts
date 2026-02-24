@@ -64,6 +64,7 @@ describe("agentActions", () => {
       .query(api.agentActions.listActionsForTurn, { turnId });
     expect(actions).toHaveLength(1);
     expect(actions[0]?.status).toBe("undone");
+    expect(actions[0]?.performedAt).toBe(performedAt);
   });
 
   test("undoAgentTurn reverts all actions in reverse order", async () => {
@@ -130,9 +131,9 @@ describe("agentActions", () => {
     expect(sets).toHaveLength(0);
   });
 
-  test("detects conflicts when target set changed since recorded action", async () => {
+  test("detects conflicts when target set was deleted since recording", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.ts"));
-    const turnId = "turn-conflict";
+    const turnId = "turn-conflict-missing";
     const { exerciseId, setId, performedAt } = await setupLoggedSet(t);
 
     const actionId = await t
@@ -160,6 +161,107 @@ describe("agentActions", () => {
     if (!result.ok) {
       expect(result.reason).toBe("missing_target");
     }
+  });
+
+  test("detects conflicts when target set fields changed since recording", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.ts"));
+    const turnId = "turn-conflict-fields";
+    const { exerciseId, setId, performedAt } = await setupLoggedSet(t);
+
+    const actionId = await t
+      .withIdentity({ subject })
+      .mutation(api.agentActions.recordLogSetAction, {
+        turnId,
+        setId,
+        exerciseId,
+        exerciseName: "Bench Press",
+        reps: 8,
+        weight: 185,
+        unit: "lbs",
+        performedAt,
+      });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(setId, { reps: 9 });
+    });
+
+    const result = await t
+      .withIdentity({ subject })
+      .mutation(api.agentActions.undoAgentAction, { actionId });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe("conflict");
+    }
+  });
+
+  test("undoAgentTurn aborts when any action conflicts", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.ts"));
+    const turnId = "turn-conflict-bulk";
+
+    const exerciseId = await t
+      .withIdentity({ subject })
+      .action(api.exercises.createExercise, { name: "Overhead Press" });
+
+    const firstSetId = await t
+      .withIdentity({ subject })
+      .mutation(api.sets.logSet, {
+        exerciseId,
+        reps: 5,
+        weight: 95,
+        unit: "lbs",
+      });
+    const secondSetId = await t
+      .withIdentity({ subject })
+      .mutation(api.sets.logSet, {
+        exerciseId,
+        reps: 6,
+        weight: 105,
+        unit: "lbs",
+      });
+
+    await t
+      .withIdentity({ subject })
+      .mutation(api.agentActions.recordLogSetAction, {
+        turnId,
+        setId: firstSetId,
+        exerciseId,
+        exerciseName: "Overhead Press",
+        reps: 5,
+        weight: 95,
+        unit: "lbs",
+        performedAt: Date.now() - 1000,
+      });
+    await t
+      .withIdentity({ subject })
+      .mutation(api.agentActions.recordLogSetAction, {
+        turnId,
+        setId: secondSetId,
+        exerciseId,
+        exerciseName: "Overhead Press",
+        reps: 6,
+        weight: 105,
+        unit: "lbs",
+        performedAt: Date.now(),
+      });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(firstSetId, { reps: 7 });
+    });
+
+    const result = await t
+      .withIdentity({ subject })
+      .mutation(api.agentActions.undoAgentTurn, { turnId });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe("conflict");
+    }
+
+    const sets = await t.withIdentity({ subject }).query(api.sets.listSets, {
+      exerciseId,
+    });
+    expect(sets).toHaveLength(2);
   });
 
   test("supports internal recordAgentAction mutation", async () => {

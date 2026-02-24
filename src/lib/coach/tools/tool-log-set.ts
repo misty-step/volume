@@ -112,6 +112,13 @@ function buildExerciseNameMap(
   return exerciseNames;
 }
 
+function parseMutationId(value: unknown, label: string): string {
+  if (typeof value === "string" && value.length > 0) {
+    return value;
+  }
+  throw new Error(`Invalid ${label} returned from Convex mutation.`);
+}
+
 export async function runLogSetTool(
   rawArgs: unknown,
   ctx: CoachToolContext,
@@ -142,13 +149,14 @@ export async function runLogSetTool(
 
   let setId: Id<"sets">;
   try {
-    setId = (await ctx.convex.mutation(api.sets.logSet, {
+    const loggedSetId = await ctx.convex.mutation(api.sets.logSet, {
       exerciseId: ensured.exercise._id,
       reps: args.reps,
       duration: args.duration_seconds,
       weight: args.weight,
       unit: args.weight !== undefined ? resolvedUnit : undefined,
-    })) as Id<"sets">;
+    });
+    setId = parseMutationId(loggedSetId, "set id") as Id<"sets">;
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown Convex error";
@@ -160,20 +168,37 @@ export async function runLogSetTool(
   }
 
   let actionId: string | null = null;
+  let undoWarningBlock: CoachBlock | null = null;
   try {
-    actionId = (await ctx.convex.mutation(api.agentActions.recordLogSetAction, {
+    const recordedActionId = await ctx.convex.mutation(
+      api.agentActions.recordLogSetAction,
+      {
+        turnId: ctx.turnId,
+        setId,
+        exerciseId: ensured.exercise._id,
+        exerciseName: ensured.exercise.name,
+        reps: args.reps,
+        duration: args.duration_seconds,
+        weight: args.weight,
+        unit: args.weight !== undefined ? resolvedUnit : undefined,
+        performedAt: Date.now(),
+      }
+    );
+    actionId = parseMutationId(recordedActionId, "agent action id");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.warn("Failed to record agent action for undo", {
       turnId: ctx.turnId,
-      setId,
-      exerciseId: ensured.exercise._id,
-      exerciseName: ensured.exercise.name,
-      reps: args.reps,
-      duration: args.duration_seconds,
-      weight: args.weight,
-      unit: args.weight !== undefined ? resolvedUnit : undefined,
-      performedAt: Date.now(),
-    })) as string;
-  } catch {
-    actionId = null;
+      setId: String(setId),
+      message,
+    });
+    undoWarningBlock = {
+      type: "status",
+      tone: "info",
+      title: "Undo unavailable",
+      description:
+        "Set was logged, but undo could not be prepared for this entry.",
+    };
   }
 
   const statusBlock: CoachBlock = {
@@ -198,6 +223,9 @@ export async function runLogSetTool(
   if (undoBlock) {
     options?.onBlocks?.([undoBlock]);
   }
+  if (undoWarningBlock) {
+    options?.onBlocks?.([undoWarningBlock]);
+  }
 
   let todaySets: SetInput[];
   let recentSets: SetInput[];
@@ -214,6 +242,7 @@ export async function runLogSetTool(
       blocks: [
         statusBlock,
         ...(undoBlock ? [undoBlock] : []),
+        ...(undoWarningBlock ? [undoWarningBlock] : []),
         {
           type: "status",
           tone: "info",
@@ -306,6 +335,7 @@ export async function runLogSetTool(
     blocks: [
       statusBlock,
       ...(undoBlock ? [undoBlock] : []),
+      ...(undoWarningBlock ? [undoWarningBlock] : []),
       metricsBlock,
       trendBlock,
       suggestionsBlock,
@@ -318,6 +348,7 @@ export async function runLogSetTool(
       today_reps: todaySummary.totalReps,
       trend_metric: trend.metric,
       trend_total: trend.total,
+      warning: undoWarningBlock ? "undo_unavailable" : undefined,
     },
   };
 }

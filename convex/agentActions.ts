@@ -5,12 +5,81 @@ import { requireAuth, requireOwnership } from "./lib/validate";
 
 type AgentActionDoc = Doc<"agentActions">;
 
+type SetSnapshot = {
+  userId: string;
+  exerciseId: string;
+  reps?: number;
+  duration?: number;
+  weight?: number;
+  unit?: string;
+  performedAt: number;
+};
+
 type UndoValidationResult =
   | { ok: true; setId: Id<"sets"> }
   | { ok: false; reason: string; message: string };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseOptionalNumber(value: unknown): number | undefined | null {
+  if (value === undefined) return undefined;
+  return typeof value === "number" ? value : null;
+}
+
+function parseOptionalString(value: unknown): string | undefined | null {
+  if (value === undefined) return undefined;
+  return typeof value === "string" ? value : null;
+}
+
+function parseSetSnapshot(value: unknown): SetSnapshot | null {
+  if (!isRecord(value)) return null;
+
+  const reps = parseOptionalNumber(value.reps);
+  const duration = parseOptionalNumber(value.duration);
+  const weight = parseOptionalNumber(value.weight);
+  const unit = parseOptionalString(value.unit);
+
+  if (reps === null || duration === null || weight === null || unit === null) {
+    return null;
+  }
+
+  if (
+    typeof value.userId !== "string" ||
+    typeof value.exerciseId !== "string" ||
+    typeof value.performedAt !== "number"
+  ) {
+    return null;
+  }
+
+  return {
+    userId: value.userId,
+    exerciseId: value.exerciseId,
+    reps,
+    duration,
+    weight,
+    unit,
+    performedAt: value.performedAt,
+  };
+}
+
+function getExpectedSnapshot(action: AgentActionDoc): SetSnapshot | null {
+  const fromBeforeSnapshot = parseSetSnapshot(action.beforeSnapshot);
+  if (fromBeforeSnapshot) {
+    return fromBeforeSnapshot;
+  }
+
+  if (!isRecord(action.args) || !("expectedSnapshot" in action.args)) {
+    return null;
+  }
+
+  return parseSetSnapshot(action.args.expectedSnapshot);
+}
+
 function validateLogSetUndo(
   action: AgentActionDoc,
+  setId: Id<"sets"> | null,
   setDoc: Doc<"sets"> | null
 ): UndoValidationResult {
   const target = action.affectedIds[0];
@@ -22,6 +91,14 @@ function validateLogSetUndo(
     };
   }
 
+  if (!setId) {
+    return {
+      ok: false,
+      reason: "invalid_action",
+      message: "Affected set id is invalid.",
+    };
+  }
+
   if (!setDoc) {
     return {
       ok: false,
@@ -30,20 +107,14 @@ function validateLogSetUndo(
     };
   }
 
-  const expected =
-    action.args &&
-    typeof action.args === "object" &&
-    "expectedSnapshot" in action.args
-      ? (action.args.expectedSnapshot as Partial<Doc<"sets">>)
-      : null;
-
+  const expected = getExpectedSnapshot(action);
   if (!expected) {
-    return { ok: true, setId: target as Id<"sets"> };
+    return { ok: true, setId };
   }
 
   const mismatched =
     setDoc.userId !== expected.userId ||
-    String(setDoc.exerciseId) !== String(expected.exerciseId) ||
+    String(setDoc.exerciseId) !== expected.exerciseId ||
     setDoc.reps !== expected.reps ||
     setDoc.duration !== expected.duration ||
     setDoc.weight !== expected.weight ||
@@ -59,7 +130,7 @@ function validateLogSetUndo(
     };
   }
 
-  return { ok: true, setId: target as Id<"sets"> };
+  return { ok: true, setId };
 }
 
 export const recordAgentAction = internalMutation({
@@ -108,14 +179,11 @@ export const recordLogSetAction = mutation({
       userId: identity.subject,
       turnId: args.turnId,
       action: "log_set",
-      args: {
-        ...args,
-        expectedSnapshot: setDoc,
-      },
+      args,
       affectedIds: [String(args.setId)],
-      beforeSnapshot: null,
+      beforeSnapshot: setDoc,
       status: "committed",
-      performedAt: Date.now(),
+      performedAt: args.performedAt,
     });
   },
 });
@@ -128,7 +196,6 @@ export const undoAgentAction = mutation({
     const identity = await requireAuth(ctx);
 
     const action = await ctx.db.get(args.actionId);
-    requireOwnership(action, identity.subject, "agent action");
     if (!action) {
       return {
         ok: false,
@@ -136,6 +203,7 @@ export const undoAgentAction = mutation({
         message: "Action not found.",
       } as const;
     }
+    requireOwnership(action, identity.subject, "agent action");
 
     if (action.status === "undone") {
       return {
@@ -153,9 +221,10 @@ export const undoAgentAction = mutation({
       } as const;
     }
 
-    const setId = action.affectedIds[0] as Id<"sets"> | undefined;
+    const targetId = action.affectedIds[0];
+    const setId = targetId ? ctx.db.normalizeId("sets", targetId) : null;
     const setDoc = setId ? await ctx.db.get(setId) : null;
-    const validation = validateLogSetUndo(action, setDoc);
+    const validation = validateLogSetUndo(action, setId, setDoc);
     if (!validation.ok) {
       return validation;
     }
@@ -192,6 +261,11 @@ export const undoAgentTurn = mutation({
       .filter((action) => action.status === "committed")
       .sort((a, b) => b.performedAt - a.performedAt);
 
+    const validatedActions: Array<{
+      actionId: Id<"agentActions">;
+      setId: Id<"sets">;
+    }> = [];
+
     for (const action of committed) {
       if (action.action !== "log_set") {
         return {
@@ -201,28 +275,30 @@ export const undoAgentTurn = mutation({
         } as const;
       }
 
-      const setId = action.affectedIds[0] as Id<"sets"> | undefined;
+      const targetId = action.affectedIds[0];
+      const setId = targetId ? ctx.db.normalizeId("sets", targetId) : null;
       const setDoc = setId ? await ctx.db.get(setId) : null;
-      const validation = validateLogSetUndo(action, setDoc);
+      const validation = validateLogSetUndo(action, setId, setDoc);
       if (!validation.ok) {
         return {
           ...validation,
           actionId: action._id,
         } as const;
       }
+
+      validatedActions.push({ actionId: action._id, setId: validation.setId });
     }
 
     const undoneAt = Date.now();
-    for (const action of committed) {
-      const setId = action.affectedIds[0] as Id<"sets">;
-      await ctx.db.delete(setId);
-      await ctx.db.patch(action._id, { status: "undone", undoneAt });
+    for (const validated of validatedActions) {
+      await ctx.db.delete(validated.setId);
+      await ctx.db.patch(validated.actionId, { status: "undone", undoneAt });
     }
 
     return {
       ok: true,
       turnId: args.turnId,
-      undoneCount: committed.length,
+      undoneCount: validatedActions.length,
     } as const;
   },
 });

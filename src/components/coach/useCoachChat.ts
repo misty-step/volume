@@ -45,6 +45,12 @@ function withIds(blocks: CoachBlock[]): CoachTimelineBlock[] {
   return blocks.map((block) => ({ id: createId(), block }));
 }
 
+function parseAgentActionId(actionId: string): Id<"agentActions"> | null {
+  const trimmed = actionId.trim();
+  if (!trimmed) return null;
+  return trimmed as Id<"agentActions">;
+}
+
 function trimCoachConversation(
   messages: CoachMessageInput[]
 ): CoachMessageInput[] {
@@ -332,10 +338,34 @@ export function useCoachChat() {
     }
   }
 
-  async function undoAction(actionId: string, _turnId: string) {
+  async function undoAction(actionId: string, turnId: string) {
+    // TODO: Use turnId when we add turn-scoped undo and richer client telemetry.
+    void turnId;
+
+    const parsedActionId = parseAgentActionId(actionId);
+    if (!parsedActionId) {
+      setTimeline((prev) => [
+        ...prev,
+        {
+          id: createId(),
+          role: "assistant",
+          text: "Undo failed.",
+          blocks: withIds([
+            {
+              type: "status",
+              tone: "error",
+              title: "Undo failed",
+              description: "Invalid undo reference.",
+            },
+          ]),
+        },
+      ]);
+      return;
+    }
+
     try {
       const result = await undoAgentActionMutation({
-        actionId: actionId as Id<"agentActions">,
+        actionId: parsedActionId,
       });
 
       if (result.ok) {

@@ -115,10 +115,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const turnId =
-    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `turn-${Date.now()}`;
+  const turnId = crypto.randomUUID();
 
   const context = {
     convex,
