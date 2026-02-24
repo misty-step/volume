@@ -81,6 +81,21 @@ describe("PostHogProvider", () => {
     expect(screen.getByTestId("posthog-provider")).toBeInTheDocument();
   });
 
+  it("opts out when Do Not Track is set to yes", async () => {
+    process.env.NEXT_PUBLIC_POSTHOG_KEY = "test-key";
+    process.env.NEXT_PUBLIC_POSTHOG_INGEST_HOST = "https://eu.i.posthog.com";
+    setDoNotTrack("yes");
+
+    render(
+      <PostHogProvider>
+        <span>child</span>
+      </PostHogProvider>
+    );
+
+    await waitFor(() => expect(mockInit).toHaveBeenCalledTimes(1));
+    expect(mockOptOutCapturing).toHaveBeenCalledTimes(1);
+  });
+
   it("prefers explicit hosts when configured", async () => {
     process.env.NEXT_PUBLIC_POSTHOG_KEY = "test-key";
     process.env.NEXT_PUBLIC_POSTHOG_HOST = "https://analytics.example.com";
@@ -101,6 +116,65 @@ describe("PostHogProvider", () => {
       })
     );
     expect(mockOptOutCapturing).not.toHaveBeenCalled();
+  });
+
+  it("derives ui host for self-hosted PostHog origins", async () => {
+    process.env.NEXT_PUBLIC_POSTHOG_KEY = "test-key";
+    process.env.NEXT_PUBLIC_POSTHOG_HOST = "https://analytics.mycompany.com";
+
+    render(
+      <PostHogProvider>
+        <span>child</span>
+      </PostHogProvider>
+    );
+
+    await waitFor(() =>
+      expect(mockInit).toHaveBeenCalledWith("test-key", {
+        api_host: "https://analytics.mycompany.com",
+        ui_host: "https://analytics.mycompany.com",
+        capture_pageview: "history_change",
+      })
+    );
+  });
+
+  it("falls back to default ui host for relative ingest host without env host", async () => {
+    process.env.NEXT_PUBLIC_POSTHOG_KEY = "test-key";
+    process.env.NEXT_PUBLIC_POSTHOG_HOST = "/ingest";
+
+    render(
+      <PostHogProvider>
+        <span>child</span>
+      </PostHogProvider>
+    );
+
+    await waitFor(() =>
+      expect(mockInit).toHaveBeenCalledWith("test-key", {
+        api_host: "/ingest",
+        ui_host: "https://us.posthog.com",
+        capture_pageview: "history_change",
+      })
+    );
+  });
+
+  it("omits ui host when host is not a valid url", async () => {
+    process.env.NEXT_PUBLIC_POSTHOG_KEY = "test-key";
+    process.env.NEXT_PUBLIC_POSTHOG_HOST = "not-a-valid-url";
+
+    render(
+      <PostHogProvider>
+        <span>child</span>
+      </PostHogProvider>
+    );
+
+    await waitFor(() => expect(mockInit).toHaveBeenCalledTimes(1));
+    const [, options] = mockInit.mock.calls[0] as [
+      string,
+      Record<string, unknown>,
+    ];
+    expect(options).toEqual({
+      api_host: "not-a-valid-url",
+      capture_pageview: "history_change",
+    });
   });
 
   it("renders children without initializing when key is missing", () => {
