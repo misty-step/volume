@@ -105,3 +105,24 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           fail-on-verdict: "true"
           fail-on-skip: "true"
+
+  ci:
+    name: CI
+    needs: [verdict, draft-check]
+    if: always() && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gate
+        run: |
+          DRAFT="${{ needs.draft-check.outputs.is_draft }}"
+          VERDICT="${{ needs.verdict.result }}"
+          if [[ "$DRAFT" == "true" ]]; then
+            echo "Draft PR — skipping council gate"
+            exit 0
+          fi
+          if [[ "$VERDICT" == "success" || "$VERDICT" == "skipped" ]]; then
+            echo "Council verdict passed"
+            exit 0
+          fi
+          echo "Council verdict: $VERDICT"
+          exit 1
