@@ -1,37 +1,23 @@
 // @vitest-environment node
 
-import { tool } from "ai";
 import { MockLanguageModelV3, simulateReadableStream } from "ai/test";
-import { z } from "zod";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CoachBlock } from "@/lib/coach/schema";
 
 // ---------------------------------------------------------------------------
-// Mock createCoachTools — tools call Convex, so we stub the whole factory.
+// Mock tool runners so planner tests use real createCoachTools wrapping.
 // ---------------------------------------------------------------------------
 
 const mockLogSetExecute = vi.fn();
 const mockGetTodaySummaryExecute = vi.fn();
 
-vi.mock("./coach-tools", () => ({
-  createCoachTools: () => ({
-    log_set: tool({
-      description: "Log a set",
-      inputSchema: z.object({
-        exercise_name: z.string(),
-        reps: z.number().optional(),
-        duration_seconds: z.number().optional(),
-        weight: z.number().optional(),
-        unit: z.enum(["lbs", "kg"]).optional(),
-      }),
-      execute: mockLogSetExecute,
-    }),
-    get_today_summary: tool({
-      description: "Get today summary",
-      inputSchema: z.object({}),
-      execute: mockGetTodaySummaryExecute,
-    }),
-  }),
+vi.mock("@/lib/coach/tools/tool-log-set", () => ({
+  runLogSetTool: (...args: unknown[]) => mockLogSetExecute(...args),
+}));
+
+vi.mock("@/lib/coach/tools/tool-today-summary", () => ({
+  runTodaySummaryTool: (...args: unknown[]) =>
+    mockGetTodaySummaryExecute(...args),
 }));
 
 // ---------------------------------------------------------------------------
@@ -124,8 +110,9 @@ describe("runPlannerTurn", () => {
     const { runPlannerTurn } = await import("./planner");
 
     mockLogSetExecute.mockResolvedValue({
+      summary: "logged",
       blocks: SUCCESS_BLOCKS,
-      status: "ok",
+      outputForModel: { status: "ok" },
     });
 
     let callCount = 0;
@@ -156,8 +143,9 @@ describe("runPlannerTurn", () => {
     const { runPlannerTurn } = await import("./planner");
 
     mockGetTodaySummaryExecute.mockResolvedValue({
+      summary: "summary",
       blocks: SUCCESS_BLOCKS,
-      status: "ok",
+      outputForModel: { status: "ok" },
     });
 
     let callCount = 0;
@@ -200,7 +188,11 @@ describe("runPlannerTurn", () => {
         metrics: [{ label: "Sets", value: "5" }],
       },
     ];
-    mockGetTodaySummaryExecute.mockResolvedValue({ blocks, status: "ok" });
+    mockGetTodaySummaryExecute.mockResolvedValue({
+      summary: "summary",
+      blocks,
+      outputForModel: { status: "ok" },
+    });
 
     let callCount = 0;
     const runtime = makeRuntime(async () => {
@@ -315,13 +307,10 @@ describe("runPlannerTurn", () => {
     ).toBe(true);
   });
 
-  it("emits error block when blocks field contains invalid schema", async () => {
+  it("emits error block when a tool throws", async () => {
     const { runPlannerTurn } = await import("./planner");
 
-    // Blocks array present but items fail CoachBlockSchema discriminated union
-    mockLogSetExecute.mockResolvedValue({
-      blocks: [{ type: "not-a-valid-block-type", value: 42 }],
-    });
+    mockLogSetExecute.mockRejectedValue(new Error("tool failed"));
 
     let callCount = 0;
     const runtime = makeRuntime(async () => {
@@ -342,7 +331,10 @@ describe("runPlannerTurn", () => {
 
     expect(result.kind).toBe("ok");
     expect(
-      result.blocks.some((b) => b.type === "status" && b.tone === "error")
+      result.blocks.some(
+        (b) =>
+          b.type === "status" && b.tone === "error" && b.title === "Tool failed"
+      )
     ).toBe(true);
   });
 
@@ -350,8 +342,9 @@ describe("runPlannerTurn", () => {
     const { runPlannerTurn } = await import("./planner");
 
     mockGetTodaySummaryExecute.mockResolvedValue({
+      summary: "summary",
       blocks: [],
-      status: "ok",
+      outputForModel: { status: "ok" },
     });
 
     // Model always returns a tool call → forces the loop
