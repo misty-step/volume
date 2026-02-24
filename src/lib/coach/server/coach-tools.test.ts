@@ -5,6 +5,8 @@ import type { CoachBlock } from "@/lib/coach/schema";
 
 const mockRunLogSetTool = vi.fn();
 const mockRunTodaySummaryTool = vi.fn();
+const mockRunExerciseReportTool = vi.fn();
+const mockRunFocusSuggestionsTool = vi.fn();
 const mockRunSetWeightUnitTool = vi.fn();
 const mockRunSetSoundTool = vi.fn();
 
@@ -14,6 +16,16 @@ vi.mock("@/lib/coach/tools/tool-log-set", () => ({
 
 vi.mock("@/lib/coach/tools/tool-today-summary", () => ({
   runTodaySummaryTool: (...args: unknown[]) => mockRunTodaySummaryTool(...args),
+}));
+
+vi.mock("@/lib/coach/tools/tool-exercise-report", () => ({
+  runExerciseReportTool: (...args: unknown[]) =>
+    mockRunExerciseReportTool(...args),
+}));
+
+vi.mock("@/lib/coach/tools/tool-focus-suggestions", () => ({
+  runFocusSuggestionsTool: (...args: unknown[]) =>
+    mockRunFocusSuggestionsTool(...args),
 }));
 
 vi.mock("@/lib/coach/tools/tool-set-weight-unit", () => ({
@@ -35,6 +47,8 @@ describe("createCoachTools", () => {
   beforeEach(() => {
     mockRunLogSetTool.mockReset();
     mockRunTodaySummaryTool.mockReset();
+    mockRunExerciseReportTool.mockReset();
+    mockRunFocusSuggestionsTool.mockReset();
     mockRunSetWeightUnitTool.mockReset();
     mockRunSetSoundTool.mockReset();
   });
@@ -155,5 +169,48 @@ describe("createCoachTools", () => {
     expect(mockRunSetSoundTool).toHaveBeenCalledWith({ enabled: true });
     expect(onBlocks).toHaveBeenCalledWith("set_sound", []);
     expect(output).toEqual({ status: "ok", enabled: true });
+  });
+
+  it("routes get_exercise_report through the context tool runner", async () => {
+    const { createCoachTools } = await import("./coach-tools");
+    const onBlocks = vi.fn();
+    const toolBlocks: CoachBlock[] = [];
+
+    mockRunExerciseReportTool.mockResolvedValue({
+      summary: "report",
+      blocks: toolBlocks,
+      outputForModel: { status: "ok", total_sets: 4 },
+    });
+
+    const tools = createCoachTools(TEST_CTX, { onBlocks });
+    const output = await (tools.get_exercise_report as any).execute({
+      exercise_name: "Push-ups",
+    });
+
+    expect(mockRunExerciseReportTool).toHaveBeenCalledWith(
+      { exercise_name: "Push-ups" },
+      TEST_CTX
+    );
+    expect(onBlocks).toHaveBeenCalledWith("get_exercise_report", toolBlocks);
+    expect(output).toEqual({ status: "ok", total_sets: 4 });
+  });
+
+  it("routes get_focus_suggestions through the context tool runner", async () => {
+    const { createCoachTools } = await import("./coach-tools");
+    const onBlocks = vi.fn();
+    const toolBlocks: CoachBlock[] = [];
+
+    mockRunFocusSuggestionsTool.mockResolvedValue({
+      summary: "focus",
+      blocks: toolBlocks,
+      outputForModel: { status: "ok", suggestions: [] },
+    });
+
+    const tools = createCoachTools(TEST_CTX, { onBlocks });
+    const output = await (tools.get_focus_suggestions as any).execute({});
+
+    expect(mockRunFocusSuggestionsTool).toHaveBeenCalledWith(TEST_CTX);
+    expect(onBlocks).toHaveBeenCalledWith("get_focus_suggestions", toolBlocks);
+    expect(output).toEqual({ status: "ok", suggestions: [] });
   });
 });

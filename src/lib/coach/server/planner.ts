@@ -27,6 +27,16 @@ export type PlannerRunResult =
 const MAX_TOOL_ROUNDS = 5;
 const MODEL_CALL_TIMEOUT_MS = 30_000;
 
+function formatAbortMessage(reason: unknown): string {
+  if (typeof reason === "string" && reason.trim()) {
+    return `Planner aborted: ${reason}`;
+  }
+  if (reason instanceof Error && reason.message.trim()) {
+    return `Planner aborted: ${reason.message}`;
+  }
+  return "Planner aborted";
+}
+
 function createModelAbortSignal(signal?: AbortSignal): AbortSignal {
   const timeoutSignal = AbortSignal.timeout(MODEL_CALL_TIMEOUT_MS);
   if (!signal) return timeoutSignal;
@@ -80,6 +90,18 @@ export async function runPlannerTurn({
 }): Promise<PlannerRunResult> {
   const toolsUsed: string[] = [];
   const blocks: CoachBlock[] = [];
+
+  if (signal?.aborted) {
+    return {
+      kind: "error",
+      assistantText: "",
+      blocks,
+      toolsUsed,
+      errorMessage: formatAbortMessage(signal.reason),
+      hitToolLimit: false,
+    };
+  }
+
   const seenToolCallIds = new Set<string>();
   // Sanitize user preferences before interpolation into the system prompt.
   const promptUnit = preferences.unit === "kg" ? "kg" : "lbs";

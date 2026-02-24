@@ -305,8 +305,9 @@ describe("runPlannerTurn", () => {
     const controller = new AbortController();
     controller.abort(new Error("test_abort"));
 
-    // Model should never be called — but even if it is, it'll throw
+    let modelCalls = 0;
     const runtime = makeRuntime(async () => {
+      modelCalls += 1;
       throw new Error("should not be called");
     });
 
@@ -316,8 +317,10 @@ describe("runPlannerTurn", () => {
       signal: controller.signal,
     });
 
+    expect(modelCalls).toBe(0);
     expect(result.kind).toBe("error");
-    expect(result.errorMessage).toBeTruthy();
+    expect(result.errorMessage).toContain("Planner aborted");
+    expect(result.errorMessage).toContain("test_abort");
   });
 
   it("emits error block when a tool throws", async () => {
