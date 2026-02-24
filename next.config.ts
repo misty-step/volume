@@ -10,37 +10,10 @@ const packageJson = JSON.parse(
 );
 const packageVersion = packageJson.version;
 
-// PostHog ingestion proxy destinations.
-// Override via env vars for EU or self-hosted deployments.
-const posthogIngestHost =
-  process.env.NEXT_PUBLIC_POSTHOG_INGEST_HOST ?? "https://us.i.posthog.com";
-const posthogAssetsHost =
-  process.env.NEXT_PUBLIC_POSTHOG_ASSETS_HOST ??
-  "https://us-assets.i.posthog.com";
-
 const nextConfig: NextConfig = {
   env: {
     // Inject package.json version at build time for client-side access
     NEXT_PUBLIC_PACKAGE_VERSION: packageVersion,
-  },
-  async rewrites() {
-    return [
-      // Static assets — must come before catch-all
-      {
-        source: "/ingest/static/:path*",
-        destination: `${posthogAssetsHost}/static/:path*`,
-      },
-      // Decide endpoint — must come before catch-all or it is swallowed
-      {
-        source: "/ingest/decide",
-        destination: `${posthogIngestHost}/decide`,
-      },
-      // Catch-all for all other ingest paths
-      {
-        source: "/ingest/:path*",
-        destination: `${posthogIngestHost}/:path*`,
-      },
-    ];
   },
   async redirects() {
     // Block test endpoints in production builds

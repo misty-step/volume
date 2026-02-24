@@ -81,8 +81,8 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
 export const config = {
   matcher: [
     // Skip Next.js internals, static files, and analytics proxy
-    // ingest/ (with slash) scopes exclusion to /ingest/... only, not /ingest-data or /ingesting
-    "/((?!_next|ingest/|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // ingest(?:/|$) scopes exclusion to /ingest and /ingest/... only.
+    "/((?!_next|ingest(?:/|$)|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
     // Always run for API routes
     "/(api|trpc)(.*)",
   ],
