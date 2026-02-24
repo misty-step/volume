@@ -1,7 +1,7 @@
 # Coach Agent Architecture
 
-Date: 2026-02-16
-Status: Implemented (prototype)
+Date: 2026-02-24
+Status: Implemented (AI SDK 6 streamText migration complete)
 
 ## Core Contract
 
@@ -14,7 +14,7 @@ This keeps the system agentic without becoming fragile.
 ## Runtime Flow
 
 1. Client sends conversation history + local preferences to `POST /api/coach`.
-2. Server planner (OpenRouter via OpenAI-compatible SDK) runs tool-calling loop.
+2. Server planner (`streamText` via AI SDK 6 + OpenRouter provider) runs tool-calling loop.
 3. Deterministic tool handlers execute against Convex.
 4. Tool outputs are converted into typed UI blocks.
 5. Client renders blocks and applies any declared local actions.
@@ -67,11 +67,9 @@ Where `data` is a `CoachStreamEvent` JSON object (see `src/lib/coach/schema.ts`)
 - `src/app/api/coach/route.ts`
   - HTTP entry point (auth, request parsing, streaming vs JSON response).
 - `src/lib/coach/server/*`
-  - planner loop, SSE utilities, deterministic fallback.
-- `src/lib/coach/agent-tools.ts`
-  - tool definitions and tool executor (facade).
+  - planner loop (`planner.ts`), AI SDK tool factory (`coach-tools.ts`), runtime provider, SSE utilities, deterministic fallback.
 - `src/lib/coach/tools/*`
-  - deterministic tool handlers and Convex access helpers.
+  - deterministic tool handlers and Convex access helpers; consumed by `createCoachTools`.
 - `src/lib/coach/schema.ts`
   - request/response + UI block contracts.
 - `src/lib/coach/sse-client.ts`
@@ -98,7 +96,7 @@ If no model runtime is configured (or planner errors), the route uses determinis
 
 ## Next Hardening Steps
 
-1. Add route-level tests for planner + tool loop.
+1. Consolidate duplicate tool registries (`server/coach-tools.ts` vs `tools/definitions.ts` and `tools/execute.ts`) into a single source of truth.
 2. Add structured eval dataset for common prompts.
 3. Persist server conversation IDs for stronger long-turn memory.
 4. Add safety/approval layer for destructive actions before expanding tool set.
