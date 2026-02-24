@@ -39,6 +39,7 @@ Volume is a chat-first workout tracker where an AI coach replaces traditional UI
 - **Milestone:** Agentic Foundation
 - **Key Issues:** #341 (epic), #342 (AI SDK 6 + json-render), #349 (catalog), #344 (Mastra memory), #350 (design tokens)
 - **Theme:** Make the agent robust, generative, and memory-aware. Consolidate all UX through the coach.
+- **Execution docs:** `docs/specs/341-agentic-ui-pivot-spec.md`, `docs/design/341-agentic-ui-pivot-architecture.md`
 
 **Locked technical directions (2026-02-22 /groom):**
 
