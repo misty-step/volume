@@ -157,6 +157,20 @@ export default defineSchema({
     .index("by_user_scope_window", ["userId", "scope", "windowStartMs"])
     .index("by_expires", ["expiresAt"]),
 
+  agentActions: defineTable({
+    userId: v.string(),
+    turnId: v.string(),
+    action: v.union(v.literal("log_set")),
+    args: v.any(),
+    affectedIds: v.array(v.string()),
+    beforeSnapshot: v.optional(v.any()),
+    status: v.union(v.literal("committed"), v.literal("undone")),
+    performedAt: v.number(),
+    undoneAt: v.optional(v.number()),
+  })
+    .index("by_user_turn", ["userId", "turnId"])
+    .index("by_user_performed", ["userId", "performedAt"]),
+
   /**
    * Pre-aggregated platform statistics cache for landing page social proof.
    * Updated daily via cron job to avoid full table scans on every page load.

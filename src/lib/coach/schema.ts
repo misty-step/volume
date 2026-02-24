@@ -117,6 +117,14 @@ const ClientActionBlockSchema = z
     }
   });
 
+const UndoBlockSchema = z.object({
+  type: z.literal("undo"),
+  actionId: z.string().min(1).max(128),
+  turnId: z.string().min(1).max(128),
+  title: z.string().max(200).optional(),
+  description: z.string().max(500).optional(),
+});
+
 export const CoachBlockSchema = z.discriminatedUnion("type", [
   StatusBlockSchema,
   MetricsBlockSchema,
@@ -124,6 +132,7 @@ export const CoachBlockSchema = z.discriminatedUnion("type", [
   TableBlockSchema,
   SuggestionsBlockSchema,
   ClientActionBlockSchema,
+  UndoBlockSchema,
 ]);
 
 export type CoachBlock = z.infer<typeof CoachBlockSchema>;

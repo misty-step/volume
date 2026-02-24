@@ -41,6 +41,7 @@ const TEST_CTX = {
   convex: {} as any,
   defaultUnit: "lbs" as const,
   timezoneOffsetMinutes: 0,
+  turnId: "turn-test",
 };
 
 describe("createCoachTools", () => {

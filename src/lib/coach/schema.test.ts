@@ -106,6 +106,24 @@ describe("coach schema", () => {
     ).toThrow();
   });
 
+  it("parses undo blocks", () => {
+    const parsed = CoachTurnResponseSchema.parse({
+      assistantText: "Logged.",
+      blocks: [
+        {
+          type: "undo",
+          actionId: "action_123",
+          turnId: "turn_123",
+          title: "Undo this log",
+          description: "Reverts the set.",
+        },
+      ],
+      trace: { toolsUsed: ["log_set"], model: "test", fallbackUsed: false },
+    });
+
+    expect(parsed.blocks[0]?.type).toBe("undo");
+  });
+
   it("parses a stream tool_result event", () => {
     const parsed = CoachStreamEventSchema.parse({
       type: "tool_result",

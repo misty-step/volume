@@ -93,6 +93,7 @@ function createFakeContext(options?: {
     convex: convex as ConvexHttpClient,
     defaultUnit: "lbs",
     timezoneOffsetMinutes: 0,
+    turnId: "turn-test",
     userInput: options?.userInput,
   };
 

@@ -115,6 +115,11 @@ export async function POST(request: Request) {
     );
   }
 
+  const turnId =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `turn-${Date.now()}`;
+
   const context = {
     convex,
     defaultUnit: parsed.data.preferences.unit,
@@ -122,6 +127,7 @@ export async function POST(request: Request) {
       // If the client didn't provide a timezone offset, default to UTC instead of
       // the server's timezone (which would be wrong for most users).
       parsed.data.preferences.timezoneOffsetMinutes ?? 0,
+    turnId,
     userInput: latestUserMessage.content,
   };
 

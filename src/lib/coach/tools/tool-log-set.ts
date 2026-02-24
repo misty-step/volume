@@ -140,14 +140,15 @@ export async function runLogSetTool(
       ? `${formatSecondsShort(args.duration_seconds)} ${ensured.exercise.name}`
       : `${args.reps ?? 0} ${ensured.exercise.name.toLowerCase()}`;
 
+  let setId: Id<"sets">;
   try {
-    await ctx.convex.mutation(api.sets.logSet, {
+    setId = (await ctx.convex.mutation(api.sets.logSet, {
       exerciseId: ensured.exercise._id,
       reps: args.reps,
       duration: args.duration_seconds,
       weight: args.weight,
       unit: args.weight !== undefined ? resolvedUnit : undefined,
-    });
+    })) as Id<"sets">;
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown Convex error";
@@ -156,6 +157,23 @@ export async function runLogSetTool(
       description: message,
       error: "log_set_failed",
     });
+  }
+
+  let actionId: string | null = null;
+  try {
+    actionId = (await ctx.convex.mutation(api.agentActions.recordLogSetAction, {
+      turnId: ctx.turnId,
+      setId,
+      exerciseId: ensured.exercise._id,
+      exerciseName: ensured.exercise.name,
+      reps: args.reps,
+      duration: args.duration_seconds,
+      weight: args.weight,
+      unit: args.weight !== undefined ? resolvedUnit : undefined,
+      performedAt: Date.now(),
+    })) as string;
+  } catch {
+    actionId = null;
   }
 
   const statusBlock: CoachBlock = {
@@ -167,6 +185,19 @@ export async function runLogSetTool(
       : "Set saved successfully.",
   };
   options?.onBlocks?.([statusBlock]);
+
+  const undoBlock: CoachBlock | null = actionId
+    ? {
+        type: "undo",
+        actionId,
+        turnId: ctx.turnId,
+        title: "Undo this log",
+        description: "Reverts this set if nothing changed since it was logged.",
+      }
+    : null;
+  if (undoBlock) {
+    options?.onBlocks?.([undoBlock]);
+  }
 
   let todaySets: SetInput[];
   let recentSets: SetInput[];
@@ -182,6 +213,7 @@ export async function runLogSetTool(
       summary: `Logged set for ${ensured.exercise.name}.`,
       blocks: [
         statusBlock,
+        ...(undoBlock ? [undoBlock] : []),
         {
           type: "status",
           tone: "info",
@@ -271,7 +303,13 @@ export async function runLogSetTool(
 
   return {
     summary: `Logged set for ${ensured.exercise.name}.`,
-    blocks: [statusBlock, metricsBlock, trendBlock, suggestionsBlock],
+    blocks: [
+      statusBlock,
+      ...(undoBlock ? [undoBlock] : []),
+      metricsBlock,
+      trendBlock,
+      suggestionsBlock,
+    ],
     outputForModel: {
       status: "ok",
       exercise_name: ensured.exercise.name,

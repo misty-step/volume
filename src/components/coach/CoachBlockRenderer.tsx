@@ -57,12 +57,37 @@ function renderTrendBars(
 export function CoachBlockRenderer({
   block,
   onPrompt,
+  onUndo,
 }: {
   block: CoachBlock;
   onPrompt: (prompt: string) => void;
+  onUndo?: (actionId: string, turnId: string) => void;
 }) {
   if (block.type === "client_action") {
     return null;
+  }
+
+  if (block.type === "undo") {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">{block.title ?? "Undo"}</CardTitle>
+          {block.description ? (
+            <p className="text-xs text-muted-foreground">{block.description}</p>
+          ) : null}
+        </CardHeader>
+        <CardContent>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onUndo?.(block.actionId, block.turnId)}
+            disabled={!onUndo}
+          >
+            Undo
+          </Button>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (block.type === "status") {

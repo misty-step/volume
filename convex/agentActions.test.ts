@@ -1,0 +1,182 @@
+import { convexTest } from "convex-test";
+import { describe, expect, test } from "vitest";
+import type { TestConvex } from "convex-test";
+import schema from "./schema";
+import { api, internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
+
+describe("agentActions", () => {
+  const subject = "agent_actions_user";
+
+  async function setupLoggedSet(t: TestConvex<typeof schema>) {
+    const exerciseId = await t
+      .withIdentity({ subject })
+      .action(api.exercises.createExercise, { name: "Bench Press" });
+
+    const performedAt = Date.now();
+    const setId = await t.withIdentity({ subject }).mutation(api.sets.logSet, {
+      exerciseId,
+      reps: 8,
+      weight: 185,
+      unit: "lbs",
+      performedAt,
+    });
+
+    return { exerciseId, setId, performedAt };
+  }
+
+  test("records and undoes a single log_set action", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.ts"));
+    const turnId = "turn-single";
+    const { exerciseId, setId, performedAt } = await setupLoggedSet(t);
+
+    const actionId = await t
+      .withIdentity({ subject })
+      .mutation(api.agentActions.recordLogSetAction, {
+        turnId,
+        setId,
+        exerciseId,
+        exerciseName: "Bench Press",
+        reps: 8,
+        weight: 185,
+        unit: "lbs",
+        performedAt,
+      });
+
+    const beforeUndo = await t
+      .withIdentity({ subject })
+      .query(api.sets.listSets, { exerciseId });
+    expect(beforeUndo).toHaveLength(1);
+
+    const undoResult = await t
+      .withIdentity({ subject })
+      .mutation(api.agentActions.undoAgentAction, { actionId });
+
+    expect(undoResult.ok).toBe(true);
+
+    const afterUndo = await t
+      .withIdentity({ subject })
+      .query(api.sets.listSets, { exerciseId });
+    expect(afterUndo).toHaveLength(0);
+
+    const actions = await t
+      .withIdentity({ subject })
+      .query(api.agentActions.listActionsForTurn, { turnId });
+    expect(actions).toHaveLength(1);
+    expect(actions[0]?.status).toBe("undone");
+  });
+
+  test("undoAgentTurn reverts all actions in reverse order", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.ts"));
+    const turnId = "turn-bulk";
+
+    const exerciseId = await t
+      .withIdentity({ subject })
+      .action(api.exercises.createExercise, { name: "Squat" });
+
+    const firstSetId = await t
+      .withIdentity({ subject })
+      .mutation(api.sets.logSet, {
+        exerciseId,
+        reps: 5,
+        weight: 225,
+        unit: "lbs",
+      });
+
+    const secondSetId = await t
+      .withIdentity({ subject })
+      .mutation(api.sets.logSet, {
+        exerciseId,
+        reps: 3,
+        weight: 245,
+        unit: "lbs",
+      });
+
+    await t
+      .withIdentity({ subject })
+      .mutation(api.agentActions.recordLogSetAction, {
+        turnId,
+        setId: firstSetId,
+        exerciseId,
+        exerciseName: "Squat",
+        reps: 5,
+        weight: 225,
+        unit: "lbs",
+        performedAt: Date.now() - 1000,
+      });
+
+    await t
+      .withIdentity({ subject })
+      .mutation(api.agentActions.recordLogSetAction, {
+        turnId,
+        setId: secondSetId,
+        exerciseId,
+        exerciseName: "Squat",
+        reps: 3,
+        weight: 245,
+        unit: "lbs",
+        performedAt: Date.now(),
+      });
+
+    const result = await t
+      .withIdentity({ subject })
+      .mutation(api.agentActions.undoAgentTurn, { turnId });
+
+    expect(result).toEqual({ ok: true, turnId, undoneCount: 2 });
+
+    const sets = await t.withIdentity({ subject }).query(api.sets.listSets, {
+      exerciseId,
+    });
+    expect(sets).toHaveLength(0);
+  });
+
+  test("detects conflicts when target set changed since recorded action", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.ts"));
+    const turnId = "turn-conflict";
+    const { exerciseId, setId, performedAt } = await setupLoggedSet(t);
+
+    const actionId = await t
+      .withIdentity({ subject })
+      .mutation(api.agentActions.recordLogSetAction, {
+        turnId,
+        setId,
+        exerciseId,
+        exerciseName: "Bench Press",
+        reps: 8,
+        weight: 185,
+        unit: "lbs",
+        performedAt,
+      });
+
+    await t.withIdentity({ subject }).mutation(api.sets.deleteSet, {
+      id: setId as Id<"sets">,
+    });
+
+    const result = await t
+      .withIdentity({ subject })
+      .mutation(api.agentActions.undoAgentAction, { actionId });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe("missing_target");
+    }
+  });
+
+  test("supports internal recordAgentAction mutation", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.ts"));
+    const { setId } = await setupLoggedSet(t);
+
+    const internalActionId = await t
+      .withIdentity({ subject })
+      .mutation(internal.agentActions.recordAgentAction, {
+        userId: subject,
+        turnId: "turn-internal",
+        action: "log_set",
+        args: { source: "test" },
+        affectedIds: [String(setId)],
+        beforeSnapshot: null,
+      });
+
+    expect(internalActionId).toBeTruthy();
+  });
+});
