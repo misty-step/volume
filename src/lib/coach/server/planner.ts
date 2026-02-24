@@ -27,6 +27,38 @@ export type PlannerRunResult =
 const MAX_TOOL_ROUNDS = 5;
 const MODEL_CALL_TIMEOUT_MS = 30_000;
 
+function createModelAbortSignal(signal?: AbortSignal): AbortSignal {
+  const timeoutSignal = AbortSignal.timeout(MODEL_CALL_TIMEOUT_MS);
+  if (!signal) return timeoutSignal;
+  if (typeof AbortSignal.any === "function") {
+    return AbortSignal.any([signal, timeoutSignal]);
+  }
+
+  const controller = new AbortController();
+
+  const abortFrom = (source: AbortSignal) => {
+    if (controller.signal.aborted) return;
+    controller.abort(source.reason ?? new Error("Planner aborted"));
+  };
+
+  if (signal.aborted) {
+    abortFrom(signal);
+    return controller.signal;
+  }
+
+  if (timeoutSignal.aborted) {
+    abortFrom(timeoutSignal);
+    return controller.signal;
+  }
+
+  signal.addEventListener("abort", () => abortFrom(signal), { once: true });
+  timeoutSignal.addEventListener("abort", () => abortFrom(timeoutSignal), {
+    once: true,
+  });
+
+  return controller.signal;
+}
+
 export async function runPlannerTurn({
   runtime,
   history,
@@ -49,6 +81,7 @@ export async function runPlannerTurn({
   const toolsUsed: string[] = [];
   const blocks: CoachBlock[] = [];
   const seenToolCallIds = new Set<string>();
+  // Sanitize user preferences before interpolation into the system prompt.
   const promptUnit = preferences.unit === "kg" ? "kg" : "lbs";
   const promptSound = preferences.soundEnabled ? "enabled" : "disabled";
 
@@ -70,10 +103,7 @@ User local prefs:
   });
 
   try {
-    const timeoutSignal = AbortSignal.timeout(MODEL_CALL_TIMEOUT_MS);
-    const modelAbortSignal = signal
-      ? AbortSignal.any([signal, timeoutSignal])
-      : timeoutSignal;
+    const modelAbortSignal = createModelAbortSignal(signal);
 
     const result = streamText({
       model: runtime.model,
@@ -94,9 +124,15 @@ User local prefs:
       abortSignal: modelAbortSignal,
     });
 
-    const [text, steps] = await Promise.all([result.text, result.steps]);
+    const [text, steps, finishReason] = await Promise.all([
+      result.text,
+      result.steps,
+      result.finishReason,
+    ]);
     const normalizedText = normalizeAssistantText(text);
-    const hitToolLimit = steps.length >= MAX_TOOL_ROUNDS && !normalizedText;
+    const hitToolLimit =
+      !normalizedText &&
+      (finishReason === "tool-calls" || steps.length >= MAX_TOOL_ROUNDS);
     const assistantText =
       normalizedText ||
       (hitToolLimit

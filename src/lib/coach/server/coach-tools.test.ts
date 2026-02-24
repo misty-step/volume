@@ -5,6 +5,8 @@ import type { CoachBlock } from "@/lib/coach/schema";
 
 const mockRunLogSetTool = vi.fn();
 const mockRunTodaySummaryTool = vi.fn();
+const mockRunSetWeightUnitTool = vi.fn();
+const mockRunSetSoundTool = vi.fn();
 
 vi.mock("@/lib/coach/tools/tool-log-set", () => ({
   runLogSetTool: (...args: unknown[]) => mockRunLogSetTool(...args),
@@ -12,6 +14,15 @@ vi.mock("@/lib/coach/tools/tool-log-set", () => ({
 
 vi.mock("@/lib/coach/tools/tool-today-summary", () => ({
   runTodaySummaryTool: (...args: unknown[]) => mockRunTodaySummaryTool(...args),
+}));
+
+vi.mock("@/lib/coach/tools/tool-set-weight-unit", () => ({
+  runSetWeightUnitTool: (...args: unknown[]) =>
+    mockRunSetWeightUnitTool(...args),
+}));
+
+vi.mock("@/lib/coach/tools/tool-set-sound", () => ({
+  runSetSoundTool: (...args: unknown[]) => mockRunSetSoundTool(...args),
 }));
 
 const TEST_CTX = {
@@ -24,11 +35,12 @@ describe("createCoachTools", () => {
   beforeEach(() => {
     mockRunLogSetTool.mockReset();
     mockRunTodaySummaryTool.mockReset();
+    mockRunSetWeightUnitTool.mockReset();
+    mockRunSetSoundTool.mockReset();
   });
 
-  it("passes tool blocks through onBlocks and marks output handled", async () => {
-    const { BLOCKS_HANDLED_FLAG, createCoachTools } =
-      await import("./coach-tools");
+  it("passes tool blocks through onBlocks", async () => {
+    const { createCoachTools } = await import("./coach-tools");
     const onBlocks = vi.fn();
     const toolBlocks: CoachBlock[] = [
       {
@@ -56,12 +68,11 @@ describe("createCoachTools", () => {
       TEST_CTX
     );
     expect(onBlocks).toHaveBeenCalledWith("log_set", toolBlocks);
-    expect(output).toEqual({ [BLOCKS_HANDLED_FLAG]: true, status: "ok" });
+    expect(output).toEqual({ status: "ok" });
   });
 
   it("emits tool failure blocks and error output when a runner throws", async () => {
-    const { BLOCKS_HANDLED_FLAG, createCoachTools } =
-      await import("./coach-tools");
+    const { createCoachTools } = await import("./coach-tools");
     const onBlocks = vi.fn();
     mockRunLogSetTool.mockRejectedValue(new Error("boom"));
 
@@ -71,7 +82,7 @@ describe("createCoachTools", () => {
       reps: 10,
     });
 
-    expect(output).toEqual({ [BLOCKS_HANDLED_FLAG]: true, error: "boom" });
+    expect(output).toEqual({ error: "boom" });
     expect(onBlocks).toHaveBeenCalledWith(
       "log_set",
       expect.arrayContaining([
@@ -86,8 +97,7 @@ describe("createCoachTools", () => {
   });
 
   it("supports tools with empty input schemas", async () => {
-    const { BLOCKS_HANDLED_FLAG, createCoachTools } =
-      await import("./coach-tools");
+    const { createCoachTools } = await import("./coach-tools");
     const onBlocks = vi.fn();
     const toolBlocks: CoachBlock[] = [
       {
@@ -108,6 +118,42 @@ describe("createCoachTools", () => {
 
     expect(mockRunTodaySummaryTool).toHaveBeenCalledWith(TEST_CTX);
     expect(onBlocks).toHaveBeenCalledWith("get_today_summary", toolBlocks);
-    expect(output).toEqual({ [BLOCKS_HANDLED_FLAG]: true, total_sets: 5 });
+    expect(output).toEqual({ total_sets: 5 });
+  });
+
+  it("routes set_weight_unit through the no-context tool runner", async () => {
+    const { createCoachTools } = await import("./coach-tools");
+    const onBlocks = vi.fn();
+
+    mockRunSetWeightUnitTool.mockReturnValue({
+      summary: "unit set",
+      blocks: [],
+      outputForModel: { status: "ok", unit: "kg" },
+    });
+
+    const tools = createCoachTools(TEST_CTX, { onBlocks });
+    const output = await (tools.set_weight_unit as any).execute({ unit: "kg" });
+
+    expect(mockRunSetWeightUnitTool).toHaveBeenCalledWith({ unit: "kg" });
+    expect(onBlocks).toHaveBeenCalledWith("set_weight_unit", []);
+    expect(output).toEqual({ status: "ok", unit: "kg" });
+  });
+
+  it("routes set_sound through the no-context tool runner", async () => {
+    const { createCoachTools } = await import("./coach-tools");
+    const onBlocks = vi.fn();
+
+    mockRunSetSoundTool.mockReturnValue({
+      summary: "sound set",
+      blocks: [],
+      outputForModel: { status: "ok", enabled: true },
+    });
+
+    const tools = createCoachTools(TEST_CTX, { onBlocks });
+    const output = await (tools.set_sound as any).execute({ enabled: true });
+
+    expect(mockRunSetSoundTool).toHaveBeenCalledWith({ enabled: true });
+    expect(onBlocks).toHaveBeenCalledWith("set_sound", []);
+    expect(output).toEqual({ status: "ok", enabled: true });
   });
 });

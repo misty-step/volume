@@ -317,6 +317,7 @@ describe("runPlannerTurn", () => {
     });
 
     expect(result.kind).toBe("error");
+    expect(result.errorMessage).toBeTruthy();
   });
 
   it("emits error block when a tool throws", async () => {
@@ -373,6 +374,9 @@ describe("runPlannerTurn", () => {
 
     expect(result.kind).toBe("ok");
     expect(result.hitToolLimit).toBe(true);
+    expect(result.assistantText).toBe(
+      "I reached the step limit. Ask a follow-up and I'll continue."
+    );
     expect(
       result.blocks.some(
         (b) => b.type === "status" && b.title === "Step limit reached"
