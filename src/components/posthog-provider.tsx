@@ -29,11 +29,11 @@ function deriveUiHost(apiHost: string): string | undefined {
     if (posthogCloud) {
       return `${url.protocol}//${posthogCloud[1]}.posthog.com`;
     }
+    // Self-hosted deployments usually expose API and UI from the same origin.
+    return url.origin;
   } catch {
     return undefined;
   }
-
-  return undefined;
 }
 
 function isDoNotTrackEnabled(value: string | null | undefined): boolean {
@@ -44,6 +44,8 @@ function isDoNotTrackEnabled(value: string | null | undefined): boolean {
 
 export function PostHogProvider({ children }: PostHogProviderProps) {
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_DISABLE_ANALYTICS === "true") return;
+
     const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
     if (!posthogKey) return;
 
@@ -57,12 +59,20 @@ export function PostHogProvider({ children }: PostHogProviderProps) {
 
     const dntValue =
       typeof navigator === "undefined" ? undefined : navigator.doNotTrack;
-    if (isDoNotTrackEnabled(dntValue)) {
+    const gpcValue =
+      typeof navigator === "undefined"
+        ? undefined
+        : (navigator as Navigator & { globalPrivacyControl?: boolean })
+            .globalPrivacyControl;
+    if (isDoNotTrackEnabled(dntValue) || gpcValue === true) {
       posthog.opt_out_capturing();
     }
   }, []);
 
-  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+  if (
+    process.env.NEXT_PUBLIC_DISABLE_ANALYTICS === "true" ||
+    !process.env.NEXT_PUBLIC_POSTHOG_KEY
+  ) {
     return <>{children}</>;
   }
 

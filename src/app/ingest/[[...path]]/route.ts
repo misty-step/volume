@@ -5,6 +5,7 @@ const DEFAULT_INGEST_HOST = "https://us.i.posthog.com";
 const DEFAULT_ASSETS_HOST = "https://us-assets.i.posthog.com";
 const DEFAULT_TIMEOUT_MS = 5_000;
 const HOP_BY_HOP_HEADERS = [
+  "authorization",
   "connection",
   "content-length",
   "cookie",
@@ -54,13 +55,22 @@ function buildForwardHeaders(request: NextRequest): Headers {
   for (const header of HOP_BY_HOP_HEADERS) {
     headers.delete(header);
   }
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    headers.set("x-forwarded-for", forwardedFor);
+  }
   return headers;
 }
 
-function buildResponseHeaders(upstreamHeaders: Headers): Headers {
+function buildResponseHeaders(
+  upstreamHeaders: Headers,
+  isStaticAsset: boolean
+): Headers {
   const headers = new Headers(upstreamHeaders);
   headers.delete("set-cookie");
-  headers.set("cache-control", "no-store");
+  if (!isStaticAsset) {
+    headers.set("cache-control", "no-store");
+  }
   return headers;
 }
 
@@ -69,6 +79,7 @@ async function proxyIngestRequest(
   context: IngestRouteContext
 ) {
   const { path = [] } = await Promise.resolve(context.params);
+  const isStaticAsset = path[0] === "static";
   const timeoutSignal = AbortSignal.timeout(getProxyTimeoutMs());
 
   try {
@@ -89,7 +100,7 @@ async function proxyIngestRequest(
 
     return new NextResponse(upstreamResponse.body, {
       status: upstreamResponse.status,
-      headers: buildResponseHeaders(upstreamResponse.headers),
+      headers: buildResponseHeaders(upstreamResponse.headers, isStaticAsset),
     });
   } catch (error) {
     if (

@@ -6,6 +6,9 @@ import { PostHogProvider } from "./posthog-provider";
 const mockInit = vi.fn();
 const mockOptOutCapturing = vi.fn();
 const originalDoNotTrack = navigator.doNotTrack;
+const originalGlobalPrivacyControl = (
+  navigator as Navigator & { globalPrivacyControl?: boolean }
+).globalPrivacyControl;
 
 vi.mock("posthog-js", () => ({
   default: {
@@ -25,10 +28,18 @@ function resetPosthogEnv() {
   delete process.env.NEXT_PUBLIC_POSTHOG_HOST;
   delete process.env.NEXT_PUBLIC_POSTHOG_UI_HOST;
   delete process.env.NEXT_PUBLIC_POSTHOG_INGEST_HOST;
+  delete process.env.NEXT_PUBLIC_DISABLE_ANALYTICS;
 }
 
 function setDoNotTrack(value?: string) {
   Object.defineProperty(navigator, "doNotTrack", {
+    configurable: true,
+    value,
+  });
+}
+
+function setGlobalPrivacyControl(value?: boolean) {
+  Object.defineProperty(navigator, "globalPrivacyControl", {
     configurable: true,
     value,
   });
@@ -39,11 +50,13 @@ describe("PostHogProvider", () => {
     vi.clearAllMocks();
     resetPosthogEnv();
     setDoNotTrack(undefined);
+    setGlobalPrivacyControl(undefined);
   });
 
   afterEach(() => {
     resetPosthogEnv();
     setDoNotTrack(originalDoNotTrack ?? undefined);
+    setGlobalPrivacyControl(originalGlobalPrivacyControl);
   });
 
   it("initializes with /ingest fallback and derives ui host from ingest host", async () => {
@@ -99,6 +112,34 @@ describe("PostHogProvider", () => {
 
     expect(mockInit).not.toHaveBeenCalled();
     expect(screen.getByText("child")).toBeInTheDocument();
+    expect(screen.queryByTestId("posthog-provider")).not.toBeInTheDocument();
+  });
+
+  it("opts out when Global Privacy Control is enabled", async () => {
+    process.env.NEXT_PUBLIC_POSTHOG_KEY = "test-key";
+    setGlobalPrivacyControl(true);
+
+    render(
+      <PostHogProvider>
+        <span>child</span>
+      </PostHogProvider>
+    );
+
+    await waitFor(() => expect(mockInit).toHaveBeenCalledTimes(1));
+    expect(mockOptOutCapturing).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not initialize when analytics are explicitly disabled", () => {
+    process.env.NEXT_PUBLIC_POSTHOG_KEY = "test-key";
+    process.env.NEXT_PUBLIC_DISABLE_ANALYTICS = "true";
+
+    render(
+      <PostHogProvider>
+        <span>child</span>
+      </PostHogProvider>
+    );
+
+    expect(mockInit).not.toHaveBeenCalled();
     expect(screen.queryByTestId("posthog-provider")).not.toBeInTheDocument();
   });
 });
