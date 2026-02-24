@@ -163,6 +163,26 @@ describe("executeCoachTool", () => {
     });
   });
 
+  it("shows an info block when undo action recording fails", async () => {
+    const { ctx, convex } = createFakeContext();
+
+    vi.mocked(convex.mutation)
+      .mockImplementationOnce(async () => "set_test_id")
+      .mockImplementationOnce(async () => null);
+
+    const result = await executeCoachTool(
+      "log_set",
+      { exercise_name: "Dead Hang", duration_seconds: 48 },
+      ctx
+    );
+
+    expect(
+      result.blocks.some(
+        (block) => block.type === "status" && block.title === "Undo unavailable"
+      )
+    ).toBe(true);
+  });
+
   it("prefers deterministically parsed durations when userInput is available", async () => {
     const { ctx } = createFakeContext({
       userInput: "i did a dead hang for 48 seconds",

@@ -264,6 +264,67 @@ describe("agentActions", () => {
     expect(sets).toHaveLength(2);
   });
 
+  test("supports legacy args.expectedSnapshot when beforeSnapshot is absent", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.ts"));
+    const { setId } = await setupLoggedSet(t);
+
+    const setDoc = await t.run(async (ctx) => {
+      return await ctx.db.get(setId);
+    });
+    expect(setDoc).not.toBeNull();
+
+    const actionId = await t
+      .withIdentity({ subject })
+      .mutation(internal.agentActions.recordAgentAction, {
+        userId: subject,
+        turnId: "turn-legacy-args",
+        action: "log_set",
+        args: {
+          expectedSnapshot: {
+            userId: setDoc?.userId,
+            exerciseId: String(setDoc?.exerciseId),
+            reps: setDoc?.reps,
+            duration: setDoc?.duration,
+            weight: setDoc?.weight,
+            unit: setDoc?.unit,
+            performedAt: setDoc?.performedAt,
+          },
+        },
+        affectedIds: [String(setId)],
+        beforeSnapshot: null,
+      });
+
+    const result = await t
+      .withIdentity({ subject })
+      .mutation(api.agentActions.undoAgentAction, { actionId });
+
+    expect(result.ok).toBe(true);
+  });
+
+  test("returns invalid_action when affected id is malformed", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.ts"));
+
+    const actionId = await t
+      .withIdentity({ subject })
+      .mutation(internal.agentActions.recordAgentAction, {
+        userId: subject,
+        turnId: "turn-invalid-id",
+        action: "log_set",
+        args: { source: "test" },
+        affectedIds: ["not_a_convex_id"],
+        beforeSnapshot: null,
+      });
+
+    const result = await t
+      .withIdentity({ subject })
+      .mutation(api.agentActions.undoAgentAction, { actionId });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe("invalid_action");
+    }
+  });
+
   test("supports internal recordAgentAction mutation", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.ts"));
     const { setId } = await setupLoggedSet(t);
