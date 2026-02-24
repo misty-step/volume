@@ -67,6 +67,37 @@ function toolCallStream(toolName: string, input: Record<string, unknown>) {
   });
 }
 
+function duplicateToolCallStream(
+  toolName: string,
+  input: Record<string, unknown>
+) {
+  return simulateReadableStream({
+    chunks: [
+      {
+        type: "tool-call" as const,
+        toolCallId: "tc-dup",
+        toolName,
+        input: JSON.stringify(input),
+      },
+      {
+        type: "tool-call" as const,
+        toolCallId: "tc-dup",
+        toolName,
+        input: JSON.stringify(input),
+      },
+      {
+        type: "finish" as const,
+        finishReason: "tool-calls" as const,
+        usage: {
+          inputTokens: 10,
+          outputTokens: 5,
+          totalTokens: 15,
+        },
+      },
+    ],
+  });
+}
+
 function textStream(text: string) {
   return simulateReadableStream({
     chunks: [
@@ -178,6 +209,44 @@ describe("runPlannerTurn", () => {
     expect(toolStart?.toolName).toBe("get_today_summary");
   });
 
+  it("deduplicates repeated tool-call chunks by toolCallId", async () => {
+    const { runPlannerTurn } = await import("./planner");
+
+    mockGetTodaySummaryExecute.mockResolvedValue({
+      summary: "summary",
+      blocks: SUCCESS_BLOCKS,
+      outputForModel: { status: "ok" },
+    });
+
+    let callCount = 0;
+    const runtime = makeRuntime(async () => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          stream: duplicateToolCallStream("get_today_summary", {}),
+          rawCall: {},
+        };
+      }
+      return { stream: textStream("Summary."), rawCall: {} };
+    });
+
+    const events: unknown[] = [];
+    const result = await runPlannerTurn({
+      runtime,
+      ...DEFAULT_ARGS,
+      history: [{ role: "user", content: "show today's summary" }],
+      emitEvent: (event) => events.push(event),
+    });
+
+    expect(result.kind).toBe("ok");
+    expect(result.toolsUsed).toEqual(["get_today_summary"]);
+    const toolStartEvents = (
+      events as Array<{ type: string; toolName?: string }>
+    ).filter((event) => event.type === "tool_start");
+    expect(toolStartEvents).toHaveLength(1);
+    expect(toolStartEvents[0]?.toolName).toBe("get_today_summary");
+  });
+
   it("includes blocks from tool results in the final response", async () => {
     const { runPlannerTurn } = await import("./planner");
 
@@ -248,63 +317,6 @@ describe("runPlannerTurn", () => {
     });
 
     expect(result.kind).toBe("error");
-  });
-
-  it("emits error block when tool output has no blocks field", async () => {
-    const { runPlannerTurn } = await import("./planner");
-
-    // Tool returns without the 'blocks' key — misbehaving or outdated tool
-    mockLogSetExecute.mockResolvedValue({ status: "ok" });
-
-    let callCount = 0;
-    const runtime = makeRuntime(async () => {
-      callCount++;
-      if (callCount === 1) {
-        return {
-          stream: toolCallStream("log_set", {
-            exercise_name: "Squats",
-            reps: 5,
-          }),
-          rawCall: {},
-        };
-      }
-      return { stream: textStream("Done."), rawCall: {} };
-    });
-
-    const result = await runPlannerTurn({ runtime, ...DEFAULT_ARGS });
-
-    expect(result.kind).toBe("ok");
-    expect(
-      result.blocks.some((b) => b.type === "status" && b.tone === "error")
-    ).toBe(true);
-  });
-
-  it("emits error block when tool output is undefined", async () => {
-    const { runPlannerTurn } = await import("./planner");
-
-    mockLogSetExecute.mockResolvedValue(undefined);
-
-    let callCount = 0;
-    const runtime = makeRuntime(async () => {
-      callCount++;
-      if (callCount === 1) {
-        return {
-          stream: toolCallStream("log_set", {
-            exercise_name: "Squats",
-            reps: 5,
-          }),
-          rawCall: {},
-        };
-      }
-      return { stream: textStream("Done."), rawCall: {} };
-    });
-
-    const result = await runPlannerTurn({ runtime, ...DEFAULT_ARGS });
-
-    expect(result.kind).toBe("ok");
-    expect(
-      result.blocks.some((b) => b.type === "status" && b.tone === "error")
-    ).toBe(true);
   });
 
   it("emits error block when a tool throws", async () => {

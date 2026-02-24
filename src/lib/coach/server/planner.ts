@@ -1,10 +1,8 @@
 import { streamText, stepCountIs } from "ai";
-import { z } from "zod";
 import { COACH_AGENT_SYSTEM_PROMPT } from "@/lib/coach/agent-prompt";
-import { CoachBlockSchema } from "@/lib/coach/schema";
 import type { CoachBlock, CoachStreamEvent } from "@/lib/coach/schema";
 import { normalizeAssistantText } from "./blocks";
-import { BLOCKS_HANDLED_FLAG, createCoachTools } from "./coach-tools";
+import { createCoachTools } from "./coach-tools";
 import type { CoachToolContext } from "@/lib/coach/tools/types";
 import type { CoachRuntime } from "./runtime";
 
@@ -28,12 +26,6 @@ export type PlannerRunResult =
 
 const MAX_TOOL_ROUNDS = 5;
 const MODEL_CALL_TIMEOUT_MS = 30_000;
-const ToolResultOutputSchema = z.object({ blocks: z.array(CoachBlockSchema) });
-
-function isBlocksHandledOutput(value: unknown): boolean {
-  if (typeof value !== "object" || value === null) return false;
-  return (value as Record<string, unknown>)[BLOCKS_HANDLED_FLAG] === true;
-}
 
 export async function runPlannerTurn({
   runtime,
@@ -56,6 +48,7 @@ export async function runPlannerTurn({
 }): Promise<PlannerRunResult> {
   const toolsUsed: string[] = [];
   const blocks: CoachBlock[] = [];
+  const seenToolCallIds = new Set<string>();
   const promptUnit = preferences.unit === "kg" ? "kg" : "lbs";
   const promptSound = preferences.soundEnabled ? "enabled" : "disabled";
 
@@ -90,36 +83,12 @@ User local prefs:
       stopWhen: stepCountIs(MAX_TOOL_ROUNDS),
       onChunk: ({ chunk }) => {
         if (chunk.type === "tool-call") {
+          if (typeof chunk.toolCallId === "string") {
+            if (seenToolCallIds.has(chunk.toolCallId)) return;
+            seenToolCallIds.add(chunk.toolCallId);
+          }
           toolsUsed.push(chunk.toolName);
           emitEvent?.({ type: "tool_start", toolName: chunk.toolName });
-        }
-        if (chunk.type === "tool-result") {
-          if (isBlocksHandledOutput(chunk.output)) return;
-
-          const outputResult = ToolResultOutputSchema.safeParse(chunk.output);
-          if (outputResult.success) {
-            blocks.push(...outputResult.data.blocks);
-            emitEvent?.({
-              type: "tool_result",
-              toolName: chunk.toolName,
-              blocks: outputResult.data.blocks,
-            });
-          } else {
-            const toolBlocks: CoachBlock[] = [
-              {
-                type: "status",
-                tone: "error",
-                title: `Tool ${chunk.toolName} returned unexpected output`,
-                description: "The tool result was not in the expected format.",
-              },
-            ];
-            blocks.push(...toolBlocks);
-            emitEvent?.({
-              type: "tool_result",
-              toolName: chunk.toolName,
-              blocks: toolBlocks,
-            });
-          }
         }
       },
       abortSignal: modelAbortSignal,

@@ -118,6 +118,75 @@ describe("POST /api/coach", () => {
     expect(events).toEqual(["start", "tool_start", "tool_result", "final"]);
   });
 
+  it("streams agent events when runtime is available", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    ConvexHttpClientMock.mockReturnValue(convex);
+
+    getCoachRuntimeMock.mockReturnValue({
+      model: {},
+      modelId: "mock-model-id",
+    });
+    runPlannerTurnMock.mockReset();
+    runPlannerTurnMock.mockResolvedValue({
+      kind: "ok",
+      assistantText: "Logged that set.",
+      blocks: [
+        {
+          type: "status",
+          tone: "success",
+          title: "Set logged",
+          description: "Bench press x10",
+        },
+      ],
+      toolsUsed: ["log_set"],
+      hitToolLimit: false,
+    });
+
+    const { POST } = await import("./route");
+
+    const request = new Request("https://volume.fitness/api/coach", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "log bench press 10 reps" }],
+        preferences: {
+          unit: "lbs",
+          soundEnabled: true,
+          timezoneOffsetMinutes: 0,
+        },
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/event-stream");
+
+    const events: Array<{ type: string; model?: string }> = [];
+    for await (const event of readCoachStreamEvents(response.body!)) {
+      events.push(event);
+      if (event.type === "final") break;
+    }
+
+    expect(events[0]).toEqual({ type: "start", model: "mock-model-id" });
+    expect(events.at(-1)?.type).toBe("final");
+    expect(runPlannerTurnMock).toHaveBeenCalledTimes(1);
+    expect(runPlannerTurnMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runtime: expect.objectContaining({ modelId: "mock-model-id" }),
+        history: [{ role: "user", content: "log bench press 10 reps" }],
+      })
+    );
+  });
+
   it("enforces per-user rate limits", async () => {
     process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
     authMock.mockResolvedValue({
@@ -185,5 +254,60 @@ describe("POST /api/coach", () => {
     const json = await response.json();
     expect(json.assistantText).toBeTruthy();
     expect(Array.isArray(json.blocks)).toBe(true);
+  });
+
+  it("returns JSON from planner when runtime is available", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    ConvexHttpClientMock.mockReturnValue(convex);
+
+    getCoachRuntimeMock.mockReturnValue({
+      model: {},
+      modelId: "mock-model-id",
+    });
+    runPlannerTurnMock.mockReset();
+    runPlannerTurnMock.mockResolvedValue({
+      kind: "ok",
+      assistantText: "Summary ready.",
+      blocks: [
+        {
+          type: "metrics",
+          title: "Today",
+          metrics: [{ label: "Sets", value: "5" }],
+        },
+      ],
+      toolsUsed: ["get_today_summary"],
+      hitToolLimit: false,
+    });
+
+    const { POST } = await import("./route");
+
+    const request = new Request("https://volume.fitness/api/coach", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "show today's summary" }],
+        preferences: {
+          unit: "lbs",
+          soundEnabled: true,
+          timezoneOffsetMinutes: 0,
+        },
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+
+    const json = await response.json();
+    expect(json.assistantText).toBe("Summary ready.");
+    expect(json.trace.model).toBe("mock-model-id");
+    expect(json.trace.fallbackUsed).toBe(false);
+    expect(json.trace.toolsUsed).toEqual(["get_today_summary"]);
+    expect(runPlannerTurnMock).toHaveBeenCalledTimes(1);
   });
 });
