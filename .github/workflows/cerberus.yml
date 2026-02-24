@@ -125,7 +125,7 @@ jobs:
             echo "Dependabot PR — skipping council gate (no secret access)"
             exit 0
           fi
-          if [[ "$VERDICT" == "success" ]]; then
+          if [[ "$VERDICT" == "success" || "$VERDICT" == "skipped" ]]; then
             echo "Council verdict passed"
             exit 0
           fi

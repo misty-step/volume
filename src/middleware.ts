@@ -6,6 +6,10 @@ const isPublicRoute = createRouteMatcher([
   "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
+  // Analytics proxy (PostHog /ingest rewrite)
+  // Use separate patterns to avoid over-matching /ingest-data, /ingestion, etc.
+  "/ingest",
+  "/ingest/(.*)",
   // Legal pages
   "/terms",
   "/privacy",
@@ -31,8 +35,8 @@ const cspHeader = `
   img-src 'self' https: data: blob:;
   font-src 'self' data:;
   worker-src 'self' blob:;
-  connect-src 'self' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud https://va.vercel-scripts.com https://vitals.vercel-insights.com https://clerk-telemetry.com;
-  frame-src 'self' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://challenges.cloudflare.com https://vercel.live;
+  connect-src 'self' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud https://va.vercel-scripts.com https://vitals.vercel-insights.com https://clerk-telemetry.com https://*.posthog.com;
+  frame-src 'self' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://challenges.cloudflare.com https://vercel.live https://*.posthog.com;
   object-src 'none';
   base-uri 'self';
   form-action 'self';
@@ -76,8 +80,9 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // Skip Next.js internals, static files, and analytics proxy
+    // ingest(?:/|$) scopes exclusion to /ingest and /ingest/... only.
+    "/((?!_next|ingest(?:/|$)|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
     // Always run for API routes
     "/(api|trpc)(.*)",
   ],
