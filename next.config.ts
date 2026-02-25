@@ -3,7 +3,7 @@ import { withSentryConfig } from "@sentry/nextjs";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { getDeploymentEnvironment } from "./src/lib/environment";
+import { isServerProductionDeployment } from "./src/lib/environment";
 
 // Read package.json version at build time
 const packageJson = JSON.parse(
@@ -19,9 +19,7 @@ const nextConfig: NextConfig = {
   async redirects() {
     // Block test endpoints in production deployments.
     // Preview deployments should still expose these routes for e2e flows.
-    if (
-      getDeploymentEnvironment({ preferClientFallback: false }) === "production"
-    ) {
+    if (isServerProductionDeployment()) {
       return [
         {
           source: "/api/test/:path*",

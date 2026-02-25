@@ -65,6 +65,34 @@ describe("POST /api/test/reset", () => {
     expect(fetchMutationMock).not.toHaveBeenCalled();
   });
 
+  it("fails closed when TEST_RESET_SECRET is missing", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.VERCEL_ENV = "preview";
+    delete process.env.TEST_RESET_SECRET;
+
+    const { POST } = await import("./route");
+    const response = await POST(createRequest("test-secret"));
+
+    expect(response.status).toBe(401);
+    expect(await response.text()).toBe("Invalid secret");
+    expect(currentUserMock).not.toHaveBeenCalled();
+    expect(fetchMutationMock).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when TEST_RESET_SECRET is empty", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.VERCEL_ENV = "preview";
+    process.env.TEST_RESET_SECRET = "";
+
+    const { POST } = await import("./route");
+    const response = await POST(createRequest(""));
+
+    expect(response.status).toBe(401);
+    expect(await response.text()).toBe("Invalid secret");
+    expect(currentUserMock).not.toHaveBeenCalled();
+    expect(fetchMutationMock).not.toHaveBeenCalled();
+  });
+
   it("allows preview deployments and executes reset", async () => {
     process.env.NODE_ENV = "production";
     process.env.VERCEL_ENV = "preview";

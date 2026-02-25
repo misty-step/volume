@@ -50,3 +50,15 @@ export function getDeploymentEnvironment(
   // Fallback: Check NODE_ENV for local development
   return process.env.NODE_ENV === "production" ? "production" : "development";
 }
+
+/**
+ * Server-side production guard for security-sensitive route checks.
+ *
+ * Intentionally ignores NEXT_PUBLIC_* fallback variables so client-exposed
+ * values cannot influence access control decisions.
+ */
+export function isServerProductionDeployment(): boolean {
+  return (
+    getDeploymentEnvironment({ preferClientFallback: false }) === "production"
+  );
+}
