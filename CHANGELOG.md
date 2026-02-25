@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0](https://github.com/misty-step/volume/compare/v1.11.0...v1.12.0) (2026-02-25)
+
+
+### Features
+
+* add PostHog /ingest proxy + respect_dnt ([#360](https://github.com/misty-step/volume/issues/360)) ([9e01a10](https://github.com/misty-step/volume/commit/9e01a10489257e9f4b6d2a86cbe5b71eb4e37159))
+* **coach:** migrate planner to AI SDK 6 streamText + createCoachTools factory ([#363](https://github.com/misty-step/volume/issues/363)) ([6599fb1](https://github.com/misty-step/volume/commit/6599fb1f620bf106057989d795420188fad0d2cf))
+* implement coach action log and snapshot undo ([#372](https://github.com/misty-step/volume/issues/372)) ([c5f65db](https://github.com/misty-step/volume/commit/c5f65db98f97bb87ea655167f7701a795275c8ae))
+
 ## [1.11.0](https://github.com/misty-step/volume/compare/v1.10.1...v1.11.0) (2026-02-18)
 
 
