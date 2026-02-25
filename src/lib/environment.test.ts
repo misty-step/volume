@@ -18,6 +18,24 @@ describe("getDeploymentEnvironment", () => {
     process.env = originalEnv;
   });
 
+  it("returns production when VERCEL_ENV is production", () => {
+    process.env.VERCEL_ENV = "production";
+
+    expect(getDeploymentEnvironment()).toBe("production");
+  });
+
+  it("returns preview when VERCEL_ENV is preview", () => {
+    process.env.VERCEL_ENV = "preview";
+
+    expect(getDeploymentEnvironment()).toBe("preview");
+  });
+
+  it("returns development when no deployment env vars are set", () => {
+    process.env.NODE_ENV = "development";
+
+    expect(getDeploymentEnvironment()).toBe("development");
+  });
+
   it("uses NEXT_PUBLIC_VERCEL_ENV fallback by default", () => {
     process.env.NEXT_PUBLIC_VERCEL_ENV = "preview";
     process.env.NODE_ENV = "production";
