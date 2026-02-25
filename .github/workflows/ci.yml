@@ -19,6 +19,11 @@ jobs:
     name: CI
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_CONVEX_URL: https://example.convex.cloud
+      STRIPE_SECRET_KEY: sk_test_ci_placeholder
+      NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID: price_ci_monthly
+      NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID: price_ci_annual
 
     steps:
       - name: Checkout
