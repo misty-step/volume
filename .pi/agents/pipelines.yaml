@@ -1,0 +1,121 @@
+version: 1
+
+defaultTeam: core-loop
+
+pipelines:
+  volume-feature-delivery:
+    description: Repo-default delivery loop for Next.js + Convex + TypeScript changes.
+    team: core-loop
+    when:
+      anyChanged:
+        - src/**
+        - convex/**
+        - packages/core/src/**
+        - docs/specs/**
+        - docs/design/**
+    stages:
+      - id: discover
+        agent: planner
+        prompt: .pi/prompts/discover.md
+        success: Evidence-backed scope and constraints.
+      - id: design
+        agent: planner
+        prompt: .pi/prompts/design.md
+        success: Concrete design contract with validation plan.
+      - id: implement
+        agent: worker
+        prompt: .pi/prompts/deliver.md
+        success: Minimal diff with test updates.
+      - id: review
+        agent: reviewer
+        prompt: .pi/prompts/review.md
+        success: Explicit verdict and actionable findings.
+    verification:
+      baseline:
+        - bun run typecheck
+        - bun run lint
+      targeted:
+        - bun run test:affected <changed-files>
+      releaseSafety:
+        - NODE_ENV=test CI=true bun run test:coverage
+        - bun run build
+
+  coach-runtime-delivery:
+    description: Repo-specific hardening lane for coach API/runtime/tool/block contracts.
+    team: coach-loop
+    when:
+      anyChanged:
+        - src/app/api/coach/**
+        - src/lib/coach/**
+        - src/components/coach/**
+        - docs/coach-agent-architecture.md
+        - docs/specs/341-agentic-ui-pivot-spec.md
+        - docs/design/341-agentic-ui-pivot-architecture.md
+    stages:
+      - id: discover
+        agent: planner
+        prompt: .pi/prompts/discover.md
+        success: Contract risks identified before coding.
+      - id: design
+        agent: planner
+        prompt: .pi/prompts/design.md
+        success: Tool/schema/stream/fallback invariants are explicit.
+      - id: implement
+        agent: worker
+        prompt: .pi/prompts/deliver.md
+        success: Runtime and renderer stay in contract.
+      - id: review
+        agent: reviewer
+        prompt: .pi/prompts/review.md
+        success: Contract drift and safety issues resolved.
+    verification:
+      contractTests:
+        - bun run test --run src/app/api/coach/route.test.ts
+        - bun run test --run src/lib/coach/server/planner.test.ts
+        - bun run test --run src/lib/coach/server/coach-tools.test.ts
+        - bun run test --run src/lib/coach/schema.test.ts
+        - bun run test --run src/components/coach/CoachBlockRenderer.test.tsx
+      baseline:
+        - bun run typecheck
+        - bun run lint
+
+  integration-safety-delivery:
+    description: Safety lane for Stripe/Clerk/Convex/deployment workflow changes.
+    team: integration-loop
+    when:
+      anyChanged:
+        - convex/http.ts
+        - convex/subscriptions.ts
+        - src/app/api/stripe/**
+        - scripts/verify-env.sh
+        - .github/workflows/**
+        - vercel.json
+        - .env.example
+    stages:
+      - id: discover
+        agent: planner
+        prompt: .pi/prompts/discover.md
+        success: Env/deploy blast radius is mapped.
+      - id: design
+        agent: planner
+        prompt: .pi/prompts/design.md
+        success: Verification contract is explicit.
+      - id: implement
+        agent: worker
+        prompt: .pi/prompts/deliver.md
+        success: Integration behavior remains safe and observable.
+      - id: review
+        agent: reviewer
+        prompt: .pi/prompts/review.md
+        success: Ops and security concerns are addressed.
+    verification:
+      integrationChecks:
+        - bun run test --run convex/http.test.ts
+        - bun run test --run convex/subscriptions.test.ts
+        - bun run test --run src/app/api/stripe/checkout/route.test.ts
+      envChecks:
+        - ./scripts/verify-env.sh --prod-only --quiet
+      baseline:
+        - bun run typecheck
+        - bun run lint
+        - bun run build

@@ -1,0 +1,18 @@
+{
+  "defaultThinkingLevel": "high",
+  "steeringMode": "one-at-a-time",
+  "followUpMode": "one-at-a-time",
+  "transport": "sse",
+  "packages": [],
+  "extensions": ["+/Users/phaedrus/.pi/agent/extensions/organic-workflows"],
+  "skills": [],
+  "themes": [],
+  "enableSkillCommands": true,
+  "prompts": [
+    "!**",
+    "+prompts/discover.md",
+    "+prompts/design.md",
+    "+prompts/deliver.md",
+    "+prompts/review.md"
+  ]
+}

@@ -1,0 +1,46 @@
+version: 1
+
+agents:
+  planner:
+    overlay: .pi/agents/planner.md
+  worker:
+    overlay: .pi/agents/worker.md
+  reviewer:
+    overlay: .pi/agents/reviewer.md
+
+teams:
+  core-loop:
+    objective: Deliver product and platform changes through discover -> design -> implement -> review.
+    members:
+      planner: planner
+      worker: worker
+      reviewer: reviewer
+    handoffArtifacts:
+      - discovery-brief
+      - design-contract
+      - implementation-summary
+      - review-verdict
+
+  coach-loop:
+    objective: Harden coach runtime, tool contracts, and typed block rendering.
+    members:
+      planner: planner
+      worker: worker
+      reviewer: reviewer
+    focusPaths:
+      - src/app/api/coach/**
+      - src/lib/coach/**
+      - src/components/coach/**
+      - docs/coach-agent-architecture.md
+
+  integration-loop:
+    objective: Protect Stripe/Clerk/Convex integration and deployment safety.
+    members:
+      planner: planner
+      worker: worker
+      reviewer: reviewer
+    focusPaths:
+      - convex/**
+      - scripts/verify-env.sh
+      - .github/workflows/**
+      - vercel.json
