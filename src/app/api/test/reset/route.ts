@@ -2,11 +2,13 @@ import { fetchMutation } from "convex/nextjs";
 import { api } from "../../../../../convex/_generated/api";
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
+import { getDeploymentEnvironment } from "@/lib/environment";
 
 export async function POST(request: NextRequest) {
-  // 1. Environment Check
-  if (process.env.NODE_ENV === "production") {
-    return new NextResponse("Not available in production", { status: 403 });
+  // Block test endpoints in production deployments.
+  // Vercel preview uses NODE_ENV=production, so rely on deployment env detection.
+  if (getDeploymentEnvironment() === "production") {
+    return new NextResponse("Not Found", { status: 404 });
   }
 
   // 2. Secret Check

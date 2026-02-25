@@ -10,14 +10,26 @@ const packageJson = JSON.parse(
 );
 const packageVersion = packageJson.version;
 
+function isProductionDeployment() {
+  const vercelEnv =
+    process.env.VERCEL_ENV || process.env.NEXT_PUBLIC_VERCEL_ENV;
+
+  if (vercelEnv) {
+    return vercelEnv === "production";
+  }
+
+  return process.env.NODE_ENV === "production";
+}
+
 const nextConfig: NextConfig = {
   env: {
     // Inject package.json version at build time for client-side access
     NEXT_PUBLIC_PACKAGE_VERSION: packageVersion,
   },
   async redirects() {
-    // Block test endpoints in production builds
-    if (process.env.NODE_ENV === "production") {
+    // Block test endpoints in production deployments.
+    // Preview deployments should still expose these routes for e2e flows.
+    if (isProductionDeployment()) {
       return [
         {
           source: "/api/test/:path*",
