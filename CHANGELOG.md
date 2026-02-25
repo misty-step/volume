@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.1](https://github.com/misty-step/volume/compare/v1.12.0...v1.12.1) (2026-02-25)
+
+
+### Bug Fixes
+
+* block test reset endpoint in production deployments ([#374](https://github.com/misty-step/volume/issues/374)) ([c3343b1](https://github.com/misty-step/volume/commit/c3343b151811ded6d80ac685d0bc106870281244))
+
 ## [1.12.0](https://github.com/misty-step/volume/compare/v1.11.0...v1.12.0) (2026-02-25)
 
 
