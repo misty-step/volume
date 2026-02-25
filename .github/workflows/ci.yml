@@ -21,6 +21,8 @@ jobs:
     timeout-minutes: 30
     env:
       NEXT_PUBLIC_CONVEX_URL: https://example.convex.cloud
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci_placeholder
+      CLERK_SECRET_KEY: sk_test_ci_placeholder
       STRIPE_SECRET_KEY: sk_test_ci_placeholder
       NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID: price_ci_monthly
       NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID: price_ci_annual
