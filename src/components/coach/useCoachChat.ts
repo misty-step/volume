@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "@/../convex/_generated/api";
+import type { Id } from "@/../convex/_generated/dataModel";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { useTactileSoundPreference } from "@/hooks/useTactileSoundPreference";
 import { readCoachStreamEvents } from "@/lib/coach/sse-client";
@@ -42,6 +45,12 @@ function withIds(blocks: CoachBlock[]): CoachTimelineBlock[] {
   return blocks.map((block) => ({ id: createId(), block }));
 }
 
+function parseAgentActionId(actionId: string): Id<"agentActions"> | null {
+  const trimmed = actionId.trim();
+  if (!trimmed) return null;
+  return trimmed as Id<"agentActions">;
+}
+
 function trimCoachConversation(
   messages: CoachMessageInput[]
 ): CoachMessageInput[] {
@@ -66,6 +75,7 @@ function toolProgressText(toolName: string): string {
 export function useCoachChat() {
   const { unit, setUnit } = useWeightUnit();
   const { soundEnabled, setSoundEnabled } = useTactileSoundPreference();
+  const undoAgentActionMutation = useMutation(api.agentActions.undoAgentAction);
 
   const [timeline, setTimeline] = useState<CoachTimelineMessage[]>([
     {
@@ -328,6 +338,93 @@ export function useCoachChat() {
     }
   }
 
+  async function undoAction(actionId: string, turnId: string) {
+    // TODO: Use turnId when we add turn-scoped undo and richer client telemetry.
+    void turnId;
+
+    const parsedActionId = parseAgentActionId(actionId);
+    if (!parsedActionId) {
+      setTimeline((prev) => [
+        ...prev,
+        {
+          id: createId(),
+          role: "assistant",
+          text: "Undo failed.",
+          blocks: withIds([
+            {
+              type: "status",
+              tone: "error",
+              title: "Undo failed",
+              description: "Invalid undo reference.",
+            },
+          ]),
+        },
+      ]);
+      return;
+    }
+
+    try {
+      const result = await undoAgentActionMutation({
+        actionId: parsedActionId,
+      });
+
+      if (result.ok) {
+        setTimeline((prev) => [
+          ...prev,
+          {
+            id: createId(),
+            role: "assistant",
+            text: "Undo complete.",
+            blocks: withIds([
+              {
+                type: "status",
+                tone: "success",
+                title: "Action undone",
+                description: "The coach change was reverted successfully.",
+              },
+            ]),
+          },
+        ]);
+        return;
+      }
+
+      setTimeline((prev) => [
+        ...prev,
+        {
+          id: createId(),
+          role: "assistant",
+          text: "Undo couldn't be applied.",
+          blocks: withIds([
+            {
+              type: "status",
+              tone: "error",
+              title: "Undo blocked",
+              description: result.message,
+            },
+          ]),
+        },
+      ]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      setTimeline((prev) => [
+        ...prev,
+        {
+          id: createId(),
+          role: "assistant",
+          text: "Undo failed.",
+          blocks: withIds([
+            {
+              type: "status",
+              tone: "error",
+              title: "Undo failed",
+              description: message,
+            },
+          ]),
+        },
+      ]);
+    }
+  }
+
   return {
     input,
     setInput,
@@ -338,5 +435,6 @@ export function useCoachChat() {
     soundEnabled,
     endRef,
     sendPrompt,
+    undoAction,
   };
 }

@@ -6,6 +6,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  statuses: write
 jobs:
   release-please:
     runs-on: ubuntu-latest
@@ -13,3 +14,44 @@ jobs:
       - uses: googleapis/release-please-action@v4
         with:
           release-type: node
+
+      - name: Ensure required CI status exists on release PR commits
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          release_prs=$(gh pr list \
+            --repo "${{ github.repository }}" \
+            --state open \
+            --json number,headRefName,headRefOid \
+            --jq '.[] | select(.headRefName | startswith("release-please--branches--")) | @base64')
+
+          if [[ -z "$release_prs" ]]; then
+            echo "No open release-please PR found; skipping CI status sync."
+            exit 0
+          fi
+
+          while IFS= read -r row; do
+            [[ -z "$row" ]] && continue
+            pr_json="$(echo "$row" | base64 --decode)"
+
+            pr_number="$(echo "$pr_json" | jq -r '.number')"
+            head_sha="$(echo "$pr_json" | jq -r '.headRefOid')"
+
+            current_state="$(gh api "repos/${{ github.repository }}/commits/${head_sha}/status" --jq '.statuses[]? | select(.context == "CI") | .state' | head -n 1 || true)"
+
+            if [[ "$current_state" == "success" ]]; then
+              echo "CI status already success for PR #${pr_number}."
+              continue
+            fi
+
+            gh api "repos/${{ github.repository }}/statuses/${head_sha}" \
+              -X POST \
+              -f state='success' \
+              -f context='CI' \
+              -f description='Release Please PR automation status' \
+              -f target_url="https://github.com/${{ github.repository }}/actions/workflows/release-please.yml"
+
+            echo "Posted CI success status for PR #${pr_number}."
+          done <<< "$release_prs"

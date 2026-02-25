@@ -54,6 +54,7 @@ function createFakeContext(options?: {
   ];
   const focusSuggestions = options?.focusSuggestions ?? defaultFocusSuggestions;
 
+  let mutationCallCount = 0;
   const convex = {
     query: vi.fn(async (_fn: unknown, args: unknown) => {
       if (args && typeof args === "object" && "includeDeleted" in args) {
@@ -85,7 +86,12 @@ function createFakeContext(options?: {
       }
       throw new Error(`Unexpected query args: ${JSON.stringify(args)}`);
     }),
-    mutation: vi.fn(async () => null),
+    mutation: vi.fn(async () => {
+      mutationCallCount += 1;
+      if (mutationCallCount === 1) return "set_test_id";
+      if (mutationCallCount === 2) return "action_test_id";
+      return null;
+    }),
     action: vi.fn(async () => "ex_created"),
   } satisfies Partial<ConvexHttpClient>;
 
@@ -93,6 +99,7 @@ function createFakeContext(options?: {
     convex: convex as ConvexHttpClient,
     defaultUnit: "lbs",
     timezoneOffsetMinutes: 0,
+    turnId: "turn-test",
     userInput: options?.userInput,
   };
 
@@ -145,10 +152,35 @@ describe("executeCoachTool", () => {
       }
     );
 
-    expect(result.blocks.length).toBeGreaterThanOrEqual(4);
-    expect(streamed.length).toBe(4);
+    expect(result.blocks.length).toBeGreaterThanOrEqual(5);
+    expect(streamed.length).toBe(5);
     expect(streamed[0]?.[0]?.type).toBe("status");
     expect(streamed[0]?.[0]?.title).toContain("48 sec");
+    expect(streamed[1]?.[0]).toMatchObject({
+      type: "undo",
+      actionId: "action_test_id",
+      turnId: "turn-test",
+    });
+  });
+
+  it("shows an info block when undo action recording fails", async () => {
+    const { ctx, convex } = createFakeContext();
+
+    vi.mocked(convex.mutation)
+      .mockImplementationOnce(async () => "set_test_id")
+      .mockImplementationOnce(async () => null);
+
+    const result = await executeCoachTool(
+      "log_set",
+      { exercise_name: "Dead Hang", duration_seconds: 48 },
+      ctx
+    );
+
+    expect(
+      result.blocks.some(
+        (block) => block.type === "status" && block.title === "Undo unavailable"
+      )
+    ).toBe(true);
   });
 
   it("prefers deterministically parsed durations when userInput is available", async () => {

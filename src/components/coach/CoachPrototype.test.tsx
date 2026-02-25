@@ -18,6 +18,7 @@ describe("CoachPrototype", () => {
   it("renders a scrollable timeline and composer", () => {
     const setInput = vi.fn();
     const sendPrompt = vi.fn();
+    const undoAction = vi.fn();
 
     mockedUseCoachChat.mockReturnValue({
       input: "Hello coach",
@@ -32,6 +33,7 @@ describe("CoachPrototype", () => {
       soundEnabled: false,
       endRef: { current: null },
       sendPrompt,
+      undoAction,
     } as any);
 
     render(<CoachPrototype />);
@@ -51,6 +53,7 @@ describe("CoachPrototype", () => {
   it("submits the current input", async () => {
     const setInput = vi.fn();
     const sendPrompt = vi.fn();
+    const undoAction = vi.fn();
 
     mockedUseCoachChat.mockReturnValue({
       input: "What should I train today?",
@@ -62,6 +65,7 @@ describe("CoachPrototype", () => {
       soundEnabled: false,
       endRef: { current: null },
       sendPrompt,
+      undoAction,
     } as any);
 
     render(<CoachPrototype />);

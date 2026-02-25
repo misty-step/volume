@@ -19,6 +19,7 @@ export function CoachPrototype() {
     soundEnabled,
     endRef,
     sendPrompt,
+    undoAction,
   } = useCoachChat();
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -84,6 +85,9 @@ export function CoachPrototype() {
                       block={entry.block}
                       onPrompt={(prompt) => {
                         void sendPrompt(prompt);
+                      }}
+                      onUndo={(actionId, turnId) => {
+                        void undoAction(actionId, turnId);
                       }}
                     />
                   ))}

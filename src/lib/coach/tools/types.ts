@@ -35,5 +35,6 @@ export interface CoachToolContext {
   convex: ConvexHttpClient;
   defaultUnit: WeightUnit;
   timezoneOffsetMinutes: number;
+  turnId: string;
   userInput?: string;
 }

@@ -124,6 +124,7 @@ const DEFAULT_ARGS = {
     convex: {} as any,
     defaultUnit: "lbs" as const,
     timezoneOffsetMinutes: 0,
+    turnId: "turn-test",
   },
 };
 
