@@ -19,13 +19,6 @@ jobs:
     name: CI
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      NEXT_PUBLIC_CONVEX_URL: https://example.convex.cloud
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci_placeholder
-      CLERK_SECRET_KEY: sk_test_ci_placeholder
-      STRIPE_SECRET_KEY: sk_test_ci_placeholder
-      NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID: price_ci_monthly
-      NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID: price_ci_annual
 
     steps:
       - name: Checkout
@@ -33,6 +26,8 @@ jobs:
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
 
       - name: Install dependencies
         run: bun install --frozen-lockfile

@@ -7,12 +7,22 @@
 
 export type DeploymentEnvironment = "production" | "preview" | "development";
 
+export type DeploymentEnvironmentOptions = {
+  /**
+   * Include NEXT_PUBLIC_VERCEL_ENV as a fallback when VERCEL_ENV is absent.
+   * Keep enabled for client-safe contexts; disable for security-sensitive server guards.
+   *
+   * @default true
+   */
+  preferClientFallback?: boolean;
+};
+
 /**
  * Determines the current deployment environment.
  *
  * Priority:
  * 1. VERCEL_ENV (Vercel's authoritative environment indicator)
- * 2. NEXT_PUBLIC_VERCEL_ENV (client-side fallback)
+ * 2. NEXT_PUBLIC_VERCEL_ENV (optional client-side fallback)
  * 3. NODE_ENV (local development fallback)
  *
  * @returns The current deployment environment
@@ -25,9 +35,14 @@ export type DeploymentEnvironment = "production" | "preview" | "development";
  * }
  * ```
  */
-export function getDeploymentEnvironment(): DeploymentEnvironment {
+export function getDeploymentEnvironment(
+  options: DeploymentEnvironmentOptions = {}
+): DeploymentEnvironment {
+  const { preferClientFallback = true } = options;
+
   const vercelEnv =
-    process.env.VERCEL_ENV || process.env.NEXT_PUBLIC_VERCEL_ENV;
+    process.env.VERCEL_ENV ||
+    (preferClientFallback ? process.env.NEXT_PUBLIC_VERCEL_ENV : undefined);
 
   if (vercelEnv === "production") return "production";
   if (vercelEnv === "preview") return "preview";

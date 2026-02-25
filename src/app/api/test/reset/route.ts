@@ -7,7 +7,9 @@ import { getDeploymentEnvironment } from "@/lib/environment";
 export async function POST(request: NextRequest) {
   // Block test endpoints in production deployments.
   // Vercel preview uses NODE_ENV=production, so rely on deployment env detection.
-  if (getDeploymentEnvironment() === "production") {
+  if (
+    getDeploymentEnvironment({ preferClientFallback: false }) === "production"
+  ) {
     return new NextResponse("Not Found", { status: 404 });
   }
 
