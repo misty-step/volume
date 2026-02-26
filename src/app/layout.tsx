@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bebas_Neue, JetBrains_Mono, Inter } from "next/font/google";
+import { Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 import { ConvexClientProvider } from "./ConvexClientProvider";
 import { ClerkProvider } from "@clerk/nextjs";
@@ -9,21 +9,9 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ToasterProvider } from "@/components/toaster-provider";
 import { PostHogProvider } from "@/components/posthog-provider";
 
-const bebasNeue = Bebas_Neue({
-  weight: "400",
+const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
-  variable: "--font-display",
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-  display: "swap",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
+  weight: ["300", "400", "600", "700"],
   variable: "--font-sans",
   display: "swap",
 });
@@ -70,14 +58,14 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html
-        lang="en"
-        suppressHydrationWarning
-        className={`${bebasNeue.variable} ${jetbrainsMono.variable} ${inter.variable}`}
-      >
+      <html lang="en" suppressHydrationWarning className={bricolage.variable}>
         <body className="antialiased font-sans">
           <PostHogProvider>
-            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <ThemeProvider
+              attribute="data-theme"
+              defaultTheme="dark"
+              enableSystem
+            >
               <WeightUnitProvider>
                 <ConvexClientProvider>{children}</ConvexClientProvider>
               </WeightUnitProvider>
