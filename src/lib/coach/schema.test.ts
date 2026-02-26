@@ -141,4 +141,80 @@ describe("coach schema", () => {
     expect(parsed.type).toBe("tool_result");
     expect(parsed.blocks).toHaveLength(1);
   });
+
+  it("parses expanded generative-ui block catalog", () => {
+    const parsed = CoachTurnResponseSchema.parse({
+      assistantText: "Workspace ready.",
+      blocks: [
+        {
+          type: "quick_log_form",
+          title: "Quick log",
+          defaultUnit: "kg",
+        },
+        {
+          type: "entity_list",
+          title: "Exercises",
+          items: [
+            {
+              id: "ex_1",
+              title: "Push-ups",
+              subtitle: "Chest, Triceps",
+              tags: ["active"],
+              prompt: "show trend for pushups",
+            },
+          ],
+        },
+        {
+          type: "detail_panel",
+          title: "Preferences",
+          fields: [{ label: "Goals", value: "Build muscle", emphasis: true }],
+          prompts: ["show settings overview"],
+        },
+        {
+          type: "billing_panel",
+          status: "trial",
+          title: "Subscription",
+          ctaLabel: "Upgrade",
+          ctaAction: "open_checkout",
+        },
+      ],
+      trace: {
+        toolsUsed: ["show_workspace"],
+        model: "test",
+        fallbackUsed: false,
+      },
+    });
+
+    expect(parsed.blocks).toHaveLength(4);
+  });
+
+  it("enforces open_checkout/open_billing_portal payload shape", () => {
+    expect(() =>
+      CoachTurnResponseSchema.parse({
+        assistantText: "ok",
+        blocks: [
+          {
+            type: "client_action",
+            action: "open_checkout",
+            payload: { mode: "portal" },
+          },
+        ],
+        trace: { toolsUsed: [], model: "test", fallbackUsed: false },
+      })
+    ).toThrow(/open_checkout payload/);
+
+    expect(() =>
+      CoachTurnResponseSchema.parse({
+        assistantText: "ok",
+        blocks: [
+          {
+            type: "client_action",
+            action: "open_billing_portal",
+            payload: { mode: "checkout" },
+          },
+        ],
+        trace: { toolsUsed: [], model: "test", fallbackUsed: false },
+      })
+    ).toThrow(/open_billing_portal payload/);
+  });
 });

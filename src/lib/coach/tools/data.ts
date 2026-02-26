@@ -8,10 +8,11 @@ import type { CoachToolContext, SetInput } from "./types";
 const RECENT_EXERCISE_SET_LIMIT = 120; // Keep tool output small while covering recent trend.
 
 export async function listExercises(
-  ctx: CoachToolContext
+  ctx: CoachToolContext,
+  options: { includeDeleted?: boolean } = {}
 ): Promise<Exercise[]> {
   return (await ctx.convex.query(api.exercises.listExercises, {
-    includeDeleted: false,
+    includeDeleted: options.includeDeleted ?? false,
   })) as Exercise[];
 }
 

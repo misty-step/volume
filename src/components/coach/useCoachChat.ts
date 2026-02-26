@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "convex/react";
+import { useRouter } from "next/navigation";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
@@ -69,10 +70,29 @@ function toolProgressText(toolName: string): string {
     return "Building today's focus plan...";
   if (toolName === "set_weight_unit") return "Updating settings...";
   if (toolName === "set_sound") return "Updating settings...";
+  if (toolName === "get_history_overview") return "Loading workout history...";
+  if (toolName === "get_analytics_overview")
+    return "Computing analytics overview...";
+  if (toolName === "get_exercise_library") return "Loading exercise library...";
+  if (
+    toolName === "rename_exercise" ||
+    toolName === "delete_exercise" ||
+    toolName === "restore_exercise" ||
+    toolName === "update_exercise_muscle_groups"
+  ) {
+    return "Updating exercises...";
+  }
+  if (toolName === "delete_set") return "Deleting set...";
+  if (toolName === "get_settings_overview")
+    return "Loading settings and billing...";
+  if (toolName === "update_preferences") return "Saving preferences...";
+  if (toolName === "get_report_history") return "Loading AI report history...";
+  if (toolName === "show_workspace") return "Rendering workspace blocks...";
   return "Working...";
 }
 
 export function useCoachChat() {
+  const router = useRouter();
   const { unit, setUnit } = useWeightUnit();
   const { soundEnabled, setSoundEnabled } = useTactileSoundPreference();
   const undoAgentActionMutation = useMutation(api.agentActions.undoAgentAction);
@@ -81,20 +101,7 @@ export function useCoachChat() {
     {
       id: createId(),
       role: "assistant",
-      text: "Coach agent online. Ask in natural language and I will decide tools dynamically.",
-      blocks: withIds([
-        {
-          type: "status",
-          tone: "info",
-          title: "Planner-first mode",
-          description:
-            "Model picks tools, tools execute deterministically, UI renders typed blocks.",
-        },
-        {
-          type: "suggestions",
-          prompts: DEFAULT_COACH_SUGGESTIONS,
-        },
-      ]),
+      text: "Agent ready. Ask to log a set, review progress, or update settings.",
     },
   ]);
   const [conversation, setConversation] = useState<CoachMessageInput[]>([]);
@@ -111,6 +118,67 @@ export function useCoachChat() {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [timeline, isWorking]);
+
+  function appendStatusMessage({
+    tone,
+    title,
+    description,
+  }: {
+    tone: "success" | "error" | "info";
+    title: string;
+    description: string;
+  }) {
+    setTimeline((prev) => [
+      ...prev,
+      {
+        id: createId(),
+        role: "assistant",
+        text: title,
+        blocks: withIds([
+          {
+            type: "status",
+            tone,
+            title,
+            description,
+          },
+        ]),
+      },
+    ]);
+  }
+
+  async function runClientAction(
+    action: "open_checkout" | "open_billing_portal"
+  ) {
+    if (action === "open_checkout") {
+      router.push("/pricing");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/stripe/portal", { method: "POST" });
+      const payload = (await response.json()) as {
+        url?: string;
+        error?: string;
+      };
+      if (!response.ok || !payload.url) {
+        const message = payload.error ?? "Could not open billing portal.";
+        appendStatusMessage({
+          tone: "error",
+          title: "Billing portal failed",
+          description: message,
+        });
+        return;
+      }
+      window.location.href = payload.url;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      appendStatusMessage({
+        tone: "error",
+        title: "Billing portal failed",
+        description: message,
+      });
+    }
+  }
 
   function applyClientActions(blocks: CoachBlock[]) {
     for (const block of blocks) {
@@ -131,6 +199,13 @@ export function useCoachChat() {
         if (typeof block.payload.enabled === "boolean") {
           setSoundEnabled(block.payload.enabled);
         }
+      }
+      if (
+        block.type === "client_action" &&
+        (block.action === "open_checkout" ||
+          block.action === "open_billing_portal")
+      ) {
+        void runClientAction(block.action);
       }
     }
   }
@@ -158,7 +233,7 @@ export function useCoachChat() {
       {
         id: assistantId,
         role: "assistant",
-        text: "…",
+        text: "...",
         blocks: [],
       },
     ]);
@@ -436,5 +511,6 @@ export function useCoachChat() {
     endRef,
     sendPrompt,
     undoAction,
+    runClientAction,
   };
 }

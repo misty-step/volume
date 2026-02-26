@@ -42,12 +42,13 @@ export async function POST(request: Request) {
   try {
     const session = await stripe.billingPortal.sessions.create({
       customer: stripeCustomerId,
-      return_url: `${baseUrl}/settings`,
+      return_url: `${baseUrl}/today?prompt=show%20settings%20overview`,
     });
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    const error = err instanceof Error ? err : new Error("Unknown portal error");
+    const error =
+      err instanceof Error ? err : new Error("Unknown portal error");
     reportError(error, { context: "stripe/portal", stripeCustomerId });
     console.error("Error creating portal session:", err);
     return NextResponse.json(
