@@ -160,6 +160,23 @@ export const COACH_TOOL_DEFINITIONS = [
   {
     type: "function",
     function: {
+      name: "merge_exercise",
+      description:
+        "Consolidate duplicate exercises by moving all historical sets from source_exercise into target_exercise, then archiving the source.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          source_exercise: { type: "string" },
+          target_exercise: { type: "string" },
+        },
+        required: ["source_exercise", "target_exercise"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "delete_exercise",
       description: "Archive an active exercise.",
       parameters: {

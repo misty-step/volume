@@ -44,6 +44,19 @@ export const RenameExerciseArgsSchema = z.object({
   new_name: z.string().trim().min(1).max(80),
 });
 
+export const MergeExerciseArgsSchema = z.object({
+  source_exercise: z
+    .string()
+    .trim()
+    .min(1)
+    .describe("Exercise name to merge from (will be archived)"),
+  target_exercise: z
+    .string()
+    .trim()
+    .min(1)
+    .describe("Exercise name to merge into (will be kept)"),
+});
+
 export const UpdateMuscleGroupsArgsSchema = z.object({
   exercise_name: z.string().trim().min(1).max(80),
   muscle_groups: z.array(z.string().trim().min(1).max(40)).min(1).max(8),

@@ -3,6 +3,7 @@ import { findExercise, listExercises } from "./data";
 import { normalizeLookup, uniquePrompts } from "./helpers";
 import {
   ExerciseNameArgsSchema,
+  MergeExerciseArgsSchema,
   RenameExerciseArgsSchema,
   UpdateMuscleGroupsArgsSchema,
 } from "./schemas";
@@ -212,6 +213,138 @@ export async function runRestoreExerciseTool(
       },
     ],
     outputForModel: { status: "ok", restored_name: exercise.name },
+  };
+}
+
+export async function runMergeExerciseTool(
+  rawArgs: unknown,
+  ctx: CoachToolContext
+): Promise<ToolResult> {
+  const args = MergeExerciseArgsSchema.parse(rawArgs);
+  const exercises = await listExercises(ctx, { includeDeleted: true });
+  const sourceExercise = findExerciseByName(exercises, args.source_exercise);
+  const targetExercise = findExerciseByName(exercises, args.target_exercise);
+
+  if (!sourceExercise) {
+    return {
+      summary: `Could not merge from "${args.source_exercise}".`,
+      blocks: [
+        {
+          type: "status",
+          tone: "error",
+          title: "Source exercise not found",
+          description: "I couldn't find that source exercise in your library.",
+        },
+        {
+          type: "suggestions",
+          prompts: ["show exercise library", "show today's summary"],
+        },
+      ],
+      outputForModel: { status: "error", error: "source_exercise_not_found" },
+    };
+  }
+
+  if (sourceExercise.deletedAt !== undefined) {
+    return {
+      summary: `${sourceExercise.name} is already archived.`,
+      blocks: [
+        {
+          type: "status",
+          tone: "error",
+          title: "Source already archived",
+          description:
+            "Pick an active source exercise so historical sets can be moved.",
+        },
+      ],
+      outputForModel: {
+        status: "error",
+        error: "source_exercise_archived",
+      },
+    };
+  }
+
+  if (!targetExercise) {
+    return {
+      summary: `Could not merge into "${args.target_exercise}".`,
+      blocks: [
+        {
+          type: "status",
+          tone: "error",
+          title: "Target exercise not found",
+          description: "I couldn't find that target exercise in your library.",
+        },
+        {
+          type: "suggestions",
+          prompts: ["show exercise library", "show today's summary"],
+        },
+      ],
+      outputForModel: { status: "error", error: "target_exercise_not_found" },
+    };
+  }
+
+  if (targetExercise.deletedAt !== undefined) {
+    return {
+      summary: `${targetExercise.name} is archived.`,
+      blocks: [
+        {
+          type: "status",
+          tone: "error",
+          title: "Target is archived",
+          description:
+            "Restore the target exercise first, then retry the merge.",
+        },
+      ],
+      outputForModel: { status: "error", error: "target_exercise_archived" },
+    };
+  }
+
+  if (sourceExercise._id === targetExercise._id) {
+    return {
+      summary: "Merge skipped.",
+      blocks: [
+        {
+          type: "status",
+          tone: "error",
+          title: "Same exercise selected",
+          description:
+            "Choose two different exercises: one source and one target.",
+        },
+      ],
+      outputForModel: { status: "error", error: "same_exercise" },
+    };
+  }
+
+  const merged = await ctx.convex.mutation(api.exercises.mergeExercise, {
+    fromId: sourceExercise._id,
+    toId: targetExercise._id,
+  });
+
+  const setLabel = merged.mergedCount === 1 ? "set" : "sets";
+
+  return {
+    summary: `Merged ${sourceExercise.name} into ${merged.keptExercise}.`,
+    blocks: [
+      {
+        type: "status",
+        tone: "success",
+        title: "Exercises merged",
+        description: `Moved ${merged.mergedCount} historical ${setLabel} into ${merged.keptExercise}. ${sourceExercise.name} is now archived.`,
+      },
+      {
+        type: "suggestions",
+        prompts: uniquePrompts([
+          `show trend for ${merged.keptExercise.toLowerCase()}`,
+          "show exercise library",
+          "show history overview",
+        ]),
+      },
+    ],
+    outputForModel: {
+      status: "ok",
+      source_exercise: sourceExercise.name,
+      target_exercise: merged.keptExercise,
+      merged_count: merged.mergedCount,
+    },
   };
 }
 

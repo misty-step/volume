@@ -14,6 +14,7 @@ import { runAnalyticsOverviewTool } from "./tool-analytics-overview";
 import { runExerciseLibraryTool } from "./tool-exercise-library";
 import {
   runDeleteExerciseTool,
+  runMergeExerciseTool,
   runRenameExerciseTool,
   runRestoreExerciseTool,
   runUpdateExerciseMuscleGroupsTool,
@@ -43,6 +44,7 @@ const TOOL_HANDLERS: Record<string, CoachToolHandler> = {
     runAnalyticsOverviewTool(ctx),
   get_exercise_library: async (_rawArgs, ctx) => runExerciseLibraryTool(ctx),
   rename_exercise: (rawArgs, ctx) => runRenameExerciseTool(rawArgs, ctx),
+  merge_exercise: (rawArgs, ctx) => runMergeExerciseTool(rawArgs, ctx),
   delete_exercise: (rawArgs, ctx) => runDeleteExerciseTool(rawArgs, ctx),
   restore_exercise: (rawArgs, ctx) => runRestoreExerciseTool(rawArgs, ctx),
   update_exercise_muscle_groups: (rawArgs, ctx) =>
