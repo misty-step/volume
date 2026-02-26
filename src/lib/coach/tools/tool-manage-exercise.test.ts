@@ -3,6 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   runDeleteExerciseTool,
+  runMergeExerciseTool,
   runRenameExerciseTool,
   runRestoreExerciseTool,
   runUpdateExerciseMuscleGroupsTool,
@@ -13,6 +14,7 @@ vi.mock("@/../convex/_generated/api", () => ({
   api: {
     exercises: {
       updateExercise: "exercises.updateExercise",
+      mergeExercise: "exercises.mergeExercise",
       deleteExercise: "exercises.deleteExercise",
       restoreExercise: "exercises.restoreExercise",
       updateMuscleGroups: "exercises.updateMuscleGroups",
@@ -104,6 +106,120 @@ describe("tool-manage-exercise", () => {
     expect(result.outputForModel).toEqual({
       status: "error",
       error: "exercise_not_found",
+    });
+    expect(mutation).not.toHaveBeenCalled();
+  });
+
+  it("returns error when source exercise is missing for merge", async () => {
+    mockListExercises.mockResolvedValue([
+      exercise({ _id: "exercise_target", name: "Bench Press" }),
+    ]);
+    mockFindExercise.mockReturnValue(null);
+
+    const result = await runMergeExerciseTool(
+      { source_exercise: "Barbell Bench", target_exercise: "Bench Press" },
+      TEST_CTX as any
+    );
+
+    expect((result.blocks[0] as any).tone).toBe("error");
+    expect(result.outputForModel).toEqual({
+      status: "error",
+      error: "source_exercise_not_found",
+    });
+    expect(mutation).not.toHaveBeenCalled();
+  });
+
+  it("returns error when target exercise is missing for merge", async () => {
+    mockListExercises.mockResolvedValue([
+      exercise({ _id: "exercise_source", name: "Barbell Bench" }),
+    ]);
+    mockFindExercise.mockReturnValue(null);
+
+    const result = await runMergeExerciseTool(
+      { source_exercise: "Barbell Bench", target_exercise: "Bench Press" },
+      TEST_CTX as any
+    );
+
+    expect((result.blocks[0] as any).tone).toBe("error");
+    expect(result.outputForModel).toEqual({
+      status: "error",
+      error: "target_exercise_not_found",
+    });
+    expect(mutation).not.toHaveBeenCalled();
+  });
+
+  it("returns error when merge source and target are the same exercise", async () => {
+    mockListExercises.mockResolvedValue([
+      exercise({ _id: "exercise_same", name: "Bench Press" }),
+    ]);
+
+    const result = await runMergeExerciseTool(
+      { source_exercise: "bench press", target_exercise: "BENCH PRESS" },
+      TEST_CTX as any
+    );
+
+    expect((result.blocks[0] as any).tone).toBe("error");
+    expect(result.outputForModel).toEqual({
+      status: "error",
+      error: "same_exercise",
+    });
+    expect(mutation).not.toHaveBeenCalled();
+  });
+
+  it("merges exercises and returns a success summary with count", async () => {
+    mockListExercises.mockResolvedValue([
+      exercise({ _id: "exercise_source", name: "Bench Press Barbell" }),
+      exercise({ _id: "exercise_target", name: "Bench Press" }),
+    ]);
+    mutation.mockResolvedValueOnce({
+      mergedCount: 5,
+      keptExercise: "Bench Press",
+    });
+
+    const result = await runMergeExerciseTool(
+      {
+        source_exercise: "bench press barbell",
+        target_exercise: "bench press",
+      },
+      TEST_CTX as any
+    );
+
+    expect(mutation).toHaveBeenCalledWith("exercises.mergeExercise", {
+      fromId: "exercise_source",
+      toId: "exercise_target",
+    });
+    expect((result.blocks[0] as any).tone).toBe("success");
+    expect((result.blocks[0] as any).description).toContain("5");
+    expect(result.outputForModel).toEqual({
+      status: "ok",
+      source_exercise: "Bench Press Barbell",
+      target_exercise: "Bench Press",
+      merged_count: 5,
+    });
+  });
+
+  it("handles archived source exercise gracefully for merge", async () => {
+    mockListExercises.mockResolvedValue([
+      exercise({
+        _id: "exercise_source",
+        name: "Bench Press Barbell",
+        deletedAt: Date.now(),
+      }),
+      exercise({ _id: "exercise_target", name: "Bench Press" }),
+    ]);
+
+    const result = await runMergeExerciseTool(
+      {
+        source_exercise: "bench press barbell",
+        target_exercise: "bench press",
+      },
+      TEST_CTX as any
+    );
+
+    expect((result.blocks[0] as any).tone).toBe("error");
+    expect(result.outputForModel).toEqual({
+      status: "error",
+      error: "source_exercise_archived",
     });
     expect(mutation).not.toHaveBeenCalled();
   });
