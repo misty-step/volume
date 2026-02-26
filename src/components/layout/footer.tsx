@@ -7,20 +7,20 @@ export function Footer() {
   const version = displayVersion;
 
   return (
-    <footer className="hidden md:block border-t-[3px] border-border mt-auto bg-background">
+    <footer className="hidden md:block border-t border-border-subtle mt-auto bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
         {/* Grid layout - 3 columns on desktop */}
         <div className="grid grid-cols-3 gap-8">
           {/* Company Section */}
           <div className="space-y-2">
-            <h3 className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+            <h3 className="text-muted-foreground text-xs uppercase tracking-wider">
               Company
             </h3>
             <a
               href="https://mistystep.io"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono text-sm text-foreground hover:text-primary transition-colors inline-flex items-center gap-1.5"
+              className="inline-flex items-center gap-1.5 text-muted-foreground text-xs transition-colors hover:text-foreground"
             >
               A Misty Step Project
               <svg
@@ -41,12 +41,12 @@ export function Footer() {
 
           {/* Support Section */}
           <div className="space-y-2">
-            <h3 className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+            <h3 className="text-muted-foreground text-xs uppercase tracking-wider">
               Support
             </h3>
             <a
               href="mailto:hello@mistystep.io"
-              className="font-mono text-sm text-primary hover:underline inline-block"
+              className="inline-block text-muted-foreground text-xs transition-colors hover:text-foreground hover:underline"
             >
               Feedback & Support
             </a>
@@ -54,11 +54,11 @@ export function Footer() {
 
           {/* Copyright Section - no heading, aligned with other sections' content */}
           <div className="pt-6">
-            <div className="font-mono text-sm text-muted-foreground space-y-0.5">
+            <div className="text-muted-foreground text-xs space-y-0.5">
               <p>© {currentYear} Volume</p>
               <a
                 href={`/releases/${version}`}
-                className="text-xs text-muted-foreground/80 hover:text-primary transition-colors"
+                className="text-xs text-muted-foreground transition-colors hover:text-foreground"
               >
                 v{version}
               </a>

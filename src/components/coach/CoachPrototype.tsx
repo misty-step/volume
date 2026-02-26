@@ -1,67 +1,53 @@
 "use client";
 
-import { type FormEvent } from "react";
-import { Loader2, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { type FormEvent, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
+import { PaperPlaneIcon, ReloadIcon } from "@radix-ui/react-icons";
 import { CoachBlockRenderer } from "@/components/coach/CoachBlockRenderer";
 import { useCoachChat } from "@/components/coach/useCoachChat";
+import { cn } from "@/lib/utils";
 
 export function CoachPrototype() {
+  const searchParams = useSearchParams();
+  const promptedRef = useRef<string | null>(null);
   const {
     input,
     setInput,
     isWorking,
-    lastTrace,
     timeline,
-    unit,
-    soundEnabled,
     endRef,
     sendPrompt,
     undoAction,
+    runClientAction,
   } = useCoachChat();
+
+  const promptFromQuery = searchParams.get("prompt");
+
+  useEffect(() => {
+    if (!promptFromQuery) return;
+    if (promptedRef.current === promptFromQuery) return;
+    promptedRef.current = promptFromQuery;
+    void sendPrompt(promptFromQuery);
+  }, [promptFromQuery, sendPrompt]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void sendPrompt(input);
   }
 
-  // 5.5rem = mobile BottomNav height (h-16) + breathing room. Safe-area keeps
-  // the composer clear of iOS home indicator.
   return (
-    <main className="mx-auto w-full max-w-4xl flex flex-1 min-h-0 flex-col px-4 pt-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-6">
-      <Card className="border-safety-orange">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-safety-orange" />
-            Agent Coach
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Model chooses actions. Tools execute deterministically. UI blocks
-            stay typed.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Local prefs: {unit.toUpperCase()} unit, tactile sounds{" "}
-            {soundEnabled ? "on" : "off"}
-          </p>
-          {lastTrace ? (
-            <p className="text-[10px] text-muted-foreground font-mono">
-              model={lastTrace.model} tools=[
-              {lastTrace.toolsUsed.join(", ") || "none"}] fallback=
-              {lastTrace.fallbackUsed ? "yes" : "no"}
-            </p>
-          ) : null}
-        </CardHeader>
-      </Card>
+    <main className="relative mx-auto flex w-full max-w-4xl flex-1 min-h-0 flex-col px-3 pt-3 pb-[calc(8.25rem+env(safe-area-inset-bottom))] md:px-4 md:pb-6">
+      <p className="mb-2 px-1 text-xs text-muted-foreground">
+        Try &quot;12 pushups&quot;, &quot;show today&apos;s summary&quot;, or
+        ask for insights.
+      </p>
 
-      {/* Scrollable timeline: keeps newest messages reachable above fixed mobile UI. */}
-      <div
+      <section
         data-testid="coach-timeline"
-        className="flex-1 min-h-0 overflow-y-auto mt-4 space-y-4 pb-6 md:pb-4"
+        className="flex-1 min-h-0 space-y-2 overflow-y-auto pb-4 pr-1"
       >
         {timeline.map((message) => (
-          <div
+          <article
             key={message.id}
             className={
               message.role === "user"
@@ -70,15 +56,19 @@ export function CoachPrototype() {
             }
           >
             <div
-              className={`max-w-[92%] rounded-lg border px-4 py-3 ${
+              className={cn(
+                "max-w-[92%] rounded-xl px-3 py-3",
+                "rounded-[--radius] border border-border-subtle bg-card",
                 message.role === "user"
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-card text-card-foreground"
-              }`}
+                  ? "ml-10 border-accent/42 bg-accent/14"
+                  : "mr-10"
+              )}
             >
-              <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+              <p className="text-sm whitespace-pre-wrap text-foreground">
+                {message.text}
+              </p>
               {message.blocks && message.blocks.length > 0 ? (
-                <div className="space-y-3 mt-3">
+                <div className="mt-3 space-y-3">
                   {message.blocks.map((entry) => (
                     <CoachBlockRenderer
                       key={entry.id}
@@ -89,37 +79,53 @@ export function CoachPrototype() {
                       onUndo={(actionId, turnId) => {
                         void undoAction(actionId, turnId);
                       }}
+                      onClientAction={(action) => {
+                        void runClientAction(action);
+                      }}
                     />
                   ))}
                 </div>
               ) : null}
             </div>
-          </div>
+          </article>
         ))}
 
         {isWorking ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Coach is planning...
+          <div
+            className={cn(
+              "mr-10 flex max-w-[92%] items-center gap-2 rounded-xl px-3 py-2",
+              "rounded-[--radius] border border-border-subtle bg-card"
+            )}
+          >
+            <ReloadIcon className="h-4 w-4 animate-spin text-accent" />
+            <p className="text-xs text-muted-foreground">Planning...</p>
           </div>
         ) : null}
         <div ref={endRef} />
-      </div>
+      </section>
 
       <form
         onSubmit={handleSubmit}
         data-testid="coach-composer"
-        className="flex items-center gap-2 mt-4 pt-2"
+        className="border-t border-border-subtle bg-card p-[8px] pb-[calc(8px+env(safe-area-inset-bottom,0px))] sticky bottom-0"
       >
-        <Input
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder={'Try: "What should I work on today?"'}
-          disabled={isWorking}
-        />
-        <Button type="submit" disabled={isWorking || input.trim().length === 0}>
-          Send
-        </Button>
+        <div className="flex items-center gap-2">
+          <input
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder='Log fast: "12 pushups @ 25 lbs"'
+            disabled={isWorking}
+            className="h-11 w-full flex-1 rounded-[--radius] border border-input bg-background/76 px-3 text-base text-foreground placeholder:text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
+          />
+          <button
+            type="submit"
+            disabled={isWorking || input.trim().length === 0}
+            className="inline-flex min-h-[44px] min-w-[5rem] items-center justify-center gap-2 rounded-[--radius] bg-accent px-4 text-sm font-medium text-accent-foreground transition-all duration-150 hover:bg-accent/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <PaperPlaneIcon className="h-4 w-4" />
+            Send
+          </button>
+        </div>
       </form>
     </main>
   );

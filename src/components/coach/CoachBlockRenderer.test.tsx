@@ -25,4 +25,49 @@ describe("CoachBlockRenderer", () => {
 
     expect(onUndo).toHaveBeenCalledWith("action_123", "turn_456");
   });
+
+  it("renders billing panel and triggers client action", async () => {
+    const onClientAction = vi.fn();
+
+    render(
+      <CoachBlockRenderer
+        block={{
+          type: "billing_panel",
+          status: "trial",
+          title: "Subscription",
+          ctaLabel: "Upgrade",
+          ctaAction: "open_checkout",
+        }}
+        onPrompt={() => {}}
+        onClientAction={onClientAction}
+      />
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Upgrade" }));
+    expect(onClientAction).toHaveBeenCalledWith("open_checkout");
+  });
+
+  it("renders quick log form and submits prompt", async () => {
+    const onPrompt = vi.fn();
+
+    render(
+      <CoachBlockRenderer
+        block={{
+          type: "quick_log_form",
+          title: "Quick log",
+          defaultUnit: "lbs",
+        }}
+        onPrompt={onPrompt}
+      />
+    );
+
+    await userEvent.type(
+      screen.getByPlaceholderText("Exercise name"),
+      "Push-ups"
+    );
+    await userEvent.type(screen.getByPlaceholderText("Reps"), "12");
+    await userEvent.click(screen.getByRole("button", { name: "Log Set" }));
+
+    expect(onPrompt).toHaveBeenCalledWith("12 Push-ups");
+  });
 });
