@@ -16,6 +16,19 @@ const config = [
   },
   ...next,
   {
+    files: ["src/**/*.{js,jsx,ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "JSXAttribute[name.name='className'] Literal[value=/--workspace-/]",
+          message:
+            "--workspace-* CSS variables are deprecated. Use main design tokens.",
+        },
+      ],
+    },
+  },
+  {
     files: ["e2e/**/*"],
     rules: {
       "react-hooks/rules-of-hooks": "off",
