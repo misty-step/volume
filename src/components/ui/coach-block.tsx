@@ -396,7 +396,7 @@ export function EntityListBlock({
                 {item.prompt ? (
                   <ActionButton
                     variant="ghost"
-                    className="min-h-9 px-3 text-xs"
+                    className="min-h-[44px] px-3 text-xs"
                     onClick={() => onPrompt(item.prompt as string)}
                   >
                     Open
@@ -516,7 +516,9 @@ export function BillingPanelBlock({
   onClientAction?: (action: "open_checkout" | "open_billing_portal") => void;
 }) {
   const action =
-    block.ctaAction === "open_portal" ? "open_billing_portal" : "open_checkout";
+    block.ctaAction === "open_billing_portal"
+      ? "open_billing_portal"
+      : "open_checkout";
   return (
     <Block className="space-y-3">
       <header className="space-y-1">

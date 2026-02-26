@@ -44,18 +44,27 @@ export const RenameExerciseArgsSchema = z.object({
   new_name: z.string().trim().min(1).max(80),
 });
 
-export const MergeExerciseArgsSchema = z.object({
-  source_exercise: z
-    .string()
-    .trim()
-    .min(1)
-    .describe("Exercise name to merge from (will be archived)"),
-  target_exercise: z
-    .string()
-    .trim()
-    .min(1)
-    .describe("Exercise name to merge into (will be kept)"),
-});
+export const MergeExerciseArgsSchema = z
+  .object({
+    source_exercise: z
+      .string()
+      .trim()
+      .min(1)
+      .max(80)
+      .describe("Exercise name to merge from (will be archived)"),
+    target_exercise: z
+      .string()
+      .trim()
+      .min(1)
+      .max(80)
+      .describe("Exercise name to merge into (will be kept)"),
+  })
+  .refine(
+    (data) =>
+      data.source_exercise.trim().toLowerCase() !==
+      data.target_exercise.trim().toLowerCase(),
+    { message: "Source and target exercises must be different." }
+  );
 
 export const UpdateMuscleGroupsArgsSchema = z.object({
   exercise_name: z.string().trim().min(1).max(80),
@@ -64,16 +73,12 @@ export const UpdateMuscleGroupsArgsSchema = z.object({
 
 export const DeleteSetArgsSchema = z
   .object({
-    set_id: z.string().trim().min(1).optional(),
-    exercise_name: z.string().trim().min(1).max(80).optional(),
+    set_id: z.string().optional(),
+    exercise_name: z.string().optional(),
   })
-  .refine(
-    (data) => data.set_id !== undefined || data.exercise_name !== undefined,
-    {
-      message: "Provide set_id or exercise_name.",
-      path: ["set_id"],
-    }
-  );
+  .refine((data) => !!data.set_id || !!data.exercise_name, {
+    message: "Provide set_id or exercise_name.",
+  });
 
 export const UpdatePreferencesArgsSchema = z.object({
   goals: z.array(z.enum(GOAL_TYPES)).max(4).optional(),

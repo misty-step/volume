@@ -343,12 +343,14 @@ export const mergeExercise = mutation({
       .withIndex("by_exercise", (q) => q.eq("exerciseId", fromId))
       .collect();
 
-    for (const set of setsToMerge) {
-      if (set.userId !== identity.subject) {
-        throw new Error("Not authorized to access this set");
-      }
-      await ctx.db.patch(set._id, { exerciseId: toId });
-    }
+    await Promise.all(
+      setsToMerge.map((set) => {
+        if (set.userId !== identity.subject) {
+          throw new Error(`Not authorized to modify set ${set._id}`);
+        }
+        return ctx.db.patch(set._id, { exerciseId: toId });
+      })
+    );
 
     await ctx.db.patch(fromId, {
       deletedAt: Date.now(),

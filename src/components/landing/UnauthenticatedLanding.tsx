@@ -21,7 +21,7 @@ export function UnauthenticatedLanding() {
         <SignInButton mode="modal">
           <button
             type="button"
-            className="rounded-[--radius] border border-border bg-transparent px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-card"
+            className="inline-flex min-h-[44px] items-center rounded-[--radius] border border-border bg-transparent px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-card"
           >
             Sign in
           </button>
@@ -105,13 +105,13 @@ export function UnauthenticatedLanding() {
           <div className="flex gap-4">
             <Link
               href="/privacy"
-              className="hover:text-foreground transition-colors"
+              className="inline-flex min-h-[44px] items-center transition-colors hover:text-foreground"
             >
               Privacy
             </Link>
             <Link
               href="/terms"
-              className="hover:text-foreground transition-colors"
+              className="inline-flex min-h-[44px] items-center transition-colors hover:text-foreground"
             >
               Terms
             </Link>

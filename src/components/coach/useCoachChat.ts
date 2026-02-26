@@ -180,7 +180,7 @@ export function useCoachChat() {
     }
   }
 
-  function applyClientActions(blocks: CoachBlock[]) {
+  function applyClientActions(blocks: CoachBlock[], seen?: Set<string>) {
     for (const block of blocks) {
       if (
         block.type === "client_action" &&
@@ -205,6 +205,9 @@ export function useCoachChat() {
         (block.action === "open_checkout" ||
           block.action === "open_billing_portal")
       ) {
+        const key = `${block.action}`;
+        if (seen && seen.has(key)) continue;
+        seen?.add(key);
         void runClientAction(block.action);
       }
     }
@@ -214,6 +217,7 @@ export function useCoachChat() {
     const trimmed = prompt.trim();
     if (!trimmed || isWorking) return;
 
+    const seenClientActions = new Set<string>();
     const timezoneOffsetMinutes = new Date().getTimezoneOffset();
     const assistantId = createId();
     const userMessage: CoachTimelineMessage = {
@@ -294,7 +298,7 @@ export function useCoachChat() {
           }
 
           if (event.type === "tool_result") {
-            applyClientActions(event.blocks);
+            applyClientActions(event.blocks, seenClientActions);
             const nextBlocks = withIds(event.blocks);
             setTimeline((prev) =>
               prev.map((message) =>
@@ -335,7 +339,7 @@ export function useCoachChat() {
 
           if (event.type === "final") {
             const payload = CoachTurnResponseSchema.parse(event.response);
-            applyClientActions(payload.blocks);
+            applyClientActions(payload.blocks, seenClientActions);
             setLastTrace(payload.trace);
             setConversation([
               ...nextConversation,
@@ -360,7 +364,7 @@ export function useCoachChat() {
       }
 
       const payload = CoachTurnResponseSchema.parse(await response.json());
-      applyClientActions(payload.blocks);
+      applyClientActions(payload.blocks, seenClientActions);
       setLastTrace(payload.trace);
       setConversation([
         ...nextConversation,

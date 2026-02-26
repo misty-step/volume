@@ -16,7 +16,7 @@ export const VOLUME_TOKENS = {
   typography: {
     metric: {
       value:
-        "text-[1.6rem] font-bold tabular leading-none tracking-tight text-accent",
+        "text-[1.6rem] font-bold tabular-nums leading-none tracking-tight text-accent",
       unit: "text-[0.75em] font-normal text-muted-foreground",
     },
     eyebrow:

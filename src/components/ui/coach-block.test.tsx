@@ -293,10 +293,10 @@ describe("BillingPanelBlock", () => {
     trialDaysRemaining: 9,
     periodEnd: "2026-03-01",
     ctaLabel: "Manage billing",
-    ctaAction: "open_portal",
+    ctaAction: "open_billing_portal",
   };
 
-  it("renders billing data and maps portal action", () => {
+  it("renders billing data and triggers portal action", () => {
     const onClientAction = vi.fn();
     render(
       <BillingPanelBlock block={trialBlock} onClientAction={onClientAction} />

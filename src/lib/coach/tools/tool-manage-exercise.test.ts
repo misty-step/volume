@@ -148,21 +148,15 @@ describe("tool-manage-exercise", () => {
     expect(mutation).not.toHaveBeenCalled();
   });
 
-  it("returns error when merge source and target are the same exercise", async () => {
-    mockListExercises.mockResolvedValue([
-      exercise({ _id: "exercise_same", name: "Bench Press" }),
-    ]);
+  it("rejects when merge source and target are the same exercise", async () => {
+    await expect(
+      runMergeExerciseTool(
+        { source_exercise: "bench press", target_exercise: "BENCH PRESS" },
+        TEST_CTX as any
+      )
+    ).rejects.toThrow("Source and target exercises must be different.");
 
-    const result = await runMergeExerciseTool(
-      { source_exercise: "bench press", target_exercise: "BENCH PRESS" },
-      TEST_CTX as any
-    );
-
-    expect((result.blocks[0] as any).tone).toBe("error");
-    expect(result.outputForModel).toEqual({
-      status: "error",
-      error: "same_exercise",
-    });
+    expect(mockListExercises).not.toHaveBeenCalled();
     expect(mutation).not.toHaveBeenCalled();
   });
 

@@ -4,6 +4,10 @@ import { ReportHistoryArgsSchema } from "./schemas";
 import { uniquePrompts } from "./helpers";
 import type { CoachToolContext, ToolResult } from "./types";
 
+function formatWithOffset(ms: number, offset: number) {
+  return format(new Date(ms - offset * 60_000), "MMM d, yyyy p");
+}
+
 type ReportRecord = {
   _id: string;
   reportType?: "daily" | "weekly" | "monthly";
@@ -33,7 +37,10 @@ export async function runReportHistoryTool(
         items: reports.map((report) => ({
           id: String(report._id),
           title: `${(report.reportType ?? "weekly").toUpperCase()} report`,
-          subtitle: format(new Date(report.generatedAt), "MMM d, yyyy p"),
+          subtitle: formatWithOffset(
+            report.generatedAt,
+            ctx.timezoneOffsetMinutes ?? 0
+          ),
           meta: `model=${report.model}`,
           tags: [report.reportVersion ?? "1.0"],
           prompt: "show analytics overview",

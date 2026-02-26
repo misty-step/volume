@@ -132,7 +132,7 @@ const BillingPanelBlockSchema = z.object({
   trialDaysRemaining: z.number().int().min(0).max(365).optional(),
   periodEnd: z.string().max(40).optional(),
   ctaLabel: z.string().max(60).optional(),
-  ctaAction: z.enum(["open_checkout", "open_portal"]).optional(),
+  ctaAction: z.enum(["open_checkout", "open_billing_portal"]).optional(),
 });
 
 const QuickLogFormBlockSchema = z.object({

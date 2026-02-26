@@ -6,6 +6,7 @@ import {
   DeleteSetArgsSchema,
   ExerciseReportArgsSchema,
   ExerciseNameArgsSchema,
+  MergeExerciseArgsSchema,
   RenameExerciseArgsSchema,
   ReportHistoryArgsSchema,
   HistoryArgsSchema,
@@ -26,6 +27,7 @@ import { runAnalyticsOverviewTool } from "@/lib/coach/tools/tool-analytics-overv
 import { runExerciseLibraryTool } from "@/lib/coach/tools/tool-exercise-library";
 import {
   runDeleteExerciseTool,
+  runMergeExerciseTool,
   runRenameExerciseTool,
   runRestoreExerciseTool,
   runUpdateExerciseMuscleGroupsTool,
@@ -191,6 +193,14 @@ export function createCoachTools(
         runTool("update_exercise_muscle_groups", () =>
           runUpdateExerciseMuscleGroupsTool(args, ctx)
         ),
+    }),
+
+    merge_exercise: tool({
+      description:
+        "Merge a source exercise into a target exercise, reassigning all historical sets and archiving the source.",
+      inputSchema: MergeExerciseArgsSchema,
+      execute: (args) =>
+        runTool("merge_exercise", () => runMergeExerciseTool(args, ctx)),
     }),
 
     delete_set: tool({

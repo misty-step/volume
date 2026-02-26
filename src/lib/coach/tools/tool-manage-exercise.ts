@@ -1,6 +1,6 @@
 import { api } from "@/../convex/_generated/api";
 import { findExercise, listExercises } from "./data";
-import { normalizeLookup, uniquePrompts } from "./helpers";
+import { normalizeLookup, titleCase, uniquePrompts } from "./helpers";
 import {
   ExerciseNameArgsSchema,
   MergeExerciseArgsSchema,
@@ -8,15 +8,6 @@ import {
   UpdateMuscleGroupsArgsSchema,
 } from "./schemas";
 import type { CoachToolContext, ToolResult } from "./types";
-
-function titleCase(value: string): string {
-  return value
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(" ");
-}
 
 function findExerciseByName(
   exercises: Awaited<ReturnType<typeof listExercises>>,

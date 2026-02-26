@@ -6,6 +6,10 @@ import { formatSecondsShort, uniquePrompts } from "./helpers";
 import { HistoryArgsSchema } from "./schemas";
 import type { CoachToolContext, ToolResult } from "./types";
 
+function formatWithOffset(ms: number, offset: number) {
+  return format(new Date(ms - offset * 60_000), "MMM d, yyyy p");
+}
+
 function describeSet(set: Set, defaultUnit: "lbs" | "kg"): string {
   if (set.duration !== undefined) {
     return formatSecondsShort(set.duration);
@@ -64,7 +68,10 @@ export async function runHistoryOverviewTool(
         emptyLabel: "No history yet. Log your first set.",
         items: sets.map((set) => {
           const exercise = exerciseMap.get(set.exerciseId);
-          const when = format(new Date(set.performedAt), "MMM d, yyyy p");
+          const when = formatWithOffset(
+            set.performedAt,
+            ctx.timezoneOffsetMinutes ?? 0
+          );
           return {
             id: String(set._id),
             title: exercise?.name ?? "Unknown exercise",

@@ -75,7 +75,7 @@ describe("runSettingsOverviewTool", () => {
         }),
       ])
     );
-    expect(billing.ctaAction).toBe("open_portal");
+    expect(billing.ctaAction).toBe("open_billing_portal");
     expect(billing.ctaLabel).toBe("Manage billing");
     expect(billing.periodEnd).toBeTypeOf("string");
     expect(result.outputForModel).toEqual({

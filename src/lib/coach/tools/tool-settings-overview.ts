@@ -52,7 +52,9 @@ export async function runSettingsOverviewTool(
   const subscription = subscriptionStatus as SubscriptionStatus | null;
   const billing = billingInfo as BillingInfo | null;
 
-  const ctaAction = billing?.stripeCustomerId ? "open_portal" : "open_checkout";
+  const ctaAction = billing?.stripeCustomerId
+    ? "open_billing_portal"
+    : "open_checkout";
   const ctaLabel = billing?.stripeCustomerId
     ? "Manage billing"
     : "Upgrade plan";

@@ -33,6 +33,7 @@
     --radius: 10px;
     --radius-lg: 12px;
     --radius-chat: 18px;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
     --chart-1: 24 85% 57%;
     --chart-2: 214 12% 60%;
