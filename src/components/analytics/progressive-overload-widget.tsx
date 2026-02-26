@@ -10,8 +10,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -65,7 +64,7 @@ export function ProgressiveOverloadWidget({
   // Loading skeleton
   if (isLoading) {
     return (
-      <BrutalistCard className="p-6">
+      <Card className="p-6">
         <CardHeader>
           <div className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5" />
@@ -82,14 +81,14 @@ export function ProgressiveOverloadWidget({
             ))}
           </div>
         </CardContent>
-      </BrutalistCard>
+      </Card>
     );
   }
 
   // Empty state
   if (!progressionData || progressionData.length === 0) {
     return (
-      <BrutalistCard className="p-6">
+      <Card className="p-6">
         <CardHeader>
           <div className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5" />
@@ -107,7 +106,7 @@ export function ProgressiveOverloadWidget({
             </p>
           </div>
         </CardContent>
-      </BrutalistCard>
+      </Card>
     );
   }
 
@@ -117,7 +116,7 @@ export function ProgressiveOverloadWidget({
 
   if (repProgressionData.length === 0) {
     return (
-      <BrutalistCard className="p-6">
+      <Card className="p-6">
         <CardHeader>
           <div className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-safety-orange" />
@@ -136,12 +135,12 @@ export function ProgressiveOverloadWidget({
             </p>
           </div>
         </CardContent>
-      </BrutalistCard>
+      </Card>
     );
   }
 
   return (
-    <BrutalistCard className="p-6">
+    <Card className="p-6">
       <CardHeader>
         <div className="flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-safety-orange" />
@@ -315,6 +314,6 @@ export function ProgressiveOverloadWidget({
           </p>
         )}
       </CardContent>
-    </BrutalistCard>
+    </Card>
   );
 }

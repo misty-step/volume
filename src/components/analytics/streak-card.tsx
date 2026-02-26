@@ -1,7 +1,6 @@
 "use client";
 
-import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Flame } from "lucide-react";
 import { motion } from "framer-motion";
 import { motionPresets } from "@/lib/brutalist-motion";
@@ -23,7 +22,7 @@ export function StreakCard({
   // Loading skeleton
   if (isLoading) {
     return (
-      <BrutalistCard className="p-6">
+      <Card className="p-6">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Flame className="w-5 h-5" />
@@ -39,14 +38,14 @@ export function StreakCard({
             </div>
           </div>
         </CardContent>
-      </BrutalistCard>
+      </Card>
     );
   }
 
   // Empty state
   if (currentStreak === 0 && longestStreak === 0 && totalWorkouts === 0) {
     return (
-      <BrutalistCard className="p-6">
+      <Card className="p-6">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Flame className="w-5 h-5" />
@@ -64,12 +63,12 @@ export function StreakCard({
             </p>
           </div>
         </CardContent>
-      </BrutalistCard>
+      </Card>
     );
   }
 
   return (
-    <BrutalistCard className="p-6">
+    <Card className="p-6">
       <CardHeader>
         <div className="flex items-center gap-2">
           <Flame
@@ -164,6 +163,6 @@ export function StreakCard({
           )}
         </div>
       </CardContent>
-    </BrutalistCard>
+    </Card>
   );
 }

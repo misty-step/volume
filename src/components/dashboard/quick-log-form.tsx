@@ -10,11 +10,6 @@ import {
 } from "react";
 import { Id } from "../../../convex/_generated/dataModel";
 import {
-  BrutalistCard,
-  BrutalistButton,
-  BrutalistInput,
-} from "@/components/brutalist";
-import {
   Form,
   FormField,
   FormItem,
@@ -22,6 +17,9 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { InlineExerciseCreator } from "./inline-exercise-creator";
 import { DurationInput } from "./duration-input";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
@@ -230,9 +228,9 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
           <form onSubmit={form.handleSubmit(onSubmit)}>
             {/* Mode Toggle */}
             <div className="mb-4 flex items-center gap-3">
-              <BrutalistButton
+              <Button
                 type="button"
-                variant={!isDurationMode ? "danger" : "outline"}
+                variant={!isDurationMode ? "destructive" : "outline"}
                 size="default"
                 onClick={() => {
                   setIsDurationMode(false);
@@ -241,10 +239,10 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                 }}
               >
                 Reps
-              </BrutalistButton>
-              <BrutalistButton
+              </Button>
+              <Button
                 type="button"
-                variant={isDurationMode ? "danger" : "outline"}
+                variant={isDurationMode ? "destructive" : "outline"}
                 size="default"
                 onClick={() => {
                   setIsDurationMode(true);
@@ -253,7 +251,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                 }}
               >
                 Duration
-              </BrutalistButton>
+              </Button>
             </div>
 
             <div className="space-y-4">
@@ -334,7 +332,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                           Reps *
                         </FormLabel>
                         <FormControl>
-                          <BrutalistInput
+                          <Input
                             {...field}
                             ref={repsInputRef}
                             type="number"
@@ -400,7 +398,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                         Weight ({unit})
                       </FormLabel>
                       <FormControl>
-                        <BrutalistInput
+                        <Input
                           {...field}
                           ref={weightInputRef}
                           type="number"
@@ -435,9 +433,9 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                 animate={animationControls}
                 className="w-full md:w-64"
               >
-                <BrutalistButton
+                <Button
                   type="submit"
-                  variant="danger"
+                  variant="destructive"
                   size="lg"
                   className="w-full"
                   disabled={form.formState.isSubmitting}
@@ -452,7 +450,7 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
                   ) : (
                     "Log Set"
                   )}
-                </BrutalistButton>
+                </Button>
               </motion.div>
             </div>
           </form>
@@ -482,12 +480,12 @@ const QuickLogFormComponent = forwardRef<QuickLogFormHandle, QuickLogFormProps>(
 
     // Desktop: card wrapper with header
     return (
-      <BrutalistCard className="p-6">
+      <Card className="p-6">
         <h2 className="font-display text-2xl uppercase tracking-wide mb-6">
           Log Set
         </h2>
         {formContent}
-      </BrutalistCard>
+      </Card>
     );
   }
 );

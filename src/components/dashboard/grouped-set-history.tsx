@@ -3,7 +3,7 @@
 import { forwardRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Id } from "../../../convex/_generated/dataModel";
-import { BrutalistCard } from "@/components/brutalist";
+import { Card } from "@/components/ui/card";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import type { ExerciseGroup } from "@/lib/exercise-grouping";
 import { Exercise, Set as WorkoutSet } from "@/types/domain";
@@ -42,7 +42,7 @@ export const GroupedSetHistory = forwardRef<
   // Loading state - show skeleton while data is fetching
   if (isLoading) {
     return (
-      <BrutalistCard ref={ref} className="p-6">
+      <Card ref={ref} className="p-6">
         <h2 className="font-display text-2xl uppercase tracking-wide mb-6">
           Today
         </h2>
@@ -54,7 +54,7 @@ export const GroupedSetHistory = forwardRef<
             <div className="h-6 w-40 bg-concrete-gray animate-pulse" />
           </div>
         </div>
-      </BrutalistCard>
+      </Card>
     );
   }
 
@@ -90,7 +90,7 @@ export const GroupedSetHistory = forwardRef<
 
     // Desktop: "Ghost Card" inside the main card
     return (
-      <BrutalistCard ref={ref} className="p-6">
+      <Card ref={ref} className="p-6">
         <h2 className="font-display text-2xl uppercase tracking-wide mb-6">
           Today
         </h2>
@@ -111,7 +111,7 @@ export const GroupedSetHistory = forwardRef<
             </p>
           </div>
         </div>
-      </BrutalistCard>
+      </Card>
     );
   }
 
@@ -157,11 +157,11 @@ export const GroupedSetHistory = forwardRef<
 
   // Desktop: card wrapper with header
   return (
-    <BrutalistCard ref={ref} className="p-6">
+    <Card ref={ref} className="p-6">
       <h2 className="font-display text-2xl uppercase tracking-wide mb-6">
         Today
       </h2>
       <div className="space-y-3">{exerciseGroupsContent}</div>
-    </BrutalistCard>
+    </Card>
   );
 });

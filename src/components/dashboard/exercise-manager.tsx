@@ -10,7 +10,6 @@ import { SettingsListItem } from "@/components/ui/settings-list-item";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BrutalistButton } from "@/components/brutalist";
 import {
   AlertDialog,
   AlertDialogAction,
