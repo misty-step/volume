@@ -156,7 +156,8 @@ function emitLog(
   } else if (level === "warn") {
     console.warn(output);
   } else {
-    console.warn(output);
+    // eslint-disable-next-line no-console -- info/debug belong on stdout, not stderr
+    console.log(output);
   }
 }
 
