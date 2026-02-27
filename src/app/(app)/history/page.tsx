@@ -73,7 +73,7 @@ export default function HistoryPage() {
 
   // Handle load more with analytics
   const handleLoadMore = useCallback(() => {
-    trackEvent("History Load More Days", { days: 7 });
+    trackEvent("History Load More Days", {});
     loadMoreDays();
   }, [loadMoreDays]);
 

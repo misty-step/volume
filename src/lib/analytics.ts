@@ -69,7 +69,6 @@ export interface AnalyticsEventDefinitions {
     userId?: string;
   };
   "History Load More Days": {
-    days: number;
     userId?: string;
   };
   "Exercise Detail Viewed": {
