@@ -73,11 +73,6 @@ export default function ExerciseDetailPage({
     [recentSessions]
   );
 
-  const _thirtyDayTrend = useMemo(
-    () => computeTrendSummary(sessions, "Last 30 days"),
-    [sessions]
-  );
-
   // Weight tier breakdown for most recent session
   const latestSessionTiers = useMemo(() => {
     if (sessions.length === 0) return [];

@@ -340,10 +340,7 @@ export function ExerciseSetGroup({
                           {comparison &&
                             (comparison.lastReps !== null ||
                               comparison.lastDuration !== null) && (
-                              <GhostData
-                                comparison={comparison}
-                                preferredUnit={preferredUnit}
-                              />
+                              <GhostData comparison={comparison} />
                             )}
 
                           {/* PR indicator for this specific set */}
@@ -395,7 +392,6 @@ export function ExerciseSetGroup({
                 {/* History Section - Previous sessions */}
                 <HistorySection
                   sessions={sessions}
-                  exerciseId={exercise._id}
                   exerciseHref={exerciseHref}
                   preferredUnit={preferredUnit}
                 />
@@ -474,13 +470,7 @@ function QualityIndicator({
 /**
  * Ghost data showing last session's values for comparison.
  */
-function GhostData({
-  comparison,
-  preferredUnit: _preferredUnit,
-}: {
-  comparison: EnrichedSet["comparison"];
-  preferredUnit: WeightUnit;
-}) {
+function GhostData({ comparison }: { comparison: EnrichedSet["comparison"] }) {
   const { lastReps, lastWeight, lastDuration } = comparison;
 
   // Format the ghost text based on what data we have
@@ -509,12 +499,10 @@ function GhostData({
  */
 function HistorySection({
   sessions,
-  exerciseId: _exerciseId,
   exerciseHref,
   preferredUnit,
 }: {
   sessions: ExerciseSession[];
-  exerciseId: string;
   exerciseHref?: string;
   preferredUnit: WeightUnit;
 }) {

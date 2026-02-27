@@ -74,7 +74,7 @@ export default function HistoryPage() {
   // Handle load more with analytics
   const handleLoadMore = useCallback(() => {
     trackEvent("History Load More Days", { days: 7 });
-    loadMoreDays(7);
+    loadMoreDays();
   }, [loadMoreDays]);
 
   // Handle CSV export - passes arrays, module builds internal structures

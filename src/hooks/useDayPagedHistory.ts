@@ -44,8 +44,8 @@ interface UseDayPagedHistoryReturn {
   dayGroups: DayGroup[];
   /** Current loading status */
   status: DayPagedHistoryStatus;
-  /** Load more days (fetches until N new days appear or data exhausted) */
-  loadMoreDays: (days?: number) => Promise<void>;
+  /** Load more days */
+  loadMoreDays: () => Promise<void>;
   /** Whether we can load more */
   canLoadMore: boolean;
 }
@@ -161,42 +161,19 @@ export function useDayPagedHistory(
   const canLoadMore = convexStatus === "CanLoadMore";
 
   /**
-   * Load more days of history.
-   * Fetches pages until N new days appear or data is exhausted.
+   * Load one more page of history.
    */
-  const loadMoreDays = useCallback(
-    async (_targetNewDays: number = 7) => {
-      if (!canLoadMore || isLoadingMore) return;
+  const loadMoreDays = useCallback(async () => {
+    if (!canLoadMore || isLoadingMore) return;
 
-      setIsLoadingMore(true);
-      const _startingDayCount = dayGroups.length;
-
-      try {
-        // Keep fetching until we have enough new days or exhausted
-        let attempts = 0;
-        const maxAttempts = 5; // Prevent infinite loops
-
-        while (attempts < maxAttempts) {
-          // Load a page of sets
-          loadMore(pageSizeSets);
-
-          // Wait a tick for React to process
-          await new Promise((resolve) => setTimeout(resolve, 50));
-
-          // Check if we've added enough days
-          // Note: dayGroups.length won't update until next render, so we estimate
-          attempts++;
-
-          // For now, just load one page and let React re-render
-          // The user can click "Load More" again if needed
-          break;
-        }
-      } finally {
-        setIsLoadingMore(false);
-      }
-    },
-    [canLoadMore, isLoadingMore, dayGroups.length, loadMore, pageSizeSets]
-  );
+    setIsLoadingMore(true);
+    try {
+      loadMore(pageSizeSets);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [canLoadMore, isLoadingMore, loadMore, pageSizeSets]);
 
   return {
     dayGroups,
