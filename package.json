@@ -18,7 +18,7 @@
     "format:check": "prettier --check .",
     "analyze": "ANALYZE=true bun run build",
     "prepare": "lefthook install || true",
-    "test": "vitest",
+    "test": "vitest run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage --run",
     "test:e2e": "playwright test",
