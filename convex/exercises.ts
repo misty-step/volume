@@ -328,6 +328,10 @@ export const mergeExercise = mutation({
     }
     requireOwnership(fromExercise, identity.subject, "exercise");
 
+    if (fromExercise.deletedAt !== undefined) {
+      throw new Error("Source exercise is already archived");
+    }
+
     const toExercise = await ctx.db.get(toId);
     if (!toExercise) {
       throw new Error("Exercise not found");
