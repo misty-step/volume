@@ -42,10 +42,10 @@ export default defineConfig({
         "**/scripts/**", // CLI wrappers, not library code
       ],
       thresholds: {
-        lines: 47,
-        functions: 70,
-        branches: 83, // Lowered from 84.5% to match actual coverage
-        statements: 47,
+        lines: 52,
+        functions: 73,
+        branches: 83,
+        statements: 52,
       },
     },
   },

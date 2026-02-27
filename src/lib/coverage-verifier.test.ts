@@ -141,10 +141,10 @@ describe("CoverageVerifier", () => {
   describe("checkThresholds", () => {
     it("passes at exactly threshold value", () => {
       const coverage = createValidCoverage({
-        lines: { total: 100, covered: 47, skipped: 0, pct: 47 }, // Exactly 47%
-        functions: { total: 100, covered: 70, skipped: 0, pct: 70 }, // Exactly 70%
+        lines: { total: 100, covered: 52, skipped: 0, pct: 52 }, // Exactly 52%
+        functions: { total: 100, covered: 73, skipped: 0, pct: 73 }, // Exactly 73%
         branches: { total: 100, covered: 83, skipped: 0, pct: 83 }, // Exactly 83%
-        statements: { total: 100, covered: 47, skipped: 0, pct: 47 }, // Exactly 47%
+        statements: { total: 100, covered: 52, skipped: 0, pct: 52 }, // Exactly 52%
       });
       const verifier = new CoverageVerifier(createMockDeps());
 
@@ -285,10 +285,10 @@ describe("CoverageVerifier", () => {
   describe("DEFAULT_THRESHOLDS", () => {
     it("matches vitest.config.ts thresholds", () => {
       // These should match the thresholds in vitest.config.ts
-      expect(DEFAULT_THRESHOLDS.lines).toBe(47);
-      expect(DEFAULT_THRESHOLDS.functions).toBe(70);
+      expect(DEFAULT_THRESHOLDS.lines).toBe(52);
+      expect(DEFAULT_THRESHOLDS.functions).toBe(73);
       expect(DEFAULT_THRESHOLDS.branches).toBe(83);
-      expect(DEFAULT_THRESHOLDS.statements).toBe(47);
+      expect(DEFAULT_THRESHOLDS.statements).toBe(52);
     });
   });
 
