@@ -50,10 +50,10 @@ export const defaultDeps: CoverageVerifierDeps = {
 
 // Default thresholds matching vitest.config.ts
 export const DEFAULT_THRESHOLDS: Thresholds = {
-  lines: 47,
-  functions: 70,
+  lines: 52,
+  functions: 73,
   branches: 83,
-  statements: 47,
+  statements: 52,
 };
 
 export class CoverageVerifier {
@@ -129,7 +129,7 @@ export class CoverageVerifier {
    */
   printResult(result: VerificationResult): void {
     if (result.passed) {
-      console.log("All coverage thresholds passed");
+      console.warn("All coverage thresholds passed");
     } else {
       console.error("Coverage thresholds not met:");
       result.failures.forEach((failure) => console.error(`  ${failure}`));
