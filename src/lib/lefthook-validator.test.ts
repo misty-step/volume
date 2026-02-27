@@ -9,7 +9,7 @@
  * - Error message formatting
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   LefthookConfigValidator,
   type ValidatorDeps,
@@ -481,6 +481,60 @@ pre-push:
 
       expect(result.valid).toBe(true);
     });
+  });
+});
+
+describe("printResults", () => {
+  it("should log errors to stderr when validation fails", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const validator = new LefthookConfigValidator(createMockDeps());
+
+    validator.printResults({
+      valid: false,
+      errors: ["❌ Config not found"],
+      warnings: [],
+    });
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Validation Failed")
+    );
+    expect(errorSpy).toHaveBeenCalledWith("❌ Config not found");
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  it("should log warnings to stderr via console.warn", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const validator = new LefthookConfigValidator(createMockDeps());
+
+    validator.printResults({
+      valid: true,
+      errors: [],
+      warnings: ["⚠️ Deprecated pattern"],
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Warnings"));
+    expect(warnSpy).toHaveBeenCalledWith("⚠️ Deprecated pattern");
+    warnSpy.mockRestore();
+  });
+
+  it("should log success to stdout when valid with no warnings", () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const validator = new LefthookConfigValidator(createMockDeps());
+
+    validator.printResults({
+      valid: true,
+      errors: [],
+      warnings: [],
+    });
+
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Validation Passed")
+    );
+    logSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 });
 
