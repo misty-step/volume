@@ -171,6 +171,8 @@ export function useCoachChat() {
       turn_index: conversation.length,
     });
 
+    const fetchStartMs = Date.now();
+
     try {
       const response = await fetch("/api/coach", {
         method: "POST",
@@ -285,7 +287,7 @@ export function useCoachChat() {
             trackEvent("Coach Response Received", {
               blocks: payload.blocks.length,
               had_tool_calls: (payload.trace?.toolsUsed?.length ?? 0) > 0,
-              duration_ms: 0,
+              duration_ms: Date.now() - fetchStartMs,
             });
             break;
           }
@@ -315,7 +317,7 @@ export function useCoachChat() {
       trackEvent("Coach Response Received", {
         blocks: payload.blocks.length,
         had_tool_calls: (payload.trace?.toolsUsed?.length ?? 0) > 0,
-        duration_ms: 0,
+        duration_ms: Date.now() - fetchStartMs,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";

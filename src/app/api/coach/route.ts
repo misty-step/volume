@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     const err = error instanceof Error ? error : new Error(String(error));
     reportError(err, { route: "coach", operation: "rate_limit_check" });
     return NextResponse.json(
-      { error: "Failed to check rate limit", detail: err.message },
+      { error: "Failed to check rate limit" },
       { status: 500 }
     );
   }
