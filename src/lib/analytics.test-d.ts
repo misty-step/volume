@@ -12,7 +12,7 @@
 import { trackEvent, setUserContext } from "./analytics";
 
 // Valid event calls should compile without errors
-function testValidEvents(): void {
+function _testValidEvents(): void {
   trackEvent("Exercise Created", {
     exerciseId: "123",
     source: "manual",
@@ -50,7 +50,7 @@ function testValidEvents(): void {
 }
 
 // Invalid calls should produce TypeScript errors
-function testInvalidEvents(): void {
+function _testInvalidEvents(): void {
   // @ts-expect-error - Unknown event type
   trackEvent("Invalid Event", { foo: "bar" });
 
@@ -78,7 +78,7 @@ function testInvalidEvents(): void {
 }
 
 // User context tests
-function testUserContext(): void {
+function _testUserContext(): void {
   // Valid
   setUserContext("user-123");
   setUserContext("user-123", { plan: "pro" });

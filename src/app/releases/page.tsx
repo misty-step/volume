@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { loadAllReleases } from "@/lib/releases/loader";
-import { CHANGE_TYPE_LABELS } from "@/lib/releases/types";
 import { Footer } from "@/components/layout/footer";
 
 export const metadata: Metadata = {

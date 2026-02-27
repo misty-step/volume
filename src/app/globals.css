@@ -53,6 +53,12 @@
 
     /* Chrome accent system */
     --chrome-glow: rgba(232, 234, 237, 0.15);
+
+    /* Performance/Ghost display tokens (light mode) */
+    --ghost-bg: hsl(0 0% 96%);
+    --ghost-border: hsl(0 0% 88%);
+    --ghost-accent: #6b7a00;
+    --ghost-accent-text: #4a5500;
   }
 
   .dark {
@@ -95,6 +101,12 @@
     --chart-3: 23 100% 50%;
     --chart-4: 0 0% 96%;
     --chart-5: 210 10% 85%;
+
+    /* Performance/Ghost display tokens (dark mode) */
+    --ghost-bg: #141414;
+    --ghost-border: #262626;
+    --ghost-accent: #D4FF00;
+    --ghost-accent-text: #b0c900;
   }
 }
 

@@ -14,7 +14,7 @@ import { motionPresets } from "@/lib/brutalist-motion";
 import { cn } from "@/lib/utils";
 import type { ExerciseGroup } from "@/lib/exercise-grouping";
 import type { Exercise, Set as WorkoutSet, WeightUnit } from "@/types/domain";
-import { Id } from "../../../convex/_generated/dataModel";
+import { type Id } from "../../../convex/_generated/dataModel";
 
 export interface DashboardMobileProps {
   todaysSets: WorkoutSet[];

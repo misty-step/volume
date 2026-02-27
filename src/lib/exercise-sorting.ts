@@ -1,5 +1,5 @@
-import { Id } from "../../convex/_generated/dataModel";
-import { Exercise } from "@/types/domain";
+import { type Id } from "../../convex/_generated/dataModel";
+import { type Exercise } from "@/types/domain";
 import type { Set } from "@/types/domain";
 
 /**

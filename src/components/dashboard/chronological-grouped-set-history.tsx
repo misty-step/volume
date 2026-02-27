@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { Id } from "../../../convex/_generated/dataModel";
+import { type Id } from "../../../convex/_generated/dataModel";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
-import { Exercise, Set, WeightUnit } from "@/types/domain";
+import { type Exercise, type Set, type WeightUnit } from "@/types/domain";
 import { ExerciseSetGroup, type DeletedSetData } from "./exercise-set-group";
 import { groupSetsByExercise } from "@/lib/exercise-grouping";
 import { motion } from "framer-motion";

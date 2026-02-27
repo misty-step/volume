@@ -2,7 +2,7 @@
  * Tests for motion utilities and reduced-motion support.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   fadeInUp,
   slideIn,

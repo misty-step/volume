@@ -8,7 +8,7 @@
  * - Edge cases (0%, 100%, exact threshold)
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   CoverageVerifier,
   type CoverageVerifierDeps,
@@ -279,6 +279,40 @@ describe("CoverageVerifier", () => {
       expect(result.failures).toContainEqual(
         expect.stringContaining("branches coverage 82%")
       );
+    });
+  });
+
+  describe("printResult", () => {
+    it("should log success to stdout when all thresholds pass", () => {
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const verifier = new CoverageVerifier(createMockDeps());
+
+      verifier.printResult({ passed: true, failures: [] });
+
+      expect(logSpy).toHaveBeenCalledWith("All coverage thresholds passed");
+      expect(errorSpy).not.toHaveBeenCalled();
+      logSpy.mockRestore();
+      errorSpy.mockRestore();
+    });
+
+    it("should log failures to stderr when thresholds not met", () => {
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const verifier = new CoverageVerifier(createMockDeps());
+
+      verifier.printResult({
+        passed: false,
+        failures: ["lines coverage 30% is below threshold 52%"],
+      });
+
+      expect(logSpy).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith("Coverage thresholds not met:");
+      expect(errorSpy).toHaveBeenCalledWith(
+        "  lines coverage 30% is below threshold 52%"
+      );
+      logSpy.mockRestore();
+      errorSpy.mockRestore();
     });
   });
 

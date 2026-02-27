@@ -96,7 +96,7 @@ export function PaywallGate({ children }: PaywallGateProps) {
 
       const sessionId = sessionStorage.getItem("pending_checkout_session");
       if (sessionId) {
-        console.log("Webhook delayed, triggering backup sync...");
+        console.warn("Webhook delayed, triggering backup sync...");
         try {
           const result = await syncCheckout({ sessionId });
           if (!result.success) {

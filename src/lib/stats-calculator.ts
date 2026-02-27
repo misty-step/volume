@@ -1,5 +1,5 @@
-import { Id } from "../../convex/_generated/dataModel";
-import { Exercise, WeightUnit } from "@/types/domain";
+import { type Id } from "../../convex/_generated/dataModel";
+import { type Exercise, type WeightUnit } from "@/types/domain";
 import type { Set } from "@/types/domain";
 import { convertWeight, normalizeWeightUnit } from "./weight-utils";
 import { computeExerciseMetrics } from "./exercise-metrics";

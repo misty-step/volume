@@ -1,11 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "convex/react";
-import { useAuth } from "@clerk/nextjs";
 import { api } from "../../../convex/_generated/api";
 import { AIInsightsCard } from "./ai-insights-card";
-import type { AIReport } from "./ai-insights-card";
 import { AIReportCardV2 } from "./report-v2";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Doc } from "../../../convex/_generated/dataModel";
@@ -21,25 +19,6 @@ type ReportType = "daily" | "weekly" | "monthly";
 export function ReportNavigator() {
   const [selectedType, setSelectedType] = useState<ReportType>("weekly");
   const [reportIndex, setReportIndex] = useState(0);
-
-  // DEBUG: Log comprehensive user info for test report generation
-  const { userId } = useAuth();
-  const currentUser = useQuery(api.users.getCurrentUser);
-
-  useEffect(() => {
-    if (process.env.NODE_ENV === "production") {
-      return;
-    }
-
-    if (userId && currentUser) {
-      console.log("[Report Navigator Debug] User Info:", {
-        clerkUserId: userId,
-        convexUserId: currentUser._id,
-        timezone: currentUser.timezone,
-        createdAt: new Date(currentUser.createdAt).toISOString(),
-      });
-    }
-  }, [userId, currentUser]);
 
   // Fetch ALL reports for navigation
   const allReports = useQuery(api.ai.reports.getReportHistory, {
