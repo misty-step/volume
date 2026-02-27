@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { reportError } from "@/lib/analytics";
 import { ConvexHttpClient } from "convex/browser";
@@ -31,7 +31,10 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 }
+    );
   }
   const { priceId } = body;
 
@@ -48,12 +51,18 @@ export async function POST(request: Request) {
   const now = Date.now();
   const nowSeconds = Math.floor(now / 1000);
   const MIN_TRIAL_LEAD_TIME_SECONDS = 48 * 60 * 60; // 48 hours per Stripe docs
-  const trialEndsAt = user?.trialEndsAt ?? (user?._creationTime ? user._creationTime + TRIAL_PERIOD_MS : null);
-  const trialEndSeconds = trialEndsAt ? Math.floor(trialEndsAt / 1000) : undefined;
-  // Only pass trial_end if user has enough remaining trial (Stripe rejects <48h)
-  const validTrialEnd = trialEndSeconds && (trialEndSeconds - nowSeconds) >= MIN_TRIAL_LEAD_TIME_SECONDS
-    ? trialEndSeconds
+  const trialEndsAt =
+    user?.trialEndsAt ??
+    (user?._creationTime ? user._creationTime + TRIAL_PERIOD_MS : null);
+  const trialEndSeconds = trialEndsAt
+    ? Math.floor(trialEndsAt / 1000)
     : undefined;
+  // Only pass trial_end if user has enough remaining trial (Stripe rejects <48h)
+  const validTrialEnd =
+    trialEndSeconds &&
+    trialEndSeconds - nowSeconds >= MIN_TRIAL_LEAD_TIME_SECONDS
+      ? trialEndSeconds
+      : undefined;
 
   if (!priceId) {
     return NextResponse.json({ error: "Price ID required" }, { status: 400 });
@@ -98,7 +107,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    const error = err instanceof Error ? err : new Error("Unknown checkout error");
+    const error =
+      err instanceof Error ? err : new Error("Unknown checkout error");
     reportError(error, { context: "stripe/checkout", priceId });
     console.error("Error creating checkout session:", err);
     return NextResponse.json(

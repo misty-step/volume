@@ -6,7 +6,7 @@
  */
 
 import { toast } from "sonner";
-import { PRResult } from "@/lib/pr-detection";
+import { type PRResult } from "@/lib/pr-detection";
 
 /**
  * Show PR celebration toast

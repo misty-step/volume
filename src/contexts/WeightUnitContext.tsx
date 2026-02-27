@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 
 export type WeightUnit = "lbs" | "kg";
 
@@ -10,7 +10,9 @@ interface WeightUnitContextType {
   setUnit: (unit: WeightUnit) => void;
 }
 
-const WeightUnitContext = createContext<WeightUnitContextType | undefined>(undefined);
+const WeightUnitContext = createContext<WeightUnitContextType | undefined>(
+  undefined
+);
 
 export function WeightUnitProvider({ children }: { children: ReactNode }) {
   // Lazy initialization to prevent SSR hydration mismatch
@@ -26,7 +28,10 @@ export function WeightUnitProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       // localStorage might be blocked (private mode, etc.)
-      console.warn("Failed to read weight unit preference from localStorage:", error);
+      console.warn(
+        "Failed to read weight unit preference from localStorage:",
+        error
+      );
     }
 
     return "lbs";
@@ -40,7 +45,10 @@ export function WeightUnitProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("weightUnit", next);
       } catch (error) {
         // localStorage might be blocked (private mode, quota exceeded, etc.)
-        console.warn("Failed to save weight unit preference to localStorage:", error);
+        console.warn(
+          "Failed to save weight unit preference to localStorage:",
+          error
+        );
       }
       return next;
     });
@@ -52,12 +60,17 @@ export function WeightUnitProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem("weightUnit", newUnit);
     } catch (error) {
-      console.warn("Failed to save weight unit preference to localStorage:", error);
+      console.warn(
+        "Failed to save weight unit preference to localStorage:",
+        error
+      );
     }
   };
 
   return (
-    <WeightUnitContext.Provider value={{ unit, toggleUnit, setUnit: setUnitAndSave }}>
+    <WeightUnitContext.Provider
+      value={{ unit, toggleUnit, setUnit: setUnitAndSave }}
+    >
       {children}
     </WeightUnitContext.Provider>
   );

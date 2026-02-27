@@ -8,7 +8,7 @@ import {
   type ExerciseSession,
 } from "./exercise-insights";
 import type { Set } from "@/types/domain";
-import { Id } from "../../convex/_generated/dataModel";
+import { type Id } from "../../convex/_generated/dataModel";
 
 // Helper to create mock sets
 function createSet(overrides: Partial<Set> & { performedAt: number }): Set {

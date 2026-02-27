@@ -2,7 +2,7 @@
 
 import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
-import { motion, HTMLMotionProps } from "framer-motion";
+import { motion, type HTMLMotionProps } from "framer-motion";
 import { motionPresets } from "@/lib/brutalist-motion";
 
 interface BrutalistCardProps extends HTMLMotionProps<"div"> {

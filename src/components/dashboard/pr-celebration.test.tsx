@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { toast } from "sonner";
 import { showPRCelebration } from "./pr-celebration";
-import { PRResult } from "@/lib/pr-detection";
+import { type PRResult } from "@/lib/pr-detection";
 
 // Mock sonner toast
 vi.mock("sonner", () => ({

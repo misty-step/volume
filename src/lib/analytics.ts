@@ -1,11 +1,10 @@
 import * as Sentry from "@sentry/nextjs";
 import { sanitizeEmail } from "./sanitize";
 import { shouldEnableSentry } from "./sentry";
+import type posthogJs from "posthog-js";
 
 // Lazy-loaded PostHog client to avoid server-side import issues
 // posthog-js pulls in DOM dependencies that throw on server
-import type posthogJs from "posthog-js";
-
 let posthogClient: typeof posthogJs | null = null;
 
 function getPostHog() {
@@ -70,7 +69,6 @@ export interface AnalyticsEventDefinitions {
     userId?: string;
   };
   "History Load More Days": {
-    days: number;
     userId?: string;
   };
   "Exercise Detail Viewed": {

@@ -100,7 +100,7 @@ export function DetailsSection({
                     <TrendRow
                       icon={<TrendingUp className="w-3.5 h-3.5" />}
                       label="Best ever"
-                      value={formatBestSet(trendSummary.bestSet, unit)}
+                      value={formatBestSet(trendSummary.bestSet)}
                     />
                   )}
 
@@ -213,8 +213,7 @@ function TrendRow({ icon, label, value }: TrendRowProps) {
 }
 
 function formatBestSet(
-  bestSet: NonNullable<ExerciseTrendSummary["bestSet"]>,
-  unit: string
+  bestSet: NonNullable<ExerciseTrendSummary["bestSet"]>
 ): string {
   if (bestSet.duration !== undefined) {
     return formatDuration(bestSet.duration);

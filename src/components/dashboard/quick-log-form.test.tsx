@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "../../test/utils";
-import userEvent from "@testing-library/user-event";
 import { QuickLogForm } from "./quick-log-form";
 import type { Exercise } from "@/types/domain";
 import type { Id } from "../../../convex/_generated/dataModel";

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Use vi.hoisted to ensure mocks are available before module evaluation
 const { mockStripeCreate, mockConvexQuery, mockSetAuth, mockAuth } = vi.hoisted(

@@ -3,7 +3,10 @@
 import { useState, useMemo, useCallback } from "react";
 import { useLastSet } from "@/hooks/useLastSet";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
-import { suggestNextSet, SetSuggestion } from "@/lib/set-suggestion-engine";
+import {
+  suggestNextSet,
+  type SetSuggestion,
+} from "@/lib/set-suggestion-engine";
 import {
   buildExerciseSessions,
   computeTrendSummary,

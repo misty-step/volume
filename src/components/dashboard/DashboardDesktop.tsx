@@ -13,7 +13,7 @@ import { LAYOUT } from "@/lib/layout-constants";
 import { motionPresets } from "@/lib/brutalist-motion";
 import type { ExerciseGroup } from "@/lib/exercise-grouping";
 import type { Exercise, Set as WorkoutSet, WeightUnit } from "@/types/domain";
-import { Id } from "../../../convex/_generated/dataModel";
+import { type Id } from "../../../convex/_generated/dataModel";
 
 export interface DashboardDesktopProps {
   todaysSets: WorkoutSet[];

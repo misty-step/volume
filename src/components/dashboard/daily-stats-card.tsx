@@ -10,7 +10,7 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
-import { ExerciseStats } from "@/lib/stats-calculator";
+import { type ExerciseStats } from "@/lib/stats-calculator";
 import { Dumbbell } from "lucide-react";
 import { motion } from "framer-motion";
 import { motionPresets } from "@/lib/brutalist-motion";

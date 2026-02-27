@@ -4,7 +4,7 @@ import {
   getStreakMilestone,
   formatStreak,
 } from "./streak-calculator";
-import { Set } from "@/types/domain";
+import { type Set } from "@/types/domain";
 
 // Helper to create a set for a specific day offset from today (UTC)
 function createSetForDay(daysAgo: number): Set {

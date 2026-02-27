@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { type Id } from "../../../convex/_generated/dataModel";
 import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
 import { BrutalistInput } from "@/components/brutalist/BrutalistInput";
 import { BrutalistButton } from "@/components/brutalist/BrutalistButton";

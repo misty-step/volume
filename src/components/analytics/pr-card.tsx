@@ -45,7 +45,7 @@ function formatRelativeTime(timestamp: number): string {
 function formatImprovement(
   prType: PRType,
   improvement: number,
-  weight?: number
+  _weight?: number
 ): string {
   if (prType === "weight") {
     return `+${improvement} lbs`;
