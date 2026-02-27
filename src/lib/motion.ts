@@ -3,7 +3,7 @@
  * All animations respect prefers-reduced-motion automatically.
  */
 
-import { Variants } from "framer-motion";
+import { type Variants } from "framer-motion";
 
 /** Shared animation timing and easing */
 export const MOTION_CONFIG = {

@@ -129,7 +129,7 @@ export class CoverageVerifier {
    */
   printResult(result: VerificationResult): void {
     if (result.passed) {
-      console.log("All coverage thresholds passed");
+      console.warn("All coverage thresholds passed");
     } else {
       console.error("Coverage thresholds not met:");
       result.failures.forEach((failure) => console.error(`  ${failure}`));

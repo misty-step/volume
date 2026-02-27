@@ -10,7 +10,7 @@ import {
   type SetStateAction,
 } from "react";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
+import { type Id } from "../../convex/_generated/dataModel";
 import type { DeletedSetData } from "@/components/dashboard/exercise-set-group";
 import type { QuickLogFormHandle } from "@/components/dashboard/quick-log-form";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
@@ -140,7 +140,10 @@ export function useDashboard({
 
     // Brief delay ensures React renders the new set before scrolling
     setTimeout(() => {
-      historyRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      historyRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
     }, 100);
   }
 

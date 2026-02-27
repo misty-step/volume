@@ -8,7 +8,7 @@ import { ChronologicalGroupedSetHistory } from "@/components/dashboard/chronolog
 import { type DeletedSetData } from "@/components/dashboard/exercise-set-group";
 import { PageLayout } from "@/components/layout/page-layout";
 import { Button } from "@/components/ui/button";
-import { Id } from "../../../../convex/_generated/dataModel";
+import { type Id } from "../../../../convex/_generated/dataModel";
 import type { Exercise } from "@/types/domain";
 import { useDayPagedHistory } from "@/hooks/useDayPagedHistory";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
@@ -86,7 +86,10 @@ export default function HistoryPage() {
 
     try {
       exportWorkoutData(allSets, exercises);
-      trackEvent("CSV Export Completed", { setCount: allSets.length, filename: "volume-export" });
+      trackEvent("CSV Export Completed", {
+        setCount: allSets.length,
+        filename: "volume-export",
+      });
     } catch (error) {
       trackEvent("CSV Export Failed", { error: String(error) });
       handleMutationError(error, "Export CSV");

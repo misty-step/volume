@@ -77,7 +77,7 @@ export function GhostSetDisplay({
           transition={{ duration: 0.2, ease: [0.4, 0.0, 0.2, 1] }}
           className={cn(
             "relative overflow-hidden rounded-md border",
-            "bg-muted/30 dark:bg-[#141414] border-border dark:border-[#262626]",
+            "bg-muted/30 dark:bg-[var(--ghost-bg)] border-border dark:border-[var(--ghost-border)]",
             className
           )}
         >
@@ -92,11 +92,11 @@ export function GhostSetDisplay({
 
           {/* Today's Total for This Exercise */}
           {todayTotal && (
-            <div className="px-4 py-3 border-b border-border dark:border-[#262626]">
+            <div className="px-4 py-3 border-b border-border dark:border-[var(--ghost-border)]">
               <div className="flex items-center justify-between gap-4">
                 {/* Label with icon */}
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-3.5 w-3.5 text-foreground dark:text-[#D4FF00]" />
+                  <Calendar className="h-3.5 w-3.5 text-foreground dark:text-[var(--ghost-accent)]" />
                   <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
                     Today
                   </div>
@@ -106,14 +106,14 @@ export function GhostSetDisplay({
                 <div className="flex items-center gap-2">
                   {/* Duration-based exercise */}
                   {todayTotal.totalDuration > 0 && (
-                    <span className="font-mono text-lg font-bold tabular-nums text-foreground dark:text-[#D4FF00]">
+                    <span className="font-mono text-lg font-bold tabular-nums text-foreground dark:text-[var(--ghost-accent)]">
                       {formatDuration(todayTotal.totalDuration)}
                     </span>
                   )}
 
                   {/* Rep-based exercise */}
                   {todayTotal.totalReps > 0 && (
-                    <span className="font-mono text-lg font-bold tabular-nums text-foreground dark:text-[#D4FF00]">
+                    <span className="font-mono text-lg font-bold tabular-nums text-foreground dark:text-[var(--ghost-accent)]">
                       {todayTotal.totalReps.toLocaleString()}
                       <span className="text-xs font-normal text-muted-foreground ml-1">
                         reps
@@ -149,7 +149,7 @@ export function GhostSetDisplay({
                 <div className="flex items-baseline gap-1.5">
                   {lastSet.weight !== undefined && lastSet.weight !== null && (
                     <>
-                      <span className="font-mono text-lg font-semibold tabular-nums text-foreground dark:text-[#D4FF00]">
+                      <span className="font-mono text-lg font-semibold tabular-nums text-foreground dark:text-[var(--ghost-accent)]">
                         {lastSet.weight}
                       </span>
                       <span className="font-mono text-xs text-muted-foreground">
@@ -159,13 +159,13 @@ export function GhostSetDisplay({
                   )}
 
                   {lastSet.reps !== undefined && (
-                    <span className="font-mono text-lg font-semibold tabular-nums text-foreground dark:text-[#D4FF00]">
+                    <span className="font-mono text-lg font-semibold tabular-nums text-foreground dark:text-[var(--ghost-accent)]">
                       {lastSet.reps}
                     </span>
                   )}
 
                   {lastSet.duration !== undefined && (
-                    <span className="font-mono text-lg font-semibold tabular-nums text-foreground dark:text-[#D4FF00]">
+                    <span className="font-mono text-lg font-semibold tabular-nums text-foreground dark:text-[var(--ghost-accent)]">
                       {Math.floor(lastSet.duration / 60)}:
                       {String(lastSet.duration % 60).padStart(2, "0")}
                     </span>
@@ -182,7 +182,7 @@ export function GhostSetDisplay({
 
           {/* Previous History List */}
           {previousHistory.length > 0 && (
-            <div className="px-4 py-2 border-t border-border dark:border-[#262626]">
+            <div className="px-4 py-2 border-t border-border dark:border-[var(--ghost-border)]">
               <div className="grid grid-cols-[1fr_auto_auto_auto] gap-y-1.5 gap-x-2 text-xs font-mono">
                 {previousHistory.map((set) => (
                   <React.Fragment key={set._id}>
@@ -211,11 +211,11 @@ export function GhostSetDisplay({
 
           {/* Suggestion Display */}
           {suggestion && (
-            <div className="px-4 py-3 border-t border-border dark:border-[#262626]">
+            <div className="px-4 py-3 border-t border-border dark:border-[var(--ghost-border)]">
               <div className="flex items-center justify-between gap-4">
                 {/* Label with icon */}
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="h-3 w-3 text-foreground dark:text-[#D4FF00]" />
+                  <TrendingUp className="h-3 w-3 text-foreground dark:text-[var(--ghost-accent)]" />
                   <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
                     Try Next
                   </div>

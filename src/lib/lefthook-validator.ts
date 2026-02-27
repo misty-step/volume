@@ -215,13 +215,13 @@ export class LefthookConfigValidator {
     }
 
     if (result.warnings.length > 0) {
-      console.log("\n⚠️ Configuration Warnings");
-      result.warnings.forEach((warning) => console.log(warning));
+      console.warn("\n⚠️ Configuration Warnings");
+      result.warnings.forEach((warning) => console.warn(warning));
     }
 
     if (result.valid && result.warnings.length === 0) {
-      console.log("\n✅ Configuration Validation Passed");
-      console.log("No configuration inconsistencies detected");
+      console.warn("\n✅ Configuration Validation Passed");
+      console.warn("No configuration inconsistencies detected");
     }
   }
 }

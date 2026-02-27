@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { type ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { Nav } from "@/components/layout/nav";

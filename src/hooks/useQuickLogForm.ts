@@ -4,11 +4,11 @@ import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
+import { type Id } from "../../convex/_generated/dataModel";
 import { handleMutationError } from "@/lib/error-handler";
 import { checkForPR } from "@/lib/pr-detection";
 import { showPRCelebration } from "@/components/dashboard/pr-celebration";
-import { Exercise } from "@/types/domain";
+import { type Exercise } from "@/types/domain";
 
 // Validation schema for quick log form
 // Supports both rep-based and duration-based exercises

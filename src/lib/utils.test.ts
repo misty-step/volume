@@ -4,7 +4,7 @@
  * Tests for cn (class name merger) and isMobile detection.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { cn, isMobile } from "./utils";
 
 describe("cn", () => {

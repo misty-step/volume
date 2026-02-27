@@ -4,7 +4,7 @@ import { use, useMemo, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../../convex/_generated/api";
-import { Id } from "../../../../../../convex/_generated/dataModel";
+import { type Id } from "../../../../../../convex/_generated/dataModel";
 import { PageLayout } from "@/components/layout/page-layout";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,7 +73,7 @@ export default function ExerciseDetailPage({
     [recentSessions]
   );
 
-  const thirtyDayTrend = useMemo(
+  const _thirtyDayTrend = useMemo(
     () => computeTrendSummary(sessions, "Last 30 days"),
     [sessions]
   );

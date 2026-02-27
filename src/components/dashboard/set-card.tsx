@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { RotateCcw, Trash2 } from "lucide-react";
-import { Id } from "../../../convex/_generated/dataModel";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import {
   AlertDialog,
@@ -18,7 +17,7 @@ import {
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
 import { formatTimeAgo, formatDuration } from "@/lib/date-utils";
-import { Exercise, Set as WorkoutSet } from "@/types/domain";
+import { type Exercise, type Set as WorkoutSet } from "@/types/domain";
 import { BRUTALIST_TYPOGRAPHY } from "@/config/design-tokens";
 import { motionPresets, PRECISION_TIMING } from "@/lib/brutalist-motion";
 

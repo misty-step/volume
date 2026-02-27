@@ -10,7 +10,7 @@ const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 /**
  * Create a Stripe Billing Portal session for the authenticated user.
  */
-export async function POST(request: Request) {
+export async function POST(_request: Request) {
   const { userId, getToken } = await auth();
 
   if (!userId) {
@@ -47,7 +47,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    const error = err instanceof Error ? err : new Error("Unknown portal error");
+    const error =
+      err instanceof Error ? err : new Error("Unknown portal error");
     reportError(error, { context: "stripe/portal", stripeCustomerId });
     console.error("Error creating portal session:", err);
     return NextResponse.json(

@@ -13,7 +13,6 @@ import { describe, it, expect, beforeEach } from "vitest";
 import {
   LefthookConfigValidator,
   type ValidatorDeps,
-  type LefthookConfig,
 } from "./lefthook-validator";
 
 const validConfig = `
@@ -178,7 +177,7 @@ echo "second"`;
   describe("validateSecurityAuditLevel", () => {
     it("passes when audit uses --audit-level=high", () => {
       validator = new LefthookConfigValidator(createMockDeps());
-      const config = validator.parseYaml(validConfig);
+      const _config = validator.parseYaml(validConfig);
       const result = validator.validate();
 
       expect(result.valid).toBe(true);

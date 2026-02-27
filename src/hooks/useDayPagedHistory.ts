@@ -4,7 +4,7 @@ import { usePaginatedQuery } from "convex/react";
 import { useCallback, useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import { formatDateGroup } from "@/lib/date-formatters";
-import { WeightUnit, Set } from "@/types/domain";
+import { type WeightUnit, type Set } from "@/types/domain";
 import { convertWeight, normalizeWeightUnit } from "@/lib/weight-utils";
 
 /**
@@ -165,11 +165,11 @@ export function useDayPagedHistory(
    * Fetches pages until N new days appear or data is exhausted.
    */
   const loadMoreDays = useCallback(
-    async (targetNewDays: number = 7) => {
+    async (_targetNewDays: number = 7) => {
       if (!canLoadMore || isLoadingMore) return;
 
       setIsLoadingMore(true);
-      const startingDayCount = dayGroups.length;
+      const _startingDayCount = dayGroups.length;
 
       try {
         // Keep fetching until we have enough new days or exhausted

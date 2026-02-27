@@ -214,7 +214,7 @@ function TrendRow({ icon, label, value }: TrendRowProps) {
 
 function formatBestSet(
   bestSet: NonNullable<ExerciseTrendSummary["bestSet"]>,
-  unit: string
+  _unit: string
 ): string {
   if (bestSet.duration !== undefined) {
     return formatDuration(bestSet.duration);

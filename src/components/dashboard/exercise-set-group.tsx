@@ -14,7 +14,7 @@ import {
   Equal,
   History,
 } from "lucide-react";
-import { Id } from "../../../convex/_generated/dataModel";
+import { type Id } from "../../../convex/_generated/dataModel";
 import { BrutalistButton } from "@/components/brutalist";
 import {
   AlertDialog,
@@ -30,7 +30,11 @@ import { handleMutationError } from "@/lib/error-handler";
 import { formatNumber } from "@/lib/number-utils";
 import { formatTimestamp, formatDuration } from "@/lib/date-utils";
 import type { ExerciseMetrics } from "@/lib/exercise-metrics";
-import { Exercise, Set as WorkoutSet, WeightUnit } from "@/types/domain";
+import {
+  type Exercise,
+  type Set as WorkoutSet,
+  type WeightUnit,
+} from "@/types/domain";
 import { BRUTALIST_TYPOGRAPHY } from "@/config/design-tokens";
 import { cn } from "@/lib/utils";
 import {
@@ -100,7 +104,10 @@ export function ExerciseSetGroup({
   }, [enrichedSets]);
 
   // Undoable delete action
-  const { execute: executeDelete } = useUndoableAction<DeletedSetData, WorkoutSet>({
+  const { execute: executeDelete } = useUndoableAction<
+    DeletedSetData,
+    WorkoutSet
+  >({
     action: async (set) => {
       await onDelete(set._id);
     },
@@ -469,7 +476,7 @@ function QualityIndicator({
  */
 function GhostData({
   comparison,
-  preferredUnit,
+  preferredUnit: _preferredUnit,
 }: {
   comparison: EnrichedSet["comparison"];
   preferredUnit: WeightUnit;
@@ -502,7 +509,7 @@ function GhostData({
  */
 function HistorySection({
   sessions,
-  exerciseId,
+  exerciseId: _exerciseId,
   exerciseHref,
   preferredUnit,
 }: {

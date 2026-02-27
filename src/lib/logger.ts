@@ -156,40 +156,20 @@ function emitLog(
   } else if (level === "warn") {
     console.warn(output);
   } else {
-    console.log(output);
+    console.warn(output);
   }
 }
 
 function createLogger(baseContext?: LogContext): Logger {
   return {
     debug: (message, context) =>
-      emitLog(
-        "debug",
-        message,
-        { ...baseContext, ...context },
-        MIN_LOG_LEVEL
-      ),
+      emitLog("debug", message, { ...baseContext, ...context }, MIN_LOG_LEVEL),
     info: (message, context) =>
-      emitLog(
-        "info",
-        message,
-        { ...baseContext, ...context },
-        MIN_LOG_LEVEL
-      ),
+      emitLog("info", message, { ...baseContext, ...context }, MIN_LOG_LEVEL),
     warn: (message, context) =>
-      emitLog(
-        "warn",
-        message,
-        { ...baseContext, ...context },
-        MIN_LOG_LEVEL
-      ),
+      emitLog("warn", message, { ...baseContext, ...context }, MIN_LOG_LEVEL),
     error: (message, context) =>
-      emitLog(
-        "error",
-        message,
-        { ...baseContext, ...context },
-        MIN_LOG_LEVEL
-      ),
+      emitLog("error", message, { ...baseContext, ...context }, MIN_LOG_LEVEL),
   };
 }
 
