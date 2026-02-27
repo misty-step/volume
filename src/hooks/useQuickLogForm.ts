@@ -4,11 +4,12 @@ import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
+import { type Id } from "../../convex/_generated/dataModel";
 import { handleMutationError } from "@/lib/error-handler";
+import { trackEvent } from "@/lib/analytics";
 import { checkForPR } from "@/lib/pr-detection";
 import { showPRCelebration } from "@/components/dashboard/pr-celebration";
-import { Exercise } from "@/types/domain";
+import { type Exercise } from "@/types/domain";
 
 // Validation schema for quick log form
 // Supports both rep-based and duration-based exercises
@@ -104,6 +105,12 @@ export function useQuickLogForm({
         logSetPromise
           .then((setId) => {
             onSetLogged?.(setId);
+            trackEvent("Set Logged", {
+              setId: String(setId),
+              exerciseId: values.exerciseId,
+              reps: values.reps ?? 0,
+              ...(values.weight !== undefined ? { weight: values.weight } : {}),
+            });
             toast.success("Set saved!", { duration: 3000 });
           })
           .catch((error) => {
@@ -123,6 +130,20 @@ export function useQuickLogForm({
       }
 
       const setId = raceResult as Id<"sets">;
+
+      // Track set logged
+      trackEvent("Set Logged", {
+        setId: String(setId),
+        exerciseId: values.exerciseId,
+        reps: values.reps ?? 0,
+        ...(values.weight !== undefined ? { weight: values.weight } : {}),
+      });
+      // Track session start on first set of the day
+      if (previousSets !== undefined && previousSets.length === 0) {
+        trackEvent("Workout Session Started", {
+          sessionId: String(setId),
+        });
+      }
 
       // Check for PR before showing success toast (only for rep-based exercises)
       let isPR = false;

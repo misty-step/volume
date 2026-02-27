@@ -4,13 +4,12 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import { Pencil, Trash2, Tag } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { type Id } from "../../../convex/_generated/dataModel";
 import { SettingsList } from "@/components/ui/settings-list";
 import { SettingsListItem } from "@/components/ui/settings-list-item";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BrutalistButton } from "@/components/brutalist";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
-import { Exercise, Set } from "@/types/domain";
+import { type Exercise, type Set } from "@/types/domain";
 import { EditMuscleGroupsDialog } from "./edit-muscle-groups-dialog";
 
 interface ExerciseManagerProps {
@@ -121,7 +120,7 @@ export function ExerciseManager({ exercises, sets }: ExerciseManagerProps) {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
-                        handleSaveEdit(exercise._id);
+                        void handleSaveEdit(exercise._id);
                       }
                       if (e.key === "Escape") {
                         e.preventDefault();

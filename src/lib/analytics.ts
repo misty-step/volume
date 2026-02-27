@@ -4,7 +4,9 @@ import { shouldEnableSentry } from "./sentry";
 
 // Lazy-loaded PostHog client to avoid server-side import issues
 // posthog-js pulls in DOM dependencies that throw on server
-let posthogClient: typeof import("posthog-js").default | null = null;
+import type posthogJs from "posthog-js";
+
+let posthogClient: typeof posthogJs | null = null;
 
 function getPostHog() {
   if (typeof window === "undefined") return null;
@@ -88,6 +90,12 @@ export interface AnalyticsEventDefinitions {
   "CSV Export Failed": {
     error: string;
     userId?: string;
+  };
+  "Coach Message Sent": { message_length: number; turn_index: number };
+  "Coach Response Received": {
+    blocks: number;
+    had_tool_calls: boolean;
+    duration_ms: number;
   };
 }
 
@@ -173,7 +181,7 @@ function sanitizeEventProperties(
       // JSON.stringify then sanitize to preserve structure
       try {
         result[key] = sanitizeString(JSON.stringify(value));
-      } catch (error) {
+      } catch {
         // Fallback for unstringifiable objects (e.g., functions, symbols)
         result[key] = "[Unstringifiable Object]";
       }

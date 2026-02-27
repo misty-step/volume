@@ -7,6 +7,7 @@ import type { Id } from "@/../convex/_generated/dataModel";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { useTactileSoundPreference } from "@/hooks/useTactileSoundPreference";
 import { readCoachStreamEvents } from "@/lib/coach/sse-client";
+import { trackEvent } from "@/lib/analytics";
 import {
   CoachTurnResponseSchema,
   DEFAULT_COACH_SUGGESTIONS,
@@ -165,6 +166,10 @@ export function useCoachChat() {
     setConversation(nextConversation);
     setInput("");
     setIsWorking(true);
+    trackEvent("Coach Message Sent", {
+      message_length: trimmed.length,
+      turn_index: conversation.length,
+    });
 
     try {
       const response = await fetch("/api/coach", {
@@ -277,6 +282,11 @@ export function useCoachChat() {
                   : message
               )
             );
+            trackEvent("Coach Response Received", {
+              blocks: payload.blocks.length,
+              had_tool_calls: (payload.trace?.toolsUsed?.length ?? 0) > 0,
+              duration_ms: 0,
+            });
             break;
           }
         }
@@ -302,6 +312,11 @@ export function useCoachChat() {
             : message
         )
       );
+      trackEvent("Coach Response Received", {
+        blocks: payload.blocks.length,
+        had_tool_calls: (payload.trace?.toolsUsed?.length ?? 0) > 0,
+        duration_ms: 0,
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       setConversation([

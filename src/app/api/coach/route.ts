@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { reportError } from "@/lib/analytics";
 import { ConvexHttpClient } from "convex/browser";
 import { auth } from "@clerk/nextjs/server";
 import { api } from "@/../convex/_generated/api";
@@ -107,10 +108,10 @@ export async function POST(request: Request) {
       );
     }
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unknown rate limit error";
+    const err = error instanceof Error ? error : new Error(String(error));
+    reportError(err, { route: "coach", operation: "rate_limit_check" });
     return NextResponse.json(
-      { error: "Failed to check rate limit", detail: message },
+      { error: "Failed to check rate limit", detail: err.message },
       { status: 500 }
     );
   }
