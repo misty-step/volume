@@ -19,8 +19,8 @@ const config = [
     files: ["src/**/*.{js,jsx,ts,tsx}"],
     rules: {
       "no-console": ["error", { allow: ["warn", "error"] }],
-      // @typescript-eslint/no-floating-promises requires typed linting (parserOptions.project)
-      // Defer until tsconfig.eslint.json is wired into parserOptions — see tsconfig.eslint.json
+      // TODO: @typescript-eslint/no-floating-promises requires typed linting (parserOptions.project).
+      // Add tsconfig.eslint.json + wire parserOptions when ready to take the lint-speed hit.
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },

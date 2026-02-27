@@ -254,7 +254,7 @@ export function GhostSetDisplay({
                     className="font-mono text-xs px-2 py-0.5 rounded"
                     style={{
                       backgroundColor: PERFORMANCE_COLORS.accent.primaryDim,
-                      color: "#b0c900", // Darker chartreuse for readability in light mode
+                      color: "var(--ghost-accent-text)",
                     }}
                   >
                     {suggestion.strategy === "increase-reps" && "+1 rep"}
