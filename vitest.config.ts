@@ -6,6 +6,10 @@ import path from "path";
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
   test: {
+    pool: "forks",
+    poolOptions: {
+      forks: { maxForks: 4 },
+    },
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     globals: true,
