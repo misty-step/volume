@@ -1,4 +1,4 @@
-import { WeightUnit, Set } from "@/types/domain";
+import { type WeightUnit, type Set } from "@/types/domain";
 import { convertWeight, normalizeWeightUnit } from "./weight-utils";
 import { formatDateGroup } from "./date-formatters";
 

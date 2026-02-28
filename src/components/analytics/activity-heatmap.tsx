@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useRef, useEffect, useState } from "react";
-import ActivityCalendar, { Activity } from "react-activity-calendar";
+import ActivityCalendar, { type Activity } from "react-activity-calendar";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Calendar } from "lucide-react";
 

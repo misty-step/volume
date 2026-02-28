@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { type ReactNode } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";

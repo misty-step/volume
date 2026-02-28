@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { generateCSV } from "./csv-export";
 import type { Id } from "../../convex/_generated/dataModel";
 import type { Set, Exercise } from "@/types/domain";
@@ -142,9 +142,7 @@ describe("generateCSV", () => {
       mockExercise("ex1", "Chest, Back Exercise", ["Chest", "Back"]),
     ];
 
-    const sets = [
-      mockSet("set1", "ex1", Date.now(), { reps: 10 }),
-    ];
+    const sets = [mockSet("set1", "ex1", Date.now(), { reps: 10 })];
 
     const csv = generateCSV(sets, exercisesWithComma);
     const lines = csv.split("\n");
@@ -160,12 +158,9 @@ describe("generateCSV", () => {
       mockExercise("ex1", "Line1\nLine2", ["Core"]),
     ];
 
-    const sets = [
-      mockSet("set1", "ex1", Date.now(), { reps: 5 }),
-    ];
+    const sets = [mockSet("set1", "ex1", Date.now(), { reps: 5 })];
 
     const csv = generateCSV(sets, exercisesWithNewline);
-    const lines = csv.split("\n");
 
     // Name with newline should be quoted and preserve newline
     expect(csv).toContain('"Line1\nLine2"');
@@ -180,7 +175,7 @@ describe("generateCSV", () => {
     const lines = csv.split("\n");
 
     // Should have empty fields for reps, weight, unit, duration
-    expect(lines[1]).toMatch(/,,,,$/)
+    expect(lines[1]).toMatch(/,,,,$/);
   });
 });
 

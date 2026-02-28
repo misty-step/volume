@@ -215,12 +215,14 @@ export class LefthookConfigValidator {
     }
 
     if (result.warnings.length > 0) {
-      console.log("\n⚠️ Configuration Warnings");
-      result.warnings.forEach((warning) => console.log(warning));
+      console.warn("\n⚠️ Configuration Warnings");
+      result.warnings.forEach((warning) => console.warn(warning));
     }
 
     if (result.valid && result.warnings.length === 0) {
+      // eslint-disable-next-line no-console -- success output belongs on stdout
       console.log("\n✅ Configuration Validation Passed");
+      // eslint-disable-next-line no-console -- success output belongs on stdout
       console.log("No configuration inconsistencies detected");
     }
   }

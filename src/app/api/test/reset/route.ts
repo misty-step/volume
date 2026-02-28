@@ -1,6 +1,6 @@
 import { fetchMutation } from "convex/nextjs";
 import { api } from "../../../../../convex/_generated/api";
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { isServerProductionDeployment } from "@/lib/environment";
 

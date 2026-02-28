@@ -18,7 +18,7 @@ jobs:
   ci:
     name: CI
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -38,5 +38,7 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
-      - name: Test
-        run: bun run test --run
+      - name: Test + Coverage
+        run: bun run test:coverage
+        env:
+          CI: true

@@ -10,7 +10,7 @@ const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 /**
  * Create a Stripe Billing Portal session for the authenticated user.
  */
-export async function POST(request: Request) {
+export async function POST(_request: Request) {
   const { userId, getToken } = await auth();
 
   if (!userId) {

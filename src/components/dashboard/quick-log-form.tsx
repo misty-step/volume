@@ -6,9 +6,9 @@ import {
   useImperativeHandle,
   forwardRef,
   useEffect,
-  KeyboardEvent,
+  type KeyboardEvent,
 } from "react";
-import { Id } from "../../../convex/_generated/dataModel";
+import { type Id } from "../../../convex/_generated/dataModel";
 import {
   Form,
   FormField,
@@ -23,14 +23,13 @@ import { Input } from "@/components/ui/input";
 import { InlineExerciseCreator } from "./inline-exercise-creator";
 import { DurationInput } from "./duration-input";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
-import { Exercise, Set } from "@/types/domain";
+import { type Exercise, type Set } from "@/types/domain";
 import { useQuickLogForm } from "@/hooks/useQuickLogForm";
 import { Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { ExerciseSelectorDialog } from "./exercise-selector-dialog";
 import { useMobileViewport } from "@/hooks/useMobileViewport";
 import { WorkoutContextCarousel } from "./workout-context-carousel";
-import { SetSuggestion } from "@/lib/set-suggestion-engine";
+import { type SetSuggestion } from "@/lib/set-suggestion-engine";
 import { useTactileFeedback } from "@/hooks/useTactileFeedback";
 import { motion } from "framer-motion";
 

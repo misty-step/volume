@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/date-utils";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
-import { BarChart, BarData } from "./bar-chart";
+import { BarChart, type BarData } from "./bar-chart";
 import type { Set as WorkoutSet } from "@/types/domain";
 import type { SetSuggestion } from "@/lib/set-suggestion-engine";
 import type { ExerciseSession } from "@/lib/exercise-insights";

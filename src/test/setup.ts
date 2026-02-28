@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
-import React from "react";
+import type React from "react";
 
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(),
@@ -8,8 +8,9 @@ vi.mock("convex/react", () => ({
   useAction: vi.fn(),
   useConvex: vi.fn(),
   Authenticated: ({ children }: { children: React.ReactNode }) => children,
-  Unauthenticated: ({ children }: { children: React.ReactNode }) => null,
-  AuthLoading: ({ children }: { children: React.ReactNode }) => null,
+  Unauthenticated: ({ children: _children }: { children: React.ReactNode }) =>
+    null,
+  AuthLoading: ({ children: _children }: { children: React.ReactNode }) => null,
 }));
 
 // Mock ResizeObserver for cmdk (Command menu)

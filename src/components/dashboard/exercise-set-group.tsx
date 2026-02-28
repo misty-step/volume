@@ -14,7 +14,7 @@ import {
   Equal,
   History,
 } from "lucide-react";
-import { Id } from "../../../convex/_generated/dataModel";
+import { type Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -30,7 +30,11 @@ import { handleMutationError } from "@/lib/error-handler";
 import { formatNumber } from "@/lib/number-utils";
 import { formatTimestamp, formatDuration } from "@/lib/date-utils";
 import type { ExerciseMetrics } from "@/lib/exercise-metrics";
-import { Exercise, Set as WorkoutSet, WeightUnit } from "@/types/domain";
+import {
+  type Exercise,
+  type Set as WorkoutSet,
+  type WeightUnit,
+} from "@/types/domain";
 import { BRUTALIST_TYPOGRAPHY } from "@/config/design-tokens";
 import { cn } from "@/lib/utils";
 import {
@@ -336,10 +340,7 @@ export function ExerciseSetGroup({
                           {comparison &&
                             (comparison.lastReps !== null ||
                               comparison.lastDuration !== null) && (
-                              <GhostData
-                                comparison={comparison}
-                                preferredUnit={preferredUnit}
-                              />
+                              <GhostData comparison={comparison} />
                             )}
 
                           {/* PR indicator for this specific set */}
@@ -391,7 +392,6 @@ export function ExerciseSetGroup({
                 {/* History Section - Previous sessions */}
                 <HistorySection
                   sessions={sessions}
-                  exerciseId={exercise._id}
                   exerciseHref={exerciseHref}
                   preferredUnit={preferredUnit}
                 />
@@ -470,13 +470,7 @@ function QualityIndicator({
 /**
  * Ghost data showing last session's values for comparison.
  */
-function GhostData({
-  comparison,
-  preferredUnit,
-}: {
-  comparison: EnrichedSet["comparison"];
-  preferredUnit: WeightUnit;
-}) {
+function GhostData({ comparison }: { comparison: EnrichedSet["comparison"] }) {
   const { lastReps, lastWeight, lastDuration } = comparison;
 
   // Format the ghost text based on what data we have
@@ -505,12 +499,10 @@ function GhostData({
  */
 function HistorySection({
   sessions,
-  exerciseId,
   exerciseHref,
   preferredUnit,
 }: {
   sessions: ExerciseSession[];
-  exerciseId: string;
   exerciseHref?: string;
   preferredUnit: WeightUnit;
 }) {

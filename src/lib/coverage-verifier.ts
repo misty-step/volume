@@ -129,7 +129,8 @@ export class CoverageVerifier {
    */
   printResult(result: VerificationResult): void {
     if (result.passed) {
-      console.warn("All coverage thresholds passed");
+      // eslint-disable-next-line no-console -- success output belongs on stdout
+      console.log("All coverage thresholds passed");
     } else {
       console.error("Coverage thresholds not met:");
       result.failures.forEach((failure) => console.error(`  ${failure}`));

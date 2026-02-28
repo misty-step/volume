@@ -12,16 +12,24 @@
 import { trackEvent, setUserContext } from "./analytics";
 
 // Valid event calls should compile without errors
-function testValidEvents(): void {
+function _testValidEvents(): void {
   trackEvent("Exercise Created", {
     exerciseId: "123",
     source: "manual",
   });
 
+  // Rep-based set
   trackEvent("Set Logged", {
     setId: "set-1",
     exerciseId: "ex-1",
     reps: 10,
+  });
+
+  // Duration-based set (no reps)
+  trackEvent("Set Logged", {
+    setId: "set-2",
+    exerciseId: "ex-2",
+    duration: 60,
   });
 
   trackEvent("Workout Session Started", {
@@ -32,6 +40,23 @@ function testValidEvents(): void {
     sessionId: "session-1",
     durationMs: 3600000,
     setCount: 12,
+  });
+
+  trackEvent("Coach Message Sent", {
+    messageLength: 42,
+    turnIndex: 0,
+  });
+
+  trackEvent("Coach Response Received", {
+    blocks: 3,
+    hadToolCalls: true,
+    durationMs: 1200,
+  });
+
+  trackEvent("Coach Error", {
+    turnIndex: 0,
+    error: "Network error",
+    durationMs: 500,
   });
 
   // Optional properties
@@ -50,7 +75,7 @@ function testValidEvents(): void {
 }
 
 // Invalid calls should produce TypeScript errors
-function testInvalidEvents(): void {
+function _testInvalidEvents(): void {
   // @ts-expect-error - Unknown event type
   trackEvent("Invalid Event", { foo: "bar" });
 
@@ -78,7 +103,7 @@ function testInvalidEvents(): void {
 }
 
 // User context tests
-function testUserContext(): void {
+function _testUserContext(): void {
   // Valid
   setUserContext("user-123");
   setUserContext("user-123", { plan: "pro" });

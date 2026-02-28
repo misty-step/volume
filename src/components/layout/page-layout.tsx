@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { type ReactNode } from "react";
 import { LAYOUT } from "@/lib/layout-constants";
 
 interface PageLayoutProps {

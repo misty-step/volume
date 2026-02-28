@@ -2,7 +2,7 @@
 
 import { useMemo, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { WeightUnit, Set as WorkoutSet } from "@/types/domain";
+import { type WeightUnit, type Set as WorkoutSet } from "@/types/domain";
 import { convertWeight, normalizeWeightUnit } from "@/lib/weight-utils";
 import { formatDuration } from "@/lib/date-utils";
 import { trackEvent } from "@/lib/analytics";

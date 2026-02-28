@@ -9,7 +9,7 @@
 
 import { useState } from "react";
 import { RotateCcw, Trash2 } from "lucide-react";
-import { Id } from "../../../convex/_generated/dataModel";
+import { type Id } from "../../../convex/_generated/dataModel";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -33,7 +33,7 @@ import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
 import { formatTime, formatDuration } from "@/lib/date-utils";
-import { Exercise, Set } from "@/types/domain";
+import { type Exercise, type Set } from "@/types/domain";
 
 interface ChronologicalSetHistoryProps {
   groupedSets: Array<{

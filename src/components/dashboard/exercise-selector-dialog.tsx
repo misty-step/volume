@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useMobileViewport } from "@/hooks/useMobileViewport";
-import { Exercise } from "@/types/domain";
+import { type Exercise } from "@/types/domain";
 
 export interface ExerciseSelectorDialogProps {
   open: boolean;

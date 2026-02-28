@@ -14,7 +14,7 @@
  * Based on research from Strong, JEFIT, and strength training principles.
  */
 
-import { Set } from "@/types/domain";
+import { type Set } from "@/types/domain";
 
 /**
  * Configuration for progressive overload suggestions

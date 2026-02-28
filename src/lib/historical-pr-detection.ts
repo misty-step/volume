@@ -5,9 +5,9 @@
  * Unlike real-time PR detection, this retroactively analyzes the full history.
  */
 
-import { Set } from "@/types/domain";
-import { checkForPR, PRType } from "./pr-detection";
-import { Id } from "../../convex/_generated/dataModel";
+import { type Set } from "@/types/domain";
+import { checkForPR, type PRType } from "./pr-detection";
+import { type Id } from "../../convex/_generated/dataModel";
 
 /**
  * Map of set IDs to their PR type (if they were a PR when logged)

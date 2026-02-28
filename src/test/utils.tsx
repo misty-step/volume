@@ -1,7 +1,10 @@
-import { render as rtlRender, RenderOptions } from "@testing-library/react";
+import {
+  render as rtlRender,
+  type RenderOptions,
+} from "@testing-library/react";
 import { ThemeProvider } from "../components/ThemeProvider";
 import { WeightUnitProvider } from "../contexts/WeightUnitContext";
-import { ReactElement, ReactNode } from "react";
+import { type ReactElement, type ReactNode } from "react";
 
 function Providers({ children }: { children: ReactNode }) {
   return (

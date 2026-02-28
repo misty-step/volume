@@ -1,10 +1,11 @@
 import * as Sentry from "@sentry/nextjs";
 import { sanitizeEmail } from "./sanitize";
 import { shouldEnableSentry } from "./sentry";
+import type posthogJs from "posthog-js";
 
 // Lazy-loaded PostHog client to avoid server-side import issues
 // posthog-js pulls in DOM dependencies that throw on server
-let posthogClient: typeof import("posthog-js").default | null = null;
+let posthogClient: typeof posthogJs | null = null;
 
 function getPostHog() {
   if (typeof window === "undefined") return null;
@@ -35,8 +36,9 @@ export interface AnalyticsEventDefinitions {
     setId: string;
     exerciseId: string;
     userId?: string;
-    reps: number;
+    reps?: number;
     weight?: number;
+    duration?: number;
   };
   "Workout Session Started": {
     sessionId: string;
@@ -68,7 +70,6 @@ export interface AnalyticsEventDefinitions {
     userId?: string;
   };
   "History Load More Days": {
-    days: number;
     userId?: string;
   };
   "Exercise Detail Viewed": {
@@ -88,6 +89,17 @@ export interface AnalyticsEventDefinitions {
   "CSV Export Failed": {
     error: string;
     userId?: string;
+  };
+  "Coach Message Sent": { messageLength: number; turnIndex: number };
+  "Coach Response Received": {
+    blocks: number;
+    hadToolCalls: boolean;
+    durationMs: number;
+  };
+  "Coach Error": {
+    turnIndex: number;
+    error: string;
+    durationMs: number;
   };
 }
 
@@ -173,7 +185,7 @@ function sanitizeEventProperties(
       // JSON.stringify then sanitize to preserve structure
       try {
         result[key] = sanitizeString(JSON.stringify(value));
-      } catch (error) {
+      } catch {
         // Fallback for unstringifiable objects (e.g., functions, symbols)
         result[key] = "[Unstringifiable Object]";
       }

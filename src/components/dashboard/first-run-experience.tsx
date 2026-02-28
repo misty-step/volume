@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { type Id } from "../../../convex/_generated/dataModel";
 import { Loader2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

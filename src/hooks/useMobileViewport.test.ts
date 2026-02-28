@@ -6,7 +6,7 @@ type ChangeListener = (event: MediaQueryListEvent) => void;
 
 describe("useMobileViewport", () => {
   let listeners: ChangeListener[];
-  const originalMatchMedia = window.matchMedia;
+  const _originalMatchMedia = window.matchMedia;
   const originalWindow = window;
 
   function stubMatchMedia(initialMatches: boolean) {

@@ -1,4 +1,4 @@
-import { Variants } from "framer-motion";
+import { type Variants } from "framer-motion";
 
 /**
  * Precision timing constants based on golden ratio (φ ≈ 0.618)

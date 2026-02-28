@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { detectHistoricalPRs } from "./historical-pr-detection";
-import { Set } from "@/types/domain";
-import { Id } from "../../convex/_generated/dataModel";
+import { type Set } from "@/types/domain";
+import { type Id } from "../../convex/_generated/dataModel";
 
 describe("detectHistoricalPRs", () => {
   it("marks first set as PR", () => {
