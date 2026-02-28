@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useAuth, UserButton } from "@clerk/nextjs";
+import { setUserContext, clearUserContext } from "@/lib/analytics";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "./theme-toggle";
@@ -18,9 +20,21 @@ const navLinks = [
 ];
 
 export function Nav({ initialUserId }: NavProps = {}) {
-  const { userId } = useAuth();
+  const { userId, isLoaded } = useAuth();
   const pathname = usePathname();
   const effectiveUserId = userId ?? initialUserId;
+  const prevUserIdRef = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (userId) {
+      setUserContext(userId);
+    } else if (prevUserIdRef.current) {
+      // Only clear on sign-out transition (was signed in, now isn't)
+      clearUserContext();
+    }
+    prevUserIdRef.current = userId;
+  }, [isLoaded, userId]);
 
   // Determine if a nav link is active
   const isActive = (href: string) => {

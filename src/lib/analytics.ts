@@ -36,8 +36,9 @@ export interface AnalyticsEventDefinitions {
     setId: string;
     exerciseId: string;
     userId?: string;
-    reps: number;
+    reps?: number;
     weight?: number;
+    duration?: number;
   };
   "Workout Session Started": {
     sessionId: string;
@@ -88,6 +89,17 @@ export interface AnalyticsEventDefinitions {
   "CSV Export Failed": {
     error: string;
     userId?: string;
+  };
+  "Coach Message Sent": { messageLength: number; turnIndex: number };
+  "Coach Response Received": {
+    blocks: number;
+    hadToolCalls: boolean;
+    durationMs: number;
+  };
+  "Coach Error": {
+    turnIndex: number;
+    error: string;
+    durationMs: number;
   };
 }
 

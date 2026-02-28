@@ -6,6 +6,7 @@ import { z } from "zod";
 import { api } from "../../convex/_generated/api";
 import { type Id } from "../../convex/_generated/dataModel";
 import { handleMutationError } from "@/lib/error-handler";
+import { trackEvent } from "@/lib/analytics";
 import { checkForPR } from "@/lib/pr-detection";
 import { showPRCelebration } from "@/components/dashboard/pr-celebration";
 import { type Exercise } from "@/types/domain";
@@ -43,6 +44,16 @@ export interface UseQuickLogFormOptions {
   onSuccess?: () => void;
   onPRFlash?: () => void;
   onHapticFeedback?: () => void;
+}
+
+function trackSetLogged(setId: string, values: QuickLogFormValues) {
+  trackEvent("Set Logged", {
+    setId,
+    exerciseId: values.exerciseId,
+    ...(values.reps !== undefined ? { reps: values.reps } : {}),
+    ...(values.weight !== undefined ? { weight: values.weight } : {}),
+    ...(values.duration !== undefined ? { duration: values.duration } : {}),
+  });
 }
 
 export function useQuickLogForm({
@@ -104,6 +115,7 @@ export function useQuickLogForm({
         logSetPromise
           .then((setId) => {
             onSetLogged?.(setId);
+            trackSetLogged(String(setId), values);
             toast.success("Set saved!", { duration: 3000 });
           })
           .catch((error) => {
@@ -123,6 +135,10 @@ export function useQuickLogForm({
       }
 
       const setId = raceResult as Id<"sets">;
+
+      trackSetLogged(String(setId), values);
+      // Session-start tracking deferred to #385 (needs day-scoped query,
+      // not the exercise-scoped previousSets available here).
 
       // Check for PR before showing success toast (only for rep-based exercises)
       let isPR = false;

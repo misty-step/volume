@@ -120,7 +120,7 @@ export function ExerciseManager({ exercises, sets }: ExerciseManagerProps) {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
-                        handleSaveEdit(exercise._id);
+                        void handleSaveEdit(exercise._id);
                       }
                       if (e.key === "Escape") {
                         e.preventDefault();
