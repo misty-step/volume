@@ -18,10 +18,18 @@ function _testValidEvents(): void {
     source: "manual",
   });
 
+  // Rep-based set
   trackEvent("Set Logged", {
     setId: "set-1",
     exerciseId: "ex-1",
     reps: 10,
+  });
+
+  // Duration-based set (no reps)
+  trackEvent("Set Logged", {
+    setId: "set-2",
+    exerciseId: "ex-2",
+    duration: 60,
   });
 
   trackEvent("Workout Session Started", {

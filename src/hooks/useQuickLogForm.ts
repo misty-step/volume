@@ -50,8 +50,9 @@ function trackSetLogged(setId: string, values: QuickLogFormValues) {
   trackEvent("Set Logged", {
     setId,
     exerciseId: values.exerciseId,
-    reps: values.reps ?? 0,
+    ...(values.reps !== undefined ? { reps: values.reps } : {}),
     ...(values.weight !== undefined ? { weight: values.weight } : {}),
+    ...(values.duration !== undefined ? { duration: values.duration } : {}),
   });
 }
 
@@ -136,15 +137,8 @@ export function useQuickLogForm({
       const setId = raceResult as Id<"sets">;
 
       trackSetLogged(String(setId), values);
-      // Track session start — NOTE: exercise-scoped, not day-scoped.
-      // previousSets is filtered by exerciseId, so this fires on the first set
-      // of each exercise, not the first set of the day. Follow-up needed for
-      // true day-scoped session detection.
-      if (previousSets !== undefined && previousSets.length === 0) {
-        trackEvent("Workout Session Started", {
-          sessionId: String(setId),
-        });
-      }
+      // Session-start tracking deferred to #385 (needs day-scoped query,
+      // not the exercise-scoped previousSets available here).
 
       // Check for PR before showing success toast (only for rep-based exercises)
       let isPR = false;

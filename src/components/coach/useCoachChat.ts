@@ -251,6 +251,11 @@ export function useCoachChat() {
 
           if (event.type === "error" && !streamedError) {
             streamedError = true;
+            trackEvent("Coach Error", {
+              turnIndex: conversation.length,
+              error: event.message,
+              durationMs: Date.now() - fetchStartMs,
+            });
             setTimeline((prev) =>
               prev.map((message) =>
                 message.id === assistantId

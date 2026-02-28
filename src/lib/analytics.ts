@@ -36,8 +36,9 @@ export interface AnalyticsEventDefinitions {
     setId: string;
     exerciseId: string;
     userId?: string;
-    reps: number;
+    reps?: number;
     weight?: number;
+    duration?: number;
   };
   "Workout Session Started": {
     sessionId: string;
