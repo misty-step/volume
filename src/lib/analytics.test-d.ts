@@ -34,6 +34,23 @@ function _testValidEvents(): void {
     setCount: 12,
   });
 
+  trackEvent("Coach Message Sent", {
+    messageLength: 42,
+    turnIndex: 0,
+  });
+
+  trackEvent("Coach Response Received", {
+    blocks: 3,
+    hadToolCalls: true,
+    durationMs: 1200,
+  });
+
+  trackEvent("Coach Error", {
+    turnIndex: 0,
+    error: "Network error",
+    durationMs: 500,
+  });
+
   // Optional properties
   trackEvent("Exercise Created", {
     exerciseId: "123",

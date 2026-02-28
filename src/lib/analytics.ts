@@ -89,11 +89,16 @@ export interface AnalyticsEventDefinitions {
     error: string;
     userId?: string;
   };
-  "Coach Message Sent": { message_length: number; turn_index: number };
+  "Coach Message Sent": { messageLength: number; turnIndex: number };
   "Coach Response Received": {
     blocks: number;
-    had_tool_calls: boolean;
-    duration_ms: number;
+    hadToolCalls: boolean;
+    durationMs: number;
+  };
+  "Coach Error": {
+    turnIndex: number;
+    error: string;
+    durationMs: number;
   };
 }
 

@@ -7,13 +7,14 @@ import type { Id } from "@/../convex/_generated/dataModel";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { useTactileSoundPreference } from "@/hooks/useTactileSoundPreference";
 import { readCoachStreamEvents } from "@/lib/coach/sse-client";
-import { trackEvent } from "@/lib/analytics";
+import { trackEvent, reportError } from "@/lib/analytics";
 import {
   CoachTurnResponseSchema,
   DEFAULT_COACH_SUGGESTIONS,
   MAX_COACH_MESSAGES,
   type CoachBlock,
   type CoachMessageInput,
+  type CoachTurnResponse,
 } from "@/lib/coach/schema";
 
 type CoachTimelineBlock = {
@@ -59,6 +60,14 @@ function trimCoachConversation(
   const slice = messages.slice(messages.length - MAX_COACH_MESSAGES);
   if (slice.length > 1 && slice[0]?.role === "assistant") return slice.slice(1);
   return slice;
+}
+
+function trackCoachResponse(payload: CoachTurnResponse, startMs: number) {
+  trackEvent("Coach Response Received", {
+    blocks: payload.blocks.length,
+    hadToolCalls: (payload.trace?.toolsUsed?.length ?? 0) > 0,
+    durationMs: Date.now() - startMs,
+  });
 }
 
 function toolProgressText(toolName: string): string {
@@ -167,8 +176,8 @@ export function useCoachChat() {
     setInput("");
     setIsWorking(true);
     trackEvent("Coach Message Sent", {
-      message_length: trimmed.length,
-      turn_index: conversation.length,
+      messageLength: trimmed.length,
+      turnIndex: conversation.length,
     });
 
     const fetchStartMs = Date.now();
@@ -284,11 +293,7 @@ export function useCoachChat() {
                   : message
               )
             );
-            trackEvent("Coach Response Received", {
-              blocks: payload.blocks.length,
-              had_tool_calls: (payload.trace?.toolsUsed?.length ?? 0) > 0,
-              duration_ms: Date.now() - fetchStartMs,
-            });
+            trackCoachResponse(payload, fetchStartMs);
             break;
           }
         }
@@ -314,13 +319,16 @@ export function useCoachChat() {
             : message
         )
       );
-      trackEvent("Coach Response Received", {
-        blocks: payload.blocks.length,
-        had_tool_calls: (payload.trace?.toolsUsed?.length ?? 0) > 0,
-        duration_ms: Date.now() - fetchStartMs,
-      });
+      trackCoachResponse(payload, fetchStartMs);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
+      const err = error instanceof Error ? error : new Error(String(error));
+      const message = err.message;
+      reportError(err, { component: "useCoachChat", operation: "sendPrompt" });
+      trackEvent("Coach Error", {
+        turnIndex: conversation.length,
+        error: message,
+        durationMs: Date.now() - fetchStartMs,
+      });
       setConversation([
         ...nextConversation,
         {

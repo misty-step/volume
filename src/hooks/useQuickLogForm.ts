@@ -46,6 +46,15 @@ export interface UseQuickLogFormOptions {
   onHapticFeedback?: () => void;
 }
 
+function trackSetLogged(setId: string, values: QuickLogFormValues) {
+  trackEvent("Set Logged", {
+    setId,
+    exerciseId: values.exerciseId,
+    reps: values.reps ?? 0,
+    ...(values.weight !== undefined ? { weight: values.weight } : {}),
+  });
+}
+
 export function useQuickLogForm({
   unit,
   exercises,
@@ -105,12 +114,7 @@ export function useQuickLogForm({
         logSetPromise
           .then((setId) => {
             onSetLogged?.(setId);
-            trackEvent("Set Logged", {
-              setId: String(setId),
-              exerciseId: values.exerciseId,
-              reps: values.reps ?? 0,
-              ...(values.weight !== undefined ? { weight: values.weight } : {}),
-            });
+            trackSetLogged(String(setId), values);
             toast.success("Set saved!", { duration: 3000 });
           })
           .catch((error) => {
@@ -131,14 +135,11 @@ export function useQuickLogForm({
 
       const setId = raceResult as Id<"sets">;
 
-      // Track set logged
-      trackEvent("Set Logged", {
-        setId: String(setId),
-        exerciseId: values.exerciseId,
-        reps: values.reps ?? 0,
-        ...(values.weight !== undefined ? { weight: values.weight } : {}),
-      });
-      // Track session start on first set of the day
+      trackSetLogged(String(setId), values);
+      // Track session start — NOTE: exercise-scoped, not day-scoped.
+      // previousSets is filtered by exerciseId, so this fires on the first set
+      // of each exercise, not the first set of the day. Follow-up needed for
+      // true day-scoped session detection.
       if (previousSets !== undefined && previousSets.length === 0) {
         trackEvent("Workout Session Started", {
           sessionId: String(setId),
