@@ -2,17 +2,11 @@ import { summarizeTodaySets } from "@/lib/coach/prototype-analytics";
 import type { CoachBlock } from "@/lib/coach/schema";
 import { getTodaySets, listExercises } from "./data";
 import { formatSecondsShort, toAnalyticsSetInput } from "./helpers";
-import type { CoachToolContext, SetInput, ToolResult } from "./types";
+import type { CoachToolContext, ToolResult } from "./types";
 
-function buildTodaySummaryBlocks(
-  sets: SetInput[],
-  exerciseNames: Map<string, string>
-): CoachBlock[] {
-  const summary = summarizeTodaySets(
-    sets.map((set) => toAnalyticsSetInput(set)),
-    exerciseNames
-  );
+type TodaySummary = ReturnType<typeof summarizeTodaySets>;
 
+function buildTodaySummaryBlocks(summary: TodaySummary): CoachBlock[] {
   if (summary.totalSets === 0) {
     return [
       {
@@ -67,11 +61,11 @@ export async function runTodaySummaryTool(
     names.set(String(exercise._id), exercise.name);
   }
 
-  const blocks = buildTodaySummaryBlocks(sets, names);
   const summary = summarizeTodaySets(
     sets.map((set) => toAnalyticsSetInput(set)),
     names
   );
+  const blocks = buildTodaySummaryBlocks(summary);
 
   return {
     summary: "Prepared today's summary.",

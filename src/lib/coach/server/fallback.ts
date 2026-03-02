@@ -89,7 +89,9 @@ export async function runDeterministicFallback(
       blocks = result.blocks;
       assistantText = result.summary;
     } else if (
-      /\b(work on|focus|improve|today plan|what should i do)\b/i.test(userInput)
+      /\b(work on|focus|improve|today plan|what should i do)\b/i.test(
+        normalized
+      )
     ) {
       toolsUsed.push("get_focus_suggestions");
       const result = await executeToolWithStreaming(

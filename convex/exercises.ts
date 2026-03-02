@@ -324,7 +324,7 @@ export const mergeExercise = mutation({
 
     const fromExercise = await ctx.db.get(fromId);
     if (!fromExercise) {
-      throw new Error("Exercise not found");
+      throw new Error("Source exercise not found");
     }
     requireOwnership(fromExercise, identity.subject, "exercise");
 
@@ -334,7 +334,7 @@ export const mergeExercise = mutation({
 
     const toExercise = await ctx.db.get(toId);
     if (!toExercise) {
-      throw new Error("Exercise not found");
+      throw new Error("Target exercise not found");
     }
     requireOwnership(toExercise, identity.subject, "exercise");
 
@@ -348,12 +348,7 @@ export const mergeExercise = mutation({
       .collect();
 
     await Promise.all(
-      setsToMerge.map((set) => {
-        if (set.userId !== identity.subject) {
-          throw new Error(`Not authorized to modify set ${set._id}`);
-        }
-        return ctx.db.patch(set._id, { exerciseId: toId });
-      })
+      setsToMerge.map((set) => ctx.db.patch(set._id, { exerciseId: toId }))
     );
 
     await ctx.db.patch(fromId, {

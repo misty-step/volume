@@ -131,13 +131,16 @@ export async function POST(request: Request) {
         name: string,
         candidates: Exercise[]
       ): Promise<Exercise | null> => {
-        const list = candidates.map((e) => `"${e.name}"`).join(", ");
+        const safeName = name.replace(/[\r\n\t]/g, " ").slice(0, 200);
+        const list = candidates
+          .map((e) => `"${e.name.replace(/[\r\n\t]/g, " ")}"`)
+          .join(", ");
         const { text } = await generateText({
           model: runtime.model,
           messages: [
             {
               role: "user",
-              content: `User wants to log: "${name}"\nExisting exercises: ${list}\nReply with ONLY the exact exercise name if it clearly matches (same movement, different spelling is fine). Reply "none" if no good match.`,
+              content: `User wants to log: "${safeName}"\nExisting exercises: ${list}\nReply with ONLY the exact exercise name if it clearly matches (same movement, different spelling is fine). Reply "none" if no good match.`,
             },
           ],
         });

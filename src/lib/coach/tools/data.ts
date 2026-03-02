@@ -54,8 +54,12 @@ export async function resolveExercise(
   if (exact) return { exercise: exact, exercises };
 
   if (ctx.resolveExerciseName && exercises.length > 0) {
-    const semantic = await ctx.resolveExerciseName(exerciseName, exercises);
-    if (semantic) return { exercise: semantic, exercises };
+    try {
+      const semantic = await ctx.resolveExerciseName(exerciseName, exercises);
+      if (semantic) return { exercise: semantic, exercises };
+    } catch {
+      // LLM/network failure — fall through to null (deterministic fallback)
+    }
   }
 
   return { exercise: null, exercises };
@@ -74,8 +78,12 @@ export async function ensureExercise(
 
   // 2. Semantic match — LLM picks from candidate list
   if (ctx.resolveExerciseName && exercises.length > 0) {
-    const semantic = await ctx.resolveExerciseName(exerciseName, exercises);
-    if (semantic) return { exercise: semantic, created: false, exercises };
+    try {
+      const semantic = await ctx.resolveExerciseName(exerciseName, exercises);
+      if (semantic) return { exercise: semantic, created: false, exercises };
+    } catch {
+      // LLM/network failure — fall through to create
+    }
   }
 
   const normalizedName = titleCase(exerciseName);

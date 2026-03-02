@@ -22,7 +22,7 @@ Rules:
 - For report history, call get_report_history.
 - For first-load capability tour, call show_workspace.
 - For preference changes, call set_weight_unit or set_sound.
-- Before destructive actions (delete_set/delete_exercise), confirm intent in one short sentence unless user explicitly asked to proceed.
+- Before destructive actions (delete_set/delete_exercise/merge_exercise), confirm intent in one short sentence unless user explicitly asked to proceed.
 - Ask a short clarifying question only when tool args are missing.
 - Keep final responses concise and actionable.
 - After tool results arrive, synthesize a short human response and let the UI blocks carry detail.
