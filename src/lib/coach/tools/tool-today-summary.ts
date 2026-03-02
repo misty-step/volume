@@ -1,11 +1,7 @@
 import { summarizeTodaySets } from "@/lib/coach/prototype-analytics";
 import type { CoachBlock } from "@/lib/coach/schema";
 import { getTodaySets, listExercises } from "./data";
-import {
-  formatSecondsShort,
-  toAnalyticsSetInput,
-  uniquePrompts,
-} from "./helpers";
+import { formatSecondsShort, toAnalyticsSetInput } from "./helpers";
 import type { CoachToolContext, SetInput, ToolResult } from "./types";
 
 function buildTodaySummaryBlocks(
@@ -24,10 +20,6 @@ function buildTodaySummaryBlocks(
         tone: "info",
         title: "No sets logged today",
         description: "Log one now and I will generate your daily focus.",
-      },
-      {
-        type: "suggestions",
-        prompts: ["10 pushups", "20 squats", "what should I work on today?"],
       },
     ];
   }
@@ -60,14 +52,6 @@ function buildTodaySummaryBlocks(
               : undefined,
       })),
     },
-    {
-      type: "suggestions",
-      prompts: uniquePrompts([
-        "what should I work on today?",
-        "show trend for pushups",
-        "show trend for squats",
-      ]),
-    },
   ];
 }
 
@@ -96,11 +80,7 @@ export async function runTodaySummaryTool(
       status: "ok",
       total_sets: summary.totalSets,
       total_reps: summary.totalReps,
-      total_duration_seconds: summary.totalDurationSeconds,
-      top_exercises: summary.topExercises.map((entry) => ({
-        exercise: entry.exerciseName,
-        sets: entry.sets,
-      })),
+      exercise_count: summary.topExercises.length,
     },
   };
 }

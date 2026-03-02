@@ -1,5 +1,4 @@
 import { api } from "@/../convex/_generated/api";
-import { uniquePrompts } from "./helpers";
 import type { CoachToolContext, ToolResult } from "./types";
 
 type DashboardAnalytics = {
@@ -103,15 +102,6 @@ export async function runAnalyticsOverviewTool(
           value: suggestion.priority.toUpperCase(),
           meta: suggestion.reason,
         })),
-      },
-      {
-        type: "suggestions",
-        prompts: uniquePrompts([
-          "show today's summary",
-          "show history overview",
-          "show exercise library",
-          "what should I work on today?",
-        ]),
       },
     ],
     outputForModel: {

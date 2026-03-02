@@ -4,15 +4,8 @@ export async function runWorkspaceTool(
   _ctx: CoachToolContext
 ): Promise<ToolResult> {
   return {
-    summary: "Rendered streamlined workspace actions.",
+    summary: "Rendered workspace actions.",
     blocks: [
-      {
-        type: "status",
-        tone: "info",
-        title: "Agent workspace online",
-        description:
-          "Use chat to log sets, review progress, and manage account.",
-      },
       {
         type: "entity_list",
         title: "Core workflows",

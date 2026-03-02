@@ -66,7 +66,7 @@ export async function runDeterministicFallback(
           return { toolName: "get_today_summary", args: {} };
         case "exercise_report":
           return {
-            toolName: "get_exercise_report",
+            toolName: "get_exercise_snapshot",
             args: { exercise_name: intent.exerciseName },
           };
         case "set_weight_unit":

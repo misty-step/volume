@@ -3,7 +3,10 @@ import type {
   CoachToolExecutionOptions,
   ToolResult,
 } from "./types";
-import { runExerciseReportTool } from "./tool-exercise-report";
+import {
+  runExerciseSnapshotTool,
+  runExerciseTrendTool,
+} from "./tool-exercise-report";
 import { runFocusSuggestionsTool } from "./tool-focus-suggestions";
 import { runLogSetTool } from "./tool-log-set";
 import { runSetSoundTool } from "./tool-set-sound";
@@ -34,7 +37,9 @@ type CoachToolHandler = (
 const TOOL_HANDLERS: Record<string, CoachToolHandler> = {
   log_set: (rawArgs, ctx, options) => runLogSetTool(rawArgs, ctx, options),
   get_today_summary: async (_rawArgs, ctx) => runTodaySummaryTool(ctx),
-  get_exercise_report: (rawArgs, ctx) => runExerciseReportTool(rawArgs, ctx),
+  get_exercise_snapshot: (rawArgs, ctx) =>
+    runExerciseSnapshotTool(rawArgs, ctx),
+  get_exercise_trend: (rawArgs, ctx) => runExerciseTrendTool(rawArgs, ctx),
   get_focus_suggestions: async (_rawArgs, ctx) => runFocusSuggestionsTool(ctx),
   set_weight_unit: async (rawArgs) => runSetWeightUnitTool(rawArgs),
   set_sound: async (rawArgs) => runSetSoundTool(rawArgs),

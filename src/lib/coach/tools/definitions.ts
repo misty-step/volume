@@ -35,8 +35,24 @@ export const COACH_TOOL_DEFINITIONS = [
   {
     type: "function",
     function: {
-      name: "get_exercise_report",
-      description: "Get a focused report and trend for a specific exercise.",
+      name: "get_exercise_snapshot",
+      description:
+        "Get summary metrics for a specific exercise (total sets, best, latest).",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          exercise_name: { type: "string" },
+        },
+        required: ["exercise_name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_exercise_trend",
+      description: "Get the 14-day trend chart for a specific exercise.",
       parameters: {
         type: "object",
         additionalProperties: false,

@@ -36,21 +36,29 @@ export async function getRecentExerciseSets(
   })) as SetInput[];
 }
 
-export function findExercise(
-  exercises: Exercise[],
-  name: string
-): Exercise | null {
-  const normalized = normalizeLookup(name);
-  const exact = exercises.find(
-    (exercise) => normalizeLookup(exercise.name) === normalized
-  );
-  if (exact) return exact;
+/**
+ * Resolve an exercise name to an existing exercise using:
+ * 1. Exact normalized match (free)
+ * 2. Semantic/LLM match via ctx.resolveExerciseName (when available)
+ *
+ * Does NOT create exercises — use `ensureExercise` for create-on-miss.
+ */
+export async function resolveExercise(
+  ctx: CoachToolContext,
+  exerciseName: string,
+  options: { includeDeleted?: boolean } = {}
+): Promise<{ exercise: Exercise | null; exercises: Exercise[] }> {
+  const exercises = await listExercises(ctx, options);
+  const normalized = normalizeLookup(exerciseName);
+  const exact = exercises.find((e) => normalizeLookup(e.name) === normalized);
+  if (exact) return { exercise: exact, exercises };
 
-  const partial = exercises.find((exercise) => {
-    const candidate = normalizeLookup(exercise.name);
-    return candidate.includes(normalized) || normalized.includes(candidate);
-  });
-  return partial ?? null;
+  if (ctx.resolveExerciseName && exercises.length > 0) {
+    const semantic = await ctx.resolveExerciseName(exerciseName, exercises);
+    if (semantic) return { exercise: semantic, exercises };
+  }
+
+  return { exercise: null, exercises };
 }
 
 export async function ensureExercise(
@@ -58,9 +66,16 @@ export async function ensureExercise(
   exerciseName: string
 ): Promise<{ exercise: Exercise; created: boolean; exercises: Exercise[] }> {
   const exercises = await listExercises(ctx);
-  const matched = findExercise(exercises, exerciseName);
-  if (matched) {
-    return { exercise: matched, created: false, exercises };
+
+  // 1. Exact match (normalized) — free, no LLM call
+  const normalized = normalizeLookup(exerciseName);
+  const exact = exercises.find((e) => normalizeLookup(e.name) === normalized);
+  if (exact) return { exercise: exact, created: false, exercises };
+
+  // 2. Semantic match — LLM picks from candidate list
+  if (ctx.resolveExerciseName && exercises.length > 0) {
+    const semantic = await ctx.resolveExerciseName(exerciseName, exercises);
+    if (semantic) return { exercise: semantic, created: false, exercises };
   }
 
   const normalizedName = titleCase(exerciseName);
@@ -92,9 +107,9 @@ export async function ensureExercise(
   // Should be immediate, but be defensive: if the freshly created exercise can't
   // be fetched (auth or eventual consistency), fall back to a refreshed list.
   const refreshed = await listExercises(ctx);
-  const matchedAfterCreate =
-    refreshed.find((exercise) => exercise._id === createdId) ??
-    findExercise(refreshed, normalizedName);
+  const matchedAfterCreate = refreshed.find(
+    (exercise) => exercise._id === createdId
+  );
   if (matchedAfterCreate) {
     return {
       exercise: matchedAfterCreate,

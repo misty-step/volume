@@ -1,7 +1,7 @@
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import type { Set } from "@/types/domain";
-import { findExercise, getRecentExerciseSets, listExercises } from "./data";
+import { resolveExercise, getRecentExerciseSets } from "./data";
 import { DeleteSetArgsSchema } from "./schemas";
 import type { CoachToolContext, ToolResult } from "./types";
 
@@ -22,8 +22,9 @@ export async function runDeleteSetTool(
     targetSetId = asSetId(args.set_id);
     sourceLabel = `set ${args.set_id}`;
   } else {
-    const exercises = await listExercises(ctx, { includeDeleted: true });
-    const exercise = findExercise(exercises, args.exercise_name ?? "");
+    const { exercise } = await resolveExercise(ctx, args.exercise_name ?? "", {
+      includeDeleted: true,
+    });
     if (!exercise) {
       return {
         summary: "Set delete failed.",
@@ -90,10 +91,6 @@ export async function runDeleteSetTool(
         tone: "success",
         title: "Set deleted",
         description: `Deleted ${sourceLabel}.`,
-      },
-      {
-        type: "suggestions",
-        prompts: ["show history overview", "show today's summary"],
       },
     ],
     outputForModel: {

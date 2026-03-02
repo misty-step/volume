@@ -1,7 +1,6 @@
 import { format } from "date-fns";
 import { api } from "@/../convex/_generated/api";
 import { ReportHistoryArgsSchema } from "./schemas";
-import { uniquePrompts } from "./helpers";
 import type { CoachToolContext, ToolResult } from "./types";
 
 function formatWithOffset(ms: number, offset: number) {
@@ -45,14 +44,6 @@ export async function runReportHistoryTool(
           tags: [report.reportVersion ?? "1.0"],
           prompt: "show analytics overview",
         })),
-      },
-      {
-        type: "suggestions",
-        prompts: uniquePrompts([
-          "show analytics overview",
-          "show today's summary",
-          "show settings overview",
-        ]),
       },
     ],
     outputForModel: {

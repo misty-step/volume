@@ -18,7 +18,10 @@ import {
 } from "@/lib/coach/tools/schemas";
 import { runLogSetTool } from "@/lib/coach/tools/tool-log-set";
 import { runTodaySummaryTool } from "@/lib/coach/tools/tool-today-summary";
-import { runExerciseReportTool } from "@/lib/coach/tools/tool-exercise-report";
+import {
+  runExerciseSnapshotTool,
+  runExerciseTrendTool,
+} from "@/lib/coach/tools/tool-exercise-report";
 import { runFocusSuggestionsTool } from "@/lib/coach/tools/tool-focus-suggestions";
 import { runSetWeightUnitTool } from "@/lib/coach/tools/tool-set-weight-unit";
 import { runSetSoundTool } from "@/lib/coach/tools/tool-set-sound";
@@ -48,7 +51,16 @@ function wrap(
   onBlocks?: ToolBlocksHandler
 ): ToolOutput {
   onBlocks?.(toolName, result.blocks);
-  return result.outputForModel;
+  const blockSummary = result.blocks
+    .filter((b) => b.type !== "suggestions")
+    .map((b) => ({
+      type: b.type,
+      ...("title" in b && b.title ? { title: b.title } : {}),
+    }));
+  return {
+    ...result.outputForModel,
+    ...(blockSummary.length > 0 ? { _blocks: blockSummary } : {}),
+  };
 }
 
 function toolError(
@@ -103,11 +115,21 @@ export function createCoachTools(
         runTool("get_today_summary", () => runTodaySummaryTool(ctx)),
     }),
 
-    get_exercise_report: tool({
-      description: "Get a focused report and trend for a specific exercise.",
+    get_exercise_snapshot: tool({
+      description:
+        "Get summary metrics for a specific exercise (total sets, best, latest).",
       inputSchema: ExerciseReportArgsSchema,
       execute: (args) =>
-        runTool("get_exercise_report", () => runExerciseReportTool(args, ctx)),
+        runTool("get_exercise_snapshot", () =>
+          runExerciseSnapshotTool(args, ctx)
+        ),
+    }),
+
+    get_exercise_trend: tool({
+      description: "Get the 14-day trend chart for a specific exercise.",
+      inputSchema: ExerciseReportArgsSchema,
+      execute: (args) =>
+        runTool("get_exercise_trend", () => runExerciseTrendTool(args, ctx)),
     }),
 
     get_focus_suggestions: tool({

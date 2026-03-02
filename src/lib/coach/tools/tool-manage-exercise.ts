@@ -1,6 +1,6 @@
 import { api } from "@/../convex/_generated/api";
-import { findExercise, listExercises } from "./data";
-import { normalizeLookup, titleCase, uniquePrompts } from "./helpers";
+import { resolveExercise } from "./data";
+import { titleCase } from "./helpers";
 import {
   ExerciseNameArgsSchema,
   MergeExerciseArgsSchema,
@@ -9,25 +9,14 @@ import {
 } from "./schemas";
 import type { CoachToolContext, ToolResult } from "./types";
 
-function findExerciseByName(
-  exercises: Awaited<ReturnType<typeof listExercises>>,
-  name: string
-) {
-  const exactNormalized = normalizeLookup(name);
-  const exact = exercises.find(
-    (exercise) => normalizeLookup(exercise.name) === exactNormalized
-  );
-  if (exact) return exact;
-  return findExercise(exercises, name);
-}
-
 export async function runRenameExerciseTool(
   rawArgs: unknown,
   ctx: CoachToolContext
 ): Promise<ToolResult> {
   const args = RenameExerciseArgsSchema.parse(rawArgs);
-  const exercises = await listExercises(ctx, { includeDeleted: true });
-  const exercise = findExerciseByName(exercises, args.exercise_name);
+  const { exercise } = await resolveExercise(ctx, args.exercise_name, {
+    includeDeleted: true,
+  });
 
   if (!exercise || exercise.deletedAt !== undefined) {
     return {
@@ -39,10 +28,6 @@ export async function runRenameExerciseTool(
           title: "Exercise not found",
           description:
             "I couldn't find an active exercise with that name to rename.",
-        },
-        {
-          type: "suggestions",
-          prompts: ["show exercise library", "show today's summary"],
         },
       ],
       outputForModel: { status: "error", error: "exercise_not_found" },
@@ -64,14 +49,6 @@ export async function runRenameExerciseTool(
         title: "Exercise renamed",
         description: `${exercise.name} is now ${newName}.`,
       },
-      {
-        type: "suggestions",
-        prompts: uniquePrompts([
-          `show trend for ${newName.toLowerCase()}`,
-          "show exercise library",
-          "show history overview",
-        ]),
-      },
     ],
     outputForModel: {
       status: "ok",
@@ -86,8 +63,7 @@ export async function runDeleteExerciseTool(
   ctx: CoachToolContext
 ): Promise<ToolResult> {
   const args = ExerciseNameArgsSchema.parse(rawArgs);
-  const exercises = await listExercises(ctx, { includeDeleted: false });
-  const exercise = findExerciseByName(exercises, args.exercise_name);
+  const { exercise } = await resolveExercise(ctx, args.exercise_name);
 
   if (!exercise) {
     return {
@@ -98,10 +74,6 @@ export async function runDeleteExerciseTool(
           tone: "error",
           title: "Exercise not found",
           description: "I couldn't find that active exercise.",
-        },
-        {
-          type: "suggestions",
-          prompts: ["show exercise library", "show today's summary"],
         },
       ],
       outputForModel: { status: "error", error: "exercise_not_found" },
@@ -128,13 +100,6 @@ export async function runDeleteExerciseTool(
         confirmPrompt: `restore exercise ${exercise.name}`,
         confirmLabel: "Restore",
       },
-      {
-        type: "suggestions",
-        prompts: uniquePrompts([
-          "show exercise library",
-          "show history overview",
-        ]),
-      },
     ],
     outputForModel: {
       status: "ok",
@@ -148,8 +113,9 @@ export async function runRestoreExerciseTool(
   ctx: CoachToolContext
 ): Promise<ToolResult> {
   const args = ExerciseNameArgsSchema.parse(rawArgs);
-  const exercises = await listExercises(ctx, { includeDeleted: true });
-  const exercise = findExerciseByName(exercises, args.exercise_name);
+  const { exercise } = await resolveExercise(ctx, args.exercise_name, {
+    includeDeleted: true,
+  });
 
   if (!exercise) {
     return {
@@ -194,14 +160,6 @@ export async function runRestoreExerciseTool(
         title: "Exercise restored",
         description: `${exercise.name} is active again.`,
       },
-      {
-        type: "suggestions",
-        prompts: uniquePrompts([
-          `show trend for ${exercise.name.toLowerCase()}`,
-          "show exercise library",
-          "show today's summary",
-        ]),
-      },
     ],
     outputForModel: { status: "ok", restored_name: exercise.name },
   };
@@ -212,9 +170,17 @@ export async function runMergeExerciseTool(
   ctx: CoachToolContext
 ): Promise<ToolResult> {
   const args = MergeExerciseArgsSchema.parse(rawArgs);
-  const exercises = await listExercises(ctx, { includeDeleted: true });
-  const sourceExercise = findExerciseByName(exercises, args.source_exercise);
-  const targetExercise = findExerciseByName(exercises, args.target_exercise);
+  const { exercise: sourceExercise } = await resolveExercise(
+    ctx,
+    args.source_exercise,
+    { includeDeleted: true }
+  );
+  // Resolve target from the same list to avoid a second query
+  const { exercise: targetExercise } = await resolveExercise(
+    ctx,
+    args.target_exercise,
+    { includeDeleted: true }
+  );
 
   if (!sourceExercise) {
     return {
@@ -225,10 +191,6 @@ export async function runMergeExerciseTool(
           tone: "error",
           title: "Source exercise not found",
           description: "I couldn't find that source exercise in your library.",
-        },
-        {
-          type: "suggestions",
-          prompts: ["show exercise library", "show today's summary"],
         },
       ],
       outputForModel: { status: "error", error: "source_exercise_not_found" },
@@ -263,10 +225,6 @@ export async function runMergeExerciseTool(
           tone: "error",
           title: "Target exercise not found",
           description: "I couldn't find that target exercise in your library.",
-        },
-        {
-          type: "suggestions",
-          prompts: ["show exercise library", "show today's summary"],
         },
       ],
       outputForModel: { status: "error", error: "target_exercise_not_found" },
@@ -321,14 +279,6 @@ export async function runMergeExerciseTool(
         title: "Exercises merged",
         description: `Moved ${merged.mergedCount} historical ${setLabel} into ${merged.keptExercise}. ${sourceExercise.name} is now archived.`,
       },
-      {
-        type: "suggestions",
-        prompts: uniquePrompts([
-          `show trend for ${merged.keptExercise.toLowerCase()}`,
-          "show exercise library",
-          "show history overview",
-        ]),
-      },
     ],
     outputForModel: {
       status: "ok",
@@ -344,8 +294,7 @@ export async function runUpdateExerciseMuscleGroupsTool(
   ctx: CoachToolContext
 ): Promise<ToolResult> {
   const args = UpdateMuscleGroupsArgsSchema.parse(rawArgs);
-  const exercises = await listExercises(ctx, { includeDeleted: false });
-  const exercise = findExerciseByName(exercises, args.exercise_name);
+  const { exercise } = await resolveExercise(ctx, args.exercise_name);
 
   if (!exercise) {
     return {

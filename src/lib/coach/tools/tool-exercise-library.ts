@@ -1,5 +1,4 @@
 import { listExercises } from "./data";
-import { uniquePrompts } from "./helpers";
 import type { CoachToolContext, ToolResult } from "./types";
 
 export async function runExerciseLibraryTool(
@@ -50,15 +49,6 @@ export async function runExerciseLibraryTool(
               : `show trend for ${exercise.name.toLowerCase()}`,
           };
         }),
-      },
-      {
-        type: "suggestions",
-        prompts: uniquePrompts([
-          "rename exercise Push-ups to Push Ups",
-          "delete exercise Push-ups",
-          "restore exercise Push-ups",
-          "set muscle groups for Push-ups: chest, triceps",
-        ]),
       },
     ],
     outputForModel: {

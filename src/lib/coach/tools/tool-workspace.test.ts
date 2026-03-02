@@ -11,17 +11,12 @@ const TEST_CTX = {
 };
 
 describe("runWorkspaceTool", () => {
-  it("returns workspace status and core workflows", async () => {
+  it("returns entity_list as first block (no status header)", async () => {
     const result = await runWorkspaceTool(TEST_CTX as any);
 
-    expect(result.summary).toBe("Rendered streamlined workspace actions.");
-    expect(result.blocks[0] as any).toEqual(
-      expect.objectContaining({
-        type: "status",
-        title: "Agent workspace online",
-      })
-    );
-    expect((result.blocks[1] as any).items).toHaveLength(5);
+    expect(result.summary).toBe("Rendered workspace actions.");
+    expect((result.blocks[0] as any).type).toBe("entity_list");
+    expect((result.blocks[0] as any).items).toHaveLength(5);
     expect(result.outputForModel).toEqual({
       status: "ok",
       workflows: [

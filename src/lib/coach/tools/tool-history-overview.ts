@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import { api } from "@/../convex/_generated/api";
 import type { Set } from "@/types/domain";
 import { listExercises } from "./data";
-import { formatSecondsShort, uniquePrompts } from "./helpers";
+import { formatSecondsShort } from "./helpers";
 import { HistoryArgsSchema } from "./schemas";
 import type { CoachToolContext, ToolResult } from "./types";
 
@@ -80,14 +80,6 @@ export async function runHistoryOverviewTool(
             prompt: `delete set ${String(set._id)}`,
           };
         }),
-      },
-      {
-        type: "suggestions",
-        prompts: uniquePrompts([
-          "show today's summary",
-          "show analytics overview",
-          "show settings overview",
-        ]),
       },
     ],
     outputForModel: {

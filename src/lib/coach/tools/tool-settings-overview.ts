@@ -1,6 +1,5 @@
 import { api } from "@/../convex/_generated/api";
 import { GOAL_LABELS, type GoalType } from "@/lib/goals";
-import { uniquePrompts } from "./helpers";
 import type { CoachToolContext, ToolResult } from "./types";
 
 type SubscriptionStatus = {
@@ -101,15 +100,6 @@ export async function runSettingsOverviewTool(
           ) ?? undefined,
         ctaLabel,
         ctaAction,
-      },
-      {
-        type: "suggestions",
-        prompts: uniquePrompts([
-          "update goals to build_muscle and get_stronger",
-          "set training split to push pull legs",
-          "set coach notes to prioritize shoulder stability",
-          "show analytics overview",
-        ]),
       },
     ],
     outputForModel: {

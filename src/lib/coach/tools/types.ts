@@ -1,6 +1,7 @@
 import type { ConvexHttpClient } from "convex/browser";
 import type { Id } from "@/../convex/_generated/dataModel";
 import type { CoachBlock } from "@/lib/coach/schema";
+import type { Exercise } from "@/types/domain";
 
 export type WeightUnit = "lbs" | "kg";
 
@@ -37,4 +38,9 @@ export interface CoachToolContext {
   timezoneOffsetMinutes: number;
   turnId: string;
   userInput?: string;
+  /** Semantic exercise resolver — LLM-backed in production, mockable in tests */
+  resolveExerciseName?: (
+    name: string,
+    candidates: Exercise[]
+  ) => Promise<Exercise | null>;
 }

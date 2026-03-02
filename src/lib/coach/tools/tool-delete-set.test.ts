@@ -2,7 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { runDeleteSetTool } from "./tool-delete-set";
-import { findExercise, getRecentExerciseSets, listExercises } from "./data";
+import { resolveExercise, getRecentExerciseSets } from "./data";
 
 vi.mock("@/../convex/_generated/api", () => ({
   api: {
@@ -13,13 +13,11 @@ vi.mock("@/../convex/_generated/api", () => ({
 }));
 
 vi.mock("./data", () => ({
-  listExercises: vi.fn(),
-  findExercise: vi.fn(),
+  resolveExercise: vi.fn(),
   getRecentExerciseSets: vi.fn(),
 }));
 
-const mockListExercises = vi.mocked(listExercises);
-const mockFindExercise = vi.mocked(findExercise);
+const mockResolveExercise = vi.mocked(resolveExercise);
 const mockGetRecentExerciseSets = vi.mocked(getRecentExerciseSets);
 const mutation = vi.fn();
 
@@ -42,8 +40,7 @@ function makeExercise() {
 describe("runDeleteSetTool", () => {
   beforeEach(() => {
     mutation.mockReset();
-    mockListExercises.mockReset();
-    mockFindExercise.mockReset();
+    mockResolveExercise.mockReset();
     mockGetRecentExerciseSets.mockReset();
   });
 
@@ -65,8 +62,7 @@ describe("runDeleteSetTool", () => {
   });
 
   it("returns error when exercise cannot be found", async () => {
-    mockListExercises.mockResolvedValue([]);
-    mockFindExercise.mockReturnValue(null);
+    mockResolveExercise.mockResolvedValue({ exercise: null, exercises: [] });
 
     const result = await runDeleteSetTool(
       { exercise_name: "Nope" },
@@ -83,8 +79,10 @@ describe("runDeleteSetTool", () => {
 
   it("returns info when no recent sets exist for exercise", async () => {
     const ex = makeExercise();
-    mockListExercises.mockResolvedValue([ex]);
-    mockFindExercise.mockReturnValue(ex);
+    mockResolveExercise.mockResolvedValue({
+      exercise: ex,
+      exercises: [ex],
+    });
     mockGetRecentExerciseSets.mockResolvedValue([]);
 
     const result = await runDeleteSetTool(
@@ -103,8 +101,10 @@ describe("runDeleteSetTool", () => {
 
   it("deletes latest set for an exercise name", async () => {
     const ex = makeExercise();
-    mockListExercises.mockResolvedValue([ex]);
-    mockFindExercise.mockReturnValue(ex);
+    mockResolveExercise.mockResolvedValue({
+      exercise: ex,
+      exercises: [ex],
+    });
     mockGetRecentExerciseSets.mockResolvedValue([
       {
         _id: "set_9",

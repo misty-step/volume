@@ -4,83 +4,82 @@ import {
   formatSetMetric,
   summarizeExercisePerformance,
 } from "@/lib/coach/prototype-analytics";
-import { listExercises, findExercise, getRecentExerciseSets } from "./data";
-import {
-  formatSecondsShort,
-  toAnalyticsSetInput,
-  uniquePrompts,
-} from "./helpers";
+import { resolveExercise, getRecentExerciseSets } from "./data";
+import { formatSecondsShort, toAnalyticsSetInput } from "./helpers";
 import { ExerciseReportArgsSchema } from "./schemas";
 import type { CoachToolContext, ToolResult } from "./types";
 
-export async function runExerciseReportTool(
-  rawArgs: unknown,
-  ctx: CoachToolContext
-): Promise<ToolResult> {
+async function resolveExerciseData(rawArgs: unknown, ctx: CoachToolContext) {
   const args = ExerciseReportArgsSchema.parse(rawArgs);
-  const exercises = await listExercises(ctx);
-  const exercise = findExercise(exercises, args.exercise_name);
+  const { exercise } = await resolveExercise(ctx, args.exercise_name);
 
   if (!exercise) {
     return {
-      summary: `Exercise "${args.exercise_name}" not found.`,
-      blocks: [
-        {
-          type: "status",
-          tone: "error",
-          title: `I can't find "${args.exercise_name}"`,
-          description: "Log a set first, then ask for a trend or report.",
+      ok: false as const,
+      errorResult: {
+        summary: `Exercise "${args.exercise_name}" not found.`,
+        blocks: [
+          {
+            type: "status",
+            tone: "error",
+            title: `I can't find "${args.exercise_name}"`,
+            description: "Log a set first, then ask for a trend or report.",
+          },
+        ],
+        outputForModel: {
+          status: "error",
+          error: "exercise_not_found",
+          exercise_name: args.exercise_name,
         },
-        {
-          type: "suggestions",
-          prompts: ["10 pushups", "show today's summary"],
-        },
-      ],
-      outputForModel: {
-        status: "error",
-        error: "exercise_not_found",
-        exercise_name: args.exercise_name,
-      },
+      } satisfies ToolResult,
     };
   }
 
   const recentSets = await getRecentExerciseSets(ctx, exercise._id);
   if (recentSets.length === 0) {
     return {
-      summary: `No history for ${exercise.name}.`,
-      blocks: [
-        {
-          type: "status",
-          tone: "info",
-          title: `${exercise.name} has no history yet`,
-          description: "Log your first set to start trend tracking.",
+      ok: false as const,
+      errorResult: {
+        summary: `No history for ${exercise.name}.`,
+        blocks: [
+          {
+            type: "status",
+            tone: "info",
+            title: `${exercise.name} has no history yet`,
+            description: "Log your first set to start trend tracking.",
+          },
+        ],
+        outputForModel: {
+          status: "ok",
+          exercise_name: exercise.name,
+          total_sets: 0,
         },
-        {
-          type: "suggestions",
-          prompts: uniquePrompts([
-            `10 ${exercise.name.toLowerCase()}`,
-            "show today's summary",
-          ]),
-        },
-      ],
-      outputForModel: {
-        status: "ok",
-        exercise_name: exercise.name,
-        total_sets: 0,
-      },
+      } satisfies ToolResult,
     };
   }
 
-  const trend = aggregateExerciseTrend(
-    recentSets.map((set) => toAnalyticsSetInput(set))
-  );
-  const performance = summarizeExercisePerformance(
-    recentSets.map((set) => toAnalyticsSetInput(set))
-  );
+  const analyticsInput = recentSets.map((set) => toAnalyticsSetInput(set));
+  return {
+    ok: true as const,
+    exercise,
+    recentSets,
+    trend: aggregateExerciseTrend(analyticsInput),
+    performance: summarizeExercisePerformance(analyticsInput),
+  };
+}
+
+export async function runExerciseSnapshotTool(
+  rawArgs: unknown,
+  ctx: CoachToolContext
+): Promise<ToolResult> {
+  const data = await resolveExerciseData(rawArgs, ctx);
+  if (!data.ok) return data.errorResult;
+
+  const { exercise, recentSets, trend, performance } = data;
   const latestSet = recentSets[0];
 
   return {
-    summary: `Prepared report for ${exercise.name}.`,
+    summary: `Prepared snapshot for ${exercise.name}.`,
     blocks: [
       {
         type: "metrics",
@@ -110,30 +109,11 @@ export async function runExerciseReportTool(
           },
         ],
       },
-      {
-        type: "trend",
-        title: `${exercise.name} 14-day trend`,
-        subtitle: "Computed from recent logged sets.",
-        metric: trend.metric,
-        points: trend.points,
-        total: trend.total,
-        bestDay: trend.bestDay,
-      },
-      {
-        type: "suggestions",
-        prompts: uniquePrompts([
-          `10 ${exercise.name.toLowerCase()}`,
-          "what should I work on today?",
-          "show today's summary",
-        ]),
-      },
     ],
     outputForModel: {
       status: "ok",
       exercise_name: exercise.name,
       total_sets: performance.totalSets,
-      trend_metric: trend.metric,
-      trend_total: trend.total,
       latest_set:
         latestSet !== undefined
           ? {
@@ -147,6 +127,37 @@ export async function runExerciseReportTool(
               unit: latestSet.unit ?? null,
             }
           : null,
+    },
+  };
+}
+
+export async function runExerciseTrendTool(
+  rawArgs: unknown,
+  ctx: CoachToolContext
+): Promise<ToolResult> {
+  const data = await resolveExerciseData(rawArgs, ctx);
+  if (!data.ok) return data.errorResult;
+
+  const { exercise, trend } = data;
+
+  return {
+    summary: `Prepared trend for ${exercise.name}.`,
+    blocks: [
+      {
+        type: "trend",
+        title: `${exercise.name} 14-day trend`,
+        subtitle: "Computed from recent logged sets.",
+        metric: trend.metric,
+        points: trend.points,
+        total: trend.total,
+        bestDay: trend.bestDay,
+      },
+    ],
+    outputForModel: {
+      status: "ok",
+      exercise_name: exercise.name,
+      trend_metric: trend.metric,
+      trend_total: trend.total,
     },
   };
 }

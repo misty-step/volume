@@ -5,7 +5,8 @@ import type { CoachBlock } from "@/lib/coach/schema";
 
 const mockRunLogSetTool = vi.fn();
 const mockRunTodaySummaryTool = vi.fn();
-const mockRunExerciseReportTool = vi.fn();
+const mockRunExerciseSnapshotTool = vi.fn();
+const mockRunExerciseTrendTool = vi.fn();
 const mockRunFocusSuggestionsTool = vi.fn();
 const mockRunSetWeightUnitTool = vi.fn();
 const mockRunSetSoundTool = vi.fn();
@@ -19,8 +20,10 @@ vi.mock("@/lib/coach/tools/tool-today-summary", () => ({
 }));
 
 vi.mock("@/lib/coach/tools/tool-exercise-report", () => ({
-  runExerciseReportTool: (...args: unknown[]) =>
-    mockRunExerciseReportTool(...args),
+  runExerciseSnapshotTool: (...args: unknown[]) =>
+    mockRunExerciseSnapshotTool(...args),
+  runExerciseTrendTool: (...args: unknown[]) =>
+    mockRunExerciseTrendTool(...args),
 }));
 
 vi.mock("@/lib/coach/tools/tool-focus-suggestions", () => ({
@@ -48,7 +51,8 @@ describe("createCoachTools", () => {
   beforeEach(() => {
     mockRunLogSetTool.mockReset();
     mockRunTodaySummaryTool.mockReset();
-    mockRunExerciseReportTool.mockReset();
+    mockRunExerciseSnapshotTool.mockReset();
+    mockRunExerciseTrendTool.mockReset();
     mockRunFocusSuggestionsTool.mockReset();
     mockRunSetWeightUnitTool.mockReset();
     mockRunSetSoundTool.mockReset();
@@ -83,7 +87,8 @@ describe("createCoachTools", () => {
       TEST_CTX
     );
     expect(onBlocks).toHaveBeenCalledWith("log_set", toolBlocks);
-    expect(output).toEqual({ status: "ok" });
+    expect(output).toMatchObject({ status: "ok" });
+    expect(output._blocks).toEqual([{ type: "status", title: "Logged" }]);
   });
 
   it("emits tool failure blocks and error output when a runner throws", async () => {
@@ -133,7 +138,8 @@ describe("createCoachTools", () => {
 
     expect(mockRunTodaySummaryTool).toHaveBeenCalledWith(TEST_CTX);
     expect(onBlocks).toHaveBeenCalledWith("get_today_summary", toolBlocks);
-    expect(output).toEqual({ total_sets: 5 });
+    expect(output).toMatchObject({ total_sets: 5 });
+    expect(output._blocks).toEqual([{ type: "metrics", title: "Today" }]);
   });
 
   it("routes set_weight_unit through the no-context tool runner", async () => {
@@ -172,28 +178,52 @@ describe("createCoachTools", () => {
     expect(output).toEqual({ status: "ok", enabled: true });
   });
 
-  it("routes get_exercise_report through the context tool runner", async () => {
+  it("routes get_exercise_snapshot through the context tool runner", async () => {
     const { createCoachTools } = await import("./coach-tools");
     const onBlocks = vi.fn();
     const toolBlocks: CoachBlock[] = [];
 
-    mockRunExerciseReportTool.mockResolvedValue({
-      summary: "report",
+    mockRunExerciseSnapshotTool.mockResolvedValue({
+      summary: "snapshot",
       blocks: toolBlocks,
       outputForModel: { status: "ok", total_sets: 4 },
     });
 
     const tools = createCoachTools(TEST_CTX, { onBlocks });
-    const output = await (tools.get_exercise_report as any).execute({
+    const output = await (tools.get_exercise_snapshot as any).execute({
       exercise_name: "Push-ups",
     });
 
-    expect(mockRunExerciseReportTool).toHaveBeenCalledWith(
+    expect(mockRunExerciseSnapshotTool).toHaveBeenCalledWith(
       { exercise_name: "Push-ups" },
       TEST_CTX
     );
-    expect(onBlocks).toHaveBeenCalledWith("get_exercise_report", toolBlocks);
+    expect(onBlocks).toHaveBeenCalledWith("get_exercise_snapshot", toolBlocks);
     expect(output).toEqual({ status: "ok", total_sets: 4 });
+  });
+
+  it("routes get_exercise_trend through the context tool runner", async () => {
+    const { createCoachTools } = await import("./coach-tools");
+    const onBlocks = vi.fn();
+    const toolBlocks: CoachBlock[] = [];
+
+    mockRunExerciseTrendTool.mockResolvedValue({
+      summary: "trend",
+      blocks: toolBlocks,
+      outputForModel: { status: "ok", trend_metric: "reps" },
+    });
+
+    const tools = createCoachTools(TEST_CTX, { onBlocks });
+    const output = await (tools.get_exercise_trend as any).execute({
+      exercise_name: "Push-ups",
+    });
+
+    expect(mockRunExerciseTrendTool).toHaveBeenCalledWith(
+      { exercise_name: "Push-ups" },
+      TEST_CTX
+    );
+    expect(onBlocks).toHaveBeenCalledWith("get_exercise_trend", toolBlocks);
+    expect(output).toEqual({ status: "ok", trend_metric: "reps" });
   });
 
   it("routes get_focus_suggestions through the context tool runner", async () => {

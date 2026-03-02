@@ -1,7 +1,6 @@
 import { GOAL_LABELS } from "@/lib/goals";
 import { api } from "@/../convex/_generated/api";
 import { UpdatePreferencesArgsSchema } from "./schemas";
-import { uniquePrompts } from "./helpers";
 import type { CoachToolContext, ToolResult } from "./types";
 
 export async function runUpdatePreferencesTool(
@@ -71,14 +70,6 @@ export async function runUpdatePreferencesTool(
             emphasis: args.coach_notes !== undefined,
           },
         ],
-      },
-      {
-        type: "suggestions",
-        prompts: uniquePrompts([
-          "show settings overview",
-          "what should I work on today?",
-          "show analytics overview",
-        ]),
       },
     ],
     outputForModel: {

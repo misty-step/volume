@@ -67,7 +67,6 @@ describe("runAnalyticsOverviewTool", () => {
       "entity_list",
       "entity_list",
       "table",
-      "suggestions",
     ]);
 
     const metricsBlock = result.blocks[0] as any;
