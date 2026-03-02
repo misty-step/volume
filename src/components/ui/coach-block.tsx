@@ -475,6 +475,41 @@ export function DetailPanelBlock({
   );
 }
 
+// ─── Log Confirmation (merged status + undo) ────────────────────────────────
+
+export function LogConfirmationBlock({
+  title,
+  actionId,
+  turnId,
+  onUndo,
+}: {
+  title: string;
+  actionId: string;
+  turnId: string;
+  onUndo?: (actionId: string, turnId: string) => void;
+}) {
+  return (
+    <section
+      className={cn(
+        "flex items-center gap-2 rounded-[--radius] border px-3 py-2",
+        "border-success/50 bg-success-bg/80"
+      )}
+    >
+      <CheckCircledIcon className="h-4 w-4 shrink-0 text-success" />
+      <p className="flex-1 text-sm font-medium text-foreground">{title}</p>
+      <button
+        type="button"
+        onClick={() => onUndo?.(actionId, turnId)}
+        disabled={!onUndo}
+        className="inline-flex items-center gap-1 rounded-[calc(var(--radius)-2px)] px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-card hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <CounterClockwiseClockIcon className="h-3 w-3" />
+        Undo
+      </button>
+    </section>
+  );
+}
+
 // ─── Suggestions ─────────────────────────────────────────────────────────────
 
 export function SuggestionsBlock({
@@ -486,23 +521,13 @@ export function SuggestionsBlock({
 }) {
   const limited = prompts.slice(0, 3);
   return (
-    <Block className="space-y-2">
-      <header>
-        <BlockTitle>Suggested</BlockTitle>
-      </header>
-      <div className="grid grid-cols-1 gap-2">
-        {limited.map((prompt) => (
-          <ActionButton
-            key={prompt}
-            variant="ghost"
-            className="w-full justify-start px-3 text-left"
-            onClick={() => onPrompt(prompt)}
-          >
-            {prompt}
-          </ActionButton>
-        ))}
-      </div>
-    </Block>
+    <div className="flex flex-wrap gap-2">
+      {limited.map((prompt) => (
+        <ChipButton key={prompt} onClick={() => onPrompt(prompt)}>
+          {prompt}
+        </ChipButton>
+      ))}
+    </div>
   );
 }
 

@@ -266,7 +266,6 @@ describe("SuggestionsBlock", () => {
       <SuggestionsBlock prompts={["A", "B", "C", "D"]} onPrompt={onPrompt} />
     );
 
-    expect(screen.getByText("Suggested")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "A" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "B" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "C" })).toBeInTheDocument();
@@ -279,7 +278,6 @@ describe("SuggestionsBlock", () => {
   it("renders safely with no prompts", () => {
     render(<SuggestionsBlock prompts={[]} onPrompt={() => {}} />);
 
-    expect(screen.getByText("Suggested")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

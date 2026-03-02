@@ -2,8 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import { useAuth, UserButton } from "@clerk/nextjs";
+import { DotsVerticalIcon } from "@radix-ui/react-icons";
 import { setUserContext, clearUserContext } from "@/lib/analytics";
 import Link from "next/link";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ThemeToggle } from "./theme-toggle";
 
 type NavProps = {
@@ -39,6 +45,39 @@ export function Nav({ initialUserId }: NavProps = {}) {
         </Link>
         <div className="flex items-center gap-3">
           <ThemeToggle />
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-[--radius] text-muted-foreground transition-colors hover:bg-card hover:text-foreground md:hidden"
+                aria-label="More options"
+              >
+                <DotsVerticalIcon className="h-5 w-5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-48 p-1">
+              <a
+                href="mailto:feedback@volume.fitness"
+                className="flex w-full items-center rounded-[calc(var(--radius)-2px)] px-3 py-2 text-sm text-foreground transition-colors hover:bg-card"
+              >
+                Feedback
+              </a>
+              <a
+                href="https://mistystep.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center rounded-[calc(var(--radius)-2px)] px-3 py-2 text-sm text-foreground transition-colors hover:bg-card"
+              >
+                Misty Step
+              </a>
+              <Link
+                href="/releases"
+                className="flex w-full items-center rounded-[calc(var(--radius)-2px)] px-3 py-2 text-sm text-foreground transition-colors hover:bg-card"
+              >
+                Version
+              </Link>
+            </PopoverContent>
+          </Popover>
           <div className="flex h-10 w-10 items-center justify-center">
             <UserButton
               afterSignOutUrl="/sign-in"

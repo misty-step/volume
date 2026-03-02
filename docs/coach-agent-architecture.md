@@ -85,7 +85,8 @@ Where `data` is a `CoachStreamEvent` JSON object (see `src/lib/coach/schema.ts`)
 
 - `log_set`
 - `get_today_summary`
-- `get_exercise_report`
+- `get_exercise_snapshot`
+- `get_exercise_trend`
 - `get_focus_suggestions`
 - `set_weight_unit` (client action)
 - `set_sound` (client action)
