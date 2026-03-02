@@ -1,7 +1,6 @@
 "use client";
 
-import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableHeader,
@@ -22,7 +21,7 @@ interface DailyStatsCardProps {
 
 export function DailyStatsCard({ exerciseStats }: DailyStatsCardProps) {
   return (
-    <BrutalistCard className="p-6">
+    <Card className="p-6">
       <CardHeader>
         <CardTitle className="text-lg">{"Today's Progress"}</CardTitle>
       </CardHeader>
@@ -135,6 +134,6 @@ export function DailyStatsCard({ exerciseStats }: DailyStatsCardProps) {
           </div>
         )}
       </CardContent>
-    </BrutalistCard>
+    </Card>
   );
 }

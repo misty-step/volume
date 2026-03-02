@@ -4,109 +4,77 @@
 
 @layer base {
   :root {
-    /* Brutalist color palette - Light Mode (brand-tinted neutrals) */
-    --background: 349 3% 96%; /* Warm concrete white */
-    --foreground: 349 5% 4%; /* Warm concrete black */
+    /* 3b Dark Mode — default */
+    --background: 222 22% 6%;
+    --card: 222 18% 10%;
+    --card-elevated: 222 15% 14%;
+    --popover: 222 18% 10%;
+    --popover-foreground: 210 20% 92%;
+    --foreground: 210 20% 92%;
+    --foreground-strong: 210 20% 98%;
+    --card-foreground: 210 20% 92%;
+    --muted: 222 15% 14%;
+    --muted-foreground: 214 12% 60%;
+    --border: 220 15% 22%;
+    --border-subtle: 220 15% 18%;
+    --input: 220 15% 22%;
+    --primary: 24 85% 57%;
+    --primary-foreground: 22 26% 10%;
+    --secondary: 222 15% 14%;
+    --secondary-foreground: 210 20% 92%;
+    --accent: 24 85% 57%;
+    --accent-foreground: 22 26% 10%;
+    --success: 147 25% 36%;
+    --success-bg: 147 20% 12%;
+    --success-border: 147 25% 25%;
+    --destructive: 4 70% 58%;
+    --destructive-foreground: 210 20% 98%;
+    --ring: 24 85% 57%;
+    --radius: 10px;
+    --radius-lg: 12px;
+    --radius-chat: 18px;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
-    --card: 349 2% 100%;
-    --card-foreground: 349 5% 4%;
-
-    --popover: 349 2% 100%;
-    --popover-foreground: 349 5% 4%;
-
-    /* Primary: Danger Red */
-    --primary: 349 78% 45%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 349 4% 50%; /* Warm concrete gray */
-    --secondary-foreground: 349 5% 4%;
-
-    --muted: 349 2% 94%;
-    --muted-foreground: 349 4% 50%;
-
-    /* Accent: Safety Orange */
-    --accent: 23 100% 50%;
-    --accent-foreground: 0 0% 100%;
-
-    /* Success: Safety Orange */
-    --success: 23 100% 50%;
-    --success-foreground: 0 0% 100%;
-
-    --destructive: 349 78% 45%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 0 0% 0%; /* Black borders */
-    --input: 0 0% 0%;
-    --ring: 349 78% 45%; /* Red focus rings */
-
-    --radius: 0.125rem; /* 2px sharp corners */
-
-    --chart-1: 349 78% 45%;
-    --chart-2: 0 0% 50%;
-    --chart-3: 23 100% 50%;
-    --chart-4: 0 0% 0%;
-    --chart-5: 210 10% 85%;
-
-    /* Focus ring system */
-    --ring-width: 3px;
-    --ring-width-subtle: 1px;
-
-    /* Chrome accent system */
-    --chrome-glow: rgba(232, 234, 237, 0.15);
-
-    /* Performance/Ghost display tokens (light mode) */
-    --ghost-bg: hsl(0 0% 96%);
-    --ghost-border: hsl(0 0% 88%);
-    --ghost-accent: #6b7a00;
-    --ghost-accent-text: #4a5500;
+    --chart-1: 24 85% 57%;
+    --chart-2: 214 12% 60%;
+    --chart-3: 147 25% 36%;
+    --chart-4: 210 20% 92%;
+    --chart-5: 222 15% 14%;
   }
 
-  .dark {
-    /* Brutalist color palette - Dark Mode (brand-tinted neutrals) */
-    --background: 349 8% 4%; /* Warm near-black */
-    --foreground: 349 3% 96%; /* Warm concrete white */
+  [data-theme="light"] {
+    /* 3b Light Mode */
+    --background: 36 18% 97%;
+    --card: 36 15% 94%;
+    --card-elevated: 36 10% 99%;
+    --popover: 36 10% 99%;
+    --popover-foreground: 220 18% 15%;
+    --foreground: 220 18% 15%;
+    --foreground-strong: 220 18% 8%;
+    --card-foreground: 220 18% 15%;
+    --muted: 36 10% 90%;
+    --muted-foreground: 220 10% 45%;
+    --border: 30 10% 82%;
+    --border-subtle: 30 10% 88%;
+    --input: 30 10% 82%;
+    --primary: 24 85% 57%;
+    --primary-foreground: 22 26% 10%;
+    --secondary: 36 10% 90%;
+    --secondary-foreground: 220 18% 15%;
+    --accent: 24 85% 57%;
+    --accent-foreground: 22 26% 10%;
+    --success: 147 30% 40%;
+    --success-bg: 147 25% 94%;
+    --success-border: 147 30% 75%;
+    --destructive: 4 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 24 85% 57%;
 
-    --card: 349 6% 8%;
-    --card-foreground: 349 3% 96%;
-
-    --popover: 349 6% 8%;
-    --popover-foreground: 349 3% 96%;
-
-    /* Primary: Brighter red for dark mode */
-    --primary: 349 78% 50%;
-    --primary-foreground: 349 8% 4%;
-
-    --secondary: 349 4% 50%;
-    --secondary-foreground: 349 3% 96%;
-
-    --muted: 349 5% 12%;
-    --muted-foreground: 349 4% 50%;
-
-    /* Accent: Safety Orange (same in dark) */
-    --accent: 23 100% 50%;
-    --accent-foreground: 0 0% 0%;
-
-    --success: 23 100% 50%;
-    --success-foreground: 0 0% 0%;
-
-    --destructive: 349 78% 50%;
-    --destructive-foreground: 0 0% 96%;
-
-    --border: 0 0% 96%; /* White borders in dark mode */
-    --input: 0 0% 96%;
-    --ring: 349 78% 50%;
-
-    --chart-1: 349 78% 50%;
-    --chart-2: 0 0% 60%;
-    --chart-3: 23 100% 50%;
-    --chart-4: 0 0% 96%;
-    --chart-5: 210 10% 85%;
-
-    /* Performance/Ghost display tokens (dark mode) */
-    --ghost-bg: #141414;
-    --ghost-border: #262626;
-    --ghost-accent: #D4FF00;
-    --ghost-accent-text: #b0c900;
+    --chart-1: 24 85% 57%;
+    --chart-2: 220 10% 45%;
+    --chart-3: 147 30% 40%;
+    --chart-4: 220 18% 15%;
+    --chart-5: 36 10% 90%;
   }
 }
 
@@ -117,107 +85,114 @@
 
   body {
     @apply bg-background text-foreground font-sans;
-    /* Add subtle concrete texture */
-    background-image: radial-gradient(
-        circle at 20% 50%,
-        rgba(128, 128, 128, 0.03) 0%,
-        transparent 50%
-      ),
-      radial-gradient(
-        circle at 80% 80%,
-        rgba(128, 128, 128, 0.03) 0%,
-        transparent 50%
-      );
   }
 
-  /* Monospace numbers everywhere */
-  input[type="number"],
-  .tabular-nums {
-    @apply font-mono;
+  .tabular {
     font-variant-numeric: tabular-nums;
   }
 
-  /* Thicker focus rings for number inputs (critical for workout logging) */
+  input[type="number"],
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
   input[type="number"]:focus-visible {
-    --ring-width: 4px;
+    outline: none;
   }
 
-  /* Context-aware focus system with golden ratio timing */
   *:focus-visible {
-    @apply outline-none ring-danger-red ring-offset-2 ring-offset-background;
-    --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(var(--ring-width) + var(--tw-ring-offset-width)) var(--tw-ring-color);
-    box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow, 0 0 #0000);
-    transition: box-shadow 0.146s cubic-bezier(0.4, 0, 0.2, 1); /* PRECISION_TIMING.MICRO */
-    position: relative;
-    z-index: 10; /* Ensure focus rings are always visible above adjacent elements */
-  }
-
-  /* Subtle focus for nested/inline contexts (dropdowns, modals) */
-  .focus-subtle:focus-visible,
-  .focus-subtle *:focus-visible {
-    --ring-width: var(--ring-width-subtle);
-  }
-
-  /* Border-only focus (no ring) */
-  .focus-border-only:focus-visible {
-    --tw-ring-shadow: none;
-    box-shadow: var(--tw-shadow, 0 0 #0000);
-    @apply border-danger-red;
-    transition: border-color 0.146s cubic-bezier(0.4, 0, 0.2, 1); /* PRECISION_TIMING.MICRO */
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+    transition: box-shadow 0.15s ease;
   }
 }
 
-/* iOS safe area insets - for notch and home indicator */
 @layer utilities {
+  /* iOS safe area insets */
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
-
   .pt-safe {
     padding-top: env(safe-area-inset-top);
   }
-
   .pl-safe {
     padding-left: env(safe-area-inset-left);
   }
-
   .pr-safe {
     padding-right: env(safe-area-inset-right);
   }
 
-  /* Brutalist utilities */
-  /* Concrete texture overlay */
-  .concrete-texture {
-    position: relative;
-  }
-
-  .concrete-texture::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.05' /%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  .concrete-texture > * {
-    position: relative;
-    z-index: 2;
-  }
-
-  /* Industrial button press */
-  .btn-press {
-    @apply active:scale-[0.97] active:shadow-inner transition-transform duration-75;
-  }
-
-  /* Mechanical animation preset */
-  .mechanical-enter {
-    animation: mechanical-slide 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  /* Toast container with safe area support */
+  /* Toast container */
   .toast-container {
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
   }
+
+  /* Diagonal hatching background pattern (dark) */
+  .hatch-pattern {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: repeating-linear-gradient(
+      -45deg,
+      transparent 0px,
+      transparent 11px,
+      hsl(220 15% 35% / 0.04) 11px,
+      hsl(220 15% 35% / 0.04) 12px
+    );
+  }
+
+  /* Dot grid pattern (light — for landing page) */
+  .dot-grid-pattern {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: radial-gradient(
+      hsl(30 10% 60% / 0.25) 1px,
+      transparent 1px
+    );
+    background-size: 20px 20px;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gentleBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+
+@keyframes sheet-slide-up {
+  0% { transform: translateY(100%); opacity: 0.9; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes sheet-slide-down {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0.9; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+@keyframes pr-flash {
+  0%, 100% { filter: invert(0); }
+  50% { filter: invert(1); }
 }

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Dashboard } from "@/components/dashboard/Dashboard";
+import { CoachPrototype } from "@/components/coach/CoachPrototype";
 
 export const metadata: Metadata = {
-  title: "Volume – Today",
+  title: "Volume – Agent Workspace",
 };
 
 export default function TodayPage() {
-  return <Dashboard />;
+  return <CoachPrototype />;
 }

@@ -132,6 +132,36 @@ const DEFAULT_ARGS = {
 // Tests
 // ---------------------------------------------------------------------------
 
+describe("buildEndOfTurnSuggestions", () => {
+  it("returns suggestions for log_set", async () => {
+    const { buildEndOfTurnSuggestions } = await import("./planner");
+    const result = buildEndOfTurnSuggestions(["log_set"]);
+    expect(result).not.toBeNull();
+    expect(result!.type).toBe("suggestions");
+    expect((result as any).prompts.length).toBeGreaterThan(0);
+  });
+
+  it("returns suggestions for get_exercise_snapshot", async () => {
+    const { buildEndOfTurnSuggestions } = await import("./planner");
+    const result = buildEndOfTurnSuggestions(["get_exercise_snapshot"]);
+    expect(result).not.toBeNull();
+    expect(result!.type).toBe("suggestions");
+  });
+
+  it("returns null when no tools ran", async () => {
+    const { buildEndOfTurnSuggestions } = await import("./planner");
+    const result = buildEndOfTurnSuggestions([]);
+    expect(result).toBeNull();
+  });
+
+  it("returns fallback suggestions for unknown tools", async () => {
+    const { buildEndOfTurnSuggestions } = await import("./planner");
+    const result = buildEndOfTurnSuggestions(["some_future_tool"]);
+    expect(result).not.toBeNull();
+    expect(result!.type).toBe("suggestions");
+  });
+});
+
 describe("runPlannerTurn", () => {
   beforeEach(() => {
     mockLogSetExecute.mockReset();
@@ -167,8 +197,13 @@ describe("runPlannerTurn", () => {
     expect(result.kind).toBe("ok");
     expect(result.assistantText).toBe("Done.");
     expect(result.toolsUsed).toEqual(["log_set"]);
-    expect(result.blocks).toEqual(SUCCESS_BLOCKS);
+    expect(result.blocks[0]).toEqual(SUCCESS_BLOCKS[0]);
+    // Planner appends end-of-turn suggestions
+    expect(result.blocks[result.blocks.length - 1]?.type).toBe("suggestions");
     expect(mockLogSetExecute).toHaveBeenCalledTimes(1);
+    // responseMessages captures the full tool interaction for multi-turn context
+    expect(Array.isArray(result.responseMessages)).toBe(true);
+    expect(result.responseMessages.length).toBeGreaterThan(0);
   });
 
   it("emits tool_start and tool_result events", async () => {
@@ -283,7 +318,9 @@ describe("runPlannerTurn", () => {
     });
 
     expect(result.kind).toBe("ok");
-    expect(result.blocks).toEqual(blocks);
+    // Tool blocks are first, planner appends suggestions at end
+    expect(result.blocks.slice(0, blocks.length)).toEqual(blocks);
+    expect(result.blocks[result.blocks.length - 1]?.type).toBe("suggestions");
   });
 
   it("returns an error result when the model stream throws", async () => {
@@ -322,6 +359,7 @@ describe("runPlannerTurn", () => {
     expect(result.kind).toBe("error");
     expect(result.errorMessage).toContain("Planner aborted");
     expect(result.errorMessage).toContain("test_abort");
+    expect(result.responseMessages).toEqual([]);
   });
 
   it("emits error block when a tool throws", async () => {

@@ -6,7 +6,7 @@ import { api } from "@/../convex/_generated/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import { Check, Loader2, Zap } from "lucide-react";
-import { BrutalistButton } from "@/components/brutalist";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { reportError } from "@/lib/analytics";
 
@@ -114,27 +114,33 @@ function PricingContent() {
   }, [subscriptionStatus?.hasAccess, subscriptionStatus?.status, router]);
 
   // Show nothing while redirecting
-  if (
-    subscriptionStatus?.hasAccess &&
-    subscriptionStatus.status !== "trial"
-  ) {
+  if (subscriptionStatus?.hasAccess && subscriptionStatus.status !== "trial") {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-dvh bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b-3 border-border p-4">
+      <header className="border-b border-border-subtle p-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <Link href="/" className="font-display text-2xl font-bold">
-            VOLUME
+          <Link
+            href="/"
+            className="text-xl font-semibold tracking-tight text-foreground"
+          >
+            Volume
           </Link>
           {user ? (
-            <Link href="/today" className="text-sm text-muted-foreground">
+            <Link
+              href="/today"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
               Back to app
             </Link>
           ) : (
-            <Link href="/sign-in" className="text-sm text-muted-foreground">
+            <Link
+              href="/sign-in"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
               Sign in
             </Link>
           )}
@@ -146,8 +152,8 @@ function PricingContent() {
         <div className="max-w-xl w-full">
           {/* Trial Expired Message */}
           {reason === "expired" && (
-            <div className="mb-8 p-4 border-3 border-danger-red bg-danger-red/10 text-center">
-              <p className="font-mono text-sm uppercase tracking-wider text-danger-red">
+            <div className="mb-8 rounded-[--radius] p-4 border border-destructive/50 bg-destructive/10 text-center">
+              <p className="text-sm font-semibold uppercase tracking-[0.08em] text-destructive">
                 Your free trial has ended
               </p>
               <p className="text-sm text-muted-foreground mt-1">
@@ -157,10 +163,10 @@ function PricingContent() {
           )}
 
           {/* Pricing Card */}
-          <div className="border-3 border-border bg-card shadow-[6px_6px_0_0_rgba(0,0,0,0.2)] dark:shadow-[6px_6px_0_0_rgba(0,0,0,0.4)]">
+          <div className="rounded-[--radius] border border-border-subtle bg-card">
             {/* Header */}
-            <div className="p-6 border-b-3 border-border text-center">
-              <h1 className="font-display text-4xl font-bold tracking-wider uppercase">
+            <div className="p-6 border-b border-border-subtle text-center">
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">
                 GO PRO
               </h1>
               <p className="text-muted-foreground mt-2">
@@ -169,41 +175,41 @@ function PricingContent() {
             </div>
 
             {/* Plan Toggle */}
-            <div className="p-6 border-b-3 border-border">
+            <div className="p-6 border-b border-border-subtle">
               <div className="flex gap-2">
                 <button
                   onClick={() => setSelectedPlan("monthly")}
-                  className={`flex-1 p-4 border-3 transition-all ${
+                  className={`flex-1 rounded-[--radius] p-4 border transition-all ${
                     selectedPlan === "monthly"
-                      ? "border-danger-red bg-danger-red/10"
-                      : "border-border hover:border-muted-foreground"
+                      ? "border-accent bg-accent/10"
+                      : "border-border-subtle hover:border-border"
                   }`}
                 >
-                  <div className="font-mono text-sm uppercase tracking-wider">
+                  <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                     Monthly
                   </div>
-                  <div className="font-display text-3xl font-bold mt-1">
+                  <div className="text-3xl font-bold mt-1 text-foreground">
                     ${PRICES.monthly.amount}
                   </div>
                   <div className="text-xs text-muted-foreground">/month</div>
                 </button>
                 <button
                   onClick={() => setSelectedPlan("annual")}
-                  className={`flex-1 p-4 border-3 transition-all relative ${
+                  className={`relative flex-1 rounded-[--radius] p-4 border transition-all ${
                     selectedPlan === "annual"
-                      ? "border-danger-red bg-danger-red/10"
-                      : "border-border hover:border-muted-foreground"
+                      ? "border-accent bg-accent/10"
+                      : "border-border-subtle hover:border-border"
                   }`}
                 >
                   {PRICES.annual.savings && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-safety-orange text-white text-xs font-mono px-2 py-0.5 uppercase">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-[calc(var(--radius)-4px)] bg-accent px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-accent-foreground">
                       {PRICES.annual.savings}
                     </div>
                   )}
-                  <div className="font-mono text-sm uppercase tracking-wider">
+                  <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                     Annual
                   </div>
-                  <div className="font-display text-3xl font-bold mt-1">
+                  <div className="text-3xl font-bold mt-1 text-foreground">
                     ${PRICES.annual.amount}
                   </div>
                   <div className="text-xs text-muted-foreground">/year</div>
@@ -212,11 +218,11 @@ function PricingContent() {
             </div>
 
             {/* Features */}
-            <div className="p-6 border-b-3 border-border">
+            <div className="p-6 border-b border-border-subtle">
               <ul className="space-y-3">
                 {FEATURES.map((feature) => (
                   <li key={feature} className="flex items-center gap-3">
-                    <Check className="h-5 w-5 text-safety-orange flex-shrink-0" />
+                    <Check className="h-5 w-5 text-accent flex-shrink-0" />
                     <span className="text-sm">{feature}</span>
                   </li>
                 ))}
@@ -225,8 +231,8 @@ function PricingContent() {
 
             {/* CTA */}
             <div className="p-6">
-              <BrutalistButton
-                variant="danger"
+              <Button
+                variant="destructive"
                 size="lg"
                 className="w-full"
                 onClick={handleCheckout}
@@ -240,10 +246,10 @@ function PricingContent() {
                     {user ? "Subscribe Now" : "Start Free Trial"}
                   </>
                 )}
-              </BrutalistButton>
+              </Button>
 
               {error && (
-                <p className="text-center text-sm text-danger-red mt-3">
+                <p className="text-center text-sm text-destructive mt-3">
                   {error}
                 </p>
               )}

@@ -27,9 +27,10 @@ describe("coach schema", () => {
   });
 
   it("rejects oversized conversations", () => {
-    const messages = Array.from({ length: 20 }, () => ({
-      role: "user",
-      content: "x".repeat(3000),
+    // 10 messages × ~20,050 chars each ≈ 200,500+ bytes in JSON
+    const messages = Array.from({ length: 10 }, () => ({
+      role: "user" as const,
+      content: "x".repeat(20_000),
     }));
 
     expect(() =>
@@ -60,6 +61,23 @@ describe("coach schema", () => {
     });
 
     expect(parsed.trace.toolsUsed).toEqual(["log_set"]);
+  });
+
+  it("parses a turn response with responseMessages", () => {
+    const parsed = CoachTurnResponseSchema.parse({
+      assistantText: "Done.",
+      blocks: [],
+      responseMessages: [
+        { role: "assistant", content: [{ type: "text", text: "Done." }] },
+      ],
+      trace: {
+        toolsUsed: [],
+        model: "test-model",
+        fallbackUsed: false,
+      },
+    });
+
+    expect(parsed.responseMessages).toHaveLength(1);
   });
 
   it("enforces client_action payload shape", () => {
@@ -140,5 +158,81 @@ describe("coach schema", () => {
 
     expect(parsed.type).toBe("tool_result");
     expect(parsed.blocks).toHaveLength(1);
+  });
+
+  it("parses expanded generative-ui block catalog", () => {
+    const parsed = CoachTurnResponseSchema.parse({
+      assistantText: "Workspace ready.",
+      blocks: [
+        {
+          type: "quick_log_form",
+          title: "Quick log",
+          defaultUnit: "kg",
+        },
+        {
+          type: "entity_list",
+          title: "Exercises",
+          items: [
+            {
+              id: "ex_1",
+              title: "Push-ups",
+              subtitle: "Chest, Triceps",
+              tags: ["active"],
+              prompt: "show trend for pushups",
+            },
+          ],
+        },
+        {
+          type: "detail_panel",
+          title: "Preferences",
+          fields: [{ label: "Goals", value: "Build muscle", emphasis: true }],
+          prompts: ["show settings overview"],
+        },
+        {
+          type: "billing_panel",
+          status: "trial",
+          title: "Subscription",
+          ctaLabel: "Upgrade",
+          ctaAction: "open_checkout",
+        },
+      ],
+      trace: {
+        toolsUsed: ["show_workspace"],
+        model: "test",
+        fallbackUsed: false,
+      },
+    });
+
+    expect(parsed.blocks).toHaveLength(4);
+  });
+
+  it("enforces open_checkout/open_billing_portal payload shape", () => {
+    expect(() =>
+      CoachTurnResponseSchema.parse({
+        assistantText: "ok",
+        blocks: [
+          {
+            type: "client_action",
+            action: "open_checkout",
+            payload: { mode: "portal" },
+          },
+        ],
+        trace: { toolsUsed: [], model: "test", fallbackUsed: false },
+      })
+    ).toThrow(/open_checkout payload/);
+
+    expect(() =>
+      CoachTurnResponseSchema.parse({
+        assistantText: "ok",
+        blocks: [
+          {
+            type: "client_action",
+            action: "open_billing_portal",
+            payload: { mode: "checkout" },
+          },
+        ],
+        trace: { toolsUsed: [], model: "test", fallbackUsed: false },
+      })
+    ).toThrow(/open_billing_portal payload/);
   });
 });

@@ -129,14 +129,12 @@ describe("executeCoachTool", () => {
 
     const result = await executeCoachTool("get_today_summary", {}, ctx);
     expect(result.blocks.some((b) => b.type === "status")).toBe(true);
-    expect(result.blocks.some((b) => b.type === "suggestions")).toBe(true);
   });
 
   it("generates focus suggestions via analytics tool", async () => {
     const { ctx } = createFakeContext();
     const result = await executeCoachTool("get_focus_suggestions", {}, ctx);
     expect(result.blocks.some((b) => b.type === "table")).toBe(true);
-    expect(result.blocks.some((b) => b.type === "suggestions")).toBe(true);
   });
 
   it("streams log_set blocks when onBlocks is provided", async () => {
@@ -152,8 +150,8 @@ describe("executeCoachTool", () => {
       }
     );
 
-    expect(result.blocks.length).toBeGreaterThanOrEqual(5);
-    expect(streamed.length).toBe(5);
+    expect(result.blocks.length).toBeGreaterThanOrEqual(2);
+    expect(streamed.length).toBe(2);
     expect(streamed[0]?.[0]?.type).toBe("status");
     expect(streamed[0]?.[0]?.title).toContain("48 sec");
     expect(streamed[1]?.[0]).toMatchObject({
@@ -183,7 +181,7 @@ describe("executeCoachTool", () => {
     ).toBe(true);
   });
 
-  it("prefers deterministically parsed durations when userInput is available", async () => {
+  it("uses LLM-provided args directly without regex override", async () => {
     const { ctx } = createFakeContext({
       userInput: "i did a dead hang for 48 seconds",
     });
@@ -195,25 +193,35 @@ describe("executeCoachTool", () => {
     );
 
     expect(result.blocks[0]?.type).toBe("status");
-    expect(result.blocks[0]?.title).toContain("48 sec");
+    // LLM args (60s = 1 min) take precedence — no regex override
+    expect(result.blocks[0]?.title).toContain("1 min");
   });
 
-  it("builds an exercise report when the exercise exists", async () => {
+  it("builds an exercise snapshot when the exercise exists", async () => {
     const { ctx } = createFakeContext();
     const result = await executeCoachTool(
-      "get_exercise_report",
+      "get_exercise_snapshot",
+      { exercise_name: "pushups" },
+      ctx
+    );
+    expect(result.blocks.some((b) => b.type === "metrics")).toBe(true);
+  });
+
+  it("builds an exercise trend when the exercise exists", async () => {
+    const { ctx } = createFakeContext();
+    const result = await executeCoachTool(
+      "get_exercise_trend",
       { exercise_name: "pushups" },
       ctx
     );
     expect(result.blocks.some((b) => b.type === "trend")).toBe(true);
-    expect(result.blocks.some((b) => b.type === "metrics")).toBe(true);
   });
 
   it("returns a helpful error when the exercise is missing", async () => {
     const { ctx } = createFakeContext({ exercises: [] });
 
     const result = await executeCoachTool(
-      "get_exercise_report",
+      "get_exercise_snapshot",
       { exercise_name: "mystery move" },
       ctx
     );

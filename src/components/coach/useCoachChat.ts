@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "convex/react";
+import { useRouter } from "next/navigation";
+import type { ModelMessage } from "ai";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
@@ -13,7 +15,6 @@ import {
   DEFAULT_COACH_SUGGESTIONS,
   MAX_COACH_MESSAGES,
   type CoachBlock,
-  type CoachMessageInput,
   type CoachTurnResponse,
 } from "@/lib/coach/schema";
 
@@ -27,6 +28,7 @@ type CoachTimelineMessage = {
   role: "user" | "assistant";
   text: string;
   blocks?: CoachTimelineBlock[];
+  isStreaming?: boolean;
 };
 
 const createId = (() => {
@@ -53,9 +55,7 @@ function parseAgentActionId(actionId: string): Id<"agentActions"> | null {
   return trimmed as Id<"agentActions">;
 }
 
-function trimCoachConversation(
-  messages: CoachMessageInput[]
-): CoachMessageInput[] {
+function trimCoachConversation(messages: ModelMessage[]): ModelMessage[] {
   if (messages.length <= MAX_COACH_MESSAGES) return messages;
   const slice = messages.slice(messages.length - MAX_COACH_MESSAGES);
   if (slice.length > 1 && slice[0]?.role === "assistant") return slice.slice(1);
@@ -73,16 +73,36 @@ function trackCoachResponse(payload: CoachTurnResponse, startMs: number) {
 function toolProgressText(toolName: string): string {
   if (toolName === "log_set") return "Logging your set...";
   if (toolName === "get_today_summary") return "Summarizing today...";
-  if (toolName === "get_exercise_report")
-    return "Analyzing exercise history...";
+  if (toolName === "get_exercise_snapshot")
+    return "Loading exercise snapshot...";
+  if (toolName === "get_exercise_trend") return "Computing exercise trend...";
   if (toolName === "get_focus_suggestions")
     return "Building today's focus plan...";
   if (toolName === "set_weight_unit") return "Updating settings...";
   if (toolName === "set_sound") return "Updating settings...";
+  if (toolName === "get_history_overview") return "Loading workout history...";
+  if (toolName === "get_analytics_overview")
+    return "Computing analytics overview...";
+  if (toolName === "get_exercise_library") return "Loading exercise library...";
+  if (
+    toolName === "rename_exercise" ||
+    toolName === "delete_exercise" ||
+    toolName === "restore_exercise" ||
+    toolName === "update_exercise_muscle_groups"
+  ) {
+    return "Updating exercises...";
+  }
+  if (toolName === "delete_set") return "Deleting set...";
+  if (toolName === "get_settings_overview")
+    return "Loading settings and billing...";
+  if (toolName === "update_preferences") return "Saving preferences...";
+  if (toolName === "get_report_history") return "Loading AI report history...";
+  if (toolName === "show_workspace") return "Rendering workspace blocks...";
   return "Working...";
 }
 
 export function useCoachChat() {
+  const router = useRouter();
   const { unit, setUnit } = useWeightUnit();
   const { soundEnabled, setSoundEnabled } = useTactileSoundPreference();
   const undoAgentActionMutation = useMutation(api.agentActions.undoAgentAction);
@@ -91,23 +111,10 @@ export function useCoachChat() {
     {
       id: createId(),
       role: "assistant",
-      text: "Coach agent online. Ask in natural language and I will decide tools dynamically.",
-      blocks: withIds([
-        {
-          type: "status",
-          tone: "info",
-          title: "Planner-first mode",
-          description:
-            "Model picks tools, tools execute deterministically, UI renders typed blocks.",
-        },
-        {
-          type: "suggestions",
-          prompts: DEFAULT_COACH_SUGGESTIONS,
-        },
-      ]),
+      text: "Agent ready. Ask to log a set, review progress, or update settings.",
     },
   ]);
-  const [conversation, setConversation] = useState<CoachMessageInput[]>([]);
+  const [conversation, setConversation] = useState<ModelMessage[]>([]);
   const [input, setInput] = useState("");
   const [isWorking, setIsWorking] = useState(false);
   const [lastTrace, setLastTrace] = useState<{
@@ -122,7 +129,68 @@ export function useCoachChat() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [timeline, isWorking]);
 
-  function applyClientActions(blocks: CoachBlock[]) {
+  function appendStatusMessage({
+    tone,
+    title,
+    description,
+  }: {
+    tone: "success" | "error" | "info";
+    title: string;
+    description: string;
+  }) {
+    setTimeline((prev) => [
+      ...prev,
+      {
+        id: createId(),
+        role: "assistant",
+        text: title,
+        blocks: withIds([
+          {
+            type: "status",
+            tone,
+            title,
+            description,
+          },
+        ]),
+      },
+    ]);
+  }
+
+  async function runClientAction(
+    action: "open_checkout" | "open_billing_portal"
+  ) {
+    if (action === "open_checkout") {
+      router.push("/pricing");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/stripe/portal", { method: "POST" });
+      const payload = (await response.json()) as {
+        url?: string;
+        error?: string;
+      };
+      if (!response.ok || !payload.url) {
+        const message = payload.error ?? "Could not open billing portal.";
+        appendStatusMessage({
+          tone: "error",
+          title: "Billing portal failed",
+          description: message,
+        });
+        return;
+      }
+      window.location.href = payload.url;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      appendStatusMessage({
+        tone: "error",
+        title: "Billing portal failed",
+        description: message,
+      });
+    }
+  }
+
+  function applyClientActions(blocks: CoachBlock[], seen?: Set<string>) {
     for (const block of blocks) {
       if (
         block.type === "client_action" &&
@@ -142,6 +210,16 @@ export function useCoachChat() {
           setSoundEnabled(block.payload.enabled);
         }
       }
+      if (
+        block.type === "client_action" &&
+        (block.action === "open_checkout" ||
+          block.action === "open_billing_portal")
+      ) {
+        const key = `${block.action}`;
+        if (seen && seen.has(key)) continue;
+        seen?.add(key);
+        void runClientAction(block.action);
+      }
     }
   }
 
@@ -149,6 +227,7 @@ export function useCoachChat() {
     const trimmed = prompt.trim();
     if (!trimmed || isWorking) return;
 
+    const seenClientActions = new Set<string>();
     const timezoneOffsetMinutes = new Date().getTimezoneOffset();
     const assistantId = createId();
     const userMessage: CoachTimelineMessage = {
@@ -168,8 +247,9 @@ export function useCoachChat() {
       {
         id: assistantId,
         role: "assistant",
-        text: "…",
+        text: "",
         blocks: [],
+        isStreaming: true,
       },
     ]);
     setConversation(nextConversation);
@@ -235,7 +315,7 @@ export function useCoachChat() {
           }
 
           if (event.type === "tool_result") {
-            applyClientActions(event.blocks);
+            applyClientActions(event.blocks, seenClientActions);
             const nextBlocks = withIds(event.blocks);
             setTimeline((prev) =>
               prev.map((message) =>
@@ -281,11 +361,11 @@ export function useCoachChat() {
 
           if (event.type === "final") {
             const payload = CoachTurnResponseSchema.parse(event.response);
-            applyClientActions(payload.blocks);
+            applyClientActions(payload.blocks, seenClientActions);
             setLastTrace(payload.trace);
             setConversation([
               ...nextConversation,
-              { role: "assistant", content: payload.assistantText },
+              ...((payload.responseMessages as ModelMessage[]) ?? []),
             ]);
             setTimeline((prev) =>
               prev.map((message) =>
@@ -294,6 +374,7 @@ export function useCoachChat() {
                       ...message,
                       text: payload.assistantText,
                       blocks: withIds(payload.blocks),
+                      isStreaming: false,
                     }
                   : message
               )
@@ -307,11 +388,11 @@ export function useCoachChat() {
       }
 
       const payload = CoachTurnResponseSchema.parse(await response.json());
-      applyClientActions(payload.blocks);
+      applyClientActions(payload.blocks, seenClientActions);
       setLastTrace(payload.trace);
       setConversation([
         ...nextConversation,
-        { role: "assistant", content: payload.assistantText },
+        ...((payload.responseMessages as ModelMessage[]) ?? []),
       ]);
       setTimeline((prev) =>
         prev.map((message) =>
@@ -320,6 +401,7 @@ export function useCoachChat() {
                 ...message,
                 text: payload.assistantText,
                 blocks: withIds(payload.blocks),
+                isStreaming: false,
               }
             : message
         )
@@ -337,8 +419,8 @@ export function useCoachChat() {
       setConversation([
         ...nextConversation,
         {
-          role: "assistant",
-          content: "I hit an error while planning this turn.",
+          role: "assistant" as const,
+          content: [{ type: "text" as const, text: "I hit an error." }],
         },
       ]);
       setTimeline((prev) =>
@@ -359,6 +441,7 @@ export function useCoachChat() {
                     prompts: DEFAULT_COACH_SUGGESTIONS,
                   },
                 ]),
+                isStreaming: false,
               }
             : entry
         )
@@ -466,5 +549,6 @@ export function useCoachChat() {
     endRef,
     sendPrompt,
     undoAction,
+    runClientAction,
   };
 }

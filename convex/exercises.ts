@@ -309,6 +309,59 @@ export const restoreExercise = mutation({
   },
 });
 
+// Merge one exercise into another and reassign historical sets
+export const mergeExercise = mutation({
+  args: {
+    fromId: v.id("exercises"),
+    toId: v.id("exercises"),
+  },
+  handler: async (ctx, { fromId, toId }) => {
+    const identity = await requireAuth(ctx);
+
+    if (fromId === toId) {
+      throw new Error("Cannot merge an exercise into itself");
+    }
+
+    const fromExercise = await ctx.db.get(fromId);
+    if (!fromExercise) {
+      throw new Error("Source exercise not found");
+    }
+    requireOwnership(fromExercise, identity.subject, "exercise");
+
+    if (fromExercise.deletedAt !== undefined) {
+      throw new Error("Source exercise is already archived");
+    }
+
+    const toExercise = await ctx.db.get(toId);
+    if (!toExercise) {
+      throw new Error("Target exercise not found");
+    }
+    requireOwnership(toExercise, identity.subject, "exercise");
+
+    if (toExercise.deletedAt !== undefined) {
+      throw new Error("Cannot merge into a deleted exercise");
+    }
+
+    const setsToMerge = await ctx.db
+      .query("sets")
+      .withIndex("by_exercise", (q) => q.eq("exerciseId", fromId))
+      .collect();
+
+    await Promise.all(
+      setsToMerge.map((set) => ctx.db.patch(set._id, { exerciseId: toId }))
+    );
+
+    await ctx.db.patch(fromId, {
+      deletedAt: Date.now(),
+    });
+
+    return {
+      mergedCount: setsToMerge.length,
+      keptExercise: toExercise.name,
+    };
+  },
+});
+
 /**
  * Update exercise muscle groups
  *

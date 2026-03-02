@@ -17,10 +17,6 @@ export function runSetSoundTool(rawArgs: unknown): ToolResult {
         action: "set_sound",
         payload: { enabled: args.enabled },
       },
-      {
-        type: "suggestions",
-        prompts: ["show today's summary", "what should I work on today?"],
-      },
     ],
     outputForModel: {
       status: "ok",

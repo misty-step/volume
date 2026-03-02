@@ -23,6 +23,8 @@ import {
   SSE_PADDING_BYTES,
   wantsEventStream,
 } from "@/lib/coach/server/sse";
+import { generateText } from "ai";
+import type { Exercise } from "@/types/domain";
 
 const COACH_TURN_TIMEOUT_MS = 60_000;
 
@@ -60,16 +62,20 @@ export async function POST(request: Request) {
     );
   }
 
-  const latestUserMessage = [...parsed.data.messages]
+  const latestUserMsg = [...parsed.data.messages]
     .reverse()
     .find((message) => message.role === "user");
 
-  if (!latestUserMessage) {
+  if (!latestUserMsg) {
     return NextResponse.json(
       { error: "Missing user message" },
       { status: 400 }
     );
   }
+
+  // User messages always have string content from our client.
+  const latestUserText =
+    typeof latestUserMsg.content === "string" ? latestUserMsg.content : "";
 
   const convex = new ConvexHttpClient(convexUrl);
   convex.setAuth(token);
@@ -118,6 +124,32 @@ export async function POST(request: Request) {
 
   const turnId = crypto.randomUUID();
 
+  const runtime = getCoachRuntime();
+
+  const resolveExerciseName = runtime
+    ? async (
+        name: string,
+        candidates: Exercise[]
+      ): Promise<Exercise | null> => {
+        const safeName = name.replace(/[\r\n\t]/g, " ").slice(0, 200);
+        const list = candidates
+          .map((e) => `"${e.name.replace(/[\r\n\t]/g, " ")}"`)
+          .join(", ");
+        const { text } = await generateText({
+          model: runtime.model,
+          messages: [
+            {
+              role: "user",
+              content: `User wants to log: "${safeName}"\nExisting exercises: ${list}\nReply with ONLY the exact exercise name if it clearly matches (same movement, different spelling is fine). Reply "none" if no good match.`,
+            },
+          ],
+        });
+        const picked = text.trim().replace(/^["']|["']$/g, "");
+        if (picked.toLowerCase() === "none") return null;
+        return candidates.find((e) => e.name === picked) ?? null;
+      }
+    : undefined;
+
   const context = {
     convex,
     defaultUnit: parsed.data.preferences.unit,
@@ -126,11 +158,11 @@ export async function POST(request: Request) {
       // the server's timezone (which would be wrong for most users).
       parsed.data.preferences.timezoneOffsetMinutes ?? 0,
     turnId,
-    userInput: latestUserMessage.content,
+    userInput: latestUserText,
+    resolveExerciseName,
   };
 
   const streamRequested = wantsEventStream(request);
-  const runtime = getCoachRuntime();
 
   if (streamRequested) {
     const encoder = new TextEncoder();
@@ -182,7 +214,7 @@ export async function POST(request: Request) {
               return;
             }
             const fallbackResponse = await runDeterministicFallback(
-              latestUserMessage.content,
+              latestUserText,
               context,
               send
             );
@@ -217,7 +249,7 @@ export async function POST(request: Request) {
             !aborted
           ) {
             const fallbackResponse = await runDeterministicFallback(
-              latestUserMessage.content,
+              latestUserText,
               context
             );
             response = CoachTurnResponseSchema.parse({
@@ -254,6 +286,7 @@ export async function POST(request: Request) {
               toolsUsed: plannerResult.toolsUsed,
               model,
               fallbackUsed: false,
+              responseMessages: plannerResult.responseMessages,
             });
           }
 
@@ -271,7 +304,7 @@ export async function POST(request: Request) {
 
   if (!runtime) {
     const fallbackResponse = await runDeterministicFallback(
-      latestUserMessage.content,
+      latestUserText,
       context
     );
     return NextResponse.json(fallbackResponse);
@@ -318,7 +351,7 @@ export async function POST(request: Request) {
     !aborted
   ) {
     const fallbackResponse = await runDeterministicFallback(
-      latestUserMessage.content,
+      latestUserText,
       context
     );
     return NextResponse.json(
@@ -354,6 +387,7 @@ export async function POST(request: Request) {
         ? `${runtime.modelId} (planner_failed_partial)`
         : runtime.modelId,
     fallbackUsed: false,
+    responseMessages: plannerResult.responseMessages,
   });
 
   return NextResponse.json(response);

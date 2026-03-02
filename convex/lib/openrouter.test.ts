@@ -20,7 +20,7 @@ describe("openrouter constants", () => {
   });
 
   it("exports model identifiers", () => {
-    expect(MODELS.MAIN).toBe("minimax/minimax-m2.5");
+    expect(MODELS.MAIN).toBe("anthropic/claude-sonnet-4.6");
     expect(MODELS.CLASSIFICATION).toBe("minimax/minimax-m2.5");
     expect(MODELS.WRITER).toBe("moonshotai/kimi-k2.5");
     expect(MODELS.FALLBACK).toBe("z-ai/glm-5");
@@ -64,32 +64,33 @@ describe("calculateCost", () => {
   });
 
   it("calculates input token cost", () => {
-    // 1M input tokens at $0.30 = $0.30
+    // 1M input tokens at $3.00 = $3.00
     const cost = calculateCost(MODELS.MAIN, 1_000_000, 0);
-    expect(cost).toBeCloseTo(0.3, 4);
+    expect(cost).toBeCloseTo(3.0, 4);
   });
 
   it("calculates output token cost", () => {
-    // 1M output tokens at $1.20 = $1.20
+    // 1M output tokens at $15.00 = $15.00
     const cost = calculateCost(MODELS.MAIN, 0, 1_000_000);
-    expect(cost).toBeCloseTo(1.2, 4);
+    expect(cost).toBeCloseTo(15.0, 4);
   });
 
   it("calculates combined cost", () => {
-    // 1M input ($0.30) + 1M output ($1.20) = $1.50
+    // 1M input ($3.00) + 1M output ($15.00) = $18.00
     const cost = calculateCost(MODELS.MAIN, 1_000_000, 1_000_000);
-    expect(cost).toBeCloseTo(1.5, 4);
+    expect(cost).toBeCloseTo(18.0, 4);
   });
 
   it("calculates cost for small token counts", () => {
     // 1000 input + 500 output
     const cost = calculateCost(MODELS.MAIN, 1000, 500);
-    // 1000 * 0.30 / 1M + 500 * 1.20 / 1M = 0.0003 + 0.0006 = 0.0009
-    expect(cost).toBeCloseTo(0.0009, 4);
+    // 1000 * 3.00 / 1M + 500 * 15.00 / 1M = 0.003 + 0.0075 = 0.0105
+    expect(cost).toBeCloseTo(0.0105, 4);
   });
 
   it("works with classification model", () => {
     const cost = calculateCost(MODELS.CLASSIFICATION, 1_000_000, 1_000_000);
+    // 1M input ($0.30) + 1M output ($1.20) = $1.50
     expect(cost).toBeCloseTo(1.5, 4);
   });
 

@@ -1,22 +1,12 @@
 import { summarizeTodaySets } from "@/lib/coach/prototype-analytics";
 import type { CoachBlock } from "@/lib/coach/schema";
 import { getTodaySets, listExercises } from "./data";
-import {
-  formatSecondsShort,
-  toAnalyticsSetInput,
-  uniquePrompts,
-} from "./helpers";
-import type { CoachToolContext, SetInput, ToolResult } from "./types";
+import { formatSecondsShort, toAnalyticsSetInput } from "./helpers";
+import type { CoachToolContext, ToolResult } from "./types";
 
-function buildTodaySummaryBlocks(
-  sets: SetInput[],
-  exerciseNames: Map<string, string>
-): CoachBlock[] {
-  const summary = summarizeTodaySets(
-    sets.map((set) => toAnalyticsSetInput(set)),
-    exerciseNames
-  );
+type TodaySummary = ReturnType<typeof summarizeTodaySets>;
 
+function buildTodaySummaryBlocks(summary: TodaySummary): CoachBlock[] {
   if (summary.totalSets === 0) {
     return [
       {
@@ -24,10 +14,6 @@ function buildTodaySummaryBlocks(
         tone: "info",
         title: "No sets logged today",
         description: "Log one now and I will generate your daily focus.",
-      },
-      {
-        type: "suggestions",
-        prompts: ["10 pushups", "20 squats", "what should I work on today?"],
       },
     ];
   }
@@ -60,14 +46,6 @@ function buildTodaySummaryBlocks(
               : undefined,
       })),
     },
-    {
-      type: "suggestions",
-      prompts: uniquePrompts([
-        "what should I work on today?",
-        "show trend for pushups",
-        "show trend for squats",
-      ]),
-    },
   ];
 }
 
@@ -83,11 +61,11 @@ export async function runTodaySummaryTool(
     names.set(String(exercise._id), exercise.name);
   }
 
-  const blocks = buildTodaySummaryBlocks(sets, names);
   const summary = summarizeTodaySets(
     sets.map((set) => toAnalyticsSetInput(set)),
     names
   );
+  const blocks = buildTodaySummaryBlocks(summary);
 
   return {
     summary: "Prepared today's summary.",
@@ -96,11 +74,7 @@ export async function runTodaySummaryTool(
       status: "ok",
       total_sets: summary.totalSets,
       total_reps: summary.totalReps,
-      total_duration_seconds: summary.totalDurationSeconds,
-      top_exercises: summary.topExercises.map((entry) => ({
-        exercise: entry.exerciseName,
-        sets: entry.sets,
-      })),
+      exercise_count: summary.topExercises.length,
     },
   };
 }

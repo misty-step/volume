@@ -55,8 +55,13 @@ vi.mock("./tool-log-set", () => ({
 }));
 
 vi.mock("./tool-exercise-report", () => ({
-  runExerciseReportTool: vi.fn().mockResolvedValue({
-    summary: "Exercise report.",
+  runExerciseSnapshotTool: vi.fn().mockResolvedValue({
+    summary: "Exercise snapshot.",
+    blocks: [],
+    outputForModel: { status: "ok" },
+  }),
+  runExerciseTrendTool: vi.fn().mockResolvedValue({
+    summary: "Exercise trend.",
     blocks: [],
     outputForModel: { status: "ok" },
   }),

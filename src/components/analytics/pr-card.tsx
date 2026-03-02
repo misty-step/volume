@@ -1,7 +1,6 @@
 "use client";
 
-import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Trophy } from "lucide-react";
 import type { PRType } from "@volume/core";
 import { motion } from "framer-motion";
@@ -76,7 +75,7 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
   // Loading skeleton
   if (isLoading) {
     return (
-      <BrutalistCard className="p-6">
+      <Card className="p-6">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5" />
@@ -96,14 +95,14 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
             ))}
           </div>
         </CardContent>
-      </BrutalistCard>
+      </Card>
     );
   }
 
   // Empty state
   if (!prs || prs.length === 0) {
     return (
-      <BrutalistCard className="p-6">
+      <Card className="p-6">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5" />
@@ -121,12 +120,12 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
             </p>
           </div>
         </CardContent>
-      </BrutalistCard>
+      </Card>
     );
   }
 
   return (
-    <BrutalistCard className="p-6">
+    <Card className="p-6">
       <CardHeader>
         <div className="flex items-center gap-2">
           <Trophy className="w-5 h-5 text-safety-orange" />
@@ -204,6 +203,6 @@ export function PRCard({ prs, isLoading = false }: PRCardProps) {
           )
         )}
       </CardContent>
-    </BrutalistCard>
+    </Card>
   );
 }

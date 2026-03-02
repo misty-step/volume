@@ -2,7 +2,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import type { LanguageModel } from "ai";
 
 const DEFAULT_COACH_MODEL =
-  process.env.COACH_AGENT_MODEL ?? "minimax/minimax-m2.5";
+  process.env.COACH_AGENT_MODEL ?? "anthropic/claude-sonnet-4.6";
 
 export type CoachRuntime = { model: LanguageModel; modelId: string };
 
