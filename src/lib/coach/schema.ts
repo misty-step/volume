@@ -1,11 +1,7 @@
 import { z } from "zod";
+import { modelMessageSchema, type ModelMessage } from "ai";
 
 export const MAX_COACH_MESSAGES = 30;
-
-export const CoachMessageSchema = z.object({
-  role: z.enum(["user", "assistant"]),
-  content: z.string().trim().min(1).max(4000),
-});
 
 export const CoachPreferencesSchema = z.object({
   unit: z.enum(["lbs", "kg"]),
@@ -13,26 +9,23 @@ export const CoachPreferencesSchema = z.object({
   timezoneOffsetMinutes: z.number().int().min(-840).max(840).optional(),
 });
 
-const MAX_TOTAL_MESSAGE_CHARS = 50_000;
+const MAX_CONVERSATION_JSON_BYTES = 200_000;
 
 export const CoachTurnRequestSchema = z
   .object({
-    messages: z.array(CoachMessageSchema).min(1).max(MAX_COACH_MESSAGES),
+    messages: z.array(modelMessageSchema).min(1).max(MAX_COACH_MESSAGES),
     preferences: CoachPreferencesSchema,
   })
   .refine(
     (data) =>
-      data.messages.reduce(
-        (total, message) => total + message.content.length,
-        0
-      ) <= MAX_TOTAL_MESSAGE_CHARS,
+      JSON.stringify(data.messages).length <= MAX_CONVERSATION_JSON_BYTES,
     {
-      message: `Conversation too large (max ${MAX_TOTAL_MESSAGE_CHARS} characters).`,
+      message: "Conversation too large.",
       path: ["messages"],
     }
   );
 
-export type CoachMessageInput = z.infer<typeof CoachMessageSchema>;
+export type CoachMessageInput = ModelMessage;
 export type CoachPreferences = z.infer<typeof CoachPreferencesSchema>;
 export type CoachTurnRequest = z.infer<typeof CoachTurnRequestSchema>;
 
@@ -40,7 +33,7 @@ const StatusBlockSchema = z.object({
   type: z.literal("status"),
   tone: z.enum(["success", "error", "info"]),
   title: z.string().max(200),
-  description: z.string().max(2000),
+  description: z.string().max(2000).optional(),
 });
 
 const MetricsBlockSchema = z.object({
@@ -234,6 +227,7 @@ export type CoachBlock = z.infer<typeof CoachBlockSchema>;
 export const CoachTurnResponseSchema = z.object({
   assistantText: z.string().max(4000),
   blocks: z.array(CoachBlockSchema),
+  responseMessages: z.array(z.record(z.string(), z.unknown())).optional(),
   trace: z.object({
     toolsUsed: z.array(z.string()),
     model: z.string(),

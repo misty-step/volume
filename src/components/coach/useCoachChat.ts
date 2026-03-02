@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
+import type { ModelMessage } from "ai";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
@@ -14,7 +15,6 @@ import {
   DEFAULT_COACH_SUGGESTIONS,
   MAX_COACH_MESSAGES,
   type CoachBlock,
-  type CoachMessageInput,
   type CoachTurnResponse,
 } from "@/lib/coach/schema";
 
@@ -28,6 +28,7 @@ type CoachTimelineMessage = {
   role: "user" | "assistant";
   text: string;
   blocks?: CoachTimelineBlock[];
+  isStreaming?: boolean;
 };
 
 const createId = (() => {
@@ -54,9 +55,7 @@ function parseAgentActionId(actionId: string): Id<"agentActions"> | null {
   return trimmed as Id<"agentActions">;
 }
 
-function trimCoachConversation(
-  messages: CoachMessageInput[]
-): CoachMessageInput[] {
+function trimCoachConversation(messages: ModelMessage[]): ModelMessage[] {
   if (messages.length <= MAX_COACH_MESSAGES) return messages;
   const slice = messages.slice(messages.length - MAX_COACH_MESSAGES);
   if (slice.length > 1 && slice[0]?.role === "assistant") return slice.slice(1);
@@ -74,8 +73,9 @@ function trackCoachResponse(payload: CoachTurnResponse, startMs: number) {
 function toolProgressText(toolName: string): string {
   if (toolName === "log_set") return "Logging your set...";
   if (toolName === "get_today_summary") return "Summarizing today...";
-  if (toolName === "get_exercise_report")
-    return "Analyzing exercise history...";
+  if (toolName === "get_exercise_snapshot")
+    return "Loading exercise snapshot...";
+  if (toolName === "get_exercise_trend") return "Computing exercise trend...";
   if (toolName === "get_focus_suggestions")
     return "Building today's focus plan...";
   if (toolName === "set_weight_unit") return "Updating settings...";
@@ -114,7 +114,7 @@ export function useCoachChat() {
       text: "Agent ready. Ask to log a set, review progress, or update settings.",
     },
   ]);
-  const [conversation, setConversation] = useState<CoachMessageInput[]>([]);
+  const [conversation, setConversation] = useState<ModelMessage[]>([]);
   const [input, setInput] = useState("");
   const [isWorking, setIsWorking] = useState(false);
   const [lastTrace, setLastTrace] = useState<{
@@ -247,8 +247,9 @@ export function useCoachChat() {
       {
         id: assistantId,
         role: "assistant",
-        text: "...",
+        text: "",
         blocks: [],
+        isStreaming: true,
       },
     ]);
     setConversation(nextConversation);
@@ -364,7 +365,7 @@ export function useCoachChat() {
             setLastTrace(payload.trace);
             setConversation([
               ...nextConversation,
-              { role: "assistant", content: payload.assistantText },
+              ...((payload.responseMessages as ModelMessage[]) ?? []),
             ]);
             setTimeline((prev) =>
               prev.map((message) =>
@@ -373,6 +374,7 @@ export function useCoachChat() {
                       ...message,
                       text: payload.assistantText,
                       blocks: withIds(payload.blocks),
+                      isStreaming: false,
                     }
                   : message
               )
@@ -390,7 +392,7 @@ export function useCoachChat() {
       setLastTrace(payload.trace);
       setConversation([
         ...nextConversation,
-        { role: "assistant", content: payload.assistantText },
+        ...((payload.responseMessages as ModelMessage[]) ?? []),
       ]);
       setTimeline((prev) =>
         prev.map((message) =>
@@ -399,6 +401,7 @@ export function useCoachChat() {
                 ...message,
                 text: payload.assistantText,
                 blocks: withIds(payload.blocks),
+                isStreaming: false,
               }
             : message
         )
@@ -416,8 +419,8 @@ export function useCoachChat() {
       setConversation([
         ...nextConversation,
         {
-          role: "assistant",
-          content: "I hit an error while planning this turn.",
+          role: "assistant" as const,
+          content: [{ type: "text" as const, text: "I hit an error." }],
         },
       ]);
       setTimeline((prev) =>
@@ -438,6 +441,7 @@ export function useCoachChat() {
                     prompts: DEFAULT_COACH_SUGGESTIONS,
                   },
                 ]),
+                isStreaming: false,
               }
             : entry
         )

@@ -27,9 +27,10 @@ describe("coach schema", () => {
   });
 
   it("rejects oversized conversations", () => {
-    const messages = Array.from({ length: 20 }, () => ({
-      role: "user",
-      content: "x".repeat(3000),
+    // 10 messages × ~20,050 chars each ≈ 200,500+ bytes in JSON
+    const messages = Array.from({ length: 10 }, () => ({
+      role: "user" as const,
+      content: "x".repeat(20_000),
     }));
 
     expect(() =>
@@ -60,6 +61,23 @@ describe("coach schema", () => {
     });
 
     expect(parsed.trace.toolsUsed).toEqual(["log_set"]);
+  });
+
+  it("parses a turn response with responseMessages", () => {
+    const parsed = CoachTurnResponseSchema.parse({
+      assistantText: "Done.",
+      blocks: [],
+      responseMessages: [
+        { role: "assistant", content: [{ type: "text", text: "Done." }] },
+      ],
+      trace: {
+        toolsUsed: [],
+        model: "test-model",
+        fallbackUsed: false,
+      },
+    });
+
+    expect(parsed.responseMessages).toHaveLength(1);
   });
 
   it("enforces client_action payload shape", () => {

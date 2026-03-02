@@ -9,4 +9,20 @@ describe("coach agent prompt", () => {
       "UI schema decides HOW it is rendered."
     );
   });
+
+  it("instructs brief confirmation after log_set", () => {
+    expect(COACH_AGENT_SYSTEM_PROMPT).toContain(
+      "After log_set: respond with one brief confirmation"
+    );
+  });
+
+  it("forbids repeating block data in text", () => {
+    expect(COACH_AGENT_SYSTEM_PROMPT).toContain(
+      "Don't repeat raw numbers shown in blocks"
+    );
+  });
+
+  it("allows empty string responses", () => {
+    expect(COACH_AGENT_SYSTEM_PROMPT).toContain("respond with an empty string");
+  });
 });
