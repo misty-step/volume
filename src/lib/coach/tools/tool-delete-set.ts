@@ -2,6 +2,7 @@ import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import type { Set } from "@/types/domain";
 import { resolveExercise, getRecentExerciseSets } from "./data";
+import { exerciseNotFoundResult } from "./helpers";
 import { DeleteSetArgsSchema } from "./schemas";
 import type { CoachToolContext, ToolResult } from "./types";
 
@@ -26,19 +27,11 @@ export async function runDeleteSetTool(
       includeDeleted: true,
     });
     if (!exercise) {
-      return {
-        summary: "Set delete failed.",
-        blocks: [
-          {
-            type: "status",
-            tone: "error",
-            title: "Exercise not found",
-            description:
-              "I couldn't find that exercise. Provide a valid set id or exercise name.",
-          },
-        ],
-        outputForModel: { status: "error", error: "exercise_not_found" },
-      };
+      return exerciseNotFoundResult(
+        args.exercise_name ?? "",
+        "exercise_not_found",
+        "I couldn't find that exercise. Provide a valid set id or exercise name."
+      );
     }
 
     const recentSets = (await getRecentExerciseSets(

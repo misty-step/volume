@@ -1,5 +1,5 @@
 import { formatDuration } from "@/lib/date-utils";
-import type { SetInput } from "./types";
+import type { SetInput, ToolResult } from "./types";
 
 export function normalizeLookup(value: string): string {
   return value
@@ -46,4 +46,23 @@ export function formatSecondsShort(seconds: number): string {
   if (seconds < 60) return `${seconds} sec`;
   if (seconds % 60 === 0) return `${seconds / 60} min`;
   return formatDuration(seconds);
+}
+
+export function exerciseNotFoundResult(
+  name: string,
+  errorCode = "exercise_not_found",
+  description = "I couldn't find that exercise in your library."
+): ToolResult {
+  return {
+    summary: `Could not find "${name}".`,
+    blocks: [
+      {
+        type: "status",
+        tone: "error",
+        title: "Exercise not found",
+        description,
+      },
+    ],
+    outputForModel: { status: "error", error: errorCode },
+  };
 }

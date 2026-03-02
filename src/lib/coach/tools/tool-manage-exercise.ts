@@ -1,6 +1,6 @@
 import { api } from "@/../convex/_generated/api";
-import { resolveExercise } from "./data";
-import { titleCase } from "./helpers";
+import { findExercise, listExercises, resolveExercise } from "./data";
+import { exerciseNotFoundResult, titleCase } from "./helpers";
 import {
   ExerciseNameArgsSchema,
   MergeExerciseArgsSchema,
@@ -19,19 +19,11 @@ export async function runRenameExerciseTool(
   });
 
   if (!exercise || exercise.deletedAt !== undefined) {
-    return {
-      summary: `Could not rename "${args.exercise_name}".`,
-      blocks: [
-        {
-          type: "status",
-          tone: "error",
-          title: "Exercise not found",
-          description:
-            "I couldn't find an active exercise with that name to rename.",
-        },
-      ],
-      outputForModel: { status: "error", error: "exercise_not_found" },
-    };
+    return exerciseNotFoundResult(
+      args.exercise_name,
+      "exercise_not_found",
+      "I couldn't find an active exercise with that name to rename."
+    );
   }
 
   const newName = titleCase(args.new_name);
@@ -66,18 +58,7 @@ export async function runDeleteExerciseTool(
   const { exercise } = await resolveExercise(ctx, args.exercise_name);
 
   if (!exercise) {
-    return {
-      summary: `Could not archive "${args.exercise_name}".`,
-      blocks: [
-        {
-          type: "status",
-          tone: "error",
-          title: "Exercise not found",
-          description: "I couldn't find that active exercise.",
-        },
-      ],
-      outputForModel: { status: "error", error: "exercise_not_found" },
-    };
+    return exerciseNotFoundResult(args.exercise_name);
   }
 
   await ctx.convex.mutation(api.exercises.deleteExercise, {
@@ -118,18 +99,7 @@ export async function runRestoreExerciseTool(
   });
 
   if (!exercise) {
-    return {
-      summary: `Could not restore "${args.exercise_name}".`,
-      blocks: [
-        {
-          type: "status",
-          tone: "error",
-          title: "Exercise not found",
-          description: "I couldn't find that exercise in your library.",
-        },
-      ],
-      outputForModel: { status: "error", error: "exercise_not_found" },
-    };
+    return exerciseNotFoundResult(args.exercise_name);
   }
 
   if (exercise.deletedAt === undefined) {
@@ -170,31 +140,24 @@ export async function runMergeExerciseTool(
   ctx: CoachToolContext
 ): Promise<ToolResult> {
   const args = MergeExerciseArgsSchema.parse(rawArgs);
-  const { exercise: sourceExercise } = await resolveExercise(
+  const exercises = await listExercises(ctx, { includeDeleted: true });
+  const sourceExercise = await findExercise(
     ctx,
     args.source_exercise,
-    { includeDeleted: true }
+    exercises
   );
-  // Resolve target from the same list to avoid a second query
-  const { exercise: targetExercise } = await resolveExercise(
+  const targetExercise = await findExercise(
     ctx,
     args.target_exercise,
-    { includeDeleted: true }
+    exercises
   );
 
   if (!sourceExercise) {
-    return {
-      summary: `Could not merge from "${args.source_exercise}".`,
-      blocks: [
-        {
-          type: "status",
-          tone: "error",
-          title: "Source exercise not found",
-          description: "I couldn't find that source exercise in your library.",
-        },
-      ],
-      outputForModel: { status: "error", error: "source_exercise_not_found" },
-    };
+    return exerciseNotFoundResult(
+      args.source_exercise,
+      "source_exercise_not_found",
+      "I couldn't find that source exercise in your library."
+    );
   }
 
   if (sourceExercise.deletedAt !== undefined) {
@@ -217,18 +180,11 @@ export async function runMergeExerciseTool(
   }
 
   if (!targetExercise) {
-    return {
-      summary: `Could not merge into "${args.target_exercise}".`,
-      blocks: [
-        {
-          type: "status",
-          tone: "error",
-          title: "Target exercise not found",
-          description: "I couldn't find that target exercise in your library.",
-        },
-      ],
-      outputForModel: { status: "error", error: "target_exercise_not_found" },
-    };
+    return exerciseNotFoundResult(
+      args.target_exercise,
+      "target_exercise_not_found",
+      "I couldn't find that target exercise in your library."
+    );
   }
 
   if (targetExercise.deletedAt !== undefined) {
@@ -297,18 +253,7 @@ export async function runUpdateExerciseMuscleGroupsTool(
   const { exercise } = await resolveExercise(ctx, args.exercise_name);
 
   if (!exercise) {
-    return {
-      summary: `Could not update groups for "${args.exercise_name}".`,
-      blocks: [
-        {
-          type: "status",
-          tone: "error",
-          title: "Exercise not found",
-          description: "I couldn't find that active exercise.",
-        },
-      ],
-      outputForModel: { status: "error", error: "exercise_not_found" },
-    };
+    return exerciseNotFoundResult(args.exercise_name);
   }
 
   const muscleGroups = Array.from(
