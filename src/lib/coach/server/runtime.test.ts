@@ -31,6 +31,7 @@ describe("getCoachRuntime", () => {
     expect(result).not.toBeNull();
     expect(result!.modelId).toBe("anthropic/claude-sonnet-4.6");
     expect(result!.model).toBeDefined();
+    expect(result!.classificationModel).toBeDefined();
   });
 
   it("uses COACH_AGENT_MODEL env var when set", async () => {

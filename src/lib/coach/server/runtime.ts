@@ -4,7 +4,15 @@ import type { LanguageModel } from "ai";
 const DEFAULT_COACH_MODEL =
   process.env.COACH_AGENT_MODEL ?? "anthropic/claude-sonnet-4.6";
 
-export type CoachRuntime = { model: LanguageModel; modelId: string };
+// Cheap model for short classification tasks (exercise name matching).
+// MiniMax M2.5: $0.30/$1.20 per M tokens vs Sonnet 4.6: $3/$15 per M tokens.
+const CLASSIFICATION_MODEL = "minimax/minimax-m2.5";
+
+export type CoachRuntime = {
+  model: LanguageModel;
+  modelId: string;
+  classificationModel: LanguageModel;
+};
 
 export function getCoachRuntime(): CoachRuntime | null {
   const openRouterKey = process.env.OPENROUTER_API_KEY;
@@ -26,5 +34,6 @@ export function getCoachRuntime(): CoachRuntime | null {
   return {
     model: openrouter(DEFAULT_COACH_MODEL),
     modelId: DEFAULT_COACH_MODEL,
+    classificationModel: openrouter(CLASSIFICATION_MODEL),
   };
 }

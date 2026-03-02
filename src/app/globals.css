@@ -103,6 +103,8 @@
   *:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
     transition: box-shadow 0.15s ease;
+    position: relative;
+    z-index: 10;
   }
 }
 

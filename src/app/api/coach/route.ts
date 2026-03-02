@@ -136,7 +136,7 @@ export async function POST(request: Request) {
           .map((e) => `"${e.name.replace(/[\r\n\t]/g, " ")}"`)
           .join(", ");
         const { text } = await generateText({
-          model: runtime.model,
+          model: runtime.classificationModel,
           messages: [
             {
               role: "user",
