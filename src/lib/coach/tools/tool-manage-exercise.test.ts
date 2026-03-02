@@ -8,7 +8,7 @@ import {
   runRestoreExerciseTool,
   runUpdateExerciseMuscleGroupsTool,
 } from "./tool-manage-exercise";
-import { resolveExercise } from "./data";
+import { findExercise, listExercises, resolveExercise } from "./data";
 
 vi.mock("@/../convex/_generated/api", () => ({
   api: {
@@ -24,9 +24,13 @@ vi.mock("@/../convex/_generated/api", () => ({
 
 vi.mock("./data", () => ({
   resolveExercise: vi.fn(),
+  listExercises: vi.fn(),
+  findExercise: vi.fn(),
 }));
 
 const mockResolveExercise = vi.mocked(resolveExercise);
+const mockListExercises = vi.mocked(listExercises);
+const mockFindExercise = vi.mocked(findExercise);
 const mutation = vi.fn();
 
 const TEST_CTX = {
@@ -49,6 +53,8 @@ function exercise(overrides: Record<string, unknown> = {}) {
 describe("tool-manage-exercise", () => {
   beforeEach(() => {
     mockResolveExercise.mockReset();
+    mockListExercises.mockReset();
+    mockFindExercise.mockReset();
     mutation.mockReset();
   });
 
@@ -111,12 +117,12 @@ describe("tool-manage-exercise", () => {
   });
 
   it("returns error when source exercise is missing for merge", async () => {
-    mockResolveExercise
-      .mockResolvedValueOnce({ exercise: null, exercises: [] })
-      .mockResolvedValueOnce({
-        exercise: exercise({ _id: "exercise_target", name: "Bench Press" }),
-        exercises: [],
-      });
+    mockListExercises.mockResolvedValue([]);
+    mockFindExercise
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(
+        exercise({ _id: "exercise_target", name: "Bench Press" })
+      );
 
     const result = await runMergeExerciseTool(
       { source_exercise: "Barbell Bench", target_exercise: "Bench Press" },
@@ -132,12 +138,12 @@ describe("tool-manage-exercise", () => {
   });
 
   it("returns error when target exercise is missing for merge", async () => {
-    mockResolveExercise
-      .mockResolvedValueOnce({
-        exercise: exercise({ _id: "exercise_source", name: "Barbell Bench" }),
-        exercises: [],
-      })
-      .mockResolvedValueOnce({ exercise: null, exercises: [] });
+    mockListExercises.mockResolvedValue([]);
+    mockFindExercise
+      .mockResolvedValueOnce(
+        exercise({ _id: "exercise_source", name: "Barbell Bench" })
+      )
+      .mockResolvedValueOnce(null);
 
     const result = await runMergeExerciseTool(
       { source_exercise: "Barbell Bench", target_exercise: "Bench Press" },
@@ -160,23 +166,19 @@ describe("tool-manage-exercise", () => {
       )
     ).rejects.toThrow("Source and target exercises must be different.");
 
-    expect(mockResolveExercise).not.toHaveBeenCalled();
+    expect(mockListExercises).not.toHaveBeenCalled();
     expect(mutation).not.toHaveBeenCalled();
   });
 
   it("merges exercises and returns a success summary with count", async () => {
-    mockResolveExercise
-      .mockResolvedValueOnce({
-        exercise: exercise({
-          _id: "exercise_source",
-          name: "Bench Press Barbell",
-        }),
-        exercises: [],
-      })
-      .mockResolvedValueOnce({
-        exercise: exercise({ _id: "exercise_target", name: "Bench Press" }),
-        exercises: [],
-      });
+    mockListExercises.mockResolvedValue([]);
+    mockFindExercise
+      .mockResolvedValueOnce(
+        exercise({ _id: "exercise_source", name: "Bench Press Barbell" })
+      )
+      .mockResolvedValueOnce(
+        exercise({ _id: "exercise_target", name: "Bench Press" })
+      );
     mutation.mockResolvedValueOnce({
       mergedCount: 5,
       keptExercise: "Bench Press",
@@ -205,19 +207,18 @@ describe("tool-manage-exercise", () => {
   });
 
   it("handles archived source exercise gracefully for merge", async () => {
-    mockResolveExercise
-      .mockResolvedValueOnce({
-        exercise: exercise({
+    mockListExercises.mockResolvedValue([]);
+    mockFindExercise
+      .mockResolvedValueOnce(
+        exercise({
           _id: "exercise_source",
           name: "Bench Press Barbell",
           deletedAt: Date.now(),
-        }),
-        exercises: [],
-      })
-      .mockResolvedValueOnce({
-        exercise: exercise({ _id: "exercise_target", name: "Bench Press" }),
-        exercises: [],
-      });
+        })
+      )
+      .mockResolvedValueOnce(
+        exercise({ _id: "exercise_target", name: "Bench Press" })
+      );
 
     const result = await runMergeExerciseTool(
       {
