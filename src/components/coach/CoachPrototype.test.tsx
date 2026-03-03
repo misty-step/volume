@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen, waitFor } from "../../test/utils";
+import { act } from "@testing-library/react";
+import { render, screen, waitFor } from "@/test/utils";
 import { CoachPrototype } from "./CoachPrototype";
 import { useCoachChat } from "@/components/coach/useCoachChat";
 
@@ -19,6 +20,22 @@ describe("CoachPrototype", () => {
   const originalVisualViewport = window.visualViewport;
   const originalInnerHeight = window.innerHeight;
 
+  const buildChatState = (overrides?: Record<string, unknown>) =>
+    ({
+      input: "",
+      setInput: vi.fn(),
+      isWorking: false,
+      lastTrace: null,
+      timeline: [{ id: "m1", role: "assistant", text: "Hi" }],
+      unit: "lbs",
+      soundEnabled: false,
+      endRef: { current: null },
+      sendPrompt: vi.fn(),
+      undoAction: vi.fn(),
+      runClientAction: vi.fn(),
+      ...overrides,
+    }) as unknown as ReturnType<typeof useCoachChat>;
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -35,27 +52,15 @@ describe("CoachPrototype", () => {
   });
 
   it("renders a scrollable timeline and composer", () => {
-    const setInput = vi.fn();
-    const sendPrompt = vi.fn();
-    const undoAction = vi.fn();
-    const runClientAction = vi.fn();
-
-    mockedUseCoachChat.mockReturnValue({
-      input: "Hello coach",
-      setInput,
-      isWorking: false,
-      lastTrace: null,
-      timeline: [
-        { id: "m1", role: "assistant", text: "Hi" },
-        { id: "m2", role: "user", text: "Hello coach" },
-      ],
-      unit: "lbs",
-      soundEnabled: false,
-      endRef: { current: null },
-      sendPrompt,
-      undoAction,
-      runClientAction,
-    } as any);
+    mockedUseCoachChat.mockReturnValue(
+      buildChatState({
+        input: "Hello coach",
+        timeline: [
+          { id: "m1", role: "assistant", text: "Hi" },
+          { id: "m2", role: "user", text: "Hello coach" },
+        ],
+      })
+    );
 
     render(<CoachPrototype />);
 
@@ -74,24 +79,13 @@ describe("CoachPrototype", () => {
   });
 
   it("submits the current input", async () => {
-    const setInput = vi.fn();
     const sendPrompt = vi.fn();
-    const undoAction = vi.fn();
-    const runClientAction = vi.fn();
-
-    mockedUseCoachChat.mockReturnValue({
-      input: "What should I train today?",
-      setInput,
-      isWorking: false,
-      lastTrace: null,
-      timeline: [{ id: "m1", role: "assistant", text: "Hi" }],
-      unit: "lbs",
-      soundEnabled: false,
-      endRef: { current: null },
-      sendPrompt,
-      undoAction,
-      runClientAction,
-    } as any);
+    mockedUseCoachChat.mockReturnValue(
+      buildChatState({
+        input: "What should I train today?",
+        sendPrompt,
+      })
+    );
 
     render(<CoachPrototype />);
 
@@ -100,12 +94,21 @@ describe("CoachPrototype", () => {
   });
 
   it("keeps composer above keyboard when visual viewport shrinks", async () => {
-    const setInput = vi.fn();
-    const sendPrompt = vi.fn();
-    const undoAction = vi.fn();
-    const runClientAction = vi.fn();
+    const listeners: Record<string, Array<() => void>> = {};
     const addEventListener = vi.fn();
     const removeEventListener = vi.fn();
+    const viewport = {
+      height: 600,
+      offsetTop: 0,
+      addEventListener,
+      removeEventListener,
+    };
+    addEventListener.mockImplementation(
+      (event: string, callback: () => void) => {
+        listeners[event] = listeners[event] ?? [];
+        listeners[event].push(callback);
+      }
+    );
 
     Object.defineProperty(window, "innerHeight", {
       configurable: true,
@@ -113,27 +116,10 @@ describe("CoachPrototype", () => {
     });
     Object.defineProperty(window, "visualViewport", {
       configurable: true,
-      value: {
-        height: 600,
-        offsetTop: 0,
-        addEventListener,
-        removeEventListener,
-      },
+      value: viewport,
     });
 
-    mockedUseCoachChat.mockReturnValue({
-      input: "",
-      setInput,
-      isWorking: false,
-      lastTrace: null,
-      timeline: [{ id: "m1", role: "assistant", text: "Hi" }],
-      unit: "lbs",
-      soundEnabled: false,
-      endRef: { current: null },
-      sendPrompt,
-      undoAction,
-      runClientAction,
-    } as any);
+    mockedUseCoachChat.mockReturnValue(buildChatState());
 
     const { unmount } = render(<CoachPrototype />);
 
@@ -151,6 +137,22 @@ describe("CoachPrototype", () => {
       expect.any(Function)
     );
 
+    viewport.height = 900;
+    await act(async () => {
+      listeners.resize?.[0]?.();
+    });
+    await waitFor(() => {
+      expect(composer.style.bottom).toBe("0px");
+    });
+
+    viewport.height = 700;
+    await act(async () => {
+      listeners.scroll?.[0]?.();
+    });
+    await waitFor(() => {
+      expect(composer.style.bottom).toBe("200px");
+    });
+
     unmount();
     expect(removeEventListener).toHaveBeenCalledWith(
       "resize",
@@ -160,5 +162,33 @@ describe("CoachPrototype", () => {
       "scroll",
       expect.any(Function)
     );
+  });
+
+  it("falls back to zero keyboard offset when visualViewport is unavailable", () => {
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      value: undefined,
+    });
+
+    mockedUseCoachChat.mockReturnValue(buildChatState());
+    render(<CoachPrototype />);
+
+    expect(screen.getByTestId("coach-composer").style.bottom).toBe("0px");
+  });
+
+  it("scrolls input into view on focus", async () => {
+    const scrollSpy = vi.spyOn(Element.prototype, "scrollIntoView");
+    mockedUseCoachChat.mockReturnValue(buildChatState());
+
+    render(<CoachPrototype />);
+
+    scrollSpy.mockClear();
+    await userEvent.click(screen.getByRole("textbox"));
+    await waitFor(() => {
+      expect(scrollSpy).toHaveBeenCalledWith({
+        block: "nearest",
+        inline: "nearest",
+      });
+    });
   });
 });
