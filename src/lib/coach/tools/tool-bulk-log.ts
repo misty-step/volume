@@ -10,7 +10,28 @@ export async function runBulkLogTool(
 
   const results: ToolResult[] = [];
   for (const item of args.sets) {
-    const result = await runLogSetTool(item, ctx);
+    let result: ToolResult;
+    try {
+      result = await runLogSetTool(item, ctx);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      result = {
+        summary: `Failed to log set for ${item.exercise_name}.`,
+        blocks: [
+          {
+            type: "status",
+            tone: "error",
+            title: "Couldn't log that set",
+            description: message,
+          },
+        ],
+        outputForModel: {
+          status: "error",
+          error: "bulk_log_item_failed",
+          message,
+        },
+      };
+    }
     results.push(result);
   }
 

@@ -82,6 +82,7 @@ describe("runWorkoutSessionTool", () => {
 
     expect(result.outputForModel.status).toBe("ok");
     expect(result.outputForModel.total_sets).toBe(0);
+    expect(result.outputForModel.exercise_count).toBe(0);
     expect((result.blocks[0] as any).type).toBe("status");
     expect((result.blocks[0] as any).tone).toBe("info");
   });
@@ -139,5 +140,18 @@ describe("runWorkoutSessionTool", () => {
     );
 
     expect(result.outputForModel.set_ids).toEqual(["set_abc", "set_def"]);
+  });
+
+  it("returns error for impossible calendar dates", async () => {
+    const result = await runWorkoutSessionTool(
+      { date: "2024-02-30" },
+      TEST_CTX as any
+    );
+
+    expect(result.outputForModel).toEqual({
+      status: "error",
+      error: "invalid_date_format",
+    });
+    expect(query).not.toHaveBeenCalled();
   });
 });

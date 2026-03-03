@@ -123,4 +123,61 @@ describe("runEditSetTool", () => {
     });
     expect(result.outputForModel.status).toBe("ok");
   });
+
+  it("uses the set unit for weight-only edits", async () => {
+    query.mockResolvedValue(makeSet({ weight: 100, unit: "kg" }));
+    mutation.mockResolvedValue(undefined);
+
+    const result = await runEditSetTool(
+      { set_id: "set_1", weight: 110 },
+      TEST_CTX as any
+    );
+
+    expect(mutation).toHaveBeenCalledWith("sets.editSet", {
+      id: "set_1",
+      reps: undefined,
+      weight: 110,
+      unit: "kg",
+      duration: undefined,
+    });
+    expect((result.blocks[0] as any).description).toContain("110 kg");
+  });
+
+  it("falls back to default unit when weight is updated from bodyweight", async () => {
+    query.mockResolvedValue(makeSet({ weight: undefined, unit: undefined }));
+    mutation.mockResolvedValue(undefined);
+
+    const result = await runEditSetTool(
+      { set_id: "set_1", weight: 45 },
+      TEST_CTX as any
+    );
+
+    expect(mutation).toHaveBeenCalledWith("sets.editSet", {
+      id: "set_1",
+      reps: undefined,
+      weight: 45,
+      unit: "lbs",
+      duration: undefined,
+    });
+    expect((result.blocks[0] as any).description).toContain("45 lbs");
+  });
+
+  it("reports unit-only edits in the change summary", async () => {
+    query.mockResolvedValue(makeSet({ weight: 135, unit: "lbs" }));
+    mutation.mockResolvedValue(undefined);
+
+    const result = await runEditSetTool(
+      { set_id: "set_1", unit: "kg" },
+      TEST_CTX as any
+    );
+
+    expect(mutation).toHaveBeenCalledWith("sets.editSet", {
+      id: "set_1",
+      reps: undefined,
+      weight: undefined,
+      unit: "kg",
+      duration: undefined,
+    });
+    expect((result.blocks[0] as any).description).toContain("unit → kg");
+  });
 });

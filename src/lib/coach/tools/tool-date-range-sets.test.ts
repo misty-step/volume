@@ -115,4 +115,17 @@ describe("runDateRangeSetsTool", () => {
     const callArgs = query.mock.calls[0][1];
     expect(callArgs.endDate).toBeGreaterThan(callArgs.startDate);
   });
+
+  it("returns error for impossible calendar dates", async () => {
+    const result = await runDateRangeSetsTool(
+      { start_date: "2024-02-30", end_date: "2024-03-01" },
+      TEST_CTX as any
+    );
+
+    expect(result.outputForModel).toEqual({
+      status: "error",
+      error: "invalid_date_format",
+    });
+    expect(query).not.toHaveBeenCalled();
+  });
 });

@@ -53,12 +53,19 @@ export async function runEditSetTool(
     };
   }
 
+  const setUnit =
+    set.unit === "lbs" || set.unit === "kg" ? set.unit : undefined;
+  const resolvedUnit =
+    args.weight !== undefined
+      ? (args.unit ?? setUnit ?? ctx.defaultUnit)
+      : args.unit;
+
   try {
     await ctx.convex.mutation(api.sets.editSet, {
       id: setId,
       reps: args.reps,
       weight: args.weight,
-      unit: args.unit,
+      unit: resolvedUnit,
       duration: args.duration_seconds,
     });
   } catch (error) {
@@ -80,7 +87,8 @@ export async function runEditSetTool(
   const changes: string[] = [];
   if (args.reps !== undefined) changes.push(`reps → ${args.reps}`);
   if (args.weight !== undefined)
-    changes.push(`weight → ${args.weight} ${args.unit ?? ctx.defaultUnit}`);
+    changes.push(`weight → ${args.weight} ${resolvedUnit}`);
+  else if (args.unit !== undefined) changes.push(`unit → ${args.unit}`);
   if (args.duration_seconds !== undefined)
     changes.push(`duration → ${formatSecondsShort(args.duration_seconds)}`);
 
@@ -102,7 +110,7 @@ export async function runEditSetTool(
       changes: {
         reps: args.reps,
         weight: args.weight,
-        unit: args.unit,
+        unit: resolvedUnit,
         duration_seconds: args.duration_seconds,
       },
     },

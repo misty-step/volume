@@ -1,4 +1,6 @@
 import { z } from "zod";
+
+const ISO_LOCAL_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 import { GOAL_TYPES } from "@/lib/goals";
 
 export const LogSetArgsSchema = z
@@ -127,13 +129,20 @@ export const ExerciseHistoryArgsSchema = z.object({
 });
 
 export const DateRangeSetsArgsSchema = z.object({
-  start_date: z.string().describe("ISO date string YYYY-MM-DD"),
-  end_date: z.string().describe("ISO date string YYYY-MM-DD"),
+  start_date: z
+    .string()
+    .regex(ISO_LOCAL_DATE_REGEX, "Date must be YYYY-MM-DD")
+    .describe("ISO date string YYYY-MM-DD"),
+  end_date: z
+    .string()
+    .regex(ISO_LOCAL_DATE_REGEX, "Date must be YYYY-MM-DD")
+    .describe("ISO date string YYYY-MM-DD"),
 });
 
 export const WorkoutSessionArgsSchema = z.object({
   date: z
     .string()
+    .regex(ISO_LOCAL_DATE_REGEX, "Date must be YYYY-MM-DD")
     .describe("ISO date string YYYY-MM-DD, defaults to today")
     .optional(),
 });

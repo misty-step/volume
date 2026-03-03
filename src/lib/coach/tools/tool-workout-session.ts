@@ -3,7 +3,11 @@ import { format } from "date-fns";
 import type { Set } from "@/types/domain";
 import { getTodayRangeForTimezoneOffset } from "@/lib/date-utils";
 import { listExercises } from "./data";
-import { formatSecondsShort } from "./helpers";
+import {
+  dateStringToDayRangeMs,
+  describeSetSummary,
+  formatSecondsShort,
+} from "./helpers";
 import { WorkoutSessionArgsSchema } from "./schemas";
 import type { CoachToolContext, ToolResult } from "./types";
 
@@ -14,24 +18,15 @@ import type { CoachToolContext, ToolResult } from "./types";
 function getSessionRange(
   dateStr: string | undefined,
   offsetMinutes: number
-): { start: number; end: number; label: string } {
+): { start: number; end: number; label: string } | null {
   if (!dateStr) {
     const range = getTodayRangeForTimezoneOffset(offsetMinutes);
     return { ...range, label: "Today" };
   }
 
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const offsetMs = offsetMinutes * 60_000;
-  const start = Date.UTC(year!, month! - 1, day!, 0, 0, 0, 0) + offsetMs;
-  const end = Date.UTC(year!, month! - 1, day!, 23, 59, 59, 999) + offsetMs;
-  return { start, end, label: dateStr };
-}
-
-function describeSet(set: Set, defaultUnit: "lbs" | "kg"): string {
-  if (set.duration !== undefined) return formatSecondsShort(set.duration);
-  const reps = set.reps ?? 0;
-  if (set.weight === undefined) return `${reps} reps`;
-  return `${reps} reps @ ${set.weight} ${set.unit ?? defaultUnit}`;
+  const range = dateStringToDayRangeMs(dateStr, offsetMinutes);
+  if (!range) return null;
+  return { ...range, label: dateStr };
 }
 
 function formatTime(ms: number, offsetMinutes: number): string {
@@ -45,7 +40,23 @@ export async function runWorkoutSessionTool(
   const args = WorkoutSessionArgsSchema.parse(rawArgs);
   const offset = ctx.timezoneOffsetMinutes ?? 0;
 
-  const { start, end, label } = getSessionRange(args.date, offset);
+  const sessionRange = getSessionRange(args.date, offset);
+  if (!sessionRange) {
+    return {
+      summary: "Invalid date format.",
+      blocks: [
+        {
+          type: "status",
+          tone: "error",
+          title: "Invalid date format",
+          description: "Use a valid calendar date in YYYY-MM-DD format.",
+        },
+      ],
+      outputForModel: { status: "error", error: "invalid_date_format" },
+    };
+  }
+
+  const { start, end, label } = sessionRange;
 
   const [allSets, exercises] = await Promise.all([
     ctx.convex.query(api.sets.listSetsForDateRange, {
@@ -75,6 +86,7 @@ export async function runWorkoutSessionTool(
         total_sets: 0,
         total_reps: 0,
         total_duration_seconds: 0,
+        exercise_count: 0,
         set_ids: [],
       },
     };
@@ -111,7 +123,7 @@ export async function runWorkoutSessionTool(
           return {
             id: String(set._id),
             title: ex?.name ?? "Unknown exercise",
-            subtitle: `${describeSet(set, ctx.defaultUnit)} · ${formatTime(set.performedAt, offset)}`,
+            subtitle: `${describeSetSummary(set, ctx.defaultUnit)} · ${formatTime(set.performedAt, offset)}`,
             meta: `set_id=${String(set._id)}`,
             prompt: `delete set ${String(set._id)}`,
           };

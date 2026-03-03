@@ -2,36 +2,9 @@ import { api } from "@/../convex/_generated/api";
 import { format } from "date-fns";
 import type { Set } from "@/types/domain";
 import { listExercises } from "./data";
-import { formatSecondsShort } from "./helpers";
+import { dateStringToDayRangeMs, describeSetSummary } from "./helpers";
 import { DateRangeSetsArgsSchema } from "./schemas";
 import type { CoachToolContext, ToolResult } from "./types";
-
-/**
- * Convert a YYYY-MM-DD string to start-of-day UTC timestamp
- * using the user's timezone offset.
- *
- * The offset convention (positive = behind UTC, e.g. America/Chicago ~ 360)
- * matches getTodayRangeForTimezoneOffset.
- */
-function dateStringToStartMs(dateStr: string, offsetMinutes: number): number {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  // Build midnight in the user's local time as a UTC timestamp
-  const offsetMs = offsetMinutes * 60 * 1000;
-  return Date.UTC(year!, month! - 1, day!, 0, 0, 0, 0) + offsetMs;
-}
-
-function dateStringToEndMs(dateStr: string, offsetMinutes: number): number {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const offsetMs = offsetMinutes * 60 * 1000;
-  return Date.UTC(year!, month! - 1, day!, 23, 59, 59, 999) + offsetMs;
-}
-
-function describeSet(set: Set, defaultUnit: "lbs" | "kg"): string {
-  if (set.duration !== undefined) return formatSecondsShort(set.duration);
-  const reps = set.reps ?? 0;
-  if (set.weight === undefined) return `${reps} reps`;
-  return `${reps} reps @ ${set.weight} ${set.unit ?? defaultUnit}`;
-}
 
 function utcDayKey(ms: number, offsetMinutes: number): string {
   const localMs = ms - offsetMinutes * 60_000;
@@ -45,8 +18,26 @@ export async function runDateRangeSetsTool(
   const args = DateRangeSetsArgsSchema.parse(rawArgs);
   const offset = ctx.timezoneOffsetMinutes ?? 0;
 
-  const startDate = dateStringToStartMs(args.start_date, offset);
-  const endDate = dateStringToEndMs(args.end_date, offset);
+  const startRange = dateStringToDayRangeMs(args.start_date, offset);
+  const endRange = dateStringToDayRangeMs(args.end_date, offset);
+
+  if (!startRange || !endRange) {
+    return {
+      summary: "Invalid date format.",
+      blocks: [
+        {
+          type: "status",
+          tone: "error",
+          title: "Invalid date format",
+          description: "Use valid calendar dates in YYYY-MM-DD format.",
+        },
+      ],
+      outputForModel: { status: "error", error: "invalid_date_format" },
+    };
+  }
+
+  const startDate = startRange.start;
+  const endDate = endRange.end;
 
   if (startDate > endDate) {
     return {
@@ -103,7 +94,7 @@ export async function runDateRangeSetsTool(
           const daySets = grouped.get(day)!;
           const lines = daySets.map((set) => {
             const ex = exerciseMap.get(String(set.exerciseId));
-            return `${ex?.name ?? "Unknown"}: ${describeSet(set, ctx.defaultUnit)}`;
+            return `${ex?.name ?? "Unknown"}: ${describeSetSummary(set, ctx.defaultUnit)}`;
           });
           return {
             id: day,

@@ -363,19 +363,59 @@ export const editSet = mutation({
     id: v.id("sets"),
     reps: v.optional(v.number()),
     weight: v.optional(v.number()),
-    unit: v.optional(v.string()),
+    unit: v.optional(v.union(v.literal("lbs"), v.literal("kg"))),
     duration: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const identity = await requireAuth(ctx);
     const set = await ctx.db.get(args.id);
     requireOwnership(set, identity.subject, "set");
+    const existingSet = set!;
+
+    if (args.reps !== undefined && args.duration !== undefined) {
+      throw new Error("Must provide either reps or duration (not both)");
+    }
 
     const patch: Record<string, unknown> = {};
-    if (args.reps !== undefined) patch.reps = args.reps;
-    if (args.weight !== undefined) patch.weight = args.weight;
-    if (args.unit !== undefined) patch.unit = args.unit;
-    if (args.duration !== undefined) patch.duration = args.duration;
+    let nextReps = existingSet.reps;
+    let nextDuration = existingSet.duration;
+
+    if (args.reps !== undefined) {
+      validateReps(args.reps);
+      nextReps = args.reps;
+      nextDuration = undefined;
+      patch.reps = args.reps;
+      patch.duration = undefined;
+    } else if (args.duration !== undefined) {
+      const validatedDuration = validateDuration(args.duration);
+      nextReps = undefined;
+      nextDuration = validatedDuration;
+      patch.reps = undefined;
+      patch.duration = validatedDuration;
+    }
+
+    if (
+      (nextReps === undefined && nextDuration === undefined) ||
+      (nextReps !== undefined && nextDuration !== undefined)
+    ) {
+      throw new Error("Must provide either reps or duration (not both)");
+    }
+
+    let nextWeight = existingSet.weight;
+    if (args.weight !== undefined) {
+      nextWeight = validateWeight(args.weight);
+      patch.weight = nextWeight;
+    }
+
+    let nextUnit = existingSet.unit;
+    if (args.unit !== undefined) {
+      nextUnit = args.unit;
+      patch.unit = args.unit;
+    }
+
+    if (args.weight !== undefined || args.unit !== undefined) {
+      validateUnit(nextUnit, nextWeight);
+    }
 
     await ctx.db.patch(args.id, patch);
   },
