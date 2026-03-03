@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0](https://github.com/misty-step/volume/compare/v1.13.0...v1.14.0) (2026-03-03)
+
+
+### Features
+
+* 3b design system + agentic chat overhaul (coach tools, generative UI, test coverage) ([#378](https://github.com/misty-step/volume/issues/378)) ([df41cce](https://github.com/misty-step/volume/commit/df41cce6aa01fbf58f75470148837aada268dd6f))
+
 ## [1.13.0](https://github.com/misty-step/volume/compare/v1.12.1...v1.13.0) (2026-02-28)
 
 
