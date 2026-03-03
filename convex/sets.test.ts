@@ -293,7 +293,9 @@ describe("logSet - Soft Delete Auto-Restore", () => {
           weight: 135,
           unit: "lbs",
         })
-    ).rejects.toThrow('Cannot restore set: an exercise named "BENCH PRESS" already exists');
+    ).rejects.toThrow(
+      'Cannot restore set: an exercise named "BENCH PRESS" already exists'
+    );
   });
 });
 
@@ -606,5 +608,136 @@ describe("listSetsForDateRange - Date Filtering Tests", () => {
         expect(sets[i - 1].performedAt).toBeGreaterThan(sets[i].performedAt);
       }
     });
+  });
+});
+
+describe("getSet/editSet - Ownership and Invariants", () => {
+  let t: TestConvex<typeof schema>;
+  const user1Subject = "user_1_test_subject";
+  const user2Subject = "user_2_test_subject";
+  let user1ExerciseId: Id<"exercises">;
+  let user2ExerciseId: Id<"exercises">;
+  let user1RepSetId: Id<"sets">;
+  let user1DurationSetId: Id<"sets">;
+  let user1BodyweightSetId: Id<"sets">;
+
+  beforeEach(async () => {
+    t = convexTest(schema, import.meta.glob("./**/*.ts"));
+
+    user1ExerciseId = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .action(api.exercises.createExercise, { name: "BENCH PRESS" });
+    user2ExerciseId = await t
+      .withIdentity({ subject: user2Subject, name: "User 2" })
+      .action(api.exercises.createExercise, { name: "SQUAT" });
+
+    user1RepSetId = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .mutation(api.sets.logSet, {
+        exerciseId: user1ExerciseId,
+        reps: 10,
+        weight: 135,
+        unit: "lbs",
+      });
+
+    user1DurationSetId = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .mutation(api.sets.logSet, {
+        exerciseId: user1ExerciseId,
+        duration: 60,
+      });
+
+    user1BodyweightSetId = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .mutation(api.sets.logSet, {
+        exerciseId: user1ExerciseId,
+        reps: 8,
+      });
+
+    await t
+      .withIdentity({ subject: user2Subject, name: "User 2" })
+      .mutation(api.sets.logSet, {
+        exerciseId: user2ExerciseId,
+        reps: 5,
+        weight: 225,
+        unit: "lbs",
+      });
+  });
+
+  test("getSet returns own set and hides foreign/unauthenticated access", async () => {
+    const ownSet = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .query(api.sets.getSet, { id: user1RepSetId });
+    expect(ownSet?._id).toBe(user1RepSetId);
+
+    const foreignSet = await t
+      .withIdentity({ subject: user2Subject, name: "User 2" })
+      .query(api.sets.getSet, { id: user1RepSetId });
+    expect(foreignSet).toBeNull();
+
+    const unauthenticated = await t.query(api.sets.getSet, {
+      id: user1RepSetId,
+    });
+    expect(unauthenticated).toBeNull();
+  });
+
+  test("editSet switches reps set to duration and clears reps", async () => {
+    await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .mutation(api.sets.editSet, { id: user1RepSetId, duration: 90 });
+
+    const updated = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .query(api.sets.getSet, { id: user1RepSetId });
+    expect(updated?.duration).toBe(90);
+    expect(updated?.reps).toBeUndefined();
+  });
+
+  test("editSet switches duration set to reps and clears duration", async () => {
+    await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .mutation(api.sets.editSet, { id: user1DurationSetId, reps: 12 });
+
+    const updated = await t
+      .withIdentity({ subject: user1Subject, name: "User 1" })
+      .query(api.sets.getSet, { id: user1DurationSetId });
+    expect(updated?.reps).toBe(12);
+    expect(updated?.duration).toBeUndefined();
+  });
+
+  test("editSet rejects payloads with both reps and duration", async () => {
+    await expect(
+      t
+        .withIdentity({ subject: user1Subject, name: "User 1" })
+        .mutation(api.sets.editSet, {
+          id: user1RepSetId,
+          reps: 10,
+          duration: 30,
+        })
+    ).rejects.toThrow("Must provide either reps or duration (not both)");
+  });
+
+  test("editSet requires unit when setting weight on a set without unit", async () => {
+    await expect(
+      t
+        .withIdentity({ subject: user1Subject, name: "User 1" })
+        .mutation(api.sets.editSet, {
+          id: user1BodyweightSetId,
+          weight: 45,
+        })
+    ).rejects.toThrow(
+      "Unit must be 'lbs' or 'kg' when weight is provided—choose a unit or clear the weight."
+    );
+  });
+
+  test("editSet enforces ownership", async () => {
+    await expect(
+      t
+        .withIdentity({ subject: user2Subject, name: "User 2" })
+        .mutation(api.sets.editSet, {
+          id: user1RepSetId,
+          reps: 6,
+        })
+    ).rejects.toThrow("Not authorized to access this set");
   });
 });
