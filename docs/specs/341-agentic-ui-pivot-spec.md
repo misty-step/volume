@@ -29,7 +29,7 @@ Deliver a chat-first product where the coach can handle logging, analytics, sett
 ### R1 — Agent runtime and orchestration
 
 - Coach API uses AI SDK 6 Agent loop with scoped tool factory.
-- Deterministic fallback remains available when runtime/provider is unavailable.
+- Runtime/provider unavailability returns explicit degraded errors; no deterministic parser fallback.
 
 ### R2 — Generative UI catalog
 
@@ -82,7 +82,7 @@ The epic can close only when all child issues above are complete and these check
 - Unit tests for tool factories, schema validation, memory adapters, action logging.
 - Integration tests for `/api/coach` JSON + SSE behavior.
 - UI tests for typed block rendering across themes.
-- Regression checks for fallback mode.
+- Regression checks for runtime-unavailable handling (no parser fallback).
 
 ## Risks
 
