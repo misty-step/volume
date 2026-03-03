@@ -344,3 +344,39 @@ export const deleteSet = mutation({
     await ctx.db.delete(args.id);
   },
 });
+
+// Get a single set by id (for tool pre-flight checks)
+export const getSet = query({
+  args: { id: v.id("sets") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const set = await ctx.db.get(args.id);
+    if (!set || set.userId !== identity.subject) return null;
+    return set;
+  },
+});
+
+// Edit an existing set — only update provided fields
+export const editSet = mutation({
+  args: {
+    id: v.id("sets"),
+    reps: v.optional(v.number()),
+    weight: v.optional(v.number()),
+    unit: v.optional(v.string()),
+    duration: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const set = await ctx.db.get(args.id);
+    requireOwnership(set, identity.subject, "set");
+
+    const patch: Record<string, unknown> = {};
+    if (args.reps !== undefined) patch.reps = args.reps;
+    if (args.weight !== undefined) patch.weight = args.weight;
+    if (args.unit !== undefined) patch.unit = args.unit;
+    if (args.duration !== undefined) patch.duration = args.duration;
+
+    await ctx.db.patch(args.id, patch);
+  },
+});

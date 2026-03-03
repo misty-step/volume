@@ -15,6 +15,11 @@ import {
   UpdatePreferencesArgsSchema,
   SetSoundArgsSchema,
   SetWeightUnitArgsSchema,
+  EditSetArgsSchema,
+  BulkLogArgsSchema,
+  ExerciseHistoryArgsSchema,
+  DateRangeSetsArgsSchema,
+  WorkoutSessionArgsSchema,
 } from "@/lib/coach/tools/schemas";
 import { runLogSetTool } from "@/lib/coach/tools/tool-log-set";
 import { runTodaySummaryTool } from "@/lib/coach/tools/tool-today-summary";
@@ -40,6 +45,11 @@ import { runSettingsOverviewTool } from "@/lib/coach/tools/tool-settings-overvie
 import { runUpdatePreferencesTool } from "@/lib/coach/tools/tool-update-preferences";
 import { runReportHistoryTool } from "@/lib/coach/tools/tool-report-history";
 import { runWorkspaceTool } from "@/lib/coach/tools/tool-workspace";
+import { runEditSetTool } from "@/lib/coach/tools/tool-edit-set";
+import { runBulkLogTool } from "@/lib/coach/tools/tool-bulk-log";
+import { runExerciseHistoryTool } from "@/lib/coach/tools/tool-exercise-history";
+import { runDateRangeSetsTool } from "@/lib/coach/tools/tool-date-range-sets";
+import { runWorkoutSessionTool } from "@/lib/coach/tools/tool-workout-session";
 
 export type ToolOutput = Record<string, unknown>;
 type ToolBlocksHandler = (toolName: string, blocks: CoachBlock[]) => void;
@@ -256,6 +266,45 @@ export function createCoachTools(
       inputSchema: ReportHistoryArgsSchema,
       execute: (args) =>
         runTool("get_report_history", () => runReportHistoryTool(args, ctx)),
+    }),
+
+    edit_set: tool({
+      description:
+        "Edit an existing set by set_id. Update reps, weight, or duration.",
+      inputSchema: EditSetArgsSchema,
+      execute: (args) => runTool("edit_set", () => runEditSetTool(args, ctx)),
+    }),
+
+    bulk_log: tool({
+      description:
+        "Log multiple sets in one turn. Use when user says they did multiple exercises or multiple sets.",
+      inputSchema: BulkLogArgsSchema,
+      execute: (args) => runTool("bulk_log", () => runBulkLogTool(args, ctx)),
+    }),
+
+    get_exercise_history: tool({
+      description:
+        "Get recent set history for a specific exercise with dates and stats.",
+      inputSchema: ExerciseHistoryArgsSchema,
+      execute: (args) =>
+        runTool("get_exercise_history", () =>
+          runExerciseHistoryTool(args, ctx)
+        ),
+    }),
+
+    get_date_range_sets: tool({
+      description: "Get sets within a date range (YYYY-MM-DD), grouped by day.",
+      inputSchema: DateRangeSetsArgsSchema,
+      execute: (args) =>
+        runTool("get_date_range_sets", () => runDateRangeSetsTool(args, ctx)),
+    }),
+
+    get_workout_session: tool({
+      description:
+        "Get all sets for a specific date (defaults to today) with volume totals.",
+      inputSchema: WorkoutSessionArgsSchema,
+      execute: (args) =>
+        runTool("get_workout_session", () => runWorkoutSessionTool(args, ctx)),
     }),
   };
 }

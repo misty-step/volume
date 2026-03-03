@@ -90,3 +90,50 @@ export const UpdatePreferencesArgsSchema = z.object({
 export const ReportHistoryArgsSchema = z.object({
   limit: z.number().int().min(1).max(30).optional(),
 });
+
+export const EditSetArgsSchema = z.object({
+  set_id: z.string().min(1),
+  reps: z.number().int().min(1).max(1000).optional(),
+  duration_seconds: z.number().int().min(1).max(86_400).optional(),
+  weight: z.number().min(0).max(5000).optional(),
+  unit: z.enum(["lbs", "kg"]).optional(),
+});
+
+export const BulkLogItemSchema = z
+  .object({
+    exercise_name: z.string().trim().min(1).max(80),
+    reps: z.number().int().min(1).max(1000).optional(),
+    duration_seconds: z.number().int().min(1).max(86_400).optional(),
+    weight: z.number().min(0).max(5000).optional(),
+    unit: z.enum(["lbs", "kg"]).optional(),
+  })
+  .refine(
+    (data) =>
+      (data.reps !== undefined && data.duration_seconds === undefined) ||
+      (data.reps === undefined && data.duration_seconds !== undefined),
+    {
+      message: "Provide exactly one of reps or duration_seconds.",
+      path: ["reps"],
+    }
+  );
+
+export const BulkLogArgsSchema = z.object({
+  sets: z.array(BulkLogItemSchema).min(1).max(20),
+});
+
+export const ExerciseHistoryArgsSchema = z.object({
+  exercise_name: z.string().trim().min(1).max(80),
+  limit: z.number().int().min(1).max(100).optional(),
+});
+
+export const DateRangeSetsArgsSchema = z.object({
+  start_date: z.string().describe("ISO date string YYYY-MM-DD"),
+  end_date: z.string().describe("ISO date string YYYY-MM-DD"),
+});
+
+export const WorkoutSessionArgsSchema = z.object({
+  date: z
+    .string()
+    .describe("ISO date string YYYY-MM-DD, defaults to today")
+    .optional(),
+});
