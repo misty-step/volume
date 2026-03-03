@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.1](https://github.com/misty-step/volume/compare/v1.14.0...v1.14.1) (2026-03-03)
+
+
+### Bug Fixes
+
+* keep mobile coach composer visible when keyboard opens ([#399](https://github.com/misty-step/volume/issues/399)) ([33cf07d](https://github.com/misty-step/volume/commit/33cf07dc1fee4a10492a0a876ecf7c0600758cb3))
+
 ## [1.14.0](https://github.com/misty-step/volume/compare/v1.13.0...v1.14.0) (2026-03-03)
 
 
