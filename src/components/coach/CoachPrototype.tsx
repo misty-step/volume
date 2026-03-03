@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useRef } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { PaperPlaneIcon, ReloadIcon } from "@radix-ui/react-icons";
@@ -44,6 +44,7 @@ export function CoachPrototype() {
   const searchParams = useSearchParams();
   const promptedRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const {
     input,
     setInput,
@@ -67,6 +68,28 @@ export function CoachPrototype() {
   const promptFromQuery = searchParams.get("prompt");
 
   useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const updateKeyboardOffset = () => {
+      const keyboardHeight = Math.max(
+        0,
+        window.innerHeight - viewport.height - viewport.offsetTop
+      );
+      setKeyboardOffset(keyboardHeight);
+    };
+
+    updateKeyboardOffset();
+    viewport.addEventListener("resize", updateKeyboardOffset);
+    viewport.addEventListener("scroll", updateKeyboardOffset);
+
+    return () => {
+      viewport.removeEventListener("resize", updateKeyboardOffset);
+      viewport.removeEventListener("scroll", updateKeyboardOffset);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!promptFromQuery) return;
     if (promptedRef.current === promptFromQuery) return;
     promptedRef.current = promptFromQuery;
@@ -76,6 +99,15 @@ export function CoachPrototype() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void sendPrompt(input);
+  }
+
+  function handleInputFocus() {
+    requestAnimationFrame(() => {
+      inputRef.current?.scrollIntoView({
+        block: "nearest",
+        inline: "nearest",
+      });
+    });
   }
 
   return (
@@ -217,6 +249,7 @@ export function CoachPrototype() {
         onSubmit={handleSubmit}
         data-testid="coach-composer"
         className="border-t border-border-subtle bg-card p-[8px] pb-[calc(8px+env(safe-area-inset-bottom,0px))] sticky bottom-0"
+        style={{ bottom: `${keyboardOffset}px` }}
       >
         <div className="flex items-center gap-2">
           <input
@@ -224,6 +257,7 @@ export function CoachPrototype() {
             autoFocus
             value={input}
             onChange={(event) => setInput(event.target.value)}
+            onFocus={handleInputFocus}
             placeholder='Log fast: "12 pushups @ 25 lbs"'
             disabled={isWorking}
             className="h-11 w-full flex-1 rounded-[--radius] border border-input bg-background/76 px-3 text-base text-foreground placeholder:text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
