@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { GOAL_TYPES } from "@/lib/goals";
 
 export const LogSetArgsSchema = z
   .object({
@@ -28,4 +29,64 @@ export const SetWeightUnitArgsSchema = z.object({
 
 export const SetSoundArgsSchema = z.object({
   enabled: z.boolean(),
+});
+
+export const HistoryArgsSchema = z.object({
+  limit: z.number().int().min(5).max(100).optional(),
+});
+
+export const ExerciseNameArgsSchema = z.object({
+  exercise_name: z.string().trim().min(1).max(80),
+});
+
+export const RenameExerciseArgsSchema = z.object({
+  exercise_name: z.string().trim().min(1).max(80),
+  new_name: z.string().trim().min(1).max(80),
+});
+
+export const MergeExerciseArgsSchema = z
+  .object({
+    source_exercise: z
+      .string()
+      .trim()
+      .min(1)
+      .max(80)
+      .describe("Exercise name to merge from (will be archived)"),
+    target_exercise: z
+      .string()
+      .trim()
+      .min(1)
+      .max(80)
+      .describe("Exercise name to merge into (will be kept)"),
+  })
+  .refine(
+    (data) =>
+      data.source_exercise.trim().toLowerCase() !==
+      data.target_exercise.trim().toLowerCase(),
+    { message: "Source and target exercises must be different." }
+  );
+
+export const UpdateMuscleGroupsArgsSchema = z.object({
+  exercise_name: z.string().trim().min(1).max(80),
+  muscle_groups: z.array(z.string().trim().min(1).max(40)).min(1).max(8),
+});
+
+export const DeleteSetArgsSchema = z
+  .object({
+    set_id: z.string().optional(),
+    exercise_name: z.string().optional(),
+  })
+  .refine((data) => !!data.set_id || !!data.exercise_name, {
+    message: "Provide set_id or exercise_name.",
+  });
+
+export const UpdatePreferencesArgsSchema = z.object({
+  goals: z.array(z.enum(GOAL_TYPES)).max(4).optional(),
+  custom_goal: z.string().trim().max(280).optional(),
+  training_split: z.string().trim().max(280).optional(),
+  coach_notes: z.string().trim().max(500).optional(),
+});
+
+export const ReportHistoryArgsSchema = z.object({
+  limit: z.number().int().min(1).max(30).optional(),
 });

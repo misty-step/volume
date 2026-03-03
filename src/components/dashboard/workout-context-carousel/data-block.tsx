@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/date-utils";
-import { BrutalistButton } from "@/components/brutalist";
+import { Button } from "@/components/ui/button";
 import { RotateCcw, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
 import { BarChart, type BarData } from "./bar-chart";
 import type { Set as WorkoutSet } from "@/types/domain";
@@ -130,7 +130,7 @@ export function DataBlock({
 
       {/* Action Buttons */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <BrutalistButton
+        <Button
           variant="outline"
           size="default"
           className="w-full"
@@ -138,10 +138,10 @@ export function DataBlock({
         >
           <RotateCcw className="w-4 h-4 mr-2" />
           Repeat
-        </BrutalistButton>
+        </Button>
 
-        <BrutalistButton
-          variant="danger"
+        <Button
+          variant="destructive"
           size="default"
           className="w-full"
           onClick={onUseSuggestion}
@@ -149,7 +149,7 @@ export function DataBlock({
         >
           <TrendingUp className="w-4 h-4 mr-2" />
           Use This
-        </BrutalistButton>
+        </Button>
       </div>
 
       {/* More Details Toggle */}

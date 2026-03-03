@@ -38,10 +38,10 @@ describe("runFocusSuggestionsTool", () => {
     );
   });
 
-  it("empty suggestions -> outputForModel.status==='ok', suggestions is empty array", async () => {
+  it("empty suggestions -> outputForModel.status==='ok', suggestion_count is 0", async () => {
     const result = await runFocusSuggestionsTool(makeCtx([]));
     expect(result.outputForModel.status).toBe("ok");
-    expect(result.outputForModel.suggestions).toEqual([]);
+    expect(result.outputForModel.suggestion_count).toBe(0);
   });
 
   it("non-empty suggestions -> table block is present", async () => {
@@ -59,7 +59,7 @@ describe("runFocusSuggestionsTool", () => {
     expect(table).toBeDefined();
   });
 
-  it("non-empty suggestions -> suggestions block with prompts", async () => {
+  it("non-empty suggestions -> no suggestions block (planner owns suggestions)", async () => {
     const suggestions = [
       {
         type: "muscle_group",
@@ -73,29 +73,10 @@ describe("runFocusSuggestionsTool", () => {
     const suggestionsBlock = result.blocks.find(
       (b) => b.type === "suggestions"
     );
-    expect(suggestionsBlock).toBeDefined();
-    const prompts = (suggestionsBlock as { prompts: string[] }).prompts;
-    expect(prompts.some((p) => p.includes("chest"))).toBe(true);
+    expect(suggestionsBlock).toBeUndefined();
   });
 
-  it("'Train Chest' title -> prompts include 'show trend for chest'", async () => {
-    const suggestions = [
-      {
-        type: "muscle_group",
-        priority: "high",
-        title: "Train Chest",
-        reason: "Chest has not been trained in 7 days",
-      },
-    ];
-    const result = await runFocusSuggestionsTool(makeCtx(suggestions));
-    const suggestionsBlock = result.blocks.find(
-      (b) => b.type === "suggestions"
-    );
-    const prompts = (suggestionsBlock as { prompts: string[] }).prompts;
-    expect(prompts).toContain("show trend for chest");
-  });
-
-  it("non-empty suggestions -> outputForModel suggestions length matches input", async () => {
+  it("non-empty suggestions -> outputForModel suggestion_count matches input length", async () => {
     const suggestions = [
       {
         type: "exercise",
@@ -112,7 +93,20 @@ describe("runFocusSuggestionsTool", () => {
     ];
     const result = await runFocusSuggestionsTool(makeCtx(suggestions));
     expect(result.outputForModel.status).toBe("ok");
-    const outSuggestions = result.outputForModel.suggestions as unknown[];
-    expect(outSuggestions).toHaveLength(2);
+    expect(result.outputForModel.suggestion_count).toBe(2);
+  });
+
+  it("non-empty suggestions -> no status block (header removed)", async () => {
+    const suggestions = [
+      {
+        type: "muscle_group",
+        priority: "high",
+        title: "Train Chest",
+        reason: "Chest has not been trained in 7 days",
+      },
+    ];
+    const result = await runFocusSuggestionsTool(makeCtx(suggestions));
+    const statusBlocks = result.blocks.filter((b) => b.type === "status");
+    expect(statusBlocks).toHaveLength(0);
   });
 });

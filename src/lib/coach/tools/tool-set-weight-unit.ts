@@ -17,10 +17,6 @@ export function runSetWeightUnitTool(rawArgs: unknown): ToolResult {
         action: "set_weight_unit",
         payload: { unit: args.unit },
       },
-      {
-        type: "suggestions",
-        prompts: ["10 pushups", "show today's summary"],
-      },
     ],
     outputForModel: {
       status: "ok",

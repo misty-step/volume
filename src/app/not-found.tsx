@@ -1,6 +1,6 @@
 "use client";
 
-import { BrutalistButton } from "@/components/brutalist/BrutalistButton";
+import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
@@ -91,9 +91,9 @@ export default function NotFound() {
           </h1>
 
           {/* Primary Action */}
-          <BrutalistButton variant="danger" size="lg" autoFocus asChild>
+          <Button variant="destructive" size="lg" autoFocus asChild>
             <Link href="/today">RETURN HOME</Link>
-          </BrutalistButton>
+          </Button>
         </motion.div>
       </div>
     </div>

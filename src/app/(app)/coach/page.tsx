@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { CoachPrototype } from "@/components/coach/CoachPrototype";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Volume – Coach Prototype",
+  title: "Volume - Agent Workspace",
 };
 
 export default function CoachPage() {
-  return <CoachPrototype />;
+  redirect("/today");
 }

@@ -4,11 +4,10 @@ import { useState, useRef, useEffect } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { type Id } from "../../../convex/_generated/dataModel";
-import { BrutalistCard } from "@/components/brutalist/BrutalistCard";
-import { BrutalistInput } from "@/components/brutalist/BrutalistInput";
-import { BrutalistButton } from "@/components/brutalist/BrutalistButton";
 import { Loader2 } from "lucide-react";
-import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { handleMutationError } from "@/lib/error-handler";
 
 interface FirstRunExperienceProps {
@@ -62,7 +61,7 @@ export function FirstRunExperience({
   };
 
   return (
-    <BrutalistCard className="p-6">
+    <Card className="p-6">
       <CardHeader>
         <CardTitle>Welcome to Volume</CardTitle>
       </CardHeader>
@@ -76,7 +75,7 @@ export function FirstRunExperience({
         {/* Inline Exercise Creator */}
         <div className="mb-6 p-4 border-3 border-concrete-black dark:border-concrete-white">
           <div className="space-y-3">
-            <BrutalistInput
+            <Input
               ref={inputRef}
               type="text"
               value={name}
@@ -85,9 +84,9 @@ export function FirstRunExperience({
               placeholder="Exercise name (e.g., Push-ups)"
               disabled={isCreating}
             />
-            <BrutalistButton
+            <Button
               type="button"
-              variant="danger"
+              variant="destructive"
               className="w-full"
               onClick={() => handleCreateExercise(name)}
               disabled={!name.trim() || isCreating}
@@ -100,7 +99,7 @@ export function FirstRunExperience({
               ) : (
                 "Create"
               )}
-            </BrutalistButton>
+            </Button>
           </div>
         </div>
 
@@ -111,7 +110,7 @@ export function FirstRunExperience({
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {POPULAR_EXERCISES.map((exercise) => (
-              <BrutalistButton
+              <Button
                 key={exercise}
                 type="button"
                 variant="outline"
@@ -120,11 +119,11 @@ export function FirstRunExperience({
                 disabled={isCreating}
               >
                 {exercise}
-              </BrutalistButton>
+              </Button>
             ))}
           </div>
         </div>
       </CardContent>
-    </BrutalistCard>
+    </Card>
   );
 }

@@ -1,72 +1,15 @@
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
-import {
-  aggregateExerciseTrend,
-  summarizeExercisePerformance,
-  summarizeTodaySets,
-} from "@/lib/coach/prototype-analytics";
-import { parseCoachIntent } from "@/lib/coach/prototype-intent";
 import type { CoachBlock } from "@/lib/coach/schema";
-import { ensureExercise, getRecentExerciseSets, getTodaySets } from "./data";
-import {
-  formatSecondsShort,
-  normalizeLookup,
-  toAnalyticsSetInput,
-  uniquePrompts,
-} from "./helpers";
+import { sanitizeError } from "@/lib/coach/sanitize-error";
+import { ensureExercise } from "./data";
+import { formatSecondsShort } from "./helpers";
 import { LogSetArgsSchema } from "./schemas";
 import type {
   CoachToolContext,
   CoachToolExecutionOptions,
-  SetInput,
   ToolResult,
 } from "./types";
-
-export function preferParsedSetArgs(
-  rawArgs: {
-    exercise_name: string;
-    reps?: number;
-    duration_seconds?: number;
-    weight?: number;
-    unit?: "lbs" | "kg";
-  },
-  userInput?: string
-): typeof rawArgs {
-  if (!userInput) return rawArgs;
-  const intent = parseCoachIntent(userInput);
-  if (intent.type !== "log_set") return rawArgs;
-  const parsedName = normalizeLookup(intent.exerciseName);
-  const toolName = normalizeLookup(rawArgs.exercise_name);
-  const matches =
-    parsedName === toolName ||
-    parsedName.includes(toolName) ||
-    toolName.includes(parsedName);
-  if (!matches) {
-    return rawArgs;
-  }
-
-  if (intent.reps !== undefined) {
-    return {
-      ...rawArgs,
-      reps: intent.reps,
-      duration_seconds: undefined,
-      weight: intent.weight ?? rawArgs.weight,
-      unit: intent.unit ?? rawArgs.unit,
-    };
-  }
-
-  if (intent.durationSeconds !== undefined) {
-    return {
-      ...rawArgs,
-      reps: undefined,
-      duration_seconds: intent.durationSeconds,
-      weight: intent.weight ?? rawArgs.weight,
-      unit: intent.unit ?? rawArgs.unit,
-    };
-  }
-
-  return rawArgs;
-}
 
 function toolErrorResult({
   title,
@@ -86,10 +29,6 @@ function toolErrorResult({
         title,
         description,
       },
-      {
-        type: "suggestions",
-        prompts: ["show today's summary", "what should I work on today?"],
-      },
     ],
     outputForModel: {
       status: "error",
@@ -97,19 +36,6 @@ function toolErrorResult({
       message: description,
     },
   };
-}
-
-function buildExerciseNameMap(
-  exercises: Array<{ _id: Id<"exercises">; name: string }>,
-  ensuredExerciseId: Id<"exercises">,
-  ensuredName: string
-): Map<string, string> {
-  const exerciseNames = new Map<string, string>();
-  for (const exercise of exercises) {
-    exerciseNames.set(String(exercise._id), exercise.name);
-  }
-  exerciseNames.set(String(ensuredExerciseId), ensuredName);
-  return exerciseNames;
 }
 
 function parseMutationId(value: unknown, label: string): string {
@@ -124,16 +50,15 @@ export async function runLogSetTool(
   ctx: CoachToolContext,
   options?: CoachToolExecutionOptions
 ): Promise<ToolResult> {
-  const args = preferParsedSetArgs(
-    LogSetArgsSchema.parse(rawArgs),
-    ctx.userInput
-  );
+  const args = LogSetArgsSchema.parse(rawArgs);
 
   let ensured: Awaited<ReturnType<typeof ensureExercise>>;
   try {
     ensured = await ensureExercise(ctx, args.exercise_name);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = sanitizeError(
+      error instanceof Error ? error.message : "Unknown error"
+    );
     return toolErrorResult({
       title: "Couldn't create that exercise",
       description: message,
@@ -158,8 +83,9 @@ export async function runLogSetTool(
     });
     setId = parseMutationId(loggedSetId, "set id") as Id<"sets">;
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unknown Convex error";
+    const message = sanitizeError(
+      error instanceof Error ? error.message : "Unknown Convex error"
+    );
     return toolErrorResult({
       title: "Couldn't log that set",
       description: message,
@@ -204,10 +130,9 @@ export async function runLogSetTool(
   const statusBlock: CoachBlock = {
     type: "status",
     tone: "success",
-    title: `Logged ${description}`,
-    description: ensured.created
-      ? `Created exercise "${ensured.exercise.name}" and saved your set.`
-      : "Set saved successfully.",
+    title: ensured.created
+      ? `Logged ${description} (new exercise)`
+      : `Logged ${description}`,
   };
   options?.onBlocks?.([statusBlock]);
 
@@ -227,127 +152,17 @@ export async function runLogSetTool(
     options?.onBlocks?.([undoWarningBlock]);
   }
 
-  let todaySets: SetInput[];
-  let recentSets: SetInput[];
-  try {
-    [todaySets, recentSets] = await Promise.all([
-      getTodaySets(ctx),
-      getRecentExerciseSets(ctx, ensured.exercise._id),
-    ]);
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unknown Convex error";
-    return {
-      summary: `Logged set for ${ensured.exercise.name}.`,
-      blocks: [
-        statusBlock,
-        ...(undoBlock ? [undoBlock] : []),
-        ...(undoWarningBlock ? [undoWarningBlock] : []),
-        {
-          type: "status",
-          tone: "info",
-          title: "Logged, but couldn't fetch summary",
-          description: message,
-        },
-        {
-          type: "suggestions",
-          prompts: uniquePrompts([
-            "show today's summary",
-            `show trend for ${ensured.exercise.name.toLowerCase()}`,
-          ]),
-        },
-      ],
-      outputForModel: {
-        status: "ok",
-        exercise_name: ensured.exercise.name,
-        created_exercise: ensured.created,
-        warning: "summary_fetch_failed",
-        warning_message: message,
-      },
-    };
-  }
-
-  const exercises = ensured.exercises;
-  const exerciseNames = buildExerciseNameMap(
-    exercises,
-    ensured.exercise._id,
-    ensured.exercise.name
-  );
-
-  const todaySummary = summarizeTodaySets(
-    todaySets.map((set) => toAnalyticsSetInput(set)),
-    exerciseNames
-  );
-  const performance = summarizeExercisePerformance(
-    recentSets.map((set) => toAnalyticsSetInput(set))
-  );
-  const trend = aggregateExerciseTrend(
-    recentSets.map((set) => toAnalyticsSetInput(set))
-  );
-
-  const metricsBlock: CoachBlock = {
-    type: "metrics",
-    title: "Immediate impact",
-    metrics: [
-      { label: "Today's sets", value: String(todaySummary.totalSets) },
-      { label: "Today's reps", value: String(todaySummary.totalReps) },
-      {
-        label: `${ensured.exercise.name} sets`,
-        value: String(performance.totalSets),
-      },
-      {
-        label:
-          trend.metric === "duration"
-            ? `${ensured.exercise.name} duration`
-            : `${ensured.exercise.name} reps`,
-        value:
-          trend.metric === "duration"
-            ? formatSecondsShort(performance.totalDurationSeconds)
-            : String(performance.totalReps),
-      },
-    ],
-  };
-  options?.onBlocks?.([metricsBlock]);
-
-  const trendBlock: CoachBlock = {
-    type: "trend",
-    title: `${ensured.exercise.name} 14-day trend`,
-    subtitle: "Generated from your deterministic set history.",
-    metric: trend.metric,
-    points: trend.points,
-    total: trend.total,
-    bestDay: trend.bestDay,
-  };
-  options?.onBlocks?.([trendBlock]);
-
-  const suggestionsBlock: CoachBlock = {
-    type: "suggestions",
-    prompts: uniquePrompts([
-      "what should I work on today?",
-      `show trend for ${ensured.exercise.name.toLowerCase()}`,
-      "show today's summary",
-    ]),
-  };
-  options?.onBlocks?.([suggestionsBlock]);
-
   return {
     summary: `Logged set for ${ensured.exercise.name}.`,
     blocks: [
       statusBlock,
       ...(undoBlock ? [undoBlock] : []),
       ...(undoWarningBlock ? [undoWarningBlock] : []),
-      metricsBlock,
-      trendBlock,
-      suggestionsBlock,
     ],
     outputForModel: {
       status: "ok",
       exercise_name: ensured.exercise.name,
       created_exercise: ensured.created,
-      today_sets: todaySummary.totalSets,
-      today_reps: todaySummary.totalReps,
-      trend_metric: trend.metric,
-      trend_total: trend.total,
       warning: undoWarningBlock ? "undo_unavailable" : undefined,
     },
   };

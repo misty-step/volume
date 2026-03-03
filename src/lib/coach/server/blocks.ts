@@ -5,14 +5,18 @@ import {
   type CoachBlock,
   type CoachTurnResponse,
 } from "@/lib/coach/schema";
+import { sanitizeError } from "@/lib/coach/sanitize-error";
 
 export function normalizeAssistantText(
   content: OpenAI.Chat.Completions.ChatCompletionMessage["content"]
 ): string {
-  if (typeof content === "string") {
-    return content.trim();
-  }
-  return "";
+  if (typeof content !== "string") return "";
+  // Some models embed reasoning in <think>...</think> tags via OpenRouter.
+  const stripped = content
+    .replace(/<think>[\s\S]*?<\/think>/gi, "") // complete blocks
+    .replace(/<think>[\s\S]*/gi, "") // unclosed opening (stream cut off)
+    .replace(/[\s\S]*<\/think>/gi, ""); // orphaned closing tag
+  return stripped.trim();
 }
 
 export function toolErrorBlocks(message: string): CoachBlock[] {
@@ -21,7 +25,7 @@ export function toolErrorBlocks(message: string): CoachBlock[] {
       type: "status",
       tone: "error",
       title: "Tool execution failed",
-      description: message,
+      description: sanitizeError(message),
     },
     {
       type: "suggestions",
@@ -36,16 +40,16 @@ export function buildCoachTurnResponse({
   toolsUsed,
   model,
   fallbackUsed,
+  responseMessages,
 }: {
   assistantText: string;
   blocks: CoachBlock[];
   toolsUsed: string[];
   model: string;
   fallbackUsed: boolean;
+  responseMessages?: unknown[];
 }): CoachTurnResponse {
-  const finalAssistantText = assistantText.trim()
-    ? assistantText.trim()
-    : "Done. I used your workout data and generated updates below.";
+  const finalAssistantText = assistantText.trim();
   const finalBlocks =
     blocks.length > 0
       ? blocks
@@ -54,6 +58,7 @@ export function buildCoachTurnResponse({
   return CoachTurnResponseSchema.parse({
     assistantText: finalAssistantText,
     blocks: finalBlocks,
+    responseMessages,
     trace: {
       toolsUsed,
       model,

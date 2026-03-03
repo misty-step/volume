@@ -8,10 +8,11 @@ import type { CoachToolContext, SetInput } from "./types";
 const RECENT_EXERCISE_SET_LIMIT = 120; // Keep tool output small while covering recent trend.
 
 export async function listExercises(
-  ctx: CoachToolContext
+  ctx: CoachToolContext,
+  options: { includeDeleted?: boolean } = {}
 ): Promise<Exercise[]> {
   return (await ctx.convex.query(api.exercises.listExercises, {
-    includeDeleted: false,
+    includeDeleted: options.includeDeleted ?? false,
   })) as Exercise[];
 }
 
@@ -35,21 +36,43 @@ export async function getRecentExerciseSets(
   })) as SetInput[];
 }
 
-export function findExercise(
-  exercises: Exercise[],
-  name: string
-): Exercise | null {
-  const normalized = normalizeLookup(name);
-  const exact = exercises.find(
-    (exercise) => normalizeLookup(exercise.name) === normalized
-  );
+/**
+ * Shared resolution: normalized match then semantic/LLM match.
+ * Returns null on no match (never creates).
+ */
+export async function findExercise(
+  ctx: CoachToolContext,
+  exerciseName: string,
+  exercises: Exercise[]
+): Promise<Exercise | null> {
+  const normalized = normalizeLookup(exerciseName);
+  const exact = exercises.find((e) => normalizeLookup(e.name) === normalized);
   if (exact) return exact;
 
-  const partial = exercises.find((exercise) => {
-    const candidate = normalizeLookup(exercise.name);
-    return candidate.includes(normalized) || normalized.includes(candidate);
-  });
-  return partial ?? null;
+  if (ctx.resolveExerciseName && exercises.length > 0) {
+    try {
+      const semantic = await ctx.resolveExerciseName(exerciseName, exercises);
+      if (semantic) return semantic;
+    } catch {
+      // LLM/network failure — fall through to null
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Resolve an exercise name to an existing exercise.
+ * Does NOT create exercises — use `ensureExercise` for create-on-miss.
+ */
+export async function resolveExercise(
+  ctx: CoachToolContext,
+  exerciseName: string,
+  options: { includeDeleted?: boolean } = {}
+): Promise<{ exercise: Exercise | null; exercises: Exercise[] }> {
+  const exercises = await listExercises(ctx, options);
+  const exercise = await findExercise(ctx, exerciseName, exercises);
+  return { exercise, exercises };
 }
 
 export async function ensureExercise(
@@ -57,10 +80,8 @@ export async function ensureExercise(
   exerciseName: string
 ): Promise<{ exercise: Exercise; created: boolean; exercises: Exercise[] }> {
   const exercises = await listExercises(ctx);
-  const matched = findExercise(exercises, exerciseName);
-  if (matched) {
-    return { exercise: matched, created: false, exercises };
-  }
+  const found = await findExercise(ctx, exerciseName, exercises);
+  if (found) return { exercise: found, created: false, exercises };
 
   const normalizedName = titleCase(exerciseName);
 
@@ -91,9 +112,9 @@ export async function ensureExercise(
   // Should be immediate, but be defensive: if the freshly created exercise can't
   // be fetched (auth or eventual consistency), fall back to a refreshed list.
   const refreshed = await listExercises(ctx);
-  const matchedAfterCreate =
-    refreshed.find((exercise) => exercise._id === createdId) ??
-    findExercise(refreshed, normalizedName);
+  const matchedAfterCreate = refreshed.find(
+    (exercise) => exercise._id === createdId
+  );
   if (matchedAfterCreate) {
     return {
       exercise: matchedAfterCreate,

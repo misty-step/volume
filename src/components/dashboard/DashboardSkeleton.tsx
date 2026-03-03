@@ -1,6 +1,6 @@
 "use client";
 
-import { BrutalistCard } from "@/components/brutalist";
+import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { LAYOUT } from "@/lib/layout-constants";
 import { motionPresets } from "@/lib/brutalist-motion";
@@ -38,7 +38,9 @@ interface DashboardSkeletonProps {
  *
  * @see Issue #150 - Loading skeleton structure doesn't match content
  */
-export function DashboardSkeleton({ isMobile = false }: DashboardSkeletonProps) {
+export function DashboardSkeleton({
+  isMobile = false,
+}: DashboardSkeletonProps) {
   // Mobile skeleton: sticky banner + history + FAB (no form card)
   if (isMobile) {
     return (
@@ -119,7 +121,7 @@ export function DashboardSkeleton({ isMobile = false }: DashboardSkeletonProps) 
 
       {/* Form skeleton - matches QuickLogForm structure */}
       <motion.div variants={motionPresets.cardEntrance}>
-        <BrutalistCard className="p-6">
+        <Card className="p-6">
           {/* Form header */}
           <div className={cn("h-8 w-24 mb-6", pulseBox)} />
 
@@ -166,12 +168,12 @@ export function DashboardSkeleton({ isMobile = false }: DashboardSkeletonProps) 
               />
             </div>
           </div>
-        </BrutalistCard>
+        </Card>
       </motion.div>
 
       {/* History skeleton - matches GroupedSetHistory structure */}
       <motion.div variants={motionPresets.cardEntrance}>
-        <BrutalistCard className="p-6">
+        <Card className="p-6">
           {/* Header */}
           <div className={cn("h-6 w-32 mb-4", pulseBox)} />
 
@@ -191,7 +193,7 @@ export function DashboardSkeleton({ isMobile = false }: DashboardSkeletonProps) 
               </div>
             </div>
           </div>
-        </BrutalistCard>
+        </Card>
       </motion.div>
     </motion.div>
   );

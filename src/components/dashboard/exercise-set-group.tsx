@@ -15,7 +15,7 @@ import {
   History,
 } from "lucide-react";
 import { type Id } from "../../../convex/_generated/dataModel";
-import { BrutalistButton } from "@/components/brutalist";
+import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -357,7 +357,7 @@ export function ExerciseSetGroup({
                         {/* Action buttons - larger and more prominent */}
                         <div className="flex items-center gap-2">
                           {showRepeat && (
-                            <BrutalistButton
+                            <Button
                               variant="outline"
                               size="sm"
                               onClick={() => onRepeat(set)}
@@ -370,9 +370,9 @@ export function ExerciseSetGroup({
                               <span className="text-xs font-mono uppercase">
                                 Repeat
                               </span>
-                            </BrutalistButton>
+                            </Button>
                           )}
-                          <BrutalistButton
+                          <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteClick(set)}
@@ -382,7 +382,7 @@ export function ExerciseSetGroup({
                             data-testid={`delete-set-btn-${set._id}`}
                           >
                             <Trash2 className="w-4 h-4" />
-                          </BrutalistButton>
+                          </Button>
                         </div>
                       </div>
                     </motion.div>

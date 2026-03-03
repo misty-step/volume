@@ -20,7 +20,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { BrutalistButton } from "@/components/brutalist";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useMobileViewport } from "@/hooks/useMobileViewport";
 import { type Exercise } from "@/types/domain";
@@ -40,7 +40,7 @@ const triggerButton = (
   open: boolean,
   isSubmitting: boolean
 ) => (
-  <BrutalistButton
+  <Button
     type="button"
     variant="outline"
     role="combobox"
@@ -54,7 +54,7 @@ const triggerButton = (
   >
     {selectedExercise?.name || "SELECT..."}
     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-  </BrutalistButton>
+  </Button>
 );
 
 const commandList = (
@@ -81,7 +81,7 @@ const commandList = (
           <span className="text-sm text-muted-foreground">
             No exercises found.
           </span>
-          <BrutalistButton
+          <Button
             variant="outline"
             className="min-h-[44px]"
             onClick={() => {
@@ -91,7 +91,7 @@ const commandList = (
             data-testid="exercise-create-empty"
           >
             Create “{searchValue || "New Exercise"}”
-          </BrutalistButton>
+          </Button>
         </div>
       </CommandEmpty>
       <CommandGroup className="[&_[cmdk-group-items]]:flex [&_[cmdk-group-items]]:flex-col [&_[cmdk-group-items]]:gap-1">
@@ -169,7 +169,7 @@ export function ExerciseSelectorDialog({
               Select Exercise
             </DialogTitle>
             <DialogClose asChild>
-              <BrutalistButton
+              <Button
                 variant="ghost"
                 size="icon"
                 aria-label="Close"
@@ -177,7 +177,7 @@ export function ExerciseSelectorDialog({
                 className="h-11 w-11 min-h-[44px] min-w-[44px]"
               >
                 <X className="h-5 w-5" />
-              </BrutalistButton>
+              </Button>
             </DialogClose>
           </div>
           <div className="flex-1 overflow-hidden flex flex-col p-4">

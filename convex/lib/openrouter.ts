@@ -17,17 +17,17 @@ export const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 /**
  * Model configurations for different use cases
  *
- * - MAIN: MiniMax M2.5 - Strong default agentic model (tools + JSON mode)
- * - CLASSIFICATION: MiniMax M2.5 - Simple + reliable for short classification calls
+ * - MAIN: Claude Sonnet 4.6 - Agentic tool composition and reasoning
+ * - CLASSIFICATION: MiniMax M2.5 - Cheap + reliable for short classification calls
  * - WRITER: Kimi K2.5 - Strong writing model (e.g. release notes)
  * - FALLBACK: GLM-5 - Alternate provider for resiliency
  */
-const DEFAULT_MODEL = "minimax/minimax-m2.5" as const;
+const DEFAULT_MODEL = "anthropic/claude-sonnet-4.6" as const;
 export const MODELS = {
-  /** MiniMax M2.5 - default for report generation and agentic flows */
+  /** Claude Sonnet 4.6 - default for agentic flows and tool composition */
   MAIN: DEFAULT_MODEL,
   /** MiniMax M2.5 - used for short classification calls */
-  CLASSIFICATION: DEFAULT_MODEL,
+  CLASSIFICATION: "minimax/minimax-m2.5",
   /** Kimi K2.5 - writing-focused tasks */
   WRITER: "moonshotai/kimi-k2.5",
   /** GLM-5 - alternate model for fallback paths */
@@ -40,6 +40,10 @@ export const MODELS = {
  */
 export const PRICING = {
   [DEFAULT_MODEL]: {
+    inputPerMillion: 3.0,
+    outputPerMillion: 15.0,
+  },
+  [MODELS.CLASSIFICATION]: {
     inputPerMillion: 0.3,
     outputPerMillion: 1.2,
   },
