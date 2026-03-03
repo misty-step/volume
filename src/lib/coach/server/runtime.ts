@@ -18,7 +18,7 @@ export function getCoachRuntime(): CoachRuntime | null {
   const openRouterKey = process.env.OPENROUTER_API_KEY;
   if (!openRouterKey) {
     console.warn(
-      "[Coach] OPENROUTER_API_KEY missing; using deterministic fallback."
+      "[Coach] OPENROUTER_API_KEY missing; coach runtime unavailable."
     );
     return null;
   }

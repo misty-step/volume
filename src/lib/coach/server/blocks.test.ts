@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  buildRuntimeUnavailableResponse,
   buildCoachTurnResponse,
   normalizeAssistantText,
   toolErrorBlocks,
@@ -88,6 +89,21 @@ describe("coach blocks helpers", () => {
     const blocks = toolErrorBlocks("nope");
     expect(blocks[0]).toMatchObject({ type: "status", tone: "error" });
     expect(blocks[1]).toMatchObject({ type: "suggestions" });
+  });
+
+  it("builds explicit runtime-unavailable response without fallback", () => {
+    const response = buildRuntimeUnavailableResponse();
+    expect(response.assistantText).toBe(
+      "I can't process that request right now."
+    );
+    expect(response.trace.model).toBe("runtime-unavailable");
+    expect(response.trace.fallbackUsed).toBe(false);
+    expect(response.trace.toolsUsed).toEqual([]);
+    expect(response.blocks[0]).toMatchObject({
+      type: "status",
+      tone: "error",
+      title: "Coach is unavailable",
+    });
   });
 
   it("preserves assistant text even when an undo block is present", () => {

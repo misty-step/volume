@@ -34,6 +34,32 @@ export function toolErrorBlocks(message: string): CoachBlock[] {
   ];
 }
 
+export function runtimeUnavailableBlocks(): CoachBlock[] {
+  return [
+    {
+      type: "status",
+      tone: "error",
+      title: "Coach is unavailable",
+      description:
+        "The AI runtime is unavailable right now. Please try again shortly.",
+    },
+    {
+      type: "suggestions",
+      prompts: DEFAULT_COACH_SUGGESTIONS,
+    },
+  ];
+}
+
+export function buildRuntimeUnavailableResponse(): CoachTurnResponse {
+  return buildCoachTurnResponse({
+    assistantText: "I can't process that request right now.",
+    blocks: runtimeUnavailableBlocks(),
+    toolsUsed: [],
+    model: "runtime-unavailable",
+    fallbackUsed: false,
+  });
+}
+
 export function buildCoachTurnResponse({
   assistantText,
   blocks,

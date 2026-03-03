@@ -23,6 +23,7 @@ describe("GET /api/health", () => {
     process.env.STRIPE_SECRET_KEY = "sk_test_123";
     process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
     process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
+    process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
 
     // Dynamic import to pick up env changes
     const { GET } = await import("./route");
@@ -33,6 +34,7 @@ describe("GET /api/health", () => {
     expect(data.status).toBe("pass");
     expect(data.checks.convex.status).toBe("pass");
     expect(data.checks.stripe.status).toBe("pass");
+    expect(data.checks.coachRuntime.status).toBe("pass");
     expect(data.checks.stripe.missing).toBeUndefined();
   });
 
@@ -41,6 +43,7 @@ describe("GET /api/health", () => {
     process.env.STRIPE_SECRET_KEY = "sk_test_123";
     process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
     process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
+    process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
 
     // Re-import to pick up env changes
     vi.resetModules();
@@ -56,11 +59,33 @@ describe("GET /api/health", () => {
     expect(data.checks.convex.status).toBe("fail");
   });
 
+  it("returns fail when OpenRouter key is missing", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
+    process.env.STRIPE_SECRET_KEY = "sk_test_123";
+    process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
+    process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
+    delete process.env.OPENROUTER_API_KEY;
+
+    vi.resetModules();
+    vi.mock("@/lib/version", () => ({
+      resolveVersion: () => "test-version-123",
+    }));
+    const { GET } = await import("./route");
+    const response = await GET();
+    const data = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(data.status).toBe("fail");
+    expect(data.checks.coachRuntime.status).toBe("fail");
+    expect(data.checks.coachRuntime.missing).toContain("OPENROUTER_API_KEY");
+  });
+
   it("returns fail when Stripe secret key is missing", async () => {
     process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
     delete process.env.STRIPE_SECRET_KEY;
     process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
     process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
+    process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
 
     vi.resetModules();
     vi.mock("@/lib/version", () => ({
@@ -81,6 +106,7 @@ describe("GET /api/health", () => {
     process.env.STRIPE_SECRET_KEY = "sk_test_123";
     delete process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID;
     delete process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID;
+    process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
 
     vi.resetModules();
     vi.mock("@/lib/version", () => ({
@@ -106,6 +132,7 @@ describe("GET /api/health", () => {
     process.env.STRIPE_SECRET_KEY = "sk_test_123";
     process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
     process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
+    process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
 
     vi.resetModules();
     vi.mock("@/lib/version", () => ({
@@ -124,6 +151,7 @@ describe("GET /api/health", () => {
     process.env.STRIPE_SECRET_KEY = "sk_test_123";
     process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
     process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
+    process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
 
     vi.resetModules();
     vi.mock("@/lib/version", () => ({

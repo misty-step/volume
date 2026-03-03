@@ -74,7 +74,7 @@ vi.mock("convex/browser", () => ({
 }));
 
 describe("POST /api/coach", () => {
-  it("streams deterministic fallback events over SSE", async () => {
+  it("streams runtime unavailable response over SSE", async () => {
     process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
     authMock.mockResolvedValue({
       userId: "user_123",
@@ -109,13 +109,22 @@ describe("POST /api/coach", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/event-stream");
 
-    const events: string[] = [];
+    const events: Array<{ type: string; model?: string; response?: any }> = [];
     for await (const event of readCoachStreamEvents(response.body!)) {
-      events.push(event.type);
+      events.push(event);
       if (event.type === "final") break;
     }
 
-    expect(events).toEqual(["start", "tool_start", "tool_result", "final"]);
+    expect(events[0]).toEqual({ type: "start", model: "runtime-unavailable" });
+    expect(events.at(-1)?.type).toBe("final");
+    const final = events.at(-1);
+    if (!final || final.type !== "final") {
+      throw new Error("expected final event");
+    }
+    expect(final.response.trace.model).toBe("runtime-unavailable");
+    expect(final.response.trace.fallbackUsed).toBe(false);
+    expect(final.response.trace.toolsUsed).toEqual([]);
+    expect(runPlannerTurnMock).not.toHaveBeenCalled();
   });
 
   it("streams agent events when runtime is available", async () => {
@@ -252,8 +261,15 @@ describe("POST /api/coach", () => {
     expect(response.status).toBe(200);
 
     const json = await response.json();
-    expect(json.assistantText).toBeTruthy();
-    expect(Array.isArray(json.blocks)).toBe(true);
+    expect(json.assistantText).toBe("I can't process that request right now.");
+    expect(json.trace.model).toBe("runtime-unavailable");
+    expect(json.trace.fallbackUsed).toBe(false);
+    expect(json.trace.toolsUsed).toEqual([]);
+    const status = json.blocks.find(
+      (block: { type?: string; title?: string }) => block.type === "status"
+    );
+    expect(status?.title).toBe("Coach is unavailable");
+    expect(runPlannerTurnMock).not.toHaveBeenCalled();
   });
 
   it("returns JSON from planner when runtime is available", async () => {
@@ -309,5 +325,61 @@ describe("POST /api/coach", () => {
     expect(json.trace.fallbackUsed).toBe(false);
     expect(json.trace.toolsUsed).toEqual(["get_today_summary"]);
     expect(runPlannerTurnMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns planner failure response without deterministic fallback", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    ConvexHttpClientMock.mockReturnValue(convex);
+
+    getCoachRuntimeMock.mockReturnValue({
+      model: {},
+      modelId: "mock-model-id",
+    });
+    runPlannerTurnMock.mockReset();
+    runPlannerTurnMock.mockResolvedValue({
+      kind: "error",
+      assistantText: "",
+      blocks: [],
+      toolsUsed: [],
+      errorMessage: "planner exploded",
+      hitToolLimit: false,
+      responseMessages: [],
+    });
+
+    const { POST } = await import("./route");
+
+    const request = new Request("https://volume.fitness/api/coach", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "summary" }],
+        preferences: {
+          unit: "lbs",
+          soundEnabled: true,
+          timezoneOffsetMinutes: 0,
+        },
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+
+    const json = await response.json();
+    expect(json.trace.model).toBe("mock-model-id (planner_failed)");
+    expect(json.trace.fallbackUsed).toBe(false);
+    expect(json.trace.toolsUsed).toEqual([]);
+    expect(json.blocks[0]?.type).toBe("status");
+    expect(json.blocks[0]?.title).toBe("Tool execution failed");
+    expect(
+      JSON.stringify(json.blocks)
+        .toLowerCase()
+        .includes("try a workout command")
+    ).toBe(false);
   });
 });

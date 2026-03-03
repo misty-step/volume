@@ -10,10 +10,10 @@ import {
   type CoachTurnResponse,
 } from "@/lib/coach/schema";
 import {
+  buildRuntimeUnavailableResponse,
   buildCoachTurnResponse,
   toolErrorBlocks,
 } from "@/lib/coach/server/blocks";
-import { runDeterministicFallback } from "@/lib/coach/server/fallback";
 import { runPlannerTurn } from "@/lib/coach/server/planner";
 import { getCoachRuntime } from "@/lib/coach/server/runtime";
 import {
@@ -207,18 +207,16 @@ export async function POST(request: Request) {
 
         try {
           if (!runtime) {
-            send({ type: "start", model: "fallback-deterministic" });
+            send({ type: "start", model: "runtime-unavailable" });
             sendComment(" ".repeat(SSE_PADDING_BYTES));
             if (turnController.signal.aborted) {
               send({ type: "error", message: "Turn aborted." });
               return;
             }
-            const fallbackResponse = await runDeterministicFallback(
-              latestUserText,
-              context,
-              send
-            );
-            send({ type: "final", response: fallbackResponse });
+            send({
+              type: "final",
+              response: buildRuntimeUnavailableResponse(),
+            });
             return;
           }
 
@@ -248,19 +246,14 @@ export async function POST(request: Request) {
             plannerResult.toolsUsed.length === 0 &&
             !aborted
           ) {
-            const fallbackResponse = await runDeterministicFallback(
-              latestUserText,
-              context
-            );
             response = CoachTurnResponseSchema.parse({
-              ...fallbackResponse,
-              blocks: [
-                ...toolErrorBlocks(plannerResult.errorMessage),
-                ...fallbackResponse.blocks,
-              ],
+              assistantText: "I hit an error while planning this turn.",
+              blocks: [...toolErrorBlocks(plannerResult.errorMessage)],
+              responseMessages: [],
               trace: {
-                ...fallbackResponse.trace,
-                model: `${fallbackResponse.trace.model} (planner_failed)`,
+                toolsUsed: [],
+                model: `${runtime.modelId} (planner_failed)`,
+                fallbackUsed: false,
               },
             });
           } else {
@@ -303,11 +296,7 @@ export async function POST(request: Request) {
   }
 
   if (!runtime) {
-    const fallbackResponse = await runDeterministicFallback(
-      latestUserText,
-      context
-    );
-    return NextResponse.json(fallbackResponse);
+    return NextResponse.json(buildRuntimeUnavailableResponse());
   }
 
   const history = parsed.data.messages;
@@ -350,20 +339,15 @@ export async function POST(request: Request) {
     plannerResult.toolsUsed.length === 0 &&
     !aborted
   ) {
-    const fallbackResponse = await runDeterministicFallback(
-      latestUserText,
-      context
-    );
     return NextResponse.json(
       CoachTurnResponseSchema.parse({
-        ...fallbackResponse,
-        blocks: [
-          ...toolErrorBlocks(plannerResult.errorMessage),
-          ...fallbackResponse.blocks,
-        ],
+        assistantText: "I hit an error while planning this turn.",
+        blocks: [...toolErrorBlocks(plannerResult.errorMessage)],
+        responseMessages: [],
         trace: {
-          ...fallbackResponse.trace,
-          model: `${fallbackResponse.trace.model} (planner_failed)`,
+          toolsUsed: [],
+          model: `${runtime.modelId} (planner_failed)`,
+          fallbackUsed: false,
         },
       } satisfies CoachTurnResponse)
     );
