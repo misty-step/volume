@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.0](https://github.com/misty-step/volume/compare/v1.14.1...v1.15.0) (2026-03-03)
+
+
+### Features
+
+* **coach:** tool wave 1 — edit, bulk log, and history tools ([#401](https://github.com/misty-step/volume/issues/401)) ([7832043](https://github.com/misty-step/volume/commit/7832043a2ffcdc4a5b880f365fc7354d8b58ccdc))
+
 ## [1.14.1](https://github.com/misty-step/volume/compare/v1.14.0...v1.14.1) (2026-03-03)
 
 
