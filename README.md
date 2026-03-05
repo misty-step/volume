@@ -46,6 +46,16 @@ bun run test --run    # Vitest (single run)
 
 Quality gates run automatically via Lefthook (pre-commit, pre-push).
 
+## Local Skills
+
+- Canonical local skills live in `.agents/skills/` (agent-agnostic source of truth).
+- `.claude/skills` points to that directory as an adapter.
+- Volume manual QA skill:
+
+```bash
+bash .agents/skills/volume-manual-qa/scripts/run-volume-manual-qa.sh
+```
+
 ## First-Time Setup
 
 ### 1. Convex (backend)

@@ -47,6 +47,7 @@ tsconfig.tsbuildinfo
 
 # clerk configuration (can include secrets)
 /.clerk/
+.claude/settings.local.json
 
 # Playwright auth
 e2e/.auth/*
