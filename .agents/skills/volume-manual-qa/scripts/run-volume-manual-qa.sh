@@ -10,6 +10,11 @@ DEV_LOG="$OUTPUT_DIR/dev.log"
 
 mkdir -p "$SCREEN_DIR" "$LOG_DIR"
 
+is_authenticated_url() {
+  local url="$1"
+  [[ "$url" == *"/today"* || "$url" == *"/coach"* ]]
+}
+
 if [[ ! -f "$ROOT_DIR/.env.local" ]]; then
   echo "Missing .env.local at $ROOT_DIR/.env.local" >&2
   exit 1
@@ -71,8 +76,12 @@ agent-browser --session "$SESSION" get url >"$LOG_DIR/post-login-url.txt"
 agent-browser --session "$SESSION" screenshot "$SCREEN_DIR/post-login.png" >/dev/null
 
 POST_LOGIN_URL="$(cat "$LOG_DIR/post-login-url.txt")"
-if [[ "$POST_LOGIN_URL" == *"/pricing?reason=expired"* ]]; then
+if [[ "$POST_LOGIN_URL" == *"/pricing?reason=expired"* || "$POST_LOGIN_URL" == *"/sign-in"* ]]; then
   echo "Authenticated user redirected to paywall: $POST_LOGIN_URL" >&2
+  exit 1
+fi
+if ! is_authenticated_url "$POST_LOGIN_URL"; then
+  echo "Authenticated user landed on unexpected route: $POST_LOGIN_URL" >&2
   exit 1
 fi
 
@@ -81,8 +90,12 @@ agent-browser --session "$SESSION" wait 1500 >/dev/null
 agent-browser --session "$SESSION" get url >"$LOG_DIR/today-url.txt"
 agent-browser --session "$SESSION" screenshot "$SCREEN_DIR/today.png" >/dev/null
 TODAY_URL="$(cat "$LOG_DIR/today-url.txt")"
-if [[ "$TODAY_URL" == *"/pricing?reason=expired"* ]]; then
+if [[ "$TODAY_URL" == *"/pricing?reason=expired"* || "$TODAY_URL" == *"/sign-in"* ]]; then
   echo "Today route redirected to paywall: $TODAY_URL" >&2
+  exit 1
+fi
+if ! is_authenticated_url "$TODAY_URL"; then
+  echo "Today route landed on unexpected URL: $TODAY_URL" >&2
   exit 1
 fi
 
@@ -91,12 +104,22 @@ agent-browser --session "$SESSION" wait 1500 >/dev/null
 agent-browser --session "$SESSION" get url >"$LOG_DIR/coach-url.txt"
 agent-browser --session "$SESSION" screenshot "$SCREEN_DIR/coach.png" >/dev/null
 COACH_URL="$(cat "$LOG_DIR/coach-url.txt")"
-if [[ "$COACH_URL" == *"/pricing?reason=expired"* ]]; then
+if [[ "$COACH_URL" == *"/pricing?reason=expired"* || "$COACH_URL" == *"/sign-in"* ]]; then
   echo "Coach route redirected to paywall: $COACH_URL" >&2
+  exit 1
+fi
+if ! is_authenticated_url "$COACH_URL"; then
+  echo "Coach route landed on unexpected URL: $COACH_URL" >&2
   exit 1
 fi
 
 agent-browser --session "$SESSION" is enabled 'button:has-text("Send")' >"$LOG_DIR/send-enabled-before.txt"
+SEND_BEFORE="$(cat "$LOG_DIR/send-enabled-before.txt")"
+if [[ "$SEND_BEFORE" != "false" ]]; then
+  echo "Coach send button should start disabled; got: $SEND_BEFORE" >&2
+  exit 1
+fi
+
 agent-browser --session "$SESSION" keyboard type "show today's summary" >/dev/null
 agent-browser --session "$SESSION" is enabled 'button:has-text("Send")' >"$LOG_DIR/send-enabled-after.txt"
 SEND_AFTER="$(cat "$LOG_DIR/send-enabled-after.txt")"
@@ -166,6 +189,10 @@ agent-browser --session "$SESSION" console >"$LOG_DIR/console.txt"
 agent-browser --session "$SESSION" errors >"$LOG_DIR/errors.txt"
 
 ERROR_LINES="$(wc -l <"$LOG_DIR/errors.txt" | tr -d ' ')"
+if [[ "$ERROR_LINES" -gt 0 ]]; then
+  echo "Manual QA failed: page errors detected ($ERROR_LINES)" >&2
+  exit 1
+fi
 
 cat >"$OUTPUT_DIR/report.md" <<EOF
 # Volume Manual QA Report
@@ -181,7 +208,7 @@ cat >"$OUTPUT_DIR/report.md" <<EOF
 - Post-login URL: $POST_LOGIN_URL
 - Today URL: $TODAY_URL
 - Coach URL: $COACH_URL
-- Send enabled before typing: $(cat "$LOG_DIR/send-enabled-before.txt")
+- Send enabled before typing: $SEND_BEFORE
 - Send enabled after typing: $SEND_AFTER
 - Page error lines: $ERROR_LINES
 - Semantic assistant text: $ASSISTANT_TEXT

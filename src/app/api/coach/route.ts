@@ -5,11 +5,11 @@ import { auth } from "@clerk/nextjs/server";
 import { api } from "@/../convex/_generated/api";
 import {
   CoachTurnRequestSchema,
-  CoachTurnResponseSchema,
   type CoachStreamEvent,
   type CoachTurnResponse,
 } from "@/lib/coach/schema";
 import {
+  buildPlannerFailedResponse,
   buildRuntimeUnavailableResponse,
   buildCoachTurnResponse,
   toolErrorBlocks,
@@ -246,15 +246,9 @@ export async function POST(request: Request) {
             plannerResult.toolsUsed.length === 0 &&
             !aborted
           ) {
-            response = CoachTurnResponseSchema.parse({
-              assistantText: "I hit an error while planning this turn.",
-              blocks: [...toolErrorBlocks(plannerResult.errorMessage)],
-              responseMessages: [],
-              trace: {
-                toolsUsed: [],
-                model: `${runtime.modelId} (planner_failed)`,
-                fallbackUsed: false,
-              },
+            response = buildPlannerFailedResponse({
+              modelId: runtime.modelId,
+              errorMessage: plannerResult.errorMessage,
             });
           } else {
             const model =
@@ -340,16 +334,10 @@ export async function POST(request: Request) {
     !aborted
   ) {
     return NextResponse.json(
-      CoachTurnResponseSchema.parse({
-        assistantText: "I hit an error while planning this turn.",
-        blocks: [...toolErrorBlocks(plannerResult.errorMessage)],
-        responseMessages: [],
-        trace: {
-          toolsUsed: [],
-          model: `${runtime.modelId} (planner_failed)`,
-          fallbackUsed: false,
-        },
-      } satisfies CoachTurnResponse)
+      buildPlannerFailedResponse({
+        modelId: runtime.modelId,
+        errorMessage: plannerResult.errorMessage,
+      })
     );
   }
 

@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildRuntimeUnavailableResponse,
+  buildPlannerFailedResponse,
   buildCoachTurnResponse,
   normalizeAssistantText,
   toolErrorBlocks,
@@ -103,6 +104,25 @@ describe("coach blocks helpers", () => {
       type: "status",
       tone: "error",
       title: "Coach is unavailable",
+    });
+  });
+
+  it("builds planner-failed response with standardized trace and error blocks", () => {
+    const response = buildPlannerFailedResponse({
+      modelId: "mock-model-id",
+      errorMessage: "planner exploded",
+    });
+
+    expect(response.assistantText).toBe(
+      "I hit an error while planning this turn."
+    );
+    expect(response.trace.model).toBe("mock-model-id (planner_failed)");
+    expect(response.trace.fallbackUsed).toBe(false);
+    expect(response.trace.toolsUsed).toEqual([]);
+    expect(response.blocks[0]).toMatchObject({
+      type: "status",
+      tone: "error",
+      title: "Tool execution failed",
     });
   });
 

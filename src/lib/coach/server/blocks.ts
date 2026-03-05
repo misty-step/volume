@@ -60,6 +60,23 @@ export function buildRuntimeUnavailableResponse(): CoachTurnResponse {
   });
 }
 
+export function buildPlannerFailedResponse({
+  modelId,
+  errorMessage,
+}: {
+  modelId: string;
+  errorMessage: string;
+}): CoachTurnResponse {
+  return buildCoachTurnResponse({
+    assistantText: "I hit an error while planning this turn.",
+    blocks: toolErrorBlocks(errorMessage),
+    toolsUsed: [],
+    model: `${modelId} (planner_failed)`,
+    fallbackUsed: false,
+    responseMessages: [],
+  });
+}
+
 export function buildCoachTurnResponse({
   assistantText,
   blocks,

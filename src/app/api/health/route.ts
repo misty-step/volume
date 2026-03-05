@@ -55,7 +55,7 @@ export async function GET() {
 
   const stripeHealthy = stripeConfigured && !keyEnvMismatch;
   const openRouterApiKey = process.env.OPENROUTER_API_KEY;
-  const coachRuntimeHealthy = Boolean(openRouterApiKey);
+  const coachRuntimeHealthy = Boolean(openRouterApiKey?.trim());
 
   const isHealthy = convexHealthy && stripeHealthy && coachRuntimeHealthy;
 
