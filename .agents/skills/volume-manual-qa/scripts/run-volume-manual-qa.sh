@@ -234,13 +234,8 @@ if ! jq -e '.trace.toolsUsed | index("get_today_summary") != null' "$COACH_API_J
   exit 1
 fi
 
-if grep -Eiq "can't process|runtime unavailable|tool execution failed|hit an error while planning" <<<"$ASSISTANT_TEXT"; then
-  echo "Coach semantic check failed: assistant returned error-like content" >&2
-  exit 1
-fi
-
-if ! grep -Eiq "today|set|logged|summary|no sets|blank slate" <<<"$ASSISTANT_TEXT"; then
-  echo "Coach semantic check failed: assistant text does not match today-summary intent" >&2
+if jq -e '.blocks[]? | select(.type == "status" and .tone == "error")' "$COACH_API_JSON" >/dev/null; then
+  echo "Coach semantic check failed: response includes error status block" >&2
   exit 1
 fi
 

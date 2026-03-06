@@ -454,4 +454,151 @@ describe("POST /api/coach", () => {
     expect(final.response.trace.toolsUsed).toEqual([]);
     expect(final.response.blocks[0]?.title).toBe("Tool execution failed");
   });
+
+  it("returns partial planner failure response when tools already ran", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    ConvexHttpClientMock.mockReturnValue(convex);
+
+    getCoachRuntimeMock.mockReturnValue({
+      model: {},
+      modelId: "mock-model-id",
+    });
+    runPlannerTurnMock.mockReset();
+    runPlannerTurnMock.mockResolvedValue({
+      kind: "error",
+      assistantText: "",
+      blocks: [
+        {
+          type: "metrics",
+          title: "Today",
+          metrics: [{ label: "Sets", value: "1" }],
+        },
+      ],
+      toolsUsed: ["get_today_summary"],
+      errorMessage: "planner exploded",
+      hitToolLimit: false,
+      responseMessages: [{ role: "assistant", content: "partial" }],
+    });
+
+    const { POST } = await import("./route");
+
+    const request = new Request("https://volume.fitness/api/coach", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "summary" }],
+        preferences: {
+          unit: "lbs",
+          soundEnabled: true,
+          timezoneOffsetMinutes: 0,
+        },
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+
+    const json = await response.json();
+    expect(json.assistantText).toBe(
+      "I hit an error while finishing that. Here's what I have so far."
+    );
+    expect(json.trace.model).toBe("mock-model-id (planner_failed_partial)");
+    expect(json.trace.fallbackUsed).toBe(false);
+    expect(json.trace.toolsUsed).toEqual(["get_today_summary"]);
+    expect(json.blocks[0]?.title).toBe("Tool execution failed");
+    const metricsBlock = json.blocks.find(
+      (block: { type?: string; title?: string }) => block.type === "metrics"
+    );
+    expect(metricsBlock?.title).toBe("Today");
+  });
+
+  it("streams partial planner failure response when tools already ran", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    ConvexHttpClientMock.mockReturnValue(convex);
+
+    getCoachRuntimeMock.mockReturnValue({
+      model: {},
+      modelId: "mock-model-id",
+    });
+    runPlannerTurnMock.mockReset();
+    runPlannerTurnMock.mockResolvedValue({
+      kind: "error",
+      assistantText: "",
+      blocks: [
+        {
+          type: "metrics",
+          title: "Today",
+          metrics: [{ label: "Sets", value: "1" }],
+        },
+      ],
+      toolsUsed: ["get_today_summary"],
+      errorMessage: "planner exploded",
+      hitToolLimit: false,
+      responseMessages: [{ role: "assistant", content: "partial" }],
+    });
+
+    const { POST } = await import("./route");
+
+    const request = new Request("https://volume.fitness/api/coach", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "summary" }],
+        preferences: {
+          unit: "lbs",
+          soundEnabled: true,
+          timezoneOffsetMinutes: 0,
+        },
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+
+    const events: Array<{
+      type: string;
+      message?: string;
+      model?: string;
+      response?: any;
+    }> = [];
+    for await (const event of readCoachStreamEvents(response.body!)) {
+      events.push(event);
+      if (event.type === "final") break;
+    }
+
+    expect(events[0]).toEqual({ type: "start", model: "mock-model-id" });
+    expect(events[1]).toEqual({
+      type: "error",
+      message: "planner exploded",
+    });
+    const final = events.at(-1);
+    if (!final || final.type !== "final") {
+      throw new Error("expected final event");
+    }
+    expect(final.response.trace.model).toBe(
+      "mock-model-id (planner_failed_partial)"
+    );
+    expect(final.response.trace.fallbackUsed).toBe(false);
+    expect(final.response.trace.toolsUsed).toEqual(["get_today_summary"]);
+    expect(final.response.blocks[0]?.title).toBe("Tool execution failed");
+    const metricsBlock = final.response.blocks.find(
+      (block: { type?: string; title?: string }) => block.type === "metrics"
+    );
+    expect(metricsBlock?.title).toBe("Today");
+  });
 });

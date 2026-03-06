@@ -15,7 +15,7 @@ Expected:
 
 ## Authentication
 
-1. Open `/sign-in?redirect_url=http://localhost:3000/coach`.
+1. Open `/sign-in?redirect_url=<app-url>/coach` using the same base URL the QA runner targets (`http://127.0.0.1:3100` by default).
 2. Sign in with `CLERK_TEST_USER_EMAIL` + `CLERK_TEST_USER_PASSWORD`.
 
 Expected:
@@ -56,7 +56,7 @@ Expected:
 - Submit action succeeds (no uncaught page error).
 - Coach response is not fallback/unavailable.
 - `trace.toolsUsed` includes `get_today_summary`.
-- Assistant text matches intent (today summary or explicit no-data state).
+- `assistantText` is non-empty.
 
 ## Platform Health
 

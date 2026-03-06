@@ -10,9 +10,9 @@ import {
 } from "@/lib/coach/schema";
 import {
   buildPlannerFailedResponse,
+  buildPlannerPartialFailureResponse,
   buildRuntimeUnavailableResponse,
   buildCoachTurnResponse,
-  toolErrorBlocks,
 } from "@/lib/coach/server/blocks";
 import { runPlannerTurn } from "@/lib/coach/server/planner";
 import { getCoachRuntime } from "@/lib/coach/server/runtime";
@@ -251,30 +251,23 @@ export async function POST(request: Request) {
               errorMessage: plannerResult.errorMessage,
             });
           } else {
-            const model =
+            response =
               plannerResult.kind === "error"
-                ? `${runtime.modelId} (planner_failed_partial)`
-                : runtime.modelId;
-
-            const assistantText =
-              plannerResult.kind === "error"
-                ? "I hit an error while finishing that. Here's what I have so far."
-                : plannerResult.assistantText;
-
-            response = buildCoachTurnResponse({
-              assistantText,
-              blocks:
-                plannerResult.kind === "error"
-                  ? [
-                      ...toolErrorBlocks(plannerResult.errorMessage),
-                      ...plannerResult.blocks,
-                    ]
-                  : plannerResult.blocks,
-              toolsUsed: plannerResult.toolsUsed,
-              model,
-              fallbackUsed: false,
-              responseMessages: plannerResult.responseMessages,
-            });
+                ? buildPlannerPartialFailureResponse({
+                    modelId: runtime.modelId,
+                    errorMessage: plannerResult.errorMessage,
+                    blocks: plannerResult.blocks,
+                    toolsUsed: plannerResult.toolsUsed,
+                    responseMessages: plannerResult.responseMessages,
+                  })
+                : buildCoachTurnResponse({
+                    assistantText: plannerResult.assistantText,
+                    blocks: plannerResult.blocks,
+                    toolsUsed: plannerResult.toolsUsed,
+                    model: runtime.modelId,
+                    fallbackUsed: false,
+                    responseMessages: plannerResult.responseMessages,
+                  });
           }
 
           send({ type: "final", response });
@@ -341,26 +334,23 @@ export async function POST(request: Request) {
     );
   }
 
-  const response = buildCoachTurnResponse({
-    assistantText:
-      plannerResult.kind === "error"
-        ? "I hit an error while finishing that. Here's what I have so far."
-        : plannerResult.assistantText,
-    blocks:
-      plannerResult.kind === "error"
-        ? [
-            ...toolErrorBlocks(plannerResult.errorMessage),
-            ...plannerResult.blocks,
-          ]
-        : plannerResult.blocks,
-    toolsUsed: plannerResult.toolsUsed,
-    model:
-      plannerResult.kind === "error"
-        ? `${runtime.modelId} (planner_failed_partial)`
-        : runtime.modelId,
-    fallbackUsed: false,
-    responseMessages: plannerResult.responseMessages,
-  });
+  const response =
+    plannerResult.kind === "error"
+      ? buildPlannerPartialFailureResponse({
+          modelId: runtime.modelId,
+          errorMessage: plannerResult.errorMessage,
+          blocks: plannerResult.blocks,
+          toolsUsed: plannerResult.toolsUsed,
+          responseMessages: plannerResult.responseMessages,
+        })
+      : buildCoachTurnResponse({
+          assistantText: plannerResult.assistantText,
+          blocks: plannerResult.blocks,
+          toolsUsed: plannerResult.toolsUsed,
+          model: runtime.modelId,
+          fallbackUsed: false,
+          responseMessages: plannerResult.responseMessages,
+        });
 
   return NextResponse.json(response);
 }

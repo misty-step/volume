@@ -78,6 +78,30 @@ export function buildPlannerFailedResponse({
   });
 }
 
+export function buildPlannerPartialFailureResponse({
+  modelId,
+  errorMessage,
+  blocks,
+  toolsUsed,
+  responseMessages,
+}: {
+  modelId: string;
+  errorMessage: string;
+  blocks: CoachBlock[];
+  toolsUsed: string[];
+  responseMessages?: unknown[];
+}): CoachTurnResponse {
+  return buildCoachTurnResponse({
+    assistantText:
+      "I hit an error while finishing that. Here's what I have so far.",
+    blocks: [...toolErrorBlocks(errorMessage), ...blocks],
+    toolsUsed,
+    model: `${modelId} (planner_failed_partial)`,
+    fallbackUsed: false,
+    responseMessages,
+  });
+}
+
 export function buildCoachTurnResponse({
   assistantText,
   blocks,
