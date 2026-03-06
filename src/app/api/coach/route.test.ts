@@ -511,6 +511,9 @@ describe("POST /api/coach", () => {
     expect(json.trace.model).toBe("mock-model-id (planner_failed_partial)");
     expect(json.trace.fallbackUsed).toBe(false);
     expect(json.trace.toolsUsed).toEqual(["get_today_summary"]);
+    expect(json.responseMessages).toEqual([
+      { role: "assistant", content: "partial" },
+    ]);
     expect(json.blocks[0]?.title).toBe("Tool execution failed");
     const metricsBlock = json.blocks.find(
       (block: { type?: string; title?: string }) => block.type === "metrics"
@@ -595,6 +598,9 @@ describe("POST /api/coach", () => {
     );
     expect(final.response.trace.fallbackUsed).toBe(false);
     expect(final.response.trace.toolsUsed).toEqual(["get_today_summary"]);
+    expect(final.response.responseMessages).toEqual([
+      { role: "assistant", content: "partial" },
+    ]);
     expect(final.response.blocks[0]?.title).toBe("Tool execution failed");
     const metricsBlock = final.response.blocks.find(
       (block: { type?: string; title?: string }) => block.type === "metrics"

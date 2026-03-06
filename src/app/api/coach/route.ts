@@ -27,6 +27,47 @@ import { generateText } from "ai";
 import type { Exercise } from "@/types/domain";
 
 const COACH_TURN_TIMEOUT_MS = 60_000;
+type PlannerResult = Awaited<ReturnType<typeof runPlannerTurn>>;
+
+function buildPlannerResultResponse({
+  plannerResult,
+  modelId,
+  aborted,
+}: {
+  plannerResult: PlannerResult;
+  modelId: string;
+  aborted: boolean;
+}): CoachTurnResponse {
+  if (
+    plannerResult.kind === "error" &&
+    plannerResult.toolsUsed.length === 0 &&
+    !aborted
+  ) {
+    return buildPlannerFailedResponse({
+      modelId,
+      errorMessage: plannerResult.errorMessage,
+    });
+  }
+
+  if (plannerResult.kind === "error") {
+    return buildPlannerPartialFailureResponse({
+      modelId,
+      errorMessage: plannerResult.errorMessage,
+      blocks: plannerResult.blocks,
+      toolsUsed: plannerResult.toolsUsed,
+      responseMessages: plannerResult.responseMessages,
+    });
+  }
+
+  return buildCoachTurnResponse({
+    assistantText: plannerResult.assistantText,
+    blocks: plannerResult.blocks,
+    toolsUsed: plannerResult.toolsUsed,
+    model: modelId,
+    fallbackUsed: false,
+    responseMessages: plannerResult.responseMessages,
+  });
+}
 
 export async function POST(request: Request) {
   const { userId, getToken } = await auth();
@@ -240,35 +281,11 @@ export async function POST(request: Request) {
 
           const aborted = turnController.signal.aborted;
 
-          let response: CoachTurnResponse;
-          if (
-            plannerResult.kind === "error" &&
-            plannerResult.toolsUsed.length === 0 &&
-            !aborted
-          ) {
-            response = buildPlannerFailedResponse({
-              modelId: runtime.modelId,
-              errorMessage: plannerResult.errorMessage,
-            });
-          } else {
-            response =
-              plannerResult.kind === "error"
-                ? buildPlannerPartialFailureResponse({
-                    modelId: runtime.modelId,
-                    errorMessage: plannerResult.errorMessage,
-                    blocks: plannerResult.blocks,
-                    toolsUsed: plannerResult.toolsUsed,
-                    responseMessages: plannerResult.responseMessages,
-                  })
-                : buildCoachTurnResponse({
-                    assistantText: plannerResult.assistantText,
-                    blocks: plannerResult.blocks,
-                    toolsUsed: plannerResult.toolsUsed,
-                    model: runtime.modelId,
-                    fallbackUsed: false,
-                    responseMessages: plannerResult.responseMessages,
-                  });
-          }
+          const response = buildPlannerResultResponse({
+            plannerResult,
+            modelId: runtime.modelId,
+            aborted,
+          });
 
           send({ type: "final", response });
         } finally {
@@ -305,7 +322,7 @@ export async function POST(request: Request) {
   };
   request.signal.addEventListener("abort", abortHandler);
 
-  let plannerResult: Awaited<ReturnType<typeof runPlannerTurn>>;
+  let plannerResult: PlannerResult;
   try {
     plannerResult = await runPlannerTurn({
       runtime,
@@ -321,36 +338,11 @@ export async function POST(request: Request) {
 
   const aborted = turnController.signal.aborted;
 
-  if (
-    plannerResult.kind === "error" &&
-    plannerResult.toolsUsed.length === 0 &&
-    !aborted
-  ) {
-    return NextResponse.json(
-      buildPlannerFailedResponse({
-        modelId: runtime.modelId,
-        errorMessage: plannerResult.errorMessage,
-      })
-    );
-  }
-
-  const response =
-    plannerResult.kind === "error"
-      ? buildPlannerPartialFailureResponse({
-          modelId: runtime.modelId,
-          errorMessage: plannerResult.errorMessage,
-          blocks: plannerResult.blocks,
-          toolsUsed: plannerResult.toolsUsed,
-          responseMessages: plannerResult.responseMessages,
-        })
-      : buildCoachTurnResponse({
-          assistantText: plannerResult.assistantText,
-          blocks: plannerResult.blocks,
-          toolsUsed: plannerResult.toolsUsed,
-          model: runtime.modelId,
-          fallbackUsed: false,
-          responseMessages: plannerResult.responseMessages,
-        });
-
-  return NextResponse.json(response);
+  return NextResponse.json(
+    buildPlannerResultResponse({
+      plannerResult,
+      modelId: runtime.modelId,
+      aborted,
+    })
+  );
 }

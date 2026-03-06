@@ -148,6 +148,49 @@ describe("GET /api/health", () => {
     );
   });
 
+  it.each([
+    {
+      env: "production",
+      key: "sk_test_123",
+      expectedWarning: "KEY/ENV MISMATCH: test key in production",
+    },
+    {
+      env: "development",
+      key: "sk_live_123",
+      expectedWarning: "KEY/ENV MISMATCH: live key in development",
+    },
+  ])(
+    "returns fail when Stripe key mode mismatches deployment env ($env)",
+    async ({ env, key, expectedWarning }) => {
+      process.env.VERCEL_ENV = env;
+      process.env.NODE_ENV =
+        env === "production" ? "production" : "development";
+      process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
+      process.env.STRIPE_SECRET_KEY = key;
+      process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
+      process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
+      process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
+
+      vi.resetModules();
+      vi.mock("@/lib/version", () => ({
+        resolveVersion: () => "test-version-123",
+      }));
+      const { GET } = await import("./route");
+      const response = await GET();
+      const data = await response.json();
+
+      expect(response.status).toBe(503);
+      expect(data.status).toBe("fail");
+      expect(data.checks.stripe.status).toBe("fail");
+      expect(data.checks.stripe.keyMode).toBe(
+        key.startsWith("sk_live_") ? "live" : "test"
+      );
+      expect(data.checks.stripe.environment).toBe(env);
+      expect(data.checks.stripe.warning).toBe(expectedWarning);
+      expect(data.checks.coachRuntime.status).toBe("pass");
+    }
+  );
+
   it("includes version and timestamp in response", async () => {
     process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
     process.env.STRIPE_SECRET_KEY = "sk_test_123";
