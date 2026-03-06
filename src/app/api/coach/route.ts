@@ -5,15 +5,15 @@ import { auth } from "@clerk/nextjs/server";
 import { api } from "@/../convex/_generated/api";
 import {
   CoachTurnRequestSchema,
-  CoachTurnResponseSchema,
   type CoachStreamEvent,
   type CoachTurnResponse,
 } from "@/lib/coach/schema";
 import {
+  buildPlannerFailedResponse,
+  buildPlannerPartialFailureResponse,
+  buildRuntimeUnavailableResponse,
   buildCoachTurnResponse,
-  toolErrorBlocks,
 } from "@/lib/coach/server/blocks";
-import { runDeterministicFallback } from "@/lib/coach/server/fallback";
 import { runPlannerTurn } from "@/lib/coach/server/planner";
 import { getCoachRuntime } from "@/lib/coach/server/runtime";
 import {
@@ -27,6 +27,47 @@ import { generateText } from "ai";
 import type { Exercise } from "@/types/domain";
 
 const COACH_TURN_TIMEOUT_MS = 60_000;
+type PlannerResult = Awaited<ReturnType<typeof runPlannerTurn>>;
+
+function buildPlannerResultResponse({
+  plannerResult,
+  modelId,
+  aborted,
+}: {
+  plannerResult: PlannerResult;
+  modelId: string;
+  aborted: boolean;
+}): CoachTurnResponse {
+  if (
+    plannerResult.kind === "error" &&
+    plannerResult.toolsUsed.length === 0 &&
+    !aborted
+  ) {
+    return buildPlannerFailedResponse({
+      modelId,
+      errorMessage: plannerResult.errorMessage,
+    });
+  }
+
+  if (plannerResult.kind === "error") {
+    return buildPlannerPartialFailureResponse({
+      modelId,
+      errorMessage: plannerResult.errorMessage,
+      blocks: plannerResult.blocks,
+      toolsUsed: plannerResult.toolsUsed,
+      responseMessages: plannerResult.responseMessages,
+    });
+  }
+
+  return buildCoachTurnResponse({
+    assistantText: plannerResult.assistantText,
+    blocks: plannerResult.blocks,
+    toolsUsed: plannerResult.toolsUsed,
+    model: modelId,
+    fallbackUsed: false,
+    responseMessages: plannerResult.responseMessages,
+  });
+}
 
 export async function POST(request: Request) {
   const { userId, getToken } = await auth();
@@ -207,18 +248,16 @@ export async function POST(request: Request) {
 
         try {
           if (!runtime) {
-            send({ type: "start", model: "fallback-deterministic" });
+            send({ type: "start", model: "runtime-unavailable" });
             sendComment(" ".repeat(SSE_PADDING_BYTES));
             if (turnController.signal.aborted) {
               send({ type: "error", message: "Turn aborted." });
               return;
             }
-            const fallbackResponse = await runDeterministicFallback(
-              latestUserText,
-              context,
-              send
-            );
-            send({ type: "final", response: fallbackResponse });
+            send({
+              type: "final",
+              response: buildRuntimeUnavailableResponse(),
+            });
             return;
           }
 
@@ -242,53 +281,11 @@ export async function POST(request: Request) {
 
           const aborted = turnController.signal.aborted;
 
-          let response: CoachTurnResponse;
-          if (
-            plannerResult.kind === "error" &&
-            plannerResult.toolsUsed.length === 0 &&
-            !aborted
-          ) {
-            const fallbackResponse = await runDeterministicFallback(
-              latestUserText,
-              context
-            );
-            response = CoachTurnResponseSchema.parse({
-              ...fallbackResponse,
-              blocks: [
-                ...toolErrorBlocks(plannerResult.errorMessage),
-                ...fallbackResponse.blocks,
-              ],
-              trace: {
-                ...fallbackResponse.trace,
-                model: `${fallbackResponse.trace.model} (planner_failed)`,
-              },
-            });
-          } else {
-            const model =
-              plannerResult.kind === "error"
-                ? `${runtime.modelId} (planner_failed_partial)`
-                : runtime.modelId;
-
-            const assistantText =
-              plannerResult.kind === "error"
-                ? "I hit an error while finishing that. Here's what I have so far."
-                : plannerResult.assistantText;
-
-            response = buildCoachTurnResponse({
-              assistantText,
-              blocks:
-                plannerResult.kind === "error"
-                  ? [
-                      ...toolErrorBlocks(plannerResult.errorMessage),
-                      ...plannerResult.blocks,
-                    ]
-                  : plannerResult.blocks,
-              toolsUsed: plannerResult.toolsUsed,
-              model,
-              fallbackUsed: false,
-              responseMessages: plannerResult.responseMessages,
-            });
-          }
+          const response = buildPlannerResultResponse({
+            plannerResult,
+            modelId: runtime.modelId,
+            aborted,
+          });
 
           send({ type: "final", response });
         } finally {
@@ -303,11 +300,7 @@ export async function POST(request: Request) {
   }
 
   if (!runtime) {
-    const fallbackResponse = await runDeterministicFallback(
-      latestUserText,
-      context
-    );
-    return NextResponse.json(fallbackResponse);
+    return NextResponse.json(buildRuntimeUnavailableResponse());
   }
 
   const history = parsed.data.messages;
@@ -329,7 +322,7 @@ export async function POST(request: Request) {
   };
   request.signal.addEventListener("abort", abortHandler);
 
-  let plannerResult: Awaited<ReturnType<typeof runPlannerTurn>>;
+  let plannerResult: PlannerResult;
   try {
     plannerResult = await runPlannerTurn({
       runtime,
@@ -345,50 +338,11 @@ export async function POST(request: Request) {
 
   const aborted = turnController.signal.aborted;
 
-  if (
-    plannerResult.kind === "error" &&
-    plannerResult.toolsUsed.length === 0 &&
-    !aborted
-  ) {
-    const fallbackResponse = await runDeterministicFallback(
-      latestUserText,
-      context
-    );
-    return NextResponse.json(
-      CoachTurnResponseSchema.parse({
-        ...fallbackResponse,
-        blocks: [
-          ...toolErrorBlocks(plannerResult.errorMessage),
-          ...fallbackResponse.blocks,
-        ],
-        trace: {
-          ...fallbackResponse.trace,
-          model: `${fallbackResponse.trace.model} (planner_failed)`,
-        },
-      } satisfies CoachTurnResponse)
-    );
-  }
-
-  const response = buildCoachTurnResponse({
-    assistantText:
-      plannerResult.kind === "error"
-        ? "I hit an error while finishing that. Here's what I have so far."
-        : plannerResult.assistantText,
-    blocks:
-      plannerResult.kind === "error"
-        ? [
-            ...toolErrorBlocks(plannerResult.errorMessage),
-            ...plannerResult.blocks,
-          ]
-        : plannerResult.blocks,
-    toolsUsed: plannerResult.toolsUsed,
-    model:
-      plannerResult.kind === "error"
-        ? `${runtime.modelId} (planner_failed_partial)`
-        : runtime.modelId,
-    fallbackUsed: false,
-    responseMessages: plannerResult.responseMessages,
-  });
-
-  return NextResponse.json(response);
+  return NextResponse.json(
+    buildPlannerResultResponse({
+      plannerResult,
+      modelId: runtime.modelId,
+      aborted,
+    })
+  );
 }

@@ -7,7 +7,9 @@ export const dynamic = "force-dynamic";
 /**
  * Parse Stripe key mode from prefix.
  */
-function getStripeKeyMode(key: string | undefined): "live" | "test" | "unknown" {
+function getStripeKeyMode(
+  key: string | undefined
+): "live" | "test" | "unknown" {
   if (!key) return "unknown";
   if (key.startsWith("sk_live_")) return "live";
   if (key.startsWith("sk_test_")) return "test";
@@ -23,6 +25,7 @@ function getStripeKeyMode(key: string | undefined): "live" | "test" | "unknown" 
  * Checks:
  * - Convex: Backend connectivity
  * - Stripe: Payment configuration (checkout and pricing)
+ * - Coach runtime: OpenRouter API key availability for agent execution
  *
  * @returns 200 with health status when healthy, 503 when unhealthy
  */
@@ -38,7 +41,9 @@ export async function GET() {
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
   const monthlyPriceId = process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID;
   const annualPriceId = process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID;
-  const stripeConfigured = Boolean(stripeSecretKey && monthlyPriceId && annualPriceId);
+  const stripeConfigured = Boolean(
+    stripeSecretKey && monthlyPriceId && annualPriceId
+  );
 
   // Check key type matches environment
   const keyMode = getStripeKeyMode(stripeSecretKey);
@@ -49,7 +54,10 @@ export async function GET() {
     ((isProd && keyMode === "test") || (!isProd && keyMode === "live"));
 
   const stripeHealthy = stripeConfigured && !keyEnvMismatch;
-  const isHealthy = convexHealthy && stripeHealthy;
+  const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+  const coachRuntimeHealthy = Boolean(openRouterApiKey?.trim());
+
+  const isHealthy = convexHealthy && stripeHealthy && coachRuntimeHealthy;
 
   const response = {
     status: isHealthy ? "pass" : "fail",
@@ -71,6 +79,12 @@ export async function GET() {
         }),
         ...(keyEnvMismatch && {
           warning: `KEY/ENV MISMATCH: ${keyMode} key in ${deploymentEnv}`,
+        }),
+      },
+      coachRuntime: {
+        status: coachRuntimeHealthy ? "pass" : "fail",
+        ...(!coachRuntimeHealthy && {
+          missing: ["OPENROUTER_API_KEY"],
         }),
       },
     },

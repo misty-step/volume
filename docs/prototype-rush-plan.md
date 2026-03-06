@@ -3,6 +3,8 @@
 Date: 2026-02-16
 Owner: Volume
 
+> Historical planning doc. Deterministic intent parsing was removed on 2026-03-03.
+
 ## Objective
 
 Ship a compelling, demoable agentic prototype fast.
@@ -52,7 +54,6 @@ Each response returns generated UI blocks:
 
 - `src/app/(app)/coach/page.tsx`: route entry
 - `src/components/coach/CoachPrototype.tsx`: chat orchestration + rendering
-- `src/lib/coach/prototype-intent.ts`: intent parsing
 - `src/lib/coach/prototype-analytics.ts`: deterministic summary/trend calculations
 
 ## Acceptance Criteria

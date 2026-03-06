@@ -24,6 +24,12 @@ describe("getCoachRuntime", () => {
     expect(getCoachRuntime()).toBeNull();
   });
 
+  it("returns null when OPENROUTER_API_KEY is whitespace only", async () => {
+    process.env.OPENROUTER_API_KEY = "   ";
+    const { getCoachRuntime } = await import("./runtime");
+    expect(getCoachRuntime()).toBeNull();
+  });
+
   it("returns a CoachRuntime when OPENROUTER_API_KEY is set", async () => {
     process.env.OPENROUTER_API_KEY = "test-key";
     const { getCoachRuntime } = await import("./runtime");

@@ -2,6 +2,8 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  buildRuntimeUnavailableResponse,
+  buildPlannerFailedResponse,
   buildCoachTurnResponse,
   normalizeAssistantText,
   toolErrorBlocks,
@@ -88,6 +90,41 @@ describe("coach blocks helpers", () => {
     const blocks = toolErrorBlocks("nope");
     expect(blocks[0]).toMatchObject({ type: "status", tone: "error" });
     expect(blocks[1]).toMatchObject({ type: "suggestions" });
+  });
+
+  it("builds explicit runtime-unavailable response without fallback", () => {
+    const response = buildRuntimeUnavailableResponse();
+    expect(response.assistantText).toBe(
+      "I can't process that request right now."
+    );
+    expect(response.trace.model).toBe("runtime-unavailable");
+    expect(response.trace.fallbackUsed).toBe(false);
+    expect(response.trace.toolsUsed).toEqual([]);
+    expect(response.responseMessages).toEqual([]);
+    expect(response.blocks[0]).toMatchObject({
+      type: "status",
+      tone: "error",
+      title: "Coach is unavailable",
+    });
+  });
+
+  it("builds planner-failed response with standardized trace and error blocks", () => {
+    const response = buildPlannerFailedResponse({
+      modelId: "mock-model-id",
+      errorMessage: "planner exploded",
+    });
+
+    expect(response.assistantText).toBe(
+      "I hit an error while planning this turn."
+    );
+    expect(response.trace.model).toBe("mock-model-id (planner_failed)");
+    expect(response.trace.fallbackUsed).toBe(false);
+    expect(response.trace.toolsUsed).toEqual([]);
+    expect(response.blocks[0]).toMatchObject({
+      type: "status",
+      tone: "error",
+      title: "Tool execution failed",
+    });
   });
 
   it("preserves assistant text even when an undo block is present", () => {

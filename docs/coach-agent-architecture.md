@@ -17,7 +17,8 @@ This keeps the system agentic without becoming fragile.
 2. Server planner (`streamText` via AI SDK 6 + OpenRouter provider) runs tool-calling loop.
 3. Deterministic tool handlers execute against Convex.
 4. Tool outputs are converted into typed UI blocks.
-5. Client renders blocks and applies any declared local actions.
+5. If runtime/planning fails, the route returns explicit structured failure blocks instead of semantic fallback parsing.
+6. Client renders blocks and applies any declared local actions.
 
 ## API Contract (Prototype)
 
@@ -51,7 +52,7 @@ Events:
 - `tool_start` (tool began)
 - `tool_result` (append typed blocks; may repeat per tool as blocks are produced)
 - `final` (canonical full response: assistant text + blocks + trace)
-- `error` (planner failed; final still follows with partial/fallback response)
+- `error` (planner failed; final still follows with partial failure response)
 
 Each SSE frame is:
 
@@ -67,7 +68,7 @@ Where `data` is a `CoachStreamEvent` JSON object (see `src/lib/coach/schema.ts`)
 - `src/app/api/coach/route.ts`
   - HTTP entry point (auth, request parsing, streaming vs JSON response).
 - `src/lib/coach/server/*`
-  - planner loop (`planner.ts`), AI SDK tool factory (`coach-tools.ts`), runtime provider, SSE utilities, deterministic fallback.
+  - planner loop (`planner.ts`), AI SDK tool factory (`coach-tools.ts`), runtime provider, SSE utilities, response builders.
 - `src/lib/coach/tools/*`
   - deterministic tool handlers and Convex access helpers; consumed by `createCoachTools`.
 - `src/lib/coach/schema.ts`
@@ -91,9 +92,12 @@ Where `data` is a `CoachStreamEvent` JSON object (see `src/lib/coach/schema.ts`)
 - `set_weight_unit` (client action)
 - `set_sound` (client action)
 
-## Fallback Behavior
+## Failure Behavior
 
-If no model runtime is configured (or planner errors), the route uses deterministic fallback intent handling so core flows still work.
+- If no model runtime is configured, the route returns `runtime-unavailable` with explicit error/suggestions blocks.
+- If planning fails before any tool runs, the route returns `planner_failed`.
+- If planning fails after tools already ran, the route returns `planner_failed_partial` and preserves the partial blocks.
+- No deterministic semantic fallback/parser path remains in the coach route.
 
 ## Next Hardening Steps
 

@@ -46,6 +46,18 @@ bun run test --run    # Vitest (single run)
 
 Quality gates run automatically via Lefthook (pre-commit, pre-push).
 
+## Local Skills
+
+- Canonical local skills live in `.agents/skills/` (agent-agnostic source of truth).
+- `.claude/skills` points to that directory as an adapter.
+- Volume manual QA skill:
+
+```bash
+bash .agents/skills/volume-manual-qa/scripts/run-volume-manual-qa.sh
+```
+
+Requires local `agent-browser`, `jq`, `CLERK_TEST_USER_EMAIL`, `CLERK_TEST_USER_PASSWORD`, and `OPENROUTER_API_KEY`. The script boots its own Next dev server on `PORT` (default `3100`).
+
 ## First-Time Setup
 
 ### 1. Convex (backend)
@@ -73,6 +85,14 @@ bunx convex env set CLERK_JWT_ISSUER_DOMAIN "https://<your-dev>.clerk.accounts.d
 
 ```bash
 bun run dev
+```
+
+### 4. Configure coach runtime
+
+`/api/health` now requires `OPENROUTER_API_KEY` to report `pass`, so local dev and uptime checks should treat the coach runtime as a hard dependency.
+
+```bash
+OPENROUTER_API_KEY=sk-or-v1-...
 ```
 
 ## Troubleshooting

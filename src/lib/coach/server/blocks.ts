@@ -34,6 +34,74 @@ export function toolErrorBlocks(message: string): CoachBlock[] {
   ];
 }
 
+function runtimeUnavailableBlocks(): CoachBlock[] {
+  return [
+    {
+      type: "status",
+      tone: "error",
+      title: "Coach is unavailable",
+      description:
+        "The AI runtime is unavailable right now. Please try again shortly.",
+    },
+    {
+      type: "suggestions",
+      prompts: DEFAULT_COACH_SUGGESTIONS,
+    },
+  ];
+}
+
+export function buildRuntimeUnavailableResponse(): CoachTurnResponse {
+  return buildCoachTurnResponse({
+    assistantText: "I can't process that request right now.",
+    blocks: runtimeUnavailableBlocks(),
+    toolsUsed: [],
+    model: "runtime-unavailable",
+    fallbackUsed: false,
+    responseMessages: [],
+  });
+}
+
+export function buildPlannerFailedResponse({
+  modelId,
+  errorMessage,
+}: {
+  modelId: string;
+  errorMessage: string;
+}): CoachTurnResponse {
+  return buildCoachTurnResponse({
+    assistantText: "I hit an error while planning this turn.",
+    blocks: toolErrorBlocks(errorMessage),
+    toolsUsed: [],
+    model: `${modelId} (planner_failed)`,
+    fallbackUsed: false,
+    responseMessages: [],
+  });
+}
+
+export function buildPlannerPartialFailureResponse({
+  modelId,
+  errorMessage,
+  blocks,
+  toolsUsed,
+  responseMessages,
+}: {
+  modelId: string;
+  errorMessage: string;
+  blocks: CoachBlock[];
+  toolsUsed: string[];
+  responseMessages?: unknown[];
+}): CoachTurnResponse {
+  return buildCoachTurnResponse({
+    assistantText:
+      "I hit an error while finishing that. Here's what I have so far.",
+    blocks: [...toolErrorBlocks(errorMessage), ...blocks],
+    toolsUsed,
+    model: `${modelId} (planner_failed_partial)`,
+    fallbackUsed: false,
+    responseMessages,
+  });
+}
+
 export function buildCoachTurnResponse({
   assistantText,
   blocks,

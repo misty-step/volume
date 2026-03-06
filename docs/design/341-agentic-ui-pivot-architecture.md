@@ -17,7 +17,7 @@ Issue: #341
 1. **Coach API boundary** (`src/app/api/coach/route.ts`)
    - Owns request validation, auth/rate-limit enforcement, stream format.
 2. **Agent orchestration boundary** (`src/lib/coach/server/*`)
-   - Owns planning/tool-calling loop and fallback orchestration.
+   - Owns planning/tool-calling loop and explicit runtime failure handling.
 3. **Tool execution boundary** (`src/lib/coach/tools/*` + Convex)
    - Owns deterministic mutations/queries and domain validation.
 4. **UI contract boundary** (`src/lib/coach/schema.ts` + catalog layer)
@@ -62,7 +62,7 @@ Issue: #341
 ## Test Strategy by Layer
 
 - **Route/API:** auth/rate-limit/validation/stream compatibility tests.
-- **Orchestration:** tool loop behavior, fallback transitions, contract invariants.
+- **Orchestration:** tool loop behavior, runtime failure transitions, contract invariants.
 - **Tools:** deterministic business logic and ownership guard tests.
 - **Renderer:** block contract rendering tests across themes.
 - **E2E:** representative chat journeys + undo safety scenarios.
@@ -78,4 +78,4 @@ Issue: #341
 - No duplicated tool registries.
 - One canonical tool→block contract path.
 - Explicit memory adapter boundary with test doubles.
-- Clear fallback boundary that does not leak into UI contracts.
+- Clear runtime failure boundary that does not leak parser logic into UI contracts.

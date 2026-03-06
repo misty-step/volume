@@ -109,12 +109,12 @@ await ctx.db.patch(id, { deletedAt: Date.now() });
 
 ## Lessons Learned
 
-| Decision                      | Outcome                                                    | Lesson                                                |
-| ----------------------------- | ---------------------------------------------------------- | ----------------------------------------------------- |
-| Custom planner loop           | Brittle — 8 failure modes, no prepareStep, regex parsing   | Use AI SDK Agent class; don't roll your own tool loop |
-| TypeScript design token files | Not wired to CSS — values diverge, hardcoded in components | CSS variables + Tailwind config from day one          |
-| 30-message sliding window     | Context loss in long sessions, no summarization            | Use Mastra Observational Memory for compression       |
-| Regex intent parsing          | 15 hardcoded aliases, 20% failure rate on natural input    | Route via LLM; regex only for deterministic fallback  |
+| Decision                      | Outcome                                                    | Lesson                                                          |
+| ----------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------- |
+| Custom planner loop           | Brittle — 8 failure modes, no prepareStep, regex parsing   | Use AI SDK Agent class; don't roll your own tool loop           |
+| TypeScript design token files | Not wired to CSS — values diverge, hardcoded in components | CSS variables + Tailwind config from day one                    |
+| 30-message sliding window     | Context loss in long sessions, no summarization            | Use Mastra Observational Memory for compression                 |
+| Regex intent parsing          | 15 hardcoded aliases, 20% failure rate on natural input    | Route via LLM only; fail explicitly when runtime is unavailable |
 
 ---
 
