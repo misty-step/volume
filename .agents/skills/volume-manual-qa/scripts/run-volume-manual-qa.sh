@@ -97,13 +97,26 @@ pushd "$ROOT_DIR" >/dev/null
 bun run dev:next >"$DEV_LOG" 2>&1 &
 DEV_PID=$!
 
+READY=0
 for _ in {1..30}; do
+  if ! kill -0 "$DEV_PID" >/dev/null 2>&1; then
+    echo "dev server exited before startup completed" >&2
+    tail -n 40 "$DEV_LOG" >&2 || true
+    exit 1
+  fi
   CODE="$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 || true)"
   if [[ "$CODE" == "200" || "$CODE" == "302" || "$CODE" == "307" ]]; then
+    READY=1
     break
   fi
   sleep 1
 done
+
+if [[ "$READY" != "1" ]]; then
+  echo "dev server did not become ready on http://localhost:3000" >&2
+  tail -n 40 "$DEV_LOG" >&2 || true
+  exit 1
+fi
 
 HEALTH_JSON="$LOG_DIR/health.json"
 curl -sS http://localhost:3000/api/health >"$HEALTH_JSON"
