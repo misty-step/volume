@@ -34,7 +34,7 @@ export function toolErrorBlocks(message: string): CoachBlock[] {
   ];
 }
 
-export function runtimeUnavailableBlocks(): CoachBlock[] {
+function runtimeUnavailableBlocks(): CoachBlock[] {
   return [
     {
       type: "status",
@@ -57,6 +57,7 @@ export function buildRuntimeUnavailableResponse(): CoachTurnResponse {
     toolsUsed: [],
     model: "runtime-unavailable",
     fallbackUsed: false,
+    responseMessages: [],
   });
 }
 

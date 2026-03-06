@@ -32,6 +32,7 @@ Verify that core experiences are intact and produce artifact-backed evidence.
 - `.env.local` includes:
   - `CLERK_TEST_USER_EMAIL`
   - `CLERK_TEST_USER_PASSWORD`
+- `agent-browser` and `jq` are installed locally.
 - Local app can run on `http://localhost:3000`.
 - Use a dedicated test user.
 

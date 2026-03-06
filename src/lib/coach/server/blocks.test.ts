@@ -100,6 +100,7 @@ describe("coach blocks helpers", () => {
     expect(response.trace.model).toBe("runtime-unavailable");
     expect(response.trace.fallbackUsed).toBe(false);
     expect(response.trace.toolsUsed).toEqual([]);
+    expect(response.responseMessages).toEqual([]);
     expect(response.blocks[0]).toMatchObject({
       type: "status",
       tone: "error",

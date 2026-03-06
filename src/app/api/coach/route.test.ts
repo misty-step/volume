@@ -381,4 +381,77 @@ describe("POST /api/coach", () => {
     );
     expect(fallbackBlock).toBeUndefined();
   });
+
+  it("streams planner failure response without deterministic fallback", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    ConvexHttpClientMock.mockReturnValue(convex);
+
+    getCoachRuntimeMock.mockReturnValue({
+      model: {},
+      modelId: "mock-model-id",
+    });
+    runPlannerTurnMock.mockReset();
+    runPlannerTurnMock.mockResolvedValue({
+      kind: "error",
+      assistantText: "",
+      blocks: [],
+      toolsUsed: [],
+      errorMessage: "planner exploded",
+      hitToolLimit: false,
+      responseMessages: [],
+    });
+
+    const { POST } = await import("./route");
+
+    const request = new Request("https://volume.fitness/api/coach", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "summary" }],
+        preferences: {
+          unit: "lbs",
+          soundEnabled: true,
+          timezoneOffsetMinutes: 0,
+        },
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/event-stream");
+
+    const events: Array<{
+      type: string;
+      message?: string;
+      model?: string;
+      response?: any;
+    }> = [];
+    for await (const event of readCoachStreamEvents(response.body!)) {
+      events.push(event);
+      if (event.type === "final") break;
+    }
+
+    expect(events[0]).toEqual({ type: "start", model: "mock-model-id" });
+    expect(events[1]).toEqual({
+      type: "error",
+      message: "planner exploded",
+    });
+    const final = events.at(-1);
+    if (!final || final.type !== "final") {
+      throw new Error("expected final event");
+    }
+    expect(final.response.trace.model).toBe("mock-model-id (planner_failed)");
+    expect(final.response.trace.fallbackUsed).toBe(false);
+    expect(final.response.trace.toolsUsed).toEqual([]);
+    expect(final.response.blocks[0]?.title).toBe("Tool execution failed");
+  });
 });

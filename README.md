@@ -56,6 +56,8 @@ Quality gates run automatically via Lefthook (pre-commit, pre-push).
 bash .agents/skills/volume-manual-qa/scripts/run-volume-manual-qa.sh
 ```
 
+Requires local `agent-browser` and `jq`.
+
 ## First-Time Setup
 
 ### 1. Convex (backend)
@@ -83,6 +85,14 @@ bunx convex env set CLERK_JWT_ISSUER_DOMAIN "https://<your-dev>.clerk.accounts.d
 
 ```bash
 bun run dev
+```
+
+### 4. Configure coach runtime
+
+`/api/health` now requires `OPENROUTER_API_KEY` to report `pass`, so local dev and uptime checks should treat the coach runtime as a hard dependency.
+
+```bash
+OPENROUTER_API_KEY=sk-or-v1-...
 ```
 
 ## Troubleshooting

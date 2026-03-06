@@ -10,10 +10,62 @@ DEV_LOG="$OUTPUT_DIR/dev.log"
 
 mkdir -p "$SCREEN_DIR" "$LOG_DIR"
 
-is_authenticated_url() {
+check_command() {
+  local command_name="$1"
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    echo "Missing required command: $command_name" >&2
+    exit 1
+  fi
+}
+
+is_post_login_url() {
   local url="$1"
   [[ "$url" == *"/today"* || "$url" == *"/coach"* ]]
 }
+
+assert_route_url() {
+  local label="$1"
+  local url="$2"
+  shift 2
+
+  if [[ "$url" == *"/pricing?reason=expired"* || "$url" == *"/sign-in"* ]]; then
+    echo "$label redirected away from authenticated route: $url" >&2
+    exit 1
+  fi
+
+  local expected_path
+  for expected_path in "$@"; do
+    if [[ "$url" == *"$expected_path"* ]]; then
+      return 0
+    fi
+  done
+
+  echo "$label landed on unexpected URL: $url (expected one of: $*)" >&2
+  exit 1
+}
+
+wait_for_send_enabled() {
+  local attempts=10
+  local delay_seconds=0.2
+  local send_after
+
+  for _ in $(seq 1 "$attempts"); do
+    agent-browser --session "$SESSION" is enabled 'button:has-text("Send")' \
+      >"$LOG_DIR/send-enabled-after.txt"
+    send_after="$(cat "$LOG_DIR/send-enabled-after.txt")"
+    if [[ "$send_after" == "true" ]]; then
+      echo "$send_after"
+      return 0
+    fi
+    sleep "$delay_seconds"
+  done
+
+  echo "false"
+  return 1
+}
+
+check_command agent-browser
+check_command jq
 
 if [[ ! -f "$ROOT_DIR/.env.local" ]]; then
   echo "Missing .env.local at $ROOT_DIR/.env.local" >&2
@@ -76,11 +128,7 @@ agent-browser --session "$SESSION" get url >"$LOG_DIR/post-login-url.txt"
 agent-browser --session "$SESSION" screenshot "$SCREEN_DIR/post-login.png" >/dev/null
 
 POST_LOGIN_URL="$(cat "$LOG_DIR/post-login-url.txt")"
-if [[ "$POST_LOGIN_URL" == *"/pricing?reason=expired"* || "$POST_LOGIN_URL" == *"/sign-in"* ]]; then
-  echo "Authenticated user redirected to paywall: $POST_LOGIN_URL" >&2
-  exit 1
-fi
-if ! is_authenticated_url "$POST_LOGIN_URL"; then
+if ! is_post_login_url "$POST_LOGIN_URL"; then
   echo "Authenticated user landed on unexpected route: $POST_LOGIN_URL" >&2
   exit 1
 fi
@@ -90,28 +138,14 @@ agent-browser --session "$SESSION" wait 1500 >/dev/null
 agent-browser --session "$SESSION" get url >"$LOG_DIR/today-url.txt"
 agent-browser --session "$SESSION" screenshot "$SCREEN_DIR/today.png" >/dev/null
 TODAY_URL="$(cat "$LOG_DIR/today-url.txt")"
-if [[ "$TODAY_URL" == *"/pricing?reason=expired"* || "$TODAY_URL" == *"/sign-in"* ]]; then
-  echo "Today route redirected to paywall: $TODAY_URL" >&2
-  exit 1
-fi
-if ! is_authenticated_url "$TODAY_URL"; then
-  echo "Today route landed on unexpected URL: $TODAY_URL" >&2
-  exit 1
-fi
+assert_route_url "Today route" "$TODAY_URL" "/today"
 
 agent-browser --session "$SESSION" open "http://localhost:3000/coach" >/dev/null
 agent-browser --session "$SESSION" wait 1500 >/dev/null
 agent-browser --session "$SESSION" get url >"$LOG_DIR/coach-url.txt"
 agent-browser --session "$SESSION" screenshot "$SCREEN_DIR/coach.png" >/dev/null
 COACH_URL="$(cat "$LOG_DIR/coach-url.txt")"
-if [[ "$COACH_URL" == *"/pricing?reason=expired"* || "$COACH_URL" == *"/sign-in"* ]]; then
-  echo "Coach route redirected to paywall: $COACH_URL" >&2
-  exit 1
-fi
-if ! is_authenticated_url "$COACH_URL"; then
-  echo "Coach route landed on unexpected URL: $COACH_URL" >&2
-  exit 1
-fi
+assert_route_url "Coach route" "$COACH_URL" "/today"
 
 agent-browser --session "$SESSION" is enabled 'button:has-text("Send")' >"$LOG_DIR/send-enabled-before.txt"
 SEND_BEFORE="$(cat "$LOG_DIR/send-enabled-before.txt")"
@@ -121,9 +155,7 @@ if [[ "$SEND_BEFORE" != "false" ]]; then
 fi
 
 agent-browser --session "$SESSION" keyboard type "show today's summary" >/dev/null
-agent-browser --session "$SESSION" is enabled 'button:has-text("Send")' >"$LOG_DIR/send-enabled-after.txt"
-SEND_AFTER="$(cat "$LOG_DIR/send-enabled-after.txt")"
-if [[ "$SEND_AFTER" != "true" ]]; then
+if ! SEND_AFTER="$(wait_for_send_enabled)"; then
   echo "Coach send button did not enable after typing" >&2
   exit 1
 fi
