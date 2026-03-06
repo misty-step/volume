@@ -7,6 +7,8 @@ SCREEN_DIR="$OUTPUT_DIR/screenshots"
 LOG_DIR="$OUTPUT_DIR/logs"
 SESSION="volume-qa-$(date +%s)"
 DEV_LOG="$OUTPUT_DIR/dev.log"
+APP_PORT="${PORT:-3100}"
+APP_URL="http://127.0.0.1:${APP_PORT}"
 
 mkdir -p "$SCREEN_DIR" "$LOG_DIR"
 
@@ -65,6 +67,8 @@ wait_for_send_enabled() {
 }
 
 check_command agent-browser
+check_command bun
+check_command curl
 check_command jq
 
 if [[ ! -f "$ROOT_DIR/.env.local" ]]; then
@@ -82,6 +86,11 @@ if [[ -z "${CLERK_TEST_USER_EMAIL:-}" || -z "${CLERK_TEST_USER_PASSWORD:-}" ]]; 
   exit 1
 fi
 
+if [[ -z "${OPENROUTER_API_KEY:-}" || -z "${OPENROUTER_API_KEY//[[:space:]]/}" ]]; then
+  echo "Missing OPENROUTER_API_KEY in .env.local" >&2
+  exit 1
+fi
+
 cleanup() {
   if [[ -n "${BROWSER_OPEN:-}" ]]; then
     agent-browser --session "$SESSION" close >/dev/null 2>&1 || true
@@ -94,7 +103,7 @@ trap cleanup EXIT
 
 pushd "$ROOT_DIR" >/dev/null
 
-bun run dev:next >"$DEV_LOG" 2>&1 &
+PORT="$APP_PORT" bun run dev:next >"$DEV_LOG" 2>&1 &
 DEV_PID=$!
 
 READY=0
@@ -104,7 +113,7 @@ for _ in {1..30}; do
     tail -n 40 "$DEV_LOG" >&2 || true
     exit 1
   fi
-  CODE="$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 || true)"
+  CODE="$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL" || true)"
   if [[ "$CODE" == "200" || "$CODE" == "302" || "$CODE" == "307" ]]; then
     READY=1
     break
@@ -113,22 +122,27 @@ for _ in {1..30}; do
 done
 
 if [[ "$READY" != "1" ]]; then
-  echo "dev server did not become ready on http://localhost:3000" >&2
+  echo "dev server did not become ready on $APP_URL" >&2
   tail -n 40 "$DEV_LOG" >&2 || true
   exit 1
 fi
 
 HEALTH_JSON="$LOG_DIR/health.json"
-curl -sS http://localhost:3000/api/health >"$HEALTH_JSON"
+curl -sS "$APP_URL/api/health" >"$HEALTH_JSON"
 HEALTH_STATUS="$(jq -r '.status // "unknown"' "$HEALTH_JSON")"
+COACH_RUNTIME_STATUS="$(jq -r '.checks.coachRuntime.status // "missing"' "$HEALTH_JSON")"
 if [[ "$HEALTH_STATUS" != "pass" ]]; then
   echo "Health check failed: status=$HEALTH_STATUS" >&2
+  exit 1
+fi
+if [[ "$COACH_RUNTIME_STATUS" != "pass" ]]; then
+  echo "Health check failed: unexpected coachRuntime status=$COACH_RUNTIME_STATUS" >&2
   exit 1
 fi
 
 rm -f "$HOME/.agent-browser/$SESSION.sock" "$HOME/.agent-browser/$SESSION.pid"
 
-agent-browser --session "$SESSION" open "http://localhost:3000/sign-in?redirect_url=http://localhost:3000/coach" >/dev/null
+agent-browser --session "$SESSION" open "$APP_URL/sign-in?redirect_url=$APP_URL/coach" >/dev/null
 BROWSER_OPEN=1
 agent-browser --session "$SESSION" wait 1500 >/dev/null
 agent-browser --session "$SESSION" screenshot "$SCREEN_DIR/signin.png" >/dev/null
@@ -146,14 +160,14 @@ if ! is_post_login_url "$POST_LOGIN_URL"; then
   exit 1
 fi
 
-agent-browser --session "$SESSION" open "http://localhost:3000/today" >/dev/null
+agent-browser --session "$SESSION" open "$APP_URL/today" >/dev/null
 agent-browser --session "$SESSION" wait 1500 >/dev/null
 agent-browser --session "$SESSION" get url >"$LOG_DIR/today-url.txt"
 agent-browser --session "$SESSION" screenshot "$SCREEN_DIR/today.png" >/dev/null
 TODAY_URL="$(cat "$LOG_DIR/today-url.txt")"
 assert_route_url "Today route" "$TODAY_URL" "/today"
 
-agent-browser --session "$SESSION" open "http://localhost:3000/coach" >/dev/null
+agent-browser --session "$SESSION" open "$APP_URL/coach" >/dev/null
 agent-browser --session "$SESSION" wait 1500 >/dev/null
 agent-browser --session "$SESSION" get url >"$LOG_DIR/coach-url.txt"
 agent-browser --session "$SESSION" screenshot "$SCREEN_DIR/coach.png" >/dev/null
@@ -245,6 +259,7 @@ cat >"$OUTPUT_DIR/report.md" <<EOF
 - Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 - Output dir: $OUTPUT_DIR
 - Session: $SESSION
+- App URL: $APP_URL
 
 ## Result
 

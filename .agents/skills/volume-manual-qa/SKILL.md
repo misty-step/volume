@@ -32,8 +32,9 @@ Verify that core experiences are intact and produce artifact-backed evidence.
 - `.env.local` includes:
   - `CLERK_TEST_USER_EMAIL`
   - `CLERK_TEST_USER_PASSWORD`
+  - `OPENROUTER_API_KEY`
 - `agent-browser` and `jq` are installed locally.
-- Local app can run on `http://localhost:3000`.
+- Local app can run on a dedicated local port. The script defaults to `http://127.0.0.1:3100` and honors `PORT`.
 - Use a dedicated test user.
 
 ## Run
@@ -46,6 +47,12 @@ Optional custom output directory:
 
 ```bash
 OUTPUT_DIR=/tmp/volume-manual-qa-custom bash .agents/skills/volume-manual-qa/scripts/run-volume-manual-qa.sh
+```
+
+Optional custom port:
+
+```bash
+PORT=3200 bash .agents/skills/volume-manual-qa/scripts/run-volume-manual-qa.sh
 ```
 
 ## Expected Outcomes

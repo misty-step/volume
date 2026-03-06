@@ -56,7 +56,7 @@ Quality gates run automatically via Lefthook (pre-commit, pre-push).
 bash .agents/skills/volume-manual-qa/scripts/run-volume-manual-qa.sh
 ```
 
-Requires local `agent-browser` and `jq`.
+Requires local `agent-browser` and `jq`. The script boots its own Next dev server on `PORT` (default `3100`).
 
 ## First-Time Setup
 
