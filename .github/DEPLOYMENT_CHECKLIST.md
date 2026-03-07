@@ -75,13 +75,16 @@ Ensure production environment variables are set correctly:
 
 ### Vercel Environment (set via Vercel dashboard)
 
-- [ ] `NEXT_PUBLIC_CONVEX_URL` - Production Convex URL
 - [ ] `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Clerk publishable key (pk*live*\*)
 - [ ] `CLERK_SECRET_KEY` - Clerk secret key (sk*live*\*)
 - [ ] `CLERK_JWT_ISSUER_DOMAIN` - Clerk JWT issuer domain (https://clerk.volume.fitness)
 - [ ] `OPENROUTER_API_KEY` - OpenRouter API key for `/api/coach`
 - [ ] `NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID` - Stripe monthly price ID
 - [ ] `NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID` - Stripe annual price ID
+
+### Build-injected Runtime Config
+
+- [ ] `NEXT_PUBLIC_CONVEX_URL` - injected by `bunx convex deploy --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL`
 
 ### Verification
 

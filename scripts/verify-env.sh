@@ -69,6 +69,8 @@ VERCEL_VALUE_VALIDATED_VARS=(
   "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID"
 )
 
+PRODUCTION_HEALTH_URL="https://volume.fitness/api/health"
+
 # Convex deployment identifiers
 CONVEX_DEV="dev:curious-salamander-943"
 CONVEX_PROD="prod:whimsical-marten-631"
@@ -83,7 +85,7 @@ for arg in "$@"; do
     --help|-h)
       echo "Usage: $0 [--prod-only] [--quiet]"
       echo ""
-      echo "Verifies environment variables are set on Convex deployments."
+      echo "Verifies production-critical environment variables across Convex and Vercel."
       echo ""
       echo "Options:"
       echo "  --prod-only  Only check production deployment"
@@ -119,6 +121,10 @@ if ! command -v vercel &> /dev/null; then
 fi
 
 run_vercel() {
+  if vercel "$@" 2>/dev/null; then
+    return 0
+  fi
+
   if command -v zsh &> /dev/null; then
     local cmd="vercel"
     local arg
@@ -129,11 +135,20 @@ run_vercel() {
     return
   fi
 
-  vercel "$@"
+  return 1
 }
 
 get_vercel_env_list() {
   run_vercel env ls 2>/dev/null || echo ""
+}
+
+is_value_validated_var() {
+  local target="$1"
+  local var
+  for var in "${VERCEL_VALUE_VALIDATED_VARS[@]}"; do
+    [[ "$var" == "$target" ]] && return 0
+  done
+  return 1
 }
 
 # Get env vars from a Convex deployment
@@ -230,21 +245,49 @@ get_vercel_env() {
   local environment="$1"
   local env_file
   env_file=$(mktemp)
+  trap "rm -f '$env_file'" RETURN
 
   if ! run_vercel env pull "$env_file" --yes --environment "$environment" >/dev/null 2>&1; then
-    rm -f "$env_file"
     echo ""
     return 1
   fi
 
   grep -E '^[A-Z0-9_]+=' "$env_file" || true
-  rm -f "$env_file"
 }
 
 vercel_var_exists() {
   local var_name="$1"
   local env_list="$2"
   echo "$env_list" | grep -Eq "^[[:space:]]*${var_name}[[:space:]].*Production"
+}
+
+check_production_health() {
+  local health_json
+  if ! health_json=$(curl -fsSL "$PRODUCTION_HEALTH_URL" 2>/dev/null); then
+    log_error "    Error: Could not fetch production health endpoint"
+    MISSING_VARS+=("Vercel:/api/health (UNREACHABLE)")
+    return 1
+  fi
+
+  if ! echo "$health_json" | grep -q '"status":"pass"'; then
+    log "    [INVALID] /api/health - overall production health failed"
+    MISSING_VARS+=("Vercel:/api/health (FAIL)")
+    return 1
+  fi
+
+  if ! echo "$health_json" | grep -q '"coachRuntime":{"status":"pass"}'; then
+    log "    [INVALID] OPENROUTER_API_KEY - coach runtime health failed"
+    MISSING_VARS+=("Vercel:OPENROUTER_API_KEY (HEALTH CHECK FAIL)")
+    return 1
+  fi
+
+  if ! echo "$health_json" | grep -q '"stripe":{"status":"pass"'; then
+    log "    [INVALID] STRIPE_SECRET_KEY - stripe health failed"
+    MISSING_VARS+=("Vercel:STRIPE_SECRET_KEY (HEALTH CHECK FAIL)")
+    return 1
+  fi
+
+  log "    [OK] /api/health"
 }
 
 # --- Main Logic ---
@@ -333,7 +376,11 @@ check_vercel_environment() {
   fi
 
   local env_list
-  env_list=$(get_vercel_env "$environment")
+  if ! env_list=$(get_vercel_env "$environment"); then
+    log_error "    Error: Could not pull Vercel env values"
+    MISSING_COUNT=$((MISSING_COUNT + ${#VERCEL_VALUE_VALIDATED_VARS[@]}))
+    return
+  fi
 
   local missing_here=0
   local i
@@ -349,36 +396,43 @@ check_vercel_environment() {
       continue
     fi
 
+    if ! is_value_validated_var "$var"; then
+      log "    [OK] $var"
+    fi
+  done
+
+  for var in "${VERCEL_VALUE_VALIDATED_VARS[@]}"; do
+    local raw_value
+    raw_value=$(get_env_value "$var" "$env_list")
+    local trimmed_value
+    trimmed_value=$(trim_env_value "$raw_value")
+
+    if [[ -z "$trimmed_value" ]]; then
+      log "    [BLANK] $var - value missing in pulled Vercel env"
+      MISSING_VARS+=("Vercel:${var} (BLANK)")
+      missing_here=$((missing_here + 1))
+      continue
+    fi
+
+    if value_has_wrapped_whitespace "$raw_value"; then
+      log "    [INVALID] $var - leading/trailing whitespace"
+      MISSING_VARS+=("Vercel:${var} (LEADING/TRAILING WHITESPACE)")
+      missing_here=$((missing_here + 1))
+      continue
+    fi
+
+    if value_has_literal_newline_escape "$raw_value"; then
+      log "    [INVALID] $var - literal newline escape sequence"
+      MISSING_VARS+=("Vercel:${var} (LITERAL NEWLINE ESCAPE)")
+      missing_here=$((missing_here + 1))
+      continue
+    fi
+
     log "    [OK] $var"
   done
 
-  if [[ -n "$env_list" ]]; then
-    for var in "${VERCEL_VALUE_VALIDATED_VARS[@]}"; do
-      local raw_value
-      raw_value=$(get_env_value "$var" "$env_list")
-      local trimmed_value
-      trimmed_value=$(trim_env_value "$raw_value")
-
-      if [[ -z "$trimmed_value" ]]; then
-        log "    [BLANK] $var - value missing in pulled Vercel env"
-        MISSING_VARS+=("Vercel:${var} (BLANK)")
-        missing_here=$((missing_here + 1))
-        continue
-      fi
-
-      if value_has_wrapped_whitespace "$raw_value"; then
-        log "    [INVALID] $var - leading/trailing whitespace"
-        MISSING_VARS+=("Vercel:${var} (LEADING/TRAILING WHITESPACE)")
-        missing_here=$((missing_here + 1))
-        continue
-      fi
-
-      if value_has_literal_newline_escape "$raw_value"; then
-        log "    [INVALID] $var - literal newline escape sequence"
-        MISSING_VARS+=("Vercel:${var} (LITERAL NEWLINE ESCAPE)")
-        missing_here=$((missing_here + 1))
-      fi
-    done
+  if ! check_production_health; then
+    missing_here=$((missing_here + 1))
   fi
 
   MISSING_COUNT=$((MISSING_COUNT + missing_here))
