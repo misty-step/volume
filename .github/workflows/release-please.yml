@@ -39,7 +39,7 @@ jobs:
             pr_number="$(echo "$pr_json" | jq -r '.number')"
             head_sha="$(echo "$pr_json" | jq -r '.headRefOid')"
 
-            current_state="$(gh api "repos/${{ github.repository }}/commits/${head_sha}/status" --jq '.statuses[]? | select(.context == "CI") | .state' | head -n 1 || true)"
+            current_state="$(gh api "repos/${{ github.repository }}/commits/${head_sha}/status" --jq '.statuses[]? | select(.context == "merge-gate") | .state' | head -n 1 || true)"
 
             if [[ "$current_state" == "success" ]]; then
               echo "CI status already success for PR #${pr_number}."
@@ -49,7 +49,7 @@ jobs:
             gh api "repos/${{ github.repository }}/statuses/${head_sha}" \
               -X POST \
               -f state='success' \
-              -f context='CI' \
+              -f context='merge-gate' \
               -f description='Release Please PR automation status' \
               -f target_url="https://github.com/${{ github.repository }}/actions/workflows/release-please.yml"
 
