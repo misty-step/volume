@@ -42,6 +42,38 @@ CONVEX_OPTIONAL_DESCRIPTIONS=(
   "Test data reset (optional, for E2E tests)"
 )
 
+VERCEL_REQUIRED_VARS=(
+  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
+  "CLERK_SECRET_KEY"
+  "CLERK_JWT_ISSUER_DOMAIN"
+  "STRIPE_SECRET_KEY"
+  "NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID"
+  "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID"
+  "OPENROUTER_API_KEY"
+)
+
+VERCEL_REQUIRED_DESCRIPTIONS=(
+  "Clerk publishable key for browser auth"
+  "Clerk secret key for server auth"
+  "Clerk JWT issuer for auth validation"
+  "Stripe API key for checkout and billing"
+  "Stripe monthly price ID"
+  "Stripe annual price ID"
+  "OpenRouter API for coach runtime"
+)
+
+# `vercel env pull` exposes stable value data for public/runtime config here, but
+# secret values are redacted in this workflow. Secret health is checked via
+# production runtime probes below instead of pretending we can lint redacted data.
+VERCEL_VALUE_VALIDATED_VARS=(
+  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
+  "CLERK_JWT_ISSUER_DOMAIN"
+  "NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID"
+  "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID"
+)
+
+PRODUCTION_HEALTH_URL="https://volume.fitness/api/health"
+
 # Convex deployment identifiers
 CONVEX_DEV="dev:curious-salamander-943"
 CONVEX_PROD="prod:whimsical-marten-631"
@@ -56,7 +88,7 @@ for arg in "$@"; do
     --help|-h)
       echo "Usage: $0 [--prod-only] [--quiet]"
       echo ""
-      echo "Verifies environment variables are set on Convex deployments."
+      echo "Verifies production-critical environment variables across Convex and Vercel."
       echo ""
       echo "Options:"
       echo "  --prod-only  Only check production deployment"
@@ -86,6 +118,42 @@ if ! command -v bunx &> /dev/null; then
   exit 2
 fi
 
+if ! command -v vercel &> /dev/null; then
+  log_error "Error: vercel CLI not found. Install Vercel CLI."
+  exit 2
+fi
+
+run_vercel() {
+  if vercel "$@" 2>/dev/null; then
+    return 0
+  fi
+
+  if command -v zsh &> /dev/null; then
+    local cmd="vercel"
+    local arg
+    for arg in "$@"; do
+      cmd+=" $(printf '%q' "$arg")"
+    done
+    zsh -lc "$cmd"
+    return
+  fi
+
+  return 1
+}
+
+get_vercel_env_list() {
+  run_vercel env ls 2>/dev/null || echo ""
+}
+
+is_value_validated_var() {
+  local target="$1"
+  local var
+  for var in "${VERCEL_VALUE_VALIDATED_VARS[@]}"; do
+    [[ "$var" == "$target" ]] && return 0
+  done
+  return 1
+}
+
 # Get env vars from a Convex deployment
 # Returns: newline-separated list of VAR_NAME=value
 get_convex_env() {
@@ -111,6 +179,37 @@ get_env_value() {
   local var_name="$1"
   local env_list="$2"
   echo "$env_list" | grep "^${var_name}=" | cut -d'=' -f2-
+}
+
+unquote_env_value() {
+  local value="$1"
+  value="${value%\"}"
+  value="${value#\"}"
+  printf '%s' "$value"
+}
+
+trim_env_value() {
+  local value
+  value=$(unquote_env_value "$1")
+  printf '%s' "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
+
+value_has_wrapped_whitespace() {
+  local raw_value="$1"
+  local unquoted_value
+  local trimmed_value
+
+  unquoted_value=$(unquote_env_value "$raw_value")
+  trimmed_value=$(trim_env_value "$raw_value")
+
+  [[ -n "$trimmed_value" && "$unquoted_value" != "$trimmed_value" ]]
+}
+
+value_has_literal_newline_escape() {
+  local raw_value="$1"
+  local unquoted_value
+  unquoted_value=$(unquote_env_value "$raw_value")
+  [[ "$unquoted_value" == *\\n* || "$unquoted_value" == *\\r* ]]
 }
 
 # Validate Stripe key type matches deployment environment
@@ -143,6 +242,55 @@ validate_stripe_key_type() {
   fi
 
   return 0
+}
+
+get_vercel_env() {
+  local environment="$1"
+  local env_file
+  env_file=$(mktemp)
+  trap "rm -f '$env_file'" RETURN
+
+  if ! run_vercel env pull "$env_file" --yes --environment "$environment" >/dev/null 2>&1; then
+    echo ""
+    return 1
+  fi
+
+  grep -E '^[A-Z0-9_]+=' "$env_file" || true
+}
+
+vercel_var_exists() {
+  local var_name="$1"
+  local env_list="$2"
+  echo "$env_list" | grep -Eq "^[[:space:]]*${var_name}[[:space:]].*Production"
+}
+
+check_production_health() {
+  local health_json
+  if ! health_json=$(curl -fsSL "$PRODUCTION_HEALTH_URL" 2>/dev/null); then
+    log_error "    Error: Could not fetch production health endpoint"
+    MISSING_VARS+=("Vercel:/api/health (UNREACHABLE)")
+    return 1
+  fi
+
+  if ! echo "$health_json" | grep -q '"status":"pass"'; then
+    log "    [INVALID] /api/health - overall production health failed"
+    MISSING_VARS+=("Vercel:/api/health (FAIL)")
+    return 1
+  fi
+
+  if ! echo "$health_json" | grep -q '"coachRuntime":{"status":"pass"}'; then
+    log "    [INVALID] OPENROUTER_API_KEY - coach runtime health failed"
+    MISSING_VARS+=("Vercel:OPENROUTER_API_KEY (HEALTH CHECK FAIL)")
+    return 1
+  fi
+
+  if ! echo "$health_json" | grep -q '"stripe":{"status":"pass"'; then
+    log "    [INVALID] STRIPE_SECRET_KEY - stripe health failed"
+    MISSING_VARS+=("Vercel:STRIPE_SECRET_KEY (HEALTH CHECK FAIL)")
+    return 1
+  fi
+
+  log "    [OK] /api/health"
 }
 
 # --- Main Logic ---
@@ -212,6 +360,87 @@ check_deployment() {
   done
 }
 
+check_vercel_environment() {
+  local environment="$1"
+  local display_name
+  local first_char="${environment%"${environment#?}"}"
+  local rest="${environment#?}"
+  display_name="$(printf '%s' "$first_char" | tr '[:lower:]' '[:upper:]')$rest"
+
+  log ""
+  log "==> Checking Vercel $display_name runtime"
+
+  local env_names
+  env_names=$(get_vercel_env_list)
+  if [[ -z "$env_names" ]]; then
+    log_error "    Error: Could not fetch Vercel env names"
+    MISSING_COUNT=$((MISSING_COUNT + ${#VERCEL_REQUIRED_VARS[@]}))
+    return
+  fi
+
+  local env_list
+  if ! env_list=$(get_vercel_env "$environment"); then
+    log_error "    Error: Could not pull Vercel env values"
+    MISSING_COUNT=$((MISSING_COUNT + ${#VERCEL_VALUE_VALIDATED_VARS[@]}))
+    return
+  fi
+
+  local missing_here=0
+  local i
+
+  for i in "${!VERCEL_REQUIRED_VARS[@]}"; do
+    local var="${VERCEL_REQUIRED_VARS[$i]}"
+    local desc="${VERCEL_REQUIRED_DESCRIPTIONS[$i]}"
+
+    if ! vercel_var_exists "$var" "$env_names"; then
+      log "    [MISSING] $var - $desc"
+      MISSING_VARS+=("Vercel:${var}")
+      missing_here=$((missing_here + 1))
+      continue
+    fi
+
+    if ! is_value_validated_var "$var"; then
+      log "    [OK] $var"
+    fi
+  done
+
+  for var in "${VERCEL_VALUE_VALIDATED_VARS[@]}"; do
+    local raw_value
+    raw_value=$(get_env_value "$var" "$env_list")
+    local trimmed_value
+    trimmed_value=$(trim_env_value "$raw_value")
+
+    if [[ -z "$trimmed_value" ]]; then
+      log "    [BLANK] $var - value missing in pulled Vercel env"
+      MISSING_VARS+=("Vercel:${var} (BLANK)")
+      missing_here=$((missing_here + 1))
+      continue
+    fi
+
+    if value_has_wrapped_whitespace "$raw_value"; then
+      log "    [INVALID] $var - leading/trailing whitespace"
+      MISSING_VARS+=("Vercel:${var} (LEADING/TRAILING WHITESPACE)")
+      missing_here=$((missing_here + 1))
+      continue
+    fi
+
+    if value_has_literal_newline_escape "$raw_value"; then
+      log "    [INVALID] $var - literal newline escape sequence"
+      MISSING_VARS+=("Vercel:${var} (LITERAL NEWLINE ESCAPE)")
+      missing_here=$((missing_here + 1))
+      continue
+    fi
+
+    log "    [OK] $var"
+  done
+
+  if ! check_production_health; then
+    missing_here=$((missing_here + 1))
+  fi
+
+  MISSING_COUNT=$((MISSING_COUNT + missing_here))
+}
+
 # Header
 log "Environment Variable Verification"
 log "=================================="
@@ -221,6 +450,7 @@ if [[ "$PROD_ONLY" == "false" ]]; then
   check_deployment "Development" "$CONVEX_DEV"
 fi
 check_deployment "Production" "$CONVEX_PROD"
+check_vercel_environment "production"
 
 # Summary
 log ""
@@ -236,8 +466,10 @@ else
   log ""
   log "To set a missing variable:"
   log "  CONVEX_DEPLOYMENT=<deployment> bunx convex env set <VAR_NAME> \"<value>\""
+  log "  vercel env add <VAR_NAME> production"
   log ""
   log "Example:"
   log "  CONVEX_DEPLOYMENT=$CONVEX_PROD bunx convex env set STRIPE_SECRET_KEY \"sk_live_...\""
+  log "  vercel env add OPENROUTER_API_KEY production < secret.txt"
   exit 1
 fi
