@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.2](https://github.com/misty-step/volume/compare/v1.15.1...v1.15.2) (2026-03-07)
+
+
+### Bug Fixes
+
+* restore prod coach runtime and harden env validation ([#410](https://github.com/misty-step/volume/issues/410)) ([9b8db63](https://github.com/misty-step/volume/commit/9b8db6329bd70abfa644a7db6bbf48cf4447f498))
+
 ## [1.15.1](https://github.com/misty-step/volume/compare/v1.15.0...v1.15.1) (2026-03-07)
 
 
