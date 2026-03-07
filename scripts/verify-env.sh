@@ -62,6 +62,9 @@ VERCEL_REQUIRED_DESCRIPTIONS=(
   "OpenRouter API for coach runtime"
 )
 
+# `vercel env pull` exposes stable value data for public/runtime config here, but
+# secret values are redacted in this workflow. Secret health is checked via
+# production runtime probes below instead of pretending we can lint redacted data.
 VERCEL_VALUE_VALIDATED_VARS=(
   "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
   "CLERK_JWT_ISSUER_DOMAIN"
