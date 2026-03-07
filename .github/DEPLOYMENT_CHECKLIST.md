@@ -79,6 +79,14 @@ Ensure production environment variables are set correctly:
 - [ ] `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Clerk publishable key (pk*live*\*)
 - [ ] `CLERK_SECRET_KEY` - Clerk secret key (sk*live*\*)
 - [ ] `CLERK_JWT_ISSUER_DOMAIN` - Clerk JWT issuer domain (https://clerk.volume.fitness)
+- [ ] `OPENROUTER_API_KEY` - OpenRouter API key for `/api/coach`
+- [ ] `NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID` - Stripe monthly price ID
+- [ ] `NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID` - Stripe annual price ID
+
+### Verification
+
+- [ ] Run `./scripts/verify-env.sh --prod-only` to validate both Convex and Vercel production env vars
+- [ ] Run `curl -sSL https://volume.fitness/api/health` and confirm `status=pass`
 
 ## Common Deployment Mistakes to Avoid
 

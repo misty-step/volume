@@ -42,7 +42,8 @@
 
 ### External Integration Deployment (if modifying Stripe, Clerk, OpenRouter, etc.)
 
-- [ ] Verify env vars exist on **production** Convex: `./scripts/verify-env.sh --prod-only`
+- [ ] Verify env vars exist on **production** Convex + Vercel: `./scripts/verify-env.sh --prod-only`
+- [ ] Check prod health endpoint: `curl -sSL https://volume.fitness/api/health`
 - [ ] Test against real API (not mocks) in test/sandbox mode
 - [ ] Check API documentation for parameter constraints TypeScript can't enforce
 - [ ] Verify webhook endpoint is registered and receiving events
