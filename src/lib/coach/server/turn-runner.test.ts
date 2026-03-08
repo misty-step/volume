@@ -68,4 +68,96 @@ describe("runCoachTurn", () => {
     expect(response.trace.model).toBe("mock-model-id (planner_failed)");
     expect(response.trace.toolsUsed).toEqual([]);
   });
+
+  it("returns the successful planner response unchanged", async () => {
+    runPlannerTurnMock.mockReset();
+    runPlannerTurnMock.mockResolvedValue({
+      kind: "ok",
+      assistantText: "Summary ready.",
+      blocks: [
+        {
+          type: "metrics",
+          title: "Today",
+          metrics: [{ label: "Sets", value: "3" }],
+        },
+      ],
+      toolsUsed: ["get_today_summary"],
+      hitToolLimit: false,
+      responseMessages: [{ role: "assistant", content: "Summary ready." }],
+    });
+    const events: unknown[] = [];
+
+    const { runCoachTurn } = await import("./turn-runner");
+
+    const response = await runCoachTurn({
+      runtime: { model: {}, modelId: "mock-model-id" } as never,
+      history: [{ role: "user", content: "summary" }],
+      preferences: {
+        unit: "lbs",
+        soundEnabled: true,
+        timezoneOffsetMinutes: 0,
+      },
+      ctx: {} as never,
+      requestSignal: new AbortController().signal,
+      emitEvent: (event) => events.push(event),
+      timeoutMs: 25,
+    });
+
+    expect(events).toEqual([{ type: "start", model: "mock-model-id" }]);
+    expect(response.assistantText).toBe("Summary ready.");
+    expect(response.trace.model).toBe("mock-model-id");
+    expect(response.trace.fallbackUsed).toBe(false);
+    expect(response.trace.toolsUsed).toEqual(["get_today_summary"]);
+    expect(response.responseMessages).toEqual([
+      { role: "assistant", content: "Summary ready." },
+    ]);
+    expect(response.blocks).toEqual([
+      {
+        type: "metrics",
+        title: "Today",
+        metrics: [{ label: "Sets", value: "3" }],
+      },
+    ]);
+  });
+
+  it("treats aborted no-tool planner failures as full failures", async () => {
+    runPlannerTurnMock.mockReset();
+    const requestController = new AbortController();
+    runPlannerTurnMock.mockImplementation(async () => {
+      requestController.abort("client_aborted");
+      return {
+        kind: "error",
+        assistantText: "",
+        blocks: [],
+        toolsUsed: [],
+        errorMessage: "planner exploded",
+        hitToolLimit: false,
+        responseMessages: [],
+      };
+    });
+    const events: unknown[] = [];
+
+    const { runCoachTurn } = await import("./turn-runner");
+
+    const response = await runCoachTurn({
+      runtime: { model: {}, modelId: "mock-model-id" } as never,
+      history: [{ role: "user", content: "summary" }],
+      preferences: {
+        unit: "lbs",
+        soundEnabled: true,
+        timezoneOffsetMinutes: 0,
+      },
+      ctx: {} as never,
+      requestSignal: requestController.signal,
+      emitEvent: (event) => events.push(event),
+      timeoutMs: 25,
+    });
+
+    expect(events).toEqual([
+      { type: "start", model: "mock-model-id" },
+      { type: "error", message: "planner exploded" },
+    ]);
+    expect(response.trace.model).toBe("mock-model-id (planner_failed)");
+    expect(response.trace.toolsUsed).toEqual([]);
+  });
 });

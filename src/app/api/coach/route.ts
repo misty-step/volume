@@ -15,10 +15,7 @@ import {
   SSE_PADDING_BYTES,
   wantsEventStream,
 } from "@/lib/coach/server/sse";
-import {
-  COACH_TURN_TIMEOUT_MS,
-  runCoachTurn,
-} from "@/lib/coach/server/turn-runner";
+import { runCoachTurn } from "@/lib/coach/server/turn-runner";
 import { generateText } from "ai";
 import type { Exercise } from "@/types/domain";
 
@@ -56,7 +53,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const latestUserMsg = [...parsed.data.messages]
+  const history = parsed.data.messages.filter(
+    (message) => message.role !== "system"
+  );
+
+  const latestUserMsg = [...history]
     .reverse()
     .find((message) => message.role === "user");
 
@@ -157,22 +158,28 @@ export async function POST(request: Request) {
   };
 
   const streamRequested = wantsEventStream(request);
-  const history = parsed.data.messages;
 
   if (streamRequested) {
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
+        let closed = false;
         const send = (event: CoachStreamEvent) => {
-          controller.enqueue(encoder.encode(encodeSse(event)));
-          if (event.type === "start") {
-            controller.enqueue(
-              encoder.encode(encodeSseComment(" ".repeat(SSE_PADDING_BYTES)))
-            );
+          if (closed) return false;
+          try {
+            controller.enqueue(encoder.encode(encodeSse(event)));
+            if (event.type === "start") {
+              controller.enqueue(
+                encoder.encode(encodeSseComment(" ".repeat(SSE_PADDING_BYTES)))
+              );
+            }
+            return true;
+          } catch {
+            closed = true;
+            return false;
           }
         };
 
-        let closed = false;
         const close = () => {
           if (closed) return;
           closed = true;
@@ -191,12 +198,10 @@ export async function POST(request: Request) {
             ctx: context,
             requestSignal: request.signal,
             emitEvent: (event) => {
-              send(event);
-              if (request.signal.aborted) {
+              if (!send(event) || request.signal.aborted) {
                 close();
               }
             },
-            timeoutMs: COACH_TURN_TIMEOUT_MS,
           });
 
           send({ type: "final", response });
@@ -215,7 +220,6 @@ export async function POST(request: Request) {
     preferences: parsed.data.preferences,
     ctx: context,
     requestSignal: request.signal,
-    timeoutMs: COACH_TURN_TIMEOUT_MS,
   });
 
   return NextResponse.json(response);

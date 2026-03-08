@@ -3,6 +3,7 @@ import type {
   CoachStreamEvent,
   CoachTurnResponse,
 } from "@/lib/coach/schema";
+import { sanitizeError } from "@/lib/coach/sanitize-error";
 import type { ModelMessage } from "ai";
 import type { CoachToolContext } from "@/lib/coach/tools/types";
 import {
@@ -37,17 +38,11 @@ function abortTurn(controller: AbortController, reason: string | Error) {
 function buildPlannerResultResponse({
   plannerResult,
   modelId,
-  aborted,
 }: {
   plannerResult: PlannerRunResult;
   modelId: string;
-  aborted: boolean;
 }): CoachTurnResponse {
-  if (
-    plannerResult.kind === "error" &&
-    plannerResult.toolsUsed.length === 0 &&
-    !aborted
-  ) {
+  if (plannerResult.kind === "error" && plannerResult.toolsUsed.length === 0) {
     return buildPlannerFailedResponse({
       modelId,
       errorMessage: plannerResult.errorMessage,
@@ -113,13 +108,15 @@ export async function runCoachTurn({
     });
 
     if (plannerResult.kind === "error") {
-      send({ type: "error", message: plannerResult.errorMessage });
+      send({
+        type: "error",
+        message: sanitizeError(plannerResult.errorMessage),
+      });
     }
 
     return buildPlannerResultResponse({
       plannerResult,
       modelId: runtime.modelId,
-      aborted: turnController.signal.aborted,
     });
   } finally {
     clearTimeout(timeoutId);
