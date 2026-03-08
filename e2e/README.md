@@ -12,10 +12,14 @@ We use Playwright for end-to-end testing. Tests are located in `e2e/`.
    # Clerk (from your Clerk Dashboard > API Keys)
    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
    CLERK_SECRET_KEY=sk_test_...
+   CLERK_JWT_ISSUER_DOMAIN=your-tenant.clerk.accounts.dev
 
    # Test User (for global auth setup)
    CLERK_TEST_USER_EMAIL=test+e2e@example.com
    CLERK_TEST_USER_PASSWORD=secure_password_here
+
+   # Convex
+   NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
 
    # Test Data Reset (Optional, for deterministic cleanup)
    # Must match the value set in your Convex Dashboard Environment Variables
@@ -23,6 +27,9 @@ We use Playwright for end-to-end testing. Tests are located in `e2e/`.
    ```
 
 2. **Convex Config**: Ensure `TEST_RESET_SECRET` is also set in your Convex deployment variables if you want to use the data reset feature.
+
+3. **GitHub Actions**: The CI workflow fails immediately if any required E2E secret is missing. Configure these repo secrets with the same names used locally:
+   `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_JWT_ISSUER_DOMAIN`, `CLERK_TEST_USER_EMAIL`, `CLERK_TEST_USER_PASSWORD`, `NEXT_PUBLIC_CONVEX_URL`, `TEST_RESET_SECRET`.
 
 ### Running Tests
 
@@ -37,6 +44,11 @@ We use Playwright for end-to-end testing. Tests are located in `e2e/`.
   ```bash
   bun run test:e2e
   ```
+
+  By default the suite runs with a single Playwright worker because all coach
+  flows share one authenticated test account and can trip the per-user coach
+  rate limit when run in parallel. Override with `PLAYWRIGHT_WORKERS=<n>` only
+  when you know the target flows are isolated.
 
 - **Specific Test File**:
   ```bash

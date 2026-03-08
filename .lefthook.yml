@@ -7,7 +7,7 @@ pre-commit:
   commands:
     # === Security Scanning (Critical) ===
     security-scan:
-      run: trufflehog git file://. --only-verified --fail --no-update
+      run: trufflehog git "file://$(git rev-parse --git-common-dir)" --bare --only-verified --fail --no-update
       fail_text: "❌ Secrets detected! Remove before committing."
 
     # === Code Formatting (Auto-fixable) ===

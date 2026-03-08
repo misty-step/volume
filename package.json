@@ -26,7 +26,7 @@
     "lint:fix": "eslint . --fix --max-warnings=0",
     "test:affected": "vitest --related --run",
     "security:audit": "bun pm scan",
-    "security:scan": "trufflehog git file://. --only-verified --fail --no-update",
+    "security:scan": "trufflehog git \"file://$(git rev-parse --git-common-dir)\" --bare --only-verified --fail --no-update",
     "quality:check": "tsx scripts/verify-coverage.ts",
     "quality:full": "bun run typecheck && bun run lint && bun run test:coverage && bun run build",
     "generate:releases": "tsx scripts/generate-releases.ts"
