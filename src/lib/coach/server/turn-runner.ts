@@ -112,9 +112,18 @@ export async function runCoachTurn({
     });
 
     if (plannerResult.kind === "error") {
+      const safeErrorMessage = sanitizeError(plannerResult.errorMessage);
       send({
         type: "error",
-        message: sanitizeError(plannerResult.errorMessage),
+        message: safeErrorMessage,
+      });
+
+      return buildPlannerResultResponse({
+        plannerResult: {
+          ...plannerResult,
+          errorMessage: safeErrorMessage,
+        },
+        modelId: runtime.modelId,
       });
     }
 
