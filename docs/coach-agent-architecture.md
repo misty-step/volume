@@ -68,7 +68,7 @@ Where `data` is a `CoachStreamEvent` JSON object (see `src/lib/coach/schema.ts`)
 - `src/app/api/coach/route.ts`
   - HTTP entry point (auth, request parsing, streaming vs JSON response).
 - `src/lib/coach/server/*`
-  - planner loop (`planner.ts`), AI SDK tool factory (`coach-tools.ts`), runtime provider, SSE utilities, response builders.
+  - planner loop (`planner.ts`), shared turn runner (`turn-runner.ts`), AI SDK tool factory (`coach-tools.ts`), runtime provider, SSE utilities, response builders.
 - `src/lib/coach/tools/*`
   - deterministic tool handlers and Convex access helpers; consumed by `createCoachTools`.
 - `src/lib/coach/schema.ts`
