@@ -161,6 +161,51 @@ describe("runCoachTurn", () => {
     expect(response.trace.toolsUsed).toEqual([]);
   });
 
+  it("propagates pre-aborted request signals into the planner signal", async () => {
+    runPlannerTurnMock.mockReset();
+    const requestController = new AbortController();
+    requestController.abort("client_aborted");
+    runPlannerTurnMock.mockImplementation(
+      async ({ signal }: { signal: AbortSignal }) => {
+        expect(signal.aborted).toBe(true);
+        expect(signal.reason).toBe("client_aborted");
+        return {
+          kind: "error",
+          assistantText: "",
+          blocks: [],
+          toolsUsed: [],
+          errorMessage: "Planner aborted: client_aborted",
+          hitToolLimit: false,
+          responseMessages: [],
+        };
+      }
+    );
+    const events: unknown[] = [];
+
+    const { runCoachTurn } = await import("./turn-runner");
+
+    const response = await runCoachTurn({
+      runtime: { model: {}, modelId: "mock-model-id" } as never,
+      history: [{ role: "user", content: "summary" }],
+      preferences: {
+        unit: "lbs",
+        soundEnabled: true,
+        timezoneOffsetMinutes: 0,
+      },
+      ctx: {} as never,
+      requestSignal: requestController.signal,
+      emitEvent: (event) => events.push(event),
+      timeoutMs: 25,
+    });
+
+    expect(events).toEqual([
+      { type: "start", model: "mock-model-id" },
+      { type: "error", message: "Planner aborted: client_aborted" },
+    ]);
+    expect(response.trace.model).toBe("mock-model-id (planner_failed)");
+    expect(response.trace.toolsUsed).toEqual([]);
+  });
+
   it("returns a partial failure response when tools already ran", async () => {
     runPlannerTurnMock.mockReset();
     runPlannerTurnMock.mockResolvedValue({

@@ -95,7 +95,11 @@ export async function runCoachTurn({
   const abortHandler = () => {
     abortTurn(turnController, "client_aborted");
   };
-  requestSignal.addEventListener("abort", abortHandler);
+  if (requestSignal.aborted) {
+    abortHandler();
+  } else {
+    requestSignal.addEventListener("abort", abortHandler);
+  }
 
   try {
     const plannerResult = await runPlannerTurn({
