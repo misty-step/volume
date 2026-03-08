@@ -8,7 +8,7 @@ Volume is a chat-first workout tracker where an AI coach replaces traditional UI
 
 **Target User:** Anyone who tracks workouts and wants the friction removed. Power users who log daily. Beginners who need guidance. People who find traditional workout apps tedious.
 
-**Current Focus:** Build the agentic foundation — generative UI catalog, AI SDK 6 agent loop, Mastra memory, CSS variable design tokens.
+**Current Focus:** Slash scope to the agentic core: coach trust, pristine generative UI, kickoff quality, and the smallest set of foundations that make the experience feel premium.
 
 **Key Differentiators:**
 
@@ -37,8 +37,8 @@ Volume is a chat-first workout tracker where an AI coach replaces traditional UI
 ## Active Focus
 
 - **Milestone:** Agentic Foundation
-- **Key Issues:** #341 (epic), #342 (AI SDK 6 + json-render), #349 (catalog), #344 (Mastra memory), #350 (design tokens)
-- **Theme:** Make the agent robust, generative, and memory-aware. Consolidate all UX through the coach.
+- **Key Issues:** #349 (catalog), #346 (kickoff), #344 (memory), #403 (intent handling bug), #411 (summary correctness bug)
+- **Theme:** Make the coach trustworthy and the generative UI feel native, fast, and visually premium. Defer breadth that does not directly improve that experience.
 - **Execution docs:** `docs/specs/341-agentic-ui-pivot-spec.md`, `docs/design/341-agentic-ui-pivot-architecture.md`
 
 **Locked technical directions (2026-02-22 /groom):**
@@ -118,5 +118,5 @@ await ctx.db.patch(id, { deletedAt: Date.now() });
 
 ---
 
-_Last updated: 2026-02-23_
+_Last updated: 2026-03-07_
 _Updated during: /groom session_
