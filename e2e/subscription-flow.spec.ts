@@ -55,11 +55,24 @@ test.describe("Subscription Flow", () => {
     });
   });
 
-  test("Pricing page surfaces a subscription CTA", async ({ page }) => {
+  test("Checkout redirects to Stripe (monthly)", async ({ page }) => {
     await page.goto("/pricing");
-    await expect(
-      page.getByRole("button", { name: /start|subscribe|continue/i }).first()
-    ).toBeVisible();
+
+    await page.getByText("Monthly").first().click();
+    await page.getByRole("button", { name: /subscribe now/i }).click();
+
+    await page.waitForURL(/checkout\.stripe\.com/, { timeout: 15_000 });
+    expect(page.url()).toContain("checkout.stripe.com");
+  });
+
+  test("Checkout redirects to Stripe (annual)", async ({ page }) => {
+    await page.goto("/pricing");
+
+    await page.getByText("Annual").first().click();
+    await page.getByRole("button", { name: /subscribe now/i }).click();
+
+    await page.waitForURL(/checkout\.stripe\.com/, { timeout: 15_000 });
+    expect(page.url()).toContain("checkout.stripe.com");
   });
 });
 

@@ -35,10 +35,9 @@ export const test = base.extend<AuthFixtures>({
       );
 
       if (!response.ok) {
-        console.warn(
+        throw new Error(
           `Failed to reset user data: ${response.status} ${response.statusText}`
         );
-        return;
       }
 
       await page.goto(`${baseURL}/today`);

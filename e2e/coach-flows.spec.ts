@@ -84,10 +84,15 @@ test.describe("Coach chat flows", () => {
   test("archives and restores an exercise through generated UI", async ({
     page,
   }) => {
-    await sendCoachMessage(page, "10 pushups");
-    await waitForCoachText(page, /Logged 10 pushups/i);
+    const exerciseName = `archive e2e ${Date.now()}`;
 
-    await sendCoachMessage(page, "archive exercise pushups");
+    await sendCoachMessage(page, `10 ${exerciseName}`);
+    await waitForCoachText(
+      page,
+      new RegExp(`Logged 10 ${escapeRegExp(exerciseName)}`, "i")
+    );
+
+    await sendCoachMessage(page, `archive exercise ${exerciseName}`);
     await waitForCoachIdle(page);
 
     await sendCoachMessage(page, "yes");
@@ -105,7 +110,7 @@ test.describe("Coach chat flows", () => {
     await waitForCoachText(page, /Exercise library/i);
     await expect(
       coachTimeline(page)
-        .getByText(/^pushups$/i)
+        .getByText(new RegExp(`^${escapeRegExp(exerciseName)}$`, "i"))
         .last()
     ).toBeVisible({
       timeout: 30_000,

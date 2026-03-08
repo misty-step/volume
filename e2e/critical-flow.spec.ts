@@ -1,7 +1,10 @@
 import { test, expect } from "./auth-fixture";
 import {
+  clickEntityAction,
   coachTimeline,
+  escapeRegExp,
   openCoachWorkspace,
+  sendCoachMessage,
   waitForCoachText,
 } from "./coach-helpers";
 
@@ -10,6 +13,32 @@ test.describe("Agentic workspace critical routes", () => {
 
   test.beforeEach(async ({ resetUserData }) => {
     await resetUserData();
+  });
+
+  test("logs and deletes a set through the workspace history flow", async ({
+    page,
+  }) => {
+    const exerciseName = `critical flow ${Date.now()}`;
+
+    await openCoachWorkspace(page, "/today");
+    await sendCoachMessage(page, `10 ${exerciseName}`);
+    await waitForCoachText(
+      page,
+      new RegExp(`Logged 10 ${escapeRegExp(exerciseName)}`, "i")
+    );
+
+    await sendCoachMessage(page, "show history overview");
+    await waitForCoachText(page, /History snapshot/i);
+    await expect(
+      coachTimeline(page)
+        .getByText(new RegExp(`^${escapeRegExp(exerciseName)}$`, "i"))
+        .first()
+    ).toBeVisible({
+      timeout: 30_000,
+    });
+
+    await clickEntityAction(page, exerciseName);
+    await waitForCoachText(page, /Set deleted/i);
   });
 
   test("analytics route redirects into the workspace and renders generated blocks", async ({

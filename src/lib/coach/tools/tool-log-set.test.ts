@@ -40,4 +40,12 @@ describe("LogSetArgsSchema", () => {
     expect(parsed.duration_seconds).toBe(120);
     expect(parsed.reps).toBeUndefined();
   });
+
+  it("rejects sets without reps or duration", () => {
+    expect(() =>
+      LogSetArgsSchema.parse({
+        exercise_name: "Push-ups",
+      })
+    ).toThrowError(/Provide exactly one of reps or duration_seconds/);
+  });
 });
