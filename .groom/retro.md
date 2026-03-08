@@ -8,3 +8,12 @@
 **Pattern:** AI SDK chunk fields differ from docs: tool-result uses 'output' not 'result'; MockLanguageModelV3 doStream is called once per step, not once total
 
 ---
+
+## Entry: #338 — [P1] Extract shared coach turn runner for JSON and SSE parity (2026-03-07)
+
+**Effort:** predicted medium → actual medium
+**Scope changes:** landed shared orchestration extraction, parity tests, and docs update; did not move `resolveExerciseName` out of the route because that widens into a deeper boundary cleanup
+**Blockers:** full authenticated dogfood was blocked by local Clerk auth; used route-level parity tests, full pre-push checks, and a local unauthenticated smoke instead
+**Pattern:** refactors need tests on the extracted seam itself, not just end behavior; adding `turn-runner.test.ts` made the boundary explicit before moving code
+
+---

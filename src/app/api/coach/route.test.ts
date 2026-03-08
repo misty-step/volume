@@ -326,6 +326,80 @@ describe("POST /api/coach", () => {
     expect(runPlannerTurnMock).toHaveBeenCalledTimes(1);
   });
 
+  it("emits equivalent final responses for JSON and SSE transports", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    ConvexHttpClientMock.mockReturnValue(convex);
+
+    getCoachRuntimeMock.mockReturnValue({
+      model: {},
+      modelId: "mock-model-id",
+    });
+    runPlannerTurnMock.mockReset();
+    runPlannerTurnMock.mockResolvedValue({
+      kind: "ok",
+      assistantText: "Summary ready.",
+      blocks: [
+        {
+          type: "metrics",
+          title: "Today",
+          metrics: [{ label: "Sets", value: "5" }],
+        },
+      ],
+      toolsUsed: ["get_today_summary"],
+      hitToolLimit: false,
+      responseMessages: [{ role: "assistant", content: "Summary ready." }],
+    });
+
+    const { POST } = await import("./route");
+    const body = JSON.stringify({
+      messages: [{ role: "user", content: "show today's summary" }],
+      preferences: {
+        unit: "lbs",
+        soundEnabled: true,
+        timezoneOffsetMinutes: 0,
+      },
+    });
+
+    const jsonResponse = await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      })
+    );
+    const sseResponse = await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+        },
+        body,
+      })
+    );
+
+    const json = await jsonResponse.json();
+    let finalEvent: { type: string; response?: unknown } | null = null;
+    for await (const event of readCoachStreamEvents(sseResponse.body!)) {
+      if (event.type === "final") {
+        finalEvent = event;
+        break;
+      }
+    }
+
+    expect(finalEvent).toEqual({
+      type: "final",
+      response: json,
+    });
+    expect(runPlannerTurnMock).toHaveBeenCalledTimes(2);
+  });
+
   it("returns planner failure response without deterministic fallback", async () => {
     process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
     authMock.mockResolvedValue({

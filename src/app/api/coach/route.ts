@@ -6,15 +6,7 @@ import { api } from "@/../convex/_generated/api";
 import {
   CoachTurnRequestSchema,
   type CoachStreamEvent,
-  type CoachTurnResponse,
 } from "@/lib/coach/schema";
-import {
-  buildPlannerFailedResponse,
-  buildPlannerPartialFailureResponse,
-  buildRuntimeUnavailableResponse,
-  buildCoachTurnResponse,
-} from "@/lib/coach/server/blocks";
-import { runPlannerTurn } from "@/lib/coach/server/planner";
 import { getCoachRuntime } from "@/lib/coach/server/runtime";
 import {
   encodeSse,
@@ -23,51 +15,12 @@ import {
   SSE_PADDING_BYTES,
   wantsEventStream,
 } from "@/lib/coach/server/sse";
+import {
+  COACH_TURN_TIMEOUT_MS,
+  runCoachTurn,
+} from "@/lib/coach/server/turn-runner";
 import { generateText } from "ai";
 import type { Exercise } from "@/types/domain";
-
-const COACH_TURN_TIMEOUT_MS = 60_000;
-type PlannerResult = Awaited<ReturnType<typeof runPlannerTurn>>;
-
-function buildPlannerResultResponse({
-  plannerResult,
-  modelId,
-  aborted,
-}: {
-  plannerResult: PlannerResult;
-  modelId: string;
-  aborted: boolean;
-}): CoachTurnResponse {
-  if (
-    plannerResult.kind === "error" &&
-    plannerResult.toolsUsed.length === 0 &&
-    !aborted
-  ) {
-    return buildPlannerFailedResponse({
-      modelId,
-      errorMessage: plannerResult.errorMessage,
-    });
-  }
-
-  if (plannerResult.kind === "error") {
-    return buildPlannerPartialFailureResponse({
-      modelId,
-      errorMessage: plannerResult.errorMessage,
-      blocks: plannerResult.blocks,
-      toolsUsed: plannerResult.toolsUsed,
-      responseMessages: plannerResult.responseMessages,
-    });
-  }
-
-  return buildCoachTurnResponse({
-    assistantText: plannerResult.assistantText,
-    blocks: plannerResult.blocks,
-    toolsUsed: plannerResult.toolsUsed,
-    model: modelId,
-    fallbackUsed: false,
-    responseMessages: plannerResult.responseMessages,
-  });
-}
 
 export async function POST(request: Request) {
   const { userId, getToken } = await auth();
@@ -204,25 +157,19 @@ export async function POST(request: Request) {
   };
 
   const streamRequested = wantsEventStream(request);
+  const history = parsed.data.messages;
 
   if (streamRequested) {
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
-        const turnController = new AbortController();
-        const timeoutId = setTimeout(() => {
-          try {
-            turnController.abort(new Error("Turn timed out"));
-          } catch {
-            turnController.abort();
-          }
-        }, COACH_TURN_TIMEOUT_MS);
-
         const send = (event: CoachStreamEvent) => {
           controller.enqueue(encoder.encode(encodeSse(event)));
-        };
-        const sendComment = (content: string) => {
-          controller.enqueue(encoder.encode(encodeSseComment(content)));
+          if (event.type === "start") {
+            controller.enqueue(
+              encoder.encode(encodeSseComment(" ".repeat(SSE_PADDING_BYTES)))
+            );
+          }
         };
 
         let closed = false;
@@ -236,61 +183,24 @@ export async function POST(request: Request) {
           }
         };
 
-        const abortHandler = () => {
-          try {
-            turnController.abort("client_aborted");
-          } catch {
-            turnController.abort();
-          }
-          close();
-        };
-        request.signal.addEventListener("abort", abortHandler);
-
         try {
-          if (!runtime) {
-            send({ type: "start", model: "runtime-unavailable" });
-            sendComment(" ".repeat(SSE_PADDING_BYTES));
-            if (turnController.signal.aborted) {
-              send({ type: "error", message: "Turn aborted." });
-              return;
-            }
-            send({
-              type: "final",
-              response: buildRuntimeUnavailableResponse(),
-            });
-            return;
-          }
-
-          send({ type: "start", model: runtime.modelId });
-          sendComment(" ".repeat(SSE_PADDING_BYTES));
-
-          const history = parsed.data.messages;
-
-          const plannerResult = await runPlannerTurn({
+          const response = await runCoachTurn({
             runtime,
             history,
             preferences: parsed.data.preferences,
             ctx: context,
-            emitEvent: send,
-            signal: turnController.signal,
-          });
-
-          if (plannerResult.kind === "error") {
-            send({ type: "error", message: plannerResult.errorMessage });
-          }
-
-          const aborted = turnController.signal.aborted;
-
-          const response = buildPlannerResultResponse({
-            plannerResult,
-            modelId: runtime.modelId,
-            aborted,
+            requestSignal: request.signal,
+            emitEvent: (event) => {
+              send(event);
+              if (request.signal.aborted) {
+                close();
+              }
+            },
+            timeoutMs: COACH_TURN_TIMEOUT_MS,
           });
 
           send({ type: "final", response });
         } finally {
-          clearTimeout(timeoutId);
-          request.signal.removeEventListener("abort", abortHandler);
           close();
         }
       },
@@ -299,50 +209,14 @@ export async function POST(request: Request) {
     return new Response(stream, { headers: SSE_HEADERS });
   }
 
-  if (!runtime) {
-    return NextResponse.json(buildRuntimeUnavailableResponse());
-  }
+  const response = await runCoachTurn({
+    runtime,
+    history,
+    preferences: parsed.data.preferences,
+    ctx: context,
+    requestSignal: request.signal,
+    timeoutMs: COACH_TURN_TIMEOUT_MS,
+  });
 
-  const history = parsed.data.messages;
-
-  const turnController = new AbortController();
-  const timeoutId = setTimeout(() => {
-    try {
-      turnController.abort(new Error("Turn timed out"));
-    } catch {
-      turnController.abort();
-    }
-  }, COACH_TURN_TIMEOUT_MS);
-  const abortHandler = () => {
-    try {
-      turnController.abort("client_aborted");
-    } catch {
-      turnController.abort();
-    }
-  };
-  request.signal.addEventListener("abort", abortHandler);
-
-  let plannerResult: PlannerResult;
-  try {
-    plannerResult = await runPlannerTurn({
-      runtime,
-      history,
-      preferences: parsed.data.preferences,
-      ctx: context,
-      signal: turnController.signal,
-    });
-  } finally {
-    clearTimeout(timeoutId);
-    request.signal.removeEventListener("abort", abortHandler);
-  }
-
-  const aborted = turnController.signal.aborted;
-
-  return NextResponse.json(
-    buildPlannerResultResponse({
-      plannerResult,
-      modelId: runtime.modelId,
-      aborted,
-    })
-  );
+  return NextResponse.json(response);
 }
