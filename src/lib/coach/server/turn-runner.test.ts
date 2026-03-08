@@ -160,4 +160,119 @@ describe("runCoachTurn", () => {
     expect(response.trace.model).toBe("mock-model-id (planner_failed)");
     expect(response.trace.toolsUsed).toEqual([]);
   });
+
+  it("returns a partial failure response when tools already ran", async () => {
+    runPlannerTurnMock.mockReset();
+    runPlannerTurnMock.mockResolvedValue({
+      kind: "error",
+      assistantText: "",
+      blocks: [
+        {
+          type: "metrics",
+          title: "Today",
+          metrics: [{ label: "Sets", value: "1" }],
+        },
+      ],
+      toolsUsed: ["get_today_summary"],
+      errorMessage: "planner exploded",
+      hitToolLimit: false,
+      responseMessages: [{ role: "assistant", content: "partial" }],
+    });
+    const events: unknown[] = [];
+
+    const { runCoachTurn } = await import("./turn-runner");
+
+    const response = await runCoachTurn({
+      runtime: { model: {}, modelId: "mock-model-id" } as never,
+      history: [{ role: "user", content: "summary" }],
+      preferences: {
+        unit: "lbs",
+        soundEnabled: true,
+        timezoneOffsetMinutes: 0,
+      },
+      ctx: {} as never,
+      requestSignal: new AbortController().signal,
+      emitEvent: (event) => events.push(event),
+      timeoutMs: 25,
+    });
+
+    expect(events).toEqual([
+      { type: "start", model: "mock-model-id" },
+      { type: "error", message: "planner exploded" },
+    ]);
+    expect(response.assistantText).toBe(
+      "I hit an error while finishing that. Here's what I have so far."
+    );
+    expect(response.trace.model).toBe("mock-model-id (planner_failed_partial)");
+    expect(response.trace.toolsUsed).toEqual(["get_today_summary"]);
+    expect(response.responseMessages).toEqual([
+      { role: "assistant", content: "partial" },
+    ]);
+    expect(response.blocks.at(-1)).toEqual({
+      type: "metrics",
+      title: "Today",
+      metrics: [{ label: "Sets", value: "1" }],
+    });
+  });
+
+  it("uses the default timeout to abort a stalled planner turn", async () => {
+    runPlannerTurnMock.mockReset();
+    runPlannerTurnMock.mockImplementation(
+      ({ signal }: { signal: AbortSignal }) =>
+        new Promise((resolve) => {
+          signal.addEventListener(
+            "abort",
+            () =>
+              resolve({
+                kind: "error",
+                assistantText: "",
+                blocks: [],
+                toolsUsed: [],
+                errorMessage:
+                  signal.reason instanceof Error
+                    ? signal.reason.message
+                    : String(signal.reason ?? "planner aborted"),
+                hitToolLimit: false,
+                responseMessages: [],
+              }),
+            { once: true }
+          );
+        })
+    );
+    vi.useFakeTimers();
+    const events: unknown[] = [];
+
+    const { COACH_TURN_TIMEOUT_MS, runCoachTurn } =
+      await import("./turn-runner");
+
+    const responsePromise = runCoachTurn({
+      runtime: { model: {}, modelId: "mock-model-id" } as never,
+      history: [{ role: "user", content: "summary" }],
+      preferences: {
+        unit: "lbs",
+        soundEnabled: true,
+        timezoneOffsetMinutes: 0,
+      },
+      ctx: {} as never,
+      requestSignal: new AbortController().signal,
+      emitEvent: (event) => events.push(event),
+    });
+
+    await vi.advanceTimersByTimeAsync(COACH_TURN_TIMEOUT_MS);
+    const response = await responsePromise;
+    vi.useRealTimers();
+
+    expect(events).toEqual([
+      { type: "start", model: "mock-model-id" },
+      { type: "error", message: "Turn timed out" },
+    ]);
+    expect(response.trace.model).toBe("mock-model-id (planner_failed)");
+    expect(response.trace.toolsUsed).toEqual([]);
+    expect(response.blocks[0]).toEqual({
+      type: "status",
+      tone: "error",
+      title: "Tool execution failed",
+      description: "Turn timed out",
+    });
+  });
 });
