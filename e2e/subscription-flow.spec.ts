@@ -1,4 +1,4 @@
-import { test, expect } from "./auth-fixture";
+import { test, expect, publicTest } from "./auth-fixture";
 import {
   coachTimeline,
   openCoachWorkspace,
@@ -15,7 +15,7 @@ import {
  */
 
 test.describe("Subscription Flow", () => {
-  test("Pricing page shows correct plans", async ({ page }) => {
+  publicTest("Pricing page shows correct plans", async ({ page }) => {
     await page.goto("/pricing");
 
     // Verify page title
@@ -40,6 +40,18 @@ test.describe("Subscription Flow", () => {
     await expect(page.getByText("No credit card required")).toBeVisible();
   });
 
+  publicTest(
+    "Unauthenticated pricing CTA routes to sign up",
+    async ({ page }) => {
+      await page.goto("/pricing");
+
+      await page.getByText("Monthly").first().click();
+      await page.getByRole("button", { name: /start free trial/i }).click();
+
+      await expect(page).toHaveURL(/\/sign-up(?:\?.*)?$/);
+    }
+  );
+
   test("Settings page shows subscription status", async ({ page }) => {
     await openCoachWorkspace(page, "/settings");
     await waitForCoachText(page, /Training preferences/i);
@@ -55,24 +67,12 @@ test.describe("Subscription Flow", () => {
     });
   });
 
-  test("Checkout redirects to Stripe (monthly)", async ({ page }) => {
+  test("Subscribed users are redirected away from pricing", async ({
+    page,
+  }) => {
     await page.goto("/pricing");
-
-    await page.getByText("Monthly").first().click();
-    await page.getByRole("button", { name: /subscribe now/i }).click();
-
-    await page.waitForURL(/checkout\.stripe\.com/, { timeout: 15_000 });
-    expect(page.url()).toContain("checkout.stripe.com");
-  });
-
-  test("Checkout redirects to Stripe (annual)", async ({ page }) => {
-    await page.goto("/pricing");
-
-    await page.getByText("Annual").first().click();
-    await page.getByRole("button", { name: /subscribe now/i }).click();
-
-    await page.waitForURL(/checkout\.stripe\.com/, { timeout: 15_000 });
-    expect(page.url()).toContain("checkout.stripe.com");
+    await expect(page).toHaveURL(/\/today(?:\?.*)?$/);
+    await expect(coachTimeline(page)).toBeVisible();
   });
 });
 

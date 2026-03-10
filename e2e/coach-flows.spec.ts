@@ -5,6 +5,7 @@ import {
   clickUndo,
   coachInput,
   coachTimeline,
+  escapeRegExp,
   openCoachWorkspace,
   sendCoachMessage,
   waitForCoachIdle,
