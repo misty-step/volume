@@ -21,6 +21,8 @@ jobs:
       CLERK_TEST_USER_PASSWORD: ${{ secrets.CLERK_TEST_USER_PASSWORD }}
       # Convex
       NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
+      # Coach runtime
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       # Test reset
       TEST_RESET_SECRET: ${{ secrets.TEST_RESET_SECRET }}
 
@@ -35,6 +37,7 @@ jobs:
             CLERK_TEST_USER_EMAIL
             CLERK_TEST_USER_PASSWORD
             NEXT_PUBLIC_CONVEX_URL
+            OPENROUTER_API_KEY
             TEST_RESET_SECRET
           )
 

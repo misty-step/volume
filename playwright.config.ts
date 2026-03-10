@@ -10,6 +10,10 @@ if (fs.existsSync(path.resolve(__dirname, ".env.local"))) {
 dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 const authFile = "e2e/.auth/user.json";
+const playwrightWorkers = Number.parseInt(
+  process.env.PLAYWRIGHT_WORKERS || "1",
+  10
+);
 
 export default defineConfig({
   testDir: "./e2e",
@@ -20,7 +24,10 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: Number(process.env.PLAYWRIGHT_WORKERS ?? "1"),
+  workers:
+    Number.isFinite(playwrightWorkers) && playwrightWorkers > 0
+      ? playwrightWorkers
+      : 1,
   reporter: "html",
   globalSetup: "./e2e/global-setup.ts",
   use: {
@@ -62,6 +69,7 @@ export default defineConfig({
       CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY!,
       CLERK_JWT_ISSUER_DOMAIN: process.env.CLERK_JWT_ISSUER_DOMAIN!,
       NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL!,
+      OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY!,
       // Disable telemetry during E2E tests
       NEXT_PUBLIC_DISABLE_SENTRY: "true",
       NEXT_PUBLIC_DISABLE_ANALYTICS: "true",
