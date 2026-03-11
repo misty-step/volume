@@ -17,6 +17,35 @@ export function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+const exerciseAdjectives = [
+  "maple",
+  "summit",
+  "harbor",
+  "ember",
+  "cinder",
+  "meadow",
+  "river",
+  "atlas",
+];
+
+const exerciseNouns = [
+  "press",
+  "row",
+  "lunge",
+  "squat",
+  "hinge",
+  "carry",
+  "stride",
+  "reach",
+];
+
+export function randomExerciseName(prefix: string): string {
+  const adjective =
+    exerciseAdjectives[Math.floor(Math.random() * exerciseAdjectives.length)];
+  const noun = exerciseNouns[Math.floor(Math.random() * exerciseNouns.length)];
+  return `${prefix} ${adjective} ${noun}`;
+}
+
 export async function openCoachWorkspace(
   page: Page,
   path = "/today"
@@ -52,7 +81,7 @@ export async function waitForCoachText(
     typeof expected === "string"
       ? coachTimeline(page).getByText(expected, { exact: false })
       : coachTimeline(page).getByText(expected);
-  await expect(locator.first()).toBeVisible({ timeout: 30_000 });
+  await expect(locator.last()).toBeVisible({ timeout: 30_000 });
 }
 
 export function entityActionButton(
@@ -60,10 +89,19 @@ export function entityActionButton(
   itemTitle: string,
   actionLabel: string | RegExp = /^Open$/i
 ): Locator {
+  const actionName =
+    typeof actionLabel === "string"
+      ? new RegExp(`^${escapeRegExp(actionLabel)}$`)
+      : actionLabel;
   const actionContainer = coachTimeline(page)
-    .getByText(itemTitle, { exact: true })
-    .last()
-    .locator("xpath=ancestor::div[.//button][1]");
+    .locator("div:has(> button)")
+    .filter({
+      has: coachTimeline(page).getByText(itemTitle, { exact: true }),
+    })
+    .filter({
+      has: coachTimeline(page).getByRole("button", { name: actionName }),
+    })
+    .last();
 
   return typeof actionLabel === "string"
     ? actionContainer

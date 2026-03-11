@@ -5,6 +5,7 @@ import {
   entityActionButton,
   escapeRegExp,
   openCoachWorkspace,
+  randomExerciseName,
   sendCoachMessage,
   waitForCoachText,
 } from "./coach-helpers";
@@ -19,11 +20,14 @@ test.describe("Agentic workspace critical routes", () => {
   test("logs and deletes a set through the workspace history flow", async ({
     page,
   }) => {
-    const exerciseName = `critical flow ${Math.random().toString(36).slice(2, 8)}`;
+    const exerciseName = randomExerciseName("critical flow");
 
     await openCoachWorkspace(page, "/today");
-    await sendCoachMessage(page, `log ${exerciseName} 10 reps`);
-    await waitForCoachText(page, new RegExp(escapeRegExp(exerciseName), "i"));
+    await sendCoachMessage(page, `log 10 reps of "${exerciseName}"`);
+    await waitForCoachText(
+      page,
+      new RegExp(`Logged.*${escapeRegExp(exerciseName)}`, "i")
+    );
 
     await sendCoachMessage(page, "show today's summary");
     await waitForCoachText(page, /Today's totals/i);

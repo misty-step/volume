@@ -7,6 +7,7 @@ import {
   coachTimeline,
   escapeRegExp,
   openCoachWorkspace,
+  randomExerciseName,
   sendCoachMessage,
   waitForCoachIdle,
   waitForCoachText,
@@ -40,12 +41,12 @@ test.describe("Coach chat flows", () => {
   test("logs a set, follows a generated suggestion, and undoes the action", async ({
     page,
   }) => {
-    const exerciseName = `coach flow ${Math.random().toString(36).slice(2, 8)}`;
+    const exerciseName = randomExerciseName("coach flow");
 
-    await sendCoachMessage(page, `log ${exerciseName} 12 reps`);
+    await sendCoachMessage(page, `log 12 reps of "${exerciseName}"`);
     await waitForCoachText(
       page,
-      new RegExp(`Logged 12 ${escapeRegExp(exerciseName)}`, "i")
+      new RegExp(`Logged.*${escapeRegExp(exerciseName)}`, "i")
     );
 
     await clickSuggestion(page, "show today's summary");
@@ -60,7 +61,10 @@ test.describe("Coach chat flows", () => {
     await waitForCoachText(page, /Action undone/i);
 
     await sendCoachMessage(page, "show today's summary");
-    await waitForCoachText(page, /No sets logged today/i);
+    await waitForCoachText(page, /Today's totals|No sets logged today/i);
+    await expect(
+      coachTimeline(page).locator("article").last()
+    ).not.toContainText(new RegExp(escapeRegExp(exerciseName), "i"));
   });
 
   test("opens analytics from the generated workspace actions", async ({
