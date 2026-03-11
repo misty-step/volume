@@ -89,17 +89,10 @@ export function entityActionButton(
   itemTitle: string,
   actionLabel: string | RegExp = /^Open$/i
 ): Locator {
-  const actionName =
-    typeof actionLabel === "string"
-      ? new RegExp(`^${escapeRegExp(actionLabel)}$`)
-      : actionLabel;
   const actionContainer = coachTimeline(page)
-    .locator("div:has(> button)")
+    .getByTestId("entity-action-row")
     .filter({
       has: coachTimeline(page).getByText(itemTitle, { exact: true }),
-    })
-    .filter({
-      has: coachTimeline(page).getByRole("button", { name: actionName }),
     })
     .last();
 

@@ -55,7 +55,11 @@ test.describe("Subscription Flow", () => {
   test("Settings page shows subscription status", async ({ page }) => {
     await openCoachWorkspace(page, "/settings");
     await waitForCoachText(page, /Training preferences/i);
-    await expect(coachTimeline(page).getByText(/^Subscription$/i)).toBeVisible({
+    await expect(
+      coachTimeline(page)
+        .getByText(/^Subscription$/i)
+        .first()
+    ).toBeVisible({
       timeout: 30_000,
     });
     await expect(

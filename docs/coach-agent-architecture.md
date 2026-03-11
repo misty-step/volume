@@ -25,7 +25,8 @@ This keeps the system agentic without becoming fragile.
 Request (`POST /api/coach`)
 
 - Body
-  - `messages`: `{ role: "user" | "assistant", content: string }[]`
+  - `messages`: AI SDK `ModelMessage[]`
+    - route strips inbound `system` messages before planner execution
     - max 30 messages
     - max 4000 chars per message
     - max 50k chars total
@@ -66,9 +67,10 @@ Where `data` is a `CoachStreamEvent` JSON object (see `src/lib/coach/schema.ts`)
 ## Modules
 
 - `src/app/api/coach/route.ts`
-  - HTTP entry point (auth, request parsing, streaming vs JSON response).
+  - HTTP entry point (auth, request parsing, rate limit, tool-context assembly,
+    streaming vs JSON response).
 - `src/lib/coach/server/*`
-  - planner loop (`planner.ts`), AI SDK tool factory (`coach-tools.ts`), runtime provider, SSE utilities, response builders.
+  - planner loop (`planner.ts`), shared turn runner (`turn-runner.ts`), AI SDK tool factory (`coach-tools.ts`), runtime provider, SSE utilities, response builders.
 - `src/lib/coach/tools/*`
   - deterministic tool handlers and Convex access helpers; consumed by `createCoachTools`.
 - `src/lib/coach/schema.ts`
@@ -105,3 +107,5 @@ Where `data` is a `CoachStreamEvent` JSON object (see `src/lib/coach/schema.ts`)
 2. Add structured eval dataset for common prompts.
 3. Persist server conversation IDs for stronger long-turn memory.
 4. Add safety/approval layer for destructive actions before expanding tool set.
+5. Move route-owned exercise resolution/context assembly behind a server context
+   factory so `route.ts` is transport-only.

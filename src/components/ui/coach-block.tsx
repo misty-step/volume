@@ -379,7 +379,10 @@ export function EntityListBlock({
         <div className="divide-y divide-border-subtle">
           {items.map((item, idx) => (
             <div key={`${item.id ?? item.title}-${idx}`} className="py-2">
-              <div className="flex items-start justify-between gap-3">
+              <div
+                data-testid="entity-action-row"
+                className="flex items-start justify-between gap-3"
+              >
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground">
                     {item.title}
