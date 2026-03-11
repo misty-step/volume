@@ -70,6 +70,7 @@ export default defineConfig({
       CLERK_JWT_ISSUER_DOMAIN: process.env.CLERK_JWT_ISSUER_DOMAIN!,
       NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL!,
       OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY!,
+      TEST_RESET_SECRET: process.env.TEST_RESET_SECRET!,
       // Disable telemetry during E2E tests
       NEXT_PUBLIC_DISABLE_SENTRY: "true",
       NEXT_PUBLIC_DISABLE_ANALYTICS: "true",
