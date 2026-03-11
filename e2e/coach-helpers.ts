@@ -75,17 +75,16 @@ export async function clickEntityAction(
   actionLabel: string | RegExp = /^Open$/i
 ): Promise<void> {
   await waitForCoachIdle(page);
-  const title = coachTimeline(page)
+  const card = coachTimeline(page)
     .getByText(itemTitle, { exact: true })
     .first();
+  const actionContainer = card.locator("xpath=ancestor::div[.//button][1]");
   const action =
     typeof actionLabel === "string"
-      ? title
-          .locator("xpath=ancestor::div[1]/following-sibling::button")
+      ? actionContainer
+          .getByRole("button")
           .filter({ hasText: new RegExp(`^${escapeRegExp(actionLabel)}$`) })
-      : title
-          .locator("xpath=ancestor::div[1]/following-sibling::button")
-          .filter({ hasText: actionLabel });
+      : actionContainer.getByRole("button", { name: actionLabel });
   await expect(action).toBeVisible({ timeout: 30_000 });
   await action.click();
   await expect(coachInput(page)).toBeDisabled({ timeout: 10_000 });
