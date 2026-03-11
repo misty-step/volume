@@ -1,3 +1,4 @@
+import { devices } from "@playwright/test";
 import { expect, publicTest, test } from "./auth-fixture";
 import {
   coachTimeline,
@@ -76,5 +77,33 @@ test.describe("Paywall Gate", () => {
     await expect(page).toHaveURL(/\/today(?:\?.*)?$/);
     await waitForCoachText(page, /Training preferences/i);
     await expect(page.getByText(/Agent ready\./i)).toBeVisible();
+  });
+
+  test("Authenticated mobile reload recovers to the workspace without a stuck paywall spinner", async ({
+    baseURL,
+    browser,
+    page,
+  }) => {
+    const storageState = await page.context().storageState();
+    const mobileContext = await browser.newContext({
+      ...devices["iPhone 12"],
+      baseURL,
+      storageState,
+    });
+    const mobilePage = await mobileContext.newPage();
+
+    try {
+      await openCoachWorkspace(mobilePage, "/today");
+      await expect(mobilePage.getByText(/Agent ready\./i)).toBeVisible();
+
+      await mobilePage.reload();
+
+      await waitForCoachText(mobilePage, /Agent ready\./i);
+      await expect(
+        mobilePage.getByTestId("paywall-bootstrap-error")
+      ).not.toBeVisible();
+    } finally {
+      await mobileContext.close();
+    }
   });
 });

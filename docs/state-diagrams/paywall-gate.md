@@ -4,32 +4,38 @@ Component that wraps authenticated routes to enforce subscription access.
 
 ## States
 
-| State | UI | Action |
-|-------|----|----|
-| `loading` | Spinner | Wait for query |
-| `no_user` | Spinner | Auto-create user |
-| `has_access` | Children rendered | None |
-| `no_access` | Spinner | Redirect to pricing |
+| State             | UI                | Action                                |
+| ----------------- | ----------------- | ------------------------------------- |
+| `auth_bootstrap`  | Spinner           | Wait for Clerk + Convex auth to agree |
+| `loading`         | Spinner           | Wait for subscription query           |
+| `no_user`         | Spinner           | Auto-create user after auth is ready  |
+| `has_access`      | Children rendered | None                                  |
+| `no_access`       | Spinner           | Redirect to pricing                   |
+| `bootstrap_error` | Recovery UI       | Refresh / investigate auth failure    |
 
 ## State Diagram
 
 ```mermaid
 stateDiagram-v2
-    [*] --> loading: Component mounts
+    [*] --> auth_bootstrap: Component mounts
 
+    auth_bootstrap --> loading: authReady
+    auth_bootstrap --> bootstrap_error: auth bootstrap timeout
     loading --> no_user: subscriptionStatus === null
     loading --> has_access: hasAccess === true
     loading --> no_access: hasAccess === false
 
     no_user --> loading: getOrCreateUser()
+    no_user --> bootstrap_error: getOrCreateUser() fails
     note right of no_user
         Handles edge case where user
         navigates to protected route
-        before user record created.
-        Uses ref to prevent double-call.
+        before user record created,
+        but only after auth is proven ready.
     end note
 
     no_access --> [*]: router.replace("/pricing?reason=expired")
+    bootstrap_error --> [*]: Refresh / sign in again
 
     has_access --> [*]: Render children
 ```
@@ -37,29 +43,44 @@ stateDiagram-v2
 ## Race Condition Prevention
 
 ```typescript
-const userCreationAttempted = useRef(false);
+const authReady =
+  isClerkLoaded && Boolean(userId) && !isConvexAuthLoading && isAuthenticated;
 
-// Only attempt once per mount
-if (subscriptionStatus === null && !userCreationAttempted.current) {
+// Don't query subscription state until auth is actually ready
+const subscriptionStatus = useQuery(
+  api.users.getSubscriptionStatus,
+  authReady ? {} : "skip"
+);
+
+// Only attempt user creation after auth is ready
+if (
+  authReady &&
+  subscriptionStatus === null &&
+  !userCreationAttempted.current
+) {
   userCreationAttempted.current = true;
   getOrCreateUser({ timezone });
 }
 ```
 
-The `useRef` flag prevents multiple user creation attempts during React's strict mode double-mounting or rapid re-renders.
+This separation prevents the gate from mistaking "auth still bootstrapping" for
+"authenticated user record missing."
 
 ## Access Decision Flow
 
 ```mermaid
 flowchart TD
-    A[subscriptionStatus query] --> B{undefined?}
-    B -->|Yes| C[Show loading spinner]
-    B -->|No| D{null?}
-    D -->|Yes| E[Create user with trial]
-    E --> A
-    D -->|No| F{hasAccess?}
-    F -->|Yes| G[Render children]
-    F -->|No| H[Redirect to /pricing]
+    A[Clerk plus Convex auth] --> B{authReady?}
+    B -->|No| C[Show auth bootstrap spinner]
+    B -->|Yes| D[subscriptionStatus query]
+    D --> E{undefined?}
+    E -->|Yes| F[Show loading spinner]
+    E -->|No| G{null?}
+    G -->|Yes| H[Create user with trial]
+    H --> D
+    G -->|No| I{hasAccess?}
+    I -->|Yes| J[Render children]
+    I -->|No| K[Redirect to /pricing]
 ```
 
 ## Files
