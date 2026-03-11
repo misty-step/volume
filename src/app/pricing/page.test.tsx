@@ -93,4 +93,70 @@ describe("PricingContent", () => {
       "https://checkout.stripe.com/c/pay/cs_test_mock_checkout"
     );
   });
+
+  it("shows an error and reports when checkout returns a non-ok response", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({ error: "bad" }),
+    });
+
+    vi.resetModules();
+    const { PricingContent } = await import("./page");
+
+    render(<PricingContent />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /subscribe now/i })
+    );
+
+    expect(
+      await screen.findByText("Something went wrong. Please try again.")
+    ).toBeInTheDocument();
+    expect(mockReportError).toHaveBeenCalledTimes(1);
+    expect(mockAssign).not.toHaveBeenCalled();
+  });
+
+  it("shows an error when checkout succeeds without a redirect url", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    });
+
+    vi.resetModules();
+    const { PricingContent } = await import("./page");
+
+    render(<PricingContent />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /subscribe now/i })
+    );
+
+    expect(
+      await screen.findByText("Something went wrong. Please try again.")
+    ).toBeInTheDocument();
+    expect(mockReportError).not.toHaveBeenCalled();
+    expect(mockAssign).not.toHaveBeenCalled();
+  });
+
+  it("shows a connection error and reports when checkout throws", async () => {
+    mockFetch.mockRejectedValue(new Error("network down"));
+
+    vi.resetModules();
+    const { PricingContent } = await import("./page");
+
+    render(<PricingContent />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /subscribe now/i })
+    );
+
+    expect(
+      await screen.findByText(
+        "Connection error. Please check your internet and try again."
+      )
+    ).toBeInTheDocument();
+    expect(mockReportError).toHaveBeenCalledTimes(1);
+    expect(mockAssign).not.toHaveBeenCalled();
+  });
 });
