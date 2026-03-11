@@ -1,5 +1,5 @@
 import { clerk } from "@clerk/testing/playwright";
-import { test as setup } from "@playwright/test";
+import { expect, test as setup } from "@playwright/test";
 import { loadE2EEnv } from "./env";
 import { waitForClerkLoaded } from "./clerk-helpers";
 import path from "path";
@@ -53,9 +53,15 @@ setup("authenticate", async ({ page }) => {
 
   console.log("Sign-in successful, verifying authenticated state...");
 
-  // Navigate to authenticated route and verify
+  // Navigate to the authenticated workspace and verify the current coach UI.
   await page.goto("/today");
-  await page.waitForSelector("h1", { timeout: 10000 });
+  await expect(page).toHaveURL(/\/today(?:\?.*)?$/);
+  await expect(page.getByTestId("coach-timeline")).toBeVisible({
+    timeout: 10000,
+  });
+  await expect(page.getByTestId("coach-composer")).toBeVisible({
+    timeout: 10000,
+  });
 
   // Save authenticated state for reuse in all tests
   await page.context().storageState({ path: authFile });

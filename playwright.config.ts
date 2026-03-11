@@ -17,10 +17,10 @@ export default defineConfig({
   expect: {
     timeout: 30_000,
   },
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: Math.max(1, Number(process.env.PLAYWRIGHT_WORKERS ?? "1") || 1),
   reporter: "html",
   globalSetup: "./e2e/global-setup.ts",
   use: {
