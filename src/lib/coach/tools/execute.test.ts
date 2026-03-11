@@ -67,7 +67,16 @@ vi.mock("./tool-exercise-report", () => ({
   }),
 }));
 
+vi.mock("./tool-edit-set", () => ({
+  runEditSetTool: vi.fn().mockResolvedValue({
+    summary: "Set edited.",
+    blocks: [],
+    outputForModel: { status: "ok", set_id: "set_123" },
+  }),
+}));
+
 import { executeCoachTool } from "./execute";
+import { runEditSetTool } from "./tool-edit-set";
 import { runSetSoundTool } from "./tool-set-sound";
 import type { CoachToolContext } from "./types";
 
@@ -113,5 +122,19 @@ describe("executeCoachTool", () => {
     );
     expect(result.outputForModel.status).toBe("ok");
     expect(result.outputForModel.enabled).toBe(true);
+  });
+
+  it("supports newer tool registrations through the shared registry", async () => {
+    const result = await executeCoachTool(
+      "edit_set",
+      { set_id: "set_123", reps: 12 },
+      mockCtx
+    );
+
+    expect(runEditSetTool).toHaveBeenCalledWith(
+      { set_id: "set_123", reps: 12 },
+      mockCtx
+    );
+    expect(result.outputForModel.set_id).toBe("set_123");
   });
 });

@@ -2,6 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CoachBlock } from "@/lib/coach/schema";
+import { getCoachToolNames } from "@/lib/coach/tools/registry";
 
 const mockRunLogSetTool = vi.fn();
 const mockRunTodaySummaryTool = vi.fn();
@@ -84,7 +85,8 @@ describe("createCoachTools", () => {
 
     expect(mockRunLogSetTool).toHaveBeenCalledWith(
       { exercise_name: "Push-ups", reps: 10 },
-      TEST_CTX
+      TEST_CTX,
+      undefined
     );
     expect(onBlocks).toHaveBeenCalledWith("log_set", toolBlocks);
     expect(output).toMatchObject({ status: "ok" });
@@ -243,5 +245,13 @@ describe("createCoachTools", () => {
     expect(mockRunFocusSuggestionsTool).toHaveBeenCalledWith(TEST_CTX);
     expect(onBlocks).toHaveBeenCalledWith("get_focus_suggestions", toolBlocks);
     expect(output).toEqual({ status: "ok", suggestions: [] });
+  });
+
+  it("exposes the same tool names as the shared registry", async () => {
+    const { createCoachTools } = await import("./coach-tools");
+
+    const tools = createCoachTools(TEST_CTX);
+
+    expect(Object.keys(tools).sort()).toEqual(getCoachToolNames().sort());
   });
 });
