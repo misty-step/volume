@@ -75,7 +75,7 @@ describe("PricingContent", () => {
     });
 
     vi.resetModules();
-    const { PricingContent } = await import("./page");
+    const { PricingContent } = await import("./PricingContent");
 
     render(<PricingContent />);
 
@@ -102,7 +102,7 @@ describe("PricingContent", () => {
     });
 
     vi.resetModules();
-    const { PricingContent } = await import("./page");
+    const { PricingContent } = await import("./PricingContent");
 
     render(<PricingContent />);
 
@@ -124,7 +124,7 @@ describe("PricingContent", () => {
     });
 
     vi.resetModules();
-    const { PricingContent } = await import("./page");
+    const { PricingContent } = await import("./PricingContent");
 
     render(<PricingContent />);
 
@@ -143,7 +143,7 @@ describe("PricingContent", () => {
     mockFetch.mockRejectedValue(new Error("network down"));
 
     vi.resetModules();
-    const { PricingContent } = await import("./page");
+    const { PricingContent } = await import("./PricingContent");
 
     render(<PricingContent />);
 
