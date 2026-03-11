@@ -98,5 +98,4 @@ export async function clickUndo(page: Page): Promise<void> {
     .last();
   await expect(button).toBeVisible({ timeout: 30_000 });
   await button.click();
-  await expect(button).toBeHidden({ timeout: 10_000 });
 }

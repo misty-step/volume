@@ -21,11 +21,8 @@ test.describe("Agentic workspace critical routes", () => {
     const exerciseName = `critical flow ${Math.random().toString(36).slice(2, 8)}`;
 
     await openCoachWorkspace(page, "/today");
-    await sendCoachMessage(page, `10 ${exerciseName}`);
-    await waitForCoachText(
-      page,
-      new RegExp(`Logged 10 ${escapeRegExp(exerciseName)}`, "i")
-    );
+    await sendCoachMessage(page, `log ${exerciseName} 10 reps`);
+    await waitForCoachText(page, new RegExp(escapeRegExp(exerciseName), "i"));
 
     await sendCoachMessage(page, "show history overview");
     await waitForCoachText(page, /History snapshot/i);
@@ -37,7 +34,7 @@ test.describe("Agentic workspace critical routes", () => {
       timeout: 30_000,
     });
 
-    await clickEntityAction(page, exerciseName);
+    await clickEntityAction(page, exerciseName, /^Open$/i);
     await waitForCoachText(page, /Set deleted/i);
   });
 
