@@ -85,7 +85,7 @@ test.describe("Coach chat flows", () => {
   test("archives and restores an exercise through generated UI", async ({
     page,
   }) => {
-    const exerciseName = `archive e2e ${Date.now()}`;
+    const exerciseName = `archive e2e ${Math.random().toString(36).slice(2, 8)}`;
 
     await sendCoachMessage(page, `10 ${exerciseName}`);
     await waitForCoachText(

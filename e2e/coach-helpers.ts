@@ -80,9 +80,9 @@ export async function clickEntityAction(
     .first();
   const action =
     typeof actionLabel === "string"
-      ? title.locator(
-          `xpath=ancestor::div[1]/following-sibling::button[normalize-space()="${actionLabel}"]`
-        )
+      ? title
+          .locator("xpath=ancestor::div[1]/following-sibling::button")
+          .filter({ hasText: new RegExp(`^${escapeRegExp(actionLabel)}$`) })
       : title
           .locator("xpath=ancestor::div[1]/following-sibling::button")
           .filter({ hasText: actionLabel });
@@ -95,8 +95,8 @@ export async function clickUndo(page: Page): Promise<void> {
   await waitForCoachIdle(page);
   const button = coachTimeline(page)
     .getByRole("button", { name: /^Undo$/ })
-    .first();
+    .last();
   await expect(button).toBeVisible({ timeout: 30_000 });
   await button.click();
-  await expect(coachInput(page)).toBeDisabled({ timeout: 10_000 });
+  await expect(button).toBeHidden({ timeout: 10_000 });
 }

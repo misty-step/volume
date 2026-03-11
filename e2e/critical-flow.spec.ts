@@ -18,7 +18,7 @@ test.describe("Agentic workspace critical routes", () => {
   test("logs and deletes a set through the workspace history flow", async ({
     page,
   }) => {
-    const exerciseName = `critical flow ${Date.now()}`;
+    const exerciseName = `critical flow ${Math.random().toString(36).slice(2, 8)}`;
 
     await openCoachWorkspace(page, "/today");
     await sendCoachMessage(page, `10 ${exerciseName}`);

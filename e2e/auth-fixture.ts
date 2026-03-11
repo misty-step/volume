@@ -9,13 +9,11 @@ export const test = base.extend<AuthFixtures>({
     await use(async () => {
       const secret = process.env.TEST_RESET_SECRET;
       if (!secret) {
-        console.warn("TEST_RESET_SECRET not set, skipping user data reset.");
-        return;
+        throw new Error("TEST_RESET_SECRET is required for resetUserData().");
       }
 
       if (!baseURL) {
-        console.warn("Playwright baseURL not set, skipping user data reset.");
-        return;
+        throw new Error("Playwright baseURL is required for resetUserData().");
       }
 
       await page.goto(baseURL);
