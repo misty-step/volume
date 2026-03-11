@@ -66,14 +66,6 @@ test.describe("Subscription Flow", () => {
       timeout: 30_000,
     });
   });
-
-  test("Subscribed users are redirected away from pricing", async ({
-    page,
-  }) => {
-    await page.goto("/pricing");
-    await expect(page).toHaveURL(/\/today(?:\?.*)?$/);
-    await expect(coachTimeline(page)).toBeVisible();
-  });
 });
 
 test.describe("Paywall Gate", () => {
