@@ -20,7 +20,7 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: Number(process.env.PLAYWRIGHT_WORKERS ?? "1"),
+  workers: Math.max(1, Number(process.env.PLAYWRIGHT_WORKERS ?? "1") || 1),
   reporter: "html",
   globalSetup: "./e2e/global-setup.ts",
   use: {

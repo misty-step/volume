@@ -1,4 +1,4 @@
-import { test, expect } from "./auth-fixture";
+import { expect, publicTest, test } from "./auth-fixture";
 import {
   coachTimeline,
   openCoachWorkspace,
@@ -15,7 +15,7 @@ import {
  */
 
 test.describe("Subscription Flow", () => {
-  test("Pricing page shows correct plans", async ({ page }) => {
+  publicTest("Pricing page shows correct plans", async ({ page }) => {
     await page.goto("/pricing");
 
     // Verify page title
@@ -55,11 +55,10 @@ test.describe("Subscription Flow", () => {
     });
   });
 
-  test("Pricing page surfaces a subscription CTA", async ({ page }) => {
+  publicTest("Pricing page surfaces a subscription CTA", async ({ page }) => {
     await page.goto("/pricing");
-    await expect(
-      page.getByRole("button", { name: /start|subscribe|continue/i }).first()
-    ).toBeVisible();
+    const cta = page.getByRole("button", { name: /start free trial/i });
+    await expect(cta).toBeVisible();
   });
 });
 

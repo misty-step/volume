@@ -9,13 +9,15 @@ export const test = base.extend<AuthFixtures>({
     await use(async () => {
       const secret = process.env.TEST_RESET_SECRET;
       if (!secret) {
-        console.warn("TEST_RESET_SECRET not set, skipping user data reset.");
-        return;
+        throw new Error(
+          "TEST_RESET_SECRET must be set for authenticated E2E reset fixtures."
+        );
       }
 
       if (!baseURL) {
-        console.warn("Playwright baseURL not set, skipping user data reset.");
-        return;
+        throw new Error(
+          "Playwright baseURL must be set for authenticated E2E reset fixtures."
+        );
       }
 
       await page.goto(baseURL);
@@ -35,10 +37,9 @@ export const test = base.extend<AuthFixtures>({
       );
 
       if (!response.ok) {
-        console.warn(
+        throw new Error(
           `Failed to reset user data: ${response.status} ${response.statusText}`
         );
-        return;
       }
 
       await page.goto(`${baseURL}/today`);

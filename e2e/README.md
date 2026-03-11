@@ -21,7 +21,7 @@ We use Playwright for end-to-end testing. Tests are located in `e2e/`.
    # Convex
    NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
 
-   # Test Data Reset (Optional, for deterministic cleanup)
+   # Test Data Reset (required, for deterministic cleanup)
    # Must match the value set in your Convex Dashboard Environment Variables
    TEST_RESET_SECRET=some_long_random_string
    ```

@@ -35,7 +35,7 @@ const FEATURES = [
   "CSV data export",
 ];
 
-function PricingContent() {
+export function PricingContent() {
   const { user, isLoaded: userLoaded } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -89,7 +89,7 @@ function PricingContent() {
       }
 
       if (data.url) {
-        window.location.href = data.url;
+        window.location.assign(data.url);
       } else {
         setError("Something went wrong. Please try again.");
         setIsLoading(false);

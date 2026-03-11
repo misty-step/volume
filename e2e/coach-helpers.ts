@@ -19,9 +19,10 @@ export function escapeRegExp(value: string): string {
 
 export async function openCoachWorkspace(
   page: Page,
-  path = "/today"
+  entryPath = "/today"
 ): Promise<void> {
-  await page.goto(path);
+  // Coach entry routes like /coach and /settings hydrate into the /today workspace.
+  await page.goto(entryPath);
   await expect(page).toHaveURL(/\/today(?:\?.*)?$/);
   await expect(coachTimeline(page)).toBeVisible();
   await expect(coachComposer(page)).toBeVisible();
@@ -75,17 +76,13 @@ export async function clickEntityAction(
   actionLabel: string | RegExp = /^Open$/i
 ): Promise<void> {
   await waitForCoachIdle(page);
-  const title = coachTimeline(page)
+  const itemTitleLocator = coachTimeline(page)
     .getByText(itemTitle, { exact: true })
     .first();
-  const action =
-    typeof actionLabel === "string"
-      ? title.locator(
-          `xpath=ancestor::div[1]/following-sibling::button[normalize-space()="${actionLabel}"]`
-        )
-      : title
-          .locator("xpath=ancestor::div[1]/following-sibling::button")
-          .filter({ hasText: actionLabel });
+  const row = itemTitleLocator.locator(
+    "xpath=ancestor::div[contains(@class,'flex items-start justify-between gap-3')]"
+  );
+  const action = row.getByRole("button", { name: actionLabel });
   await expect(action).toBeVisible({ timeout: 30_000 });
   await action.click();
   await expect(coachInput(page)).toBeDisabled({ timeout: 10_000 });
@@ -95,7 +92,7 @@ export async function clickUndo(page: Page): Promise<void> {
   await waitForCoachIdle(page);
   const button = coachTimeline(page)
     .getByRole("button", { name: /^Undo$/ })
-    .first();
+    .last();
   await expect(button).toBeVisible({ timeout: 30_000 });
   await button.click();
 }
