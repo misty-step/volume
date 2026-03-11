@@ -161,6 +161,26 @@ describe("PaywallGate", () => {
     );
   });
 
+  it("redirects signed-out users to the sign-in page instead of spinning forever", async () => {
+    mockUseAuth.mockReturnValue({
+      isLoaded: true,
+      userId: null,
+    });
+    mockUseQuery.mockReturnValue(undefined);
+
+    render(
+      <PaywallGate>
+        <div>Protected Content</div>
+      </PaywallGate>
+    );
+
+    expect(screen.getByTestId("paywall-signed-out")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/sign-in");
+    });
+  });
+
   it("shows recovery UI and reports telemetry when user bootstrap fails", async () => {
     const failure = new Error("Unauthorized: No valid authentication token.");
     mockUseQuery.mockReturnValue(null);
@@ -189,6 +209,49 @@ describe("PaywallGate", () => {
         operation: "getOrCreateUser",
       })
     );
+  });
+
+  it("shows verification recovery UI without redirecting away", async () => {
+    vi.useFakeTimers();
+    mockSearchParamsGet.mockImplementation((key: string) => {
+      if (key === "checkout") return "success";
+      if (key === "session_id") return "cs_test_123";
+      return null;
+    });
+    mockUseQuery
+      .mockReturnValueOnce(undefined)
+      .mockReturnValue({ hasAccess: false, status: "expired" });
+
+    render(
+      <PaywallGate>
+        <div>Protected Content</div>
+      </PaywallGate>
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(screen.getByTestId("paywall-verifying")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_001);
+    });
+
+    expect(screen.getByText("Payment received!")).toBeInTheDocument();
+    expect(mockTrackEvent).toHaveBeenCalledWith(
+      "Subscription Gate Checkout Verification Timed Out",
+      { hasAccess: false }
+    );
+    expect(mockReportError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        component: "PaywallGate",
+        checkoutStatus: "success",
+      })
+    );
+    expect(mockReplace).toHaveBeenCalledWith(window.location.pathname);
+    expect(mockReplace).not.toHaveBeenCalledWith("/pricing?reason=expired");
   });
 
   it("redirects when access is denied", async () => {

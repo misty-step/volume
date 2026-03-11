@@ -77,21 +77,45 @@ export function PaywallGate({ children }: PaywallGateProps) {
   const hasShownSuccessRef = useRef(false);
   const reportedBootstrapPhasesRef = useRef<Set<BootstrapPhase>>(new Set());
   const hasReportedVerificationTimeoutRef = useRef(false);
+  const bootstrapTelemetryContextRef = useRef({
+    hasUserId: Boolean(userId),
+    isClerkLoaded,
+    isConvexAuthLoading,
+    isAuthenticated,
+    isVerifying,
+  });
+  const hasReportedSignedOutRedirectRef = useRef(false);
+
+  const isSignedOut = isClerkLoaded && !userId;
+
+  useEffect(() => {
+    bootstrapTelemetryContextRef.current = {
+      hasUserId: Boolean(userId),
+      isClerkLoaded,
+      isConvexAuthLoading,
+      isAuthenticated,
+      isVerifying,
+    };
+  }, [
+    isAuthenticated,
+    isClerkLoaded,
+    isConvexAuthLoading,
+    isVerifying,
+    userId,
+  ]);
 
   let bootstrapPhase: BootstrapPhase | null = null;
   if (!isClerkLoaded) {
     bootstrapPhase = "clerk";
-  } else if (userId && (!isAuthenticated || isConvexAuthLoading)) {
+  } else if (isSignedOut) {
+    bootstrapPhase = null;
+  } else if (!isAuthenticated || isConvexAuthLoading) {
     bootstrapPhase = "convex_auth";
   } else if (authReady && subscriptionStatus === undefined) {
     bootstrapPhase = "subscription_query";
   } else if (authReady && subscriptionStatus === null && !userBootstrapError) {
     bootstrapPhase = "user_bootstrap";
   }
-  const activeBootstrapTimeoutPhase =
-    bootstrapPhase && bootstrapTimeoutPhase === bootstrapPhase
-      ? bootstrapTimeoutPhase
-      : null;
 
   // 1. Handle checkout redirect on mount
   useEffect(() => {
@@ -116,6 +140,13 @@ export function PaywallGate({ children }: PaywallGateProps) {
     return undefined;
   }, [searchParams, router]);
 
+  useEffect(() => {
+    if (!isSignedOut) return;
+    if (hasReportedSignedOutRedirectRef.current) return;
+    hasReportedSignedOutRedirectRef.current = true;
+    router.replace("/sign-in");
+  }, [isSignedOut, router]);
+
   // 2. Emit and surface slow bootstrap states instead of spinning forever
   useEffect(() => {
     if (!bootstrapPhase) return;
@@ -126,33 +157,34 @@ export function PaywallGate({ children }: PaywallGateProps) {
       if (reportedBootstrapPhasesRef.current.has(bootstrapPhase)) return;
       reportedBootstrapPhasesRef.current.add(bootstrapPhase);
 
+      const {
+        hasUserId,
+        isAuthenticated: latestIsAuthenticated,
+        isClerkLoaded: latestIsClerkLoaded,
+        isConvexAuthLoading: latestIsConvexAuthLoading,
+        isVerifying: latestIsVerifying,
+      } = bootstrapTelemetryContextRef.current;
+
       trackEvent("Subscription Gate Bootstrap Delayed", {
         phase: bootstrapPhase,
-        hasUserId: Boolean(userId),
-        isAuthenticated,
-        isVerifying,
+        hasUserId,
+        isAuthenticated: latestIsAuthenticated,
+        isVerifying: latestIsVerifying,
       });
 
       reportError(new Error("Subscription gate bootstrap timed out"), {
         component: "PaywallGate",
         phase: bootstrapPhase,
-        hasUserId: Boolean(userId),
-        isClerkLoaded,
-        isConvexAuthLoading,
-        isAuthenticated,
-        isVerifying,
+        hasUserId,
+        isClerkLoaded: latestIsClerkLoaded,
+        isConvexAuthLoading: latestIsConvexAuthLoading,
+        isAuthenticated: latestIsAuthenticated,
+        isVerifying: latestIsVerifying,
       });
     }, BOOTSTRAP_TIMEOUT_MS);
 
     return () => clearTimeout(timer);
-  }, [
-    bootstrapPhase,
-    isAuthenticated,
-    isClerkLoaded,
-    isConvexAuthLoading,
-    isVerifying,
-    userId,
-  ]);
+  }, [bootstrapPhase]);
 
   // 3. Handle successful subscription activation
   useEffect(() => {
@@ -246,19 +278,34 @@ export function PaywallGate({ children }: PaywallGateProps) {
   // 6. Redirect to pricing if no access (but not during verification)
   useEffect(() => {
     if (subscriptionStatus === undefined || subscriptionStatus === null) return;
-    if (isVerifying && !verificationTimeout) return;
+    if (isVerifying) return;
+    if (verificationTimeout) return;
 
     if (!subscriptionStatus.hasAccess) {
-      if (verificationTimeout) {
-        toast.error(
-          "Verification timed out. Please contact support if you paid."
-        );
-      }
       router.replace("/pricing?reason=expired");
     }
   }, [subscriptionStatus, isVerifying, verificationTimeout, router]);
 
   // --- Render States ---
+
+  if (isSignedOut) {
+    return (
+      <div
+        data-testid="paywall-signed-out"
+        className="flex min-h-screen flex-col items-center justify-center gap-4 p-4 text-center"
+      >
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">
+          Your session expired. Redirecting you to sign in...
+        </p>
+      </div>
+    );
+  }
+
+  // Access granted should win over any stale timeout marker.
+  if (subscriptionStatus?.hasAccess) {
+    return <>{children}</>;
+  }
 
   // Verifying payment
   if (isVerifying && !verificationTimeout) {
@@ -275,11 +322,14 @@ export function PaywallGate({ children }: PaywallGateProps) {
     );
   }
 
-  if (activeBootstrapTimeoutPhase || userBootstrapError) {
-    const title = userBootstrapError
+  const activeUserBootstrapError =
+    subscriptionStatus === null ? userBootstrapError : null;
+
+  if (bootstrapTimeoutPhase || activeUserBootstrapError) {
+    const title = activeUserBootstrapError
       ? "We couldn't finish loading your account."
       : "We couldn't finish connecting to Volume.";
-    const message = userBootstrapError
+    const message = activeUserBootstrapError
       ? "Please refresh the page. If this keeps happening, contact support."
       : "Authentication took too long. Refresh the page and sign in again if needed.";
 
@@ -342,6 +392,12 @@ export function PaywallGate({ children }: PaywallGateProps) {
     );
   }
 
-  // Access granted
-  return <>{children}</>;
+  return (
+    <div
+      data-testid="paywall-redirecting"
+      className="flex min-h-screen items-center justify-center"
+    >
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  );
 }

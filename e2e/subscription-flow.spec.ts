@@ -90,6 +90,44 @@ test.describe("Paywall Gate", () => {
       baseURL,
       storageState,
     });
+
+    await mobileContext.addInitScript(() => {
+      const win = window as Window & {
+        __sawPaywallBootstrapError?: boolean;
+        __observePaywallBootstrapError?: () => void;
+      };
+
+      win.__sawPaywallBootstrapError = false;
+      win.__observePaywallBootstrapError = () => {
+        const markIfPresent = () => {
+          if (
+            document.querySelector('[data-testid="paywall-bootstrap-error"]')
+          ) {
+            win.__sawPaywallBootstrapError = true;
+          }
+        };
+
+        markIfPresent();
+        const observer = new MutationObserver(markIfPresent);
+        observer.observe(document.documentElement, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ["data-testid"],
+        });
+      };
+
+      if (document.readyState === "loading") {
+        document.addEventListener(
+          "DOMContentLoaded",
+          () => win.__observePaywallBootstrapError?.(),
+          { once: true }
+        );
+      } else {
+        win.__observePaywallBootstrapError();
+      }
+    });
+
     const mobilePage = await mobileContext.newPage();
 
     try {
@@ -99,9 +137,18 @@ test.describe("Paywall Gate", () => {
       await mobilePage.reload();
 
       await waitForCoachText(mobilePage, /Agent ready\./i);
+      await mobilePage.waitForTimeout(1500);
+      await expect(mobilePage.getByText(/Agent ready\./i)).toBeVisible();
       await expect(
         mobilePage.getByTestId("paywall-bootstrap-error")
       ).not.toBeVisible();
+      const sawBootstrapError = await mobilePage.evaluate(() =>
+        Boolean(
+          (window as Window & { __sawPaywallBootstrapError?: boolean })
+            .__sawPaywallBootstrapError
+        )
+      );
+      expect(sawBootstrapError).toBe(false);
     } finally {
       await mobileContext.close();
     }
