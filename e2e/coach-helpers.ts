@@ -80,7 +80,7 @@ export async function clickEntityAction(
     .getByText(itemTitle, { exact: true })
     .first();
   const row = itemTitleLocator.locator(
-    "xpath=ancestor::div[contains(@class,'flex items-start justify-between gap-3')]"
+    "xpath=ancestor::*[@data-testid='entity-action-row']"
   );
   const action = row.getByRole("button", { name: actionLabel });
   await expect(action).toBeVisible({ timeout: 30_000 });
@@ -95,4 +95,5 @@ export async function clickUndo(page: Page): Promise<void> {
     .last();
   await expect(button).toBeVisible({ timeout: 30_000 });
   await button.click();
+  await expect(coachInput(page)).toBeDisabled({ timeout: 10_000 });
 }
