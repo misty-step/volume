@@ -2,6 +2,7 @@ import { test, expect } from "./auth-fixture";
 import {
   clickEntityAction,
   coachTimeline,
+  entityActionButton,
   escapeRegExp,
   openCoachWorkspace,
   sendCoachMessage,
@@ -24,15 +25,24 @@ test.describe("Agentic workspace critical routes", () => {
     await sendCoachMessage(page, `log ${exerciseName} 10 reps`);
     await waitForCoachText(page, new RegExp(escapeRegExp(exerciseName), "i"));
 
-    await sendCoachMessage(page, "show history overview");
-    await waitForCoachText(page, /History snapshot/i);
+    await sendCoachMessage(page, "show today's summary");
+    await waitForCoachText(page, /Today's totals/i);
     await expect(
       coachTimeline(page)
         .getByText(new RegExp(`^${escapeRegExp(exerciseName)}$`, "i"))
-        .first()
+        .last()
     ).toBeVisible({
       timeout: 30_000,
     });
+
+    const openAction = entityActionButton(page, exerciseName, /^Open$/i);
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await sendCoachMessage(page, "show history overview");
+      await waitForCoachText(page, /History snapshot/i);
+      if (await openAction.isVisible().catch(() => false)) {
+        break;
+      }
+    }
 
     await clickEntityAction(page, exerciseName, /^Open$/i);
     await waitForCoachText(page, /Set deleted/i);

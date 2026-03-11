@@ -48,12 +48,28 @@ export async function waitForCoachText(
   page: Page,
   expected: string | RegExp
 ): Promise<void> {
-  await waitForCoachIdle(page);
   const locator =
     typeof expected === "string"
       ? coachTimeline(page).getByText(expected, { exact: false })
       : coachTimeline(page).getByText(expected);
   await expect(locator.first()).toBeVisible({ timeout: 30_000 });
+}
+
+export function entityActionButton(
+  page: Page,
+  itemTitle: string,
+  actionLabel: string | RegExp = /^Open$/i
+): Locator {
+  const actionContainer = coachTimeline(page)
+    .getByText(itemTitle, { exact: true })
+    .last()
+    .locator("xpath=ancestor::div[.//button][1]");
+
+  return typeof actionLabel === "string"
+    ? actionContainer
+        .getByRole("button")
+        .filter({ hasText: new RegExp(`^${escapeRegExp(actionLabel)}$`) })
+    : actionContainer.getByRole("button", { name: actionLabel });
 }
 
 export async function clickSuggestion(
@@ -75,16 +91,7 @@ export async function clickEntityAction(
   actionLabel: string | RegExp = /^Open$/i
 ): Promise<void> {
   await waitForCoachIdle(page);
-  const card = coachTimeline(page)
-    .getByText(itemTitle, { exact: true })
-    .first();
-  const actionContainer = card.locator("xpath=ancestor::div[.//button][1]");
-  const action =
-    typeof actionLabel === "string"
-      ? actionContainer
-          .getByRole("button")
-          .filter({ hasText: new RegExp(`^${escapeRegExp(actionLabel)}$`) })
-      : actionContainer.getByRole("button", { name: actionLabel });
+  const action = entityActionButton(page, itemTitle, actionLabel);
   await expect(action).toBeVisible({ timeout: 30_000 });
   await action.click();
   await expect(coachInput(page)).toBeDisabled({ timeout: 10_000 });

@@ -40,8 +40,13 @@ test.describe("Coach chat flows", () => {
   test("logs a set, follows a generated suggestion, and undoes the action", async ({
     page,
   }) => {
-    await sendCoachMessage(page, "12 pushups");
-    await waitForCoachText(page, /Logged 12 pushups/i);
+    const exerciseName = `coach flow ${Math.random().toString(36).slice(2, 8)}`;
+
+    await sendCoachMessage(page, `log ${exerciseName} 12 reps`);
+    await waitForCoachText(
+      page,
+      new RegExp(`Logged 12 ${escapeRegExp(exerciseName)}`, "i")
+    );
 
     await clickSuggestion(page, "show today's summary");
     await waitForCoachText(page, /Today's totals/i);
