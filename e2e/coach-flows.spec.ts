@@ -17,7 +17,7 @@ test.describe("Coach chat flows", () => {
 
   test.beforeEach(async ({ page, resetUserData }) => {
     await resetUserData();
-    await openCoachWorkspace(page, "/coach");
+    await openCoachWorkspace(page);
   });
 
   test("shows the coach workspace shell", async ({ page }) => {
