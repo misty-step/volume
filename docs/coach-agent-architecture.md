@@ -14,7 +14,7 @@ This keeps the system agentic without becoming fragile.
 ## Runtime Flow
 
 1. Client sends conversation history + local preferences to `POST /api/coach`.
-2. Server planner (`streamText` via AI SDK 6 + OpenRouter provider) runs tool-calling loop.
+2. Server planner (`streamText` via AI SDK 6 + OpenRouter provider) runs tool-calling loop using the canonical policy in `src/lib/openrouter/policy.ts`.
 3. Deterministic tool handlers execute against Convex.
 4. Tool outputs are converted into typed UI blocks.
 5. If runtime/planning fails, the route returns explicit structured failure blocks instead of semantic fallback parsing.
@@ -69,6 +69,8 @@ Where `data` is a `CoachStreamEvent` JSON object (see `src/lib/coach/schema.ts`)
 - `src/app/api/coach/route.ts`
   - HTTP entry point (auth, request parsing, rate limit, tool-context assembly,
     streaming vs JSON response).
+- `src/lib/openrouter/policy.ts`
+  - canonical OpenRouter gateway contract: model portfolio, routing policy, headers, timeout, and env variable names
 - `src/lib/coach/server/*`
   - planner loop (`planner.ts`), shared turn runner (`turn-runner.ts`), AI SDK tool factory (`coach-tools.ts`), runtime provider, SSE utilities, response builders.
 - `src/lib/coach/tools/*`
@@ -97,6 +99,7 @@ Where `data` is a `CoachStreamEvent` JSON object (see `src/lib/coach/schema.ts`)
 ## Failure Behavior
 
 - If no model runtime is configured, the route returns `runtime-unavailable` with explicit error/suggestions blocks.
+- If `COACH_AGENT_MODEL` is unset or blank, coach runtime falls back to the canonical default model instead of treating whitespace as a separate policy.
 - If planning fails before any tool runs, the route returns `planner_failed`.
 - If planning fails after tools already ran, the route returns `planner_failed_partial` and preserves the partial blocks.
 - No deterministic semantic fallback/parser path remains in the coach route.

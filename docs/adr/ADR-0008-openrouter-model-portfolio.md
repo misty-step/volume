@@ -21,7 +21,8 @@ Volume uses LLMs for the coach agent, report copy, and exercise classification. 
 
 ### Option 3: OpenRouter portfolio (chosen)
 
-- Default: `minimax/minimax-m2.5`
+- Default: `anthropic/claude-sonnet-4.6`
+- Classification: `minimax/minimax-m2.5`
 - Writer: `moonshotai/kimi-k2.5`
 - Fallback: `z-ai/glm-5`
 
@@ -47,10 +48,12 @@ Rationale: Minimizes integration complexity (one gateway, OpenAI-compatible API)
 
 **Neutral**
 
-- Model IDs/pricing can change; keep them centralized and adjustable.
+- Model IDs/pricing can change; keep them centralized and adjustable through one shared policy module.
 
 ## Implementation Notes
 
-- Defaults: `convex/lib/openrouter.ts`, `src/app/api/coach/route.ts`
+- Canonical policy: `src/lib/openrouter/policy.ts`
+- Runtime consumers: `src/lib/coach/server/runtime.ts`, `convex/lib/openrouter.ts`, `scripts/generate-releases.ts`
+- Health + deploy validation: `src/app/api/health/route.ts`, `scripts/verify-env.sh`
 - Release note writing: `scripts/generate-releases.ts`
 - Coach env override: `COACH_AGENT_MODEL`

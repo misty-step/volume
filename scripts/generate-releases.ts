@@ -17,6 +17,13 @@
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 import OpenAI from "openai";
+import {
+  MODELS,
+  OPENROUTER_BASE_URL,
+  RUNTIME_CONFIG,
+  getOpenRouterApiKey,
+  getOpenRouterHeaders,
+} from "../src/lib/openrouter/policy";
 import { parseChangelog } from "../src/lib/releases/parser";
 import type { Release, ReleaseManifest } from "../src/lib/releases/types";
 
@@ -26,8 +33,7 @@ import type { Release, ReleaseManifest } from "../src/lib/releases/types";
  * Using Kimi K2.5 via OpenRouter for strong product writing.
  * OpenRouter provides unified access to 400+ models with OpenAI-compatible API.
  */
-const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
-const MODEL = "moonshotai/kimi-k2.5";
+const MODEL = MODELS.WRITER;
 
 const CONTENT_DIR = join(process.cwd(), "content/releases");
 const CHANGELOG_PATH = join(process.cwd(), "CHANGELOG.md");
@@ -195,9 +201,9 @@ async function main() {
   mkdirSync(CONTENT_DIR, { recursive: true });
 
   // Initialize OpenRouter client (OpenAI-compatible)
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = getOpenRouterApiKey();
   if (!apiKey) {
-    console.error("ERROR: OPENROUTER_API_KEY not set");
+    console.error(`ERROR: ${RUNTIME_CONFIG.apiKeyEnvVar} not set`);
     console.error("Set it in your environment or .env.local");
     process.exit(1);
   }
@@ -205,10 +211,7 @@ async function main() {
   const openai = new OpenAI({
     baseURL: OPENROUTER_BASE_URL,
     apiKey,
-    defaultHeaders: {
-      "HTTP-Referer": "https://volume.fitness",
-      "X-Title": "Volume",
-    },
+    defaultHeaders: getOpenRouterHeaders(),
   });
 
   // Generate missing releases

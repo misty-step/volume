@@ -9,6 +9,8 @@ import {
   OPENROUTER_BASE_URL,
   MODELS,
   PRICING,
+  ROUTING_POLICY,
+  RUNTIME_CONFIG,
   createOpenRouterClient,
   isConfigured,
   calculateCost,
@@ -29,6 +31,16 @@ describe("openrouter constants", () => {
   it("has pricing for all models", () => {
     expect(PRICING[MODELS.MAIN]).toBeDefined();
     expect(PRICING[MODELS.CLASSIFICATION]).toBeDefined();
+  });
+
+  it("exports the canonical routing policy and runtime config", () => {
+    expect(ROUTING_POLICY.COACH).toBe(MODELS.MAIN);
+    expect(ROUTING_POLICY.CLASSIFICATION).toBe(MODELS.CLASSIFICATION);
+    expect(ROUTING_POLICY.WRITER).toBe(MODELS.WRITER);
+    expect(ROUTING_POLICY.FALLBACK).toBe(MODELS.FALLBACK);
+    expect(RUNTIME_CONFIG.apiKeyEnvVar).toBe("OPENROUTER_API_KEY");
+    expect(RUNTIME_CONFIG.coachModelOverrideEnvVar).toBe("COACH_AGENT_MODEL");
+    expect(RUNTIME_CONFIG.timeoutMs).toBe(30000);
   });
 
   it("pricing has input and output costs", () => {

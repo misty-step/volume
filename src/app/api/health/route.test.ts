@@ -35,6 +35,17 @@ describe("GET /api/health", () => {
     expect(data.checks.convex.status).toBe("pass");
     expect(data.checks.stripe.status).toBe("pass");
     expect(data.checks.coachRuntime.status).toBe("pass");
+    expect(data.checks.coachRuntime.defaultModel).toBe(
+      "anthropic/claude-sonnet-4.6"
+    );
+    expect(data.checks.coachRuntime.classificationModel).toBe(
+      "minimax/minimax-m2.5"
+    );
+    expect(data.checks.coachRuntime.writerModel).toBe("moonshotai/kimi-k2.5");
+    expect(data.checks.coachRuntime.fallbackModel).toBe("z-ai/glm-5");
+    expect(data.checks.coachRuntime.modelOverrideEnvVar).toBe(
+      "COACH_AGENT_MODEL"
+    );
     expect(data.checks.stripe.missing).toBeUndefined();
   });
 
