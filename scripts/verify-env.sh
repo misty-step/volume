@@ -308,7 +308,7 @@ check_production_health() {
     return 1
   fi
 
-  if ! echo "$health_json" | grep -q '"coachRuntime":{"status":"pass"}'; then
+  if ! echo "$health_json" | grep -q '"coachRuntime":{"status":"pass"'; then
     log "    [INVALID] $OPENROUTER_API_KEY_VAR - coach runtime health failed"
     MISSING_VARS+=("Vercel:${OPENROUTER_API_KEY_VAR} (HEALTH CHECK FAIL)")
     return 1
