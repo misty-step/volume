@@ -5,20 +5,21 @@ import {
   clickUndo,
   coachInput,
   coachTimeline,
-  escapeRegExp,
+  createUniqueExerciseName,
   openCoachWorkspace,
-  randomExerciseName,
+  requestTodaySetCount,
   sendCoachMessage,
   waitForCoachIdle,
   waitForCoachText,
 } from "./coach-helpers";
+import { createExerciseForCurrentUser } from "./convex-helpers";
 
 test.describe("Coach chat flows", () => {
   test.describe.configure({ mode: "serial" });
 
   test.beforeEach(async ({ page, resetUserData }) => {
     await resetUserData();
-    await openCoachWorkspace(page);
+    await openCoachWorkspace(page, "/coach");
   });
 
   test("shows the coach workspace shell", async ({ page }) => {
@@ -41,30 +42,19 @@ test.describe("Coach chat flows", () => {
   test("logs a set, follows a generated suggestion, and undoes the action", async ({
     page,
   }) => {
-    const exerciseName = randomExerciseName("coach flow");
+    const beforeCount = await requestTodaySetCount(page);
 
-    await sendCoachMessage(page, `log 12 reps of "${exerciseName}"`);
-    await waitForCoachText(
-      page,
-      new RegExp(`Logged.*${escapeRegExp(exerciseName)}`, "i")
-    );
+    await sendCoachMessage(page, "12 pushups");
+    await waitForCoachText(page, /Logged 12 pushups/i);
 
     await clickSuggestion(page, "show today's summary");
     await waitForCoachText(page, /Today's totals/i);
-    await expect(
-      coachTimeline(page).getByText(/Top exercises today/i)
-    ).toBeVisible({
-      timeout: 30_000,
-    });
+    expect(await requestTodaySetCount(page)).toBe(beforeCount + 1);
 
     await clickUndo(page);
     await waitForCoachText(page, /Action undone/i);
 
-    await sendCoachMessage(page, "show today's summary");
-    await waitForCoachText(page, /Today's totals|No sets logged today/i);
-    await expect(
-      coachTimeline(page).locator("article").last()
-    ).not.toContainText(new RegExp(escapeRegExp(exerciseName), "i"));
+    expect(await requestTodaySetCount(page)).toBe(beforeCount);
   });
 
   test("opens analytics from the generated workspace actions", async ({
@@ -94,13 +84,8 @@ test.describe("Coach chat flows", () => {
   test("archives and restores an exercise through generated UI", async ({
     page,
   }) => {
-    const exerciseName = `archive e2e ${Math.random().toString(36).slice(2, 8)}`;
-
-    await sendCoachMessage(page, `log 10 reps of "${exerciseName}"`);
-    await waitForCoachText(
-      page,
-      new RegExp(`Logged 10 ${escapeRegExp(exerciseName)}`, "i")
-    );
+    const exerciseName = createUniqueExerciseName("PushupsCodex");
+    await createExerciseForCurrentUser(page, exerciseName);
 
     await sendCoachMessage(page, `archive exercise ${exerciseName}`);
     await waitForCoachIdle(page);
@@ -122,7 +107,7 @@ test.describe("Coach chat flows", () => {
     await waitForCoachText(page, /Exercise library/i);
     await expect(
       coachTimeline(page)
-        .getByText(new RegExp(`^${escapeRegExp(exerciseName)}$`, "i"))
+        .getByText(new RegExp(`^${exerciseName}$`, "i"))
         .last()
     ).toBeVisible({
       timeout: 30_000,

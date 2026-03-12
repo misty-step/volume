@@ -1,10 +1,15 @@
 import { test as base } from "@playwright/test";
+import { ensureAuthenticated } from "./clerk-helpers";
 
 type AuthFixtures = {
   resetUserData: () => Promise<void>;
 };
 
 export const test = base.extend<AuthFixtures>({
+  page: async ({ page }, use) => {
+    await ensureAuthenticated(page, "/today");
+    await use(page);
+  },
   resetUserData: async ({ page, baseURL }, use) => {
     await use(async () => {
       const secret = process.env.TEST_RESET_SECRET;
@@ -43,9 +48,6 @@ export const test = base.extend<AuthFixtures>({
   },
 });
 
-/**
- * Test instance with empty storage state for public/unauthenticated pages.
- */
 export const publicTest = base.extend({
   storageState: { cookies: [], origins: [] },
 });

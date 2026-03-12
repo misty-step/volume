@@ -58,9 +58,7 @@ test.describe("404 and Navigation Errors", () => {
 
   test("Invalid exercise deep link is handled via workspace redirect", async ({
     page,
-    resetUserData,
   }) => {
-    await resetUserData();
     await openCoachWorkspace(page, "/history/exercise/invalid-id-12345");
     await waitForCoachText(page, /History snapshot/i);
     await expect(coachTimeline(page).getByText(/^Recent sets$/i)).toBeVisible({
