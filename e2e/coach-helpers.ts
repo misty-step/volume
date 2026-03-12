@@ -92,7 +92,9 @@ export function entityActionButton(
   const actionContainer = coachTimeline(page)
     .getByTestId("entity-action-row")
     .filter({
-      has: coachTimeline(page).getByText(itemTitle, { exact: true }),
+      has: page.locator("p", {
+        hasText: new RegExp(`^${escapeRegExp(itemTitle)}$`),
+      }),
     })
     .last();
 
