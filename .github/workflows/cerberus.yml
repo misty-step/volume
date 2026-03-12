@@ -38,7 +38,9 @@ concurrency:
 
 jobs:
   review:
-    uses: misty-step/cerberus/.github/workflows/cerberus.yml@master
+    # Pin Cerberus to the last known-good workflow revision until
+    # misty-step/cerberus#365 is fixed on master.
+    uses: misty-step/cerberus/.github/workflows/cerberus.yml@795d68a59c89e552abb867b40b59109b0a276a3e
     permissions:
       contents: read
       pull-requests: write

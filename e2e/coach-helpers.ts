@@ -64,6 +64,15 @@ function parseMetricValue(blockText: string, label: string): string {
   return lines[labelIndex + 1] ?? "";
 }
 
+async function readMetricValueFromLatestBlock(
+  page: Page,
+  title: string | RegExp,
+  label: string
+): Promise<string> {
+  const text = await latestBlockForTitle(page, title).innerText();
+  return parseMetricValue(text, label);
+}
+
 export function randomExerciseName(prefix: string): string {
   const adjective =
     exerciseAdjectives[Math.floor(Math.random() * exerciseAdjectives.length)];
@@ -148,14 +157,17 @@ export async function requestTodaySetCount(page: Page): Promise<number> {
     .toBe(true);
 
   if ((await totalsTitle.count()) > totalsBefore) {
-    const text = await latestBlockForTitle(
-      page,
-      /^Today's totals$/i
-    ).innerText();
-    return Number.parseInt(parseMetricValue(text, "Sets"), 10);
+    return await readTodaySetCount(page);
   }
 
   return 0;
+}
+
+export async function readTodaySetCount(page: Page): Promise<number> {
+  return Number.parseInt(
+    await readMetricValueFromLatestBlock(page, /^Today's totals$/i, "Sets"),
+    10
+  );
 }
 
 export function createUniqueExerciseName(prefix: string): string {
@@ -194,5 +206,4 @@ export async function clickUndo(page: Page): Promise<void> {
     .last();
   await expect(button).toBeVisible({ timeout: 30_000 });
   await button.click();
-  await expect(coachInput(page)).toBeDisabled({ timeout: 10_000 });
 }

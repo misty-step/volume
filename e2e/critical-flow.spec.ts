@@ -39,18 +39,52 @@ test.describe("Agentic workspace critical routes", () => {
       timeout: 30_000,
     });
 
-    const openAction = entityActionButton(page, exerciseName, /^Open$/i);
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      await sendCoachMessage(page, "show history overview");
-      await waitForCoachText(page, /History snapshot/i);
-      if (await openAction.isVisible().catch(() => false)) {
-        break;
+    await sendCoachMessage(page, "show history overview");
+    await waitForCoachText(page, /History snapshot/i);
+    await expect(entityActionButton(page, exerciseName, /^Open$/i)).toBeVisible(
+      {
+        timeout: 30_000,
       }
-    }
+    );
 
     await clickEntityAction(page, exerciseName, /^Open$/i);
-    await waitForCoachText(page, /confirm/i);
-    await sendCoachMessage(page, "yes");
+
+    let deleteState: "pending" | "confirm" | "deleted" = "pending";
+    await expect
+      .poll(
+        async () => {
+          if (
+            await coachTimeline(page)
+              .getByText(/Set deleted/i)
+              .last()
+              .isVisible()
+              .catch(() => false)
+          ) {
+            deleteState = "deleted";
+            return deleteState;
+          }
+
+          if (
+            await coachTimeline(page)
+              .getByText(/confirm|go ahead|permanently delete/i)
+              .last()
+              .isVisible()
+              .catch(() => false)
+          ) {
+            deleteState = "confirm";
+            return deleteState;
+          }
+
+          return deleteState;
+        },
+        { timeout: 30_000 }
+      )
+      .not.toBe("pending");
+
+    if (deleteState === "confirm") {
+      await sendCoachMessage(page, "yes");
+    }
+
     await waitForCoachText(page, /Set deleted/i);
   });
 

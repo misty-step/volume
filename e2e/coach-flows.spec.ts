@@ -7,6 +7,7 @@ import {
   coachTimeline,
   createUniqueExerciseName,
   openCoachWorkspace,
+  readTodaySetCount,
   requestTodaySetCount,
   sendCoachMessage,
   waitForCoachIdle,
@@ -42,19 +43,19 @@ test.describe("Coach chat flows", () => {
   test("logs a set, follows a generated suggestion, and undoes the action", async ({
     page,
   }) => {
-    const beforeCount = await requestTodaySetCount(page);
+    const exerciseName = createUniqueExerciseName("Coach flow ");
 
-    await sendCoachMessage(page, "12 pushups");
-    await waitForCoachText(page, /Logged 12 pushups/i);
+    await sendCoachMessage(page, `log 12 reps of "${exerciseName}"`);
+    await waitForCoachText(page, new RegExp(`Logged.*${exerciseName}`, "i"));
 
     await clickSuggestion(page, "show today's summary");
     await waitForCoachText(page, /Today's totals/i);
-    expect(await requestTodaySetCount(page)).toBe(beforeCount + 1);
+    expect(await readTodaySetCount(page)).toBe(1);
 
     await clickUndo(page);
     await waitForCoachText(page, /Action undone/i);
 
-    expect(await requestTodaySetCount(page)).toBe(beforeCount);
+    expect(await requestTodaySetCount(page)).toBe(0);
   });
 
   test("opens analytics from the generated workspace actions", async ({
