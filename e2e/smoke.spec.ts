@@ -9,9 +9,10 @@ test("landing page loads", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("navigation to sign up", async ({ page }) => {
+test("start for free opens the sign-up modal", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: /Start for free/i }).click();
-  // Should redirect to sign-up (Clerk or local route)
-  await expect(page).toHaveURL(/.*sign-up/);
+  await expect(
+    page.getByRole("heading", { name: /Create your account/i })
+  ).toBeVisible();
 });

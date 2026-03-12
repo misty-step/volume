@@ -2,6 +2,7 @@
 
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { api } from "../../../../../convex/_generated/api";
 
 const authMock = vi.fn();
 vi.mock("@clerk/nextjs/server", () => ({
@@ -26,6 +27,7 @@ function createRequest(secret: string) {
 
 describe("POST /api/test/reset", () => {
   const originalEnv = process.env;
+  const queryMock = vi.fn();
   const mutationMock = vi.fn();
   const setAuthMock = vi.fn();
 
@@ -35,11 +37,13 @@ describe("POST /api/test/reset", () => {
     process.env.TEST_RESET_SECRET = "test-secret";
     process.env.NEXT_PUBLIC_CONVEX_URL = "https://volume-test.convex.cloud";
 
+    queryMock.mockReset();
     mutationMock.mockReset();
     setAuthMock.mockReset();
     authMock.mockReset();
     ConvexHttpClientMock.mockReset();
     ConvexHttpClientMock.mockReturnValue({
+      query: queryMock,
       setAuth: setAuthMock,
       mutation: mutationMock,
     });
@@ -112,6 +116,9 @@ describe("POST /api/test/reset", () => {
       userId: "user_123",
       getToken: vi.fn().mockResolvedValue("convex-token"),
     });
+    queryMock
+      .mockResolvedValueOnce([{ _id: "set_123" }])
+      .mockResolvedValueOnce([{ _id: "exercise_123" }]);
     mutationMock.mockResolvedValue(undefined);
 
     const { POST } = await import("./route");
@@ -124,8 +131,20 @@ describe("POST /api/test/reset", () => {
       "https://volume-test.convex.cloud"
     );
     expect(setAuthMock).toHaveBeenCalledWith("convex-token");
-    expect(mutationMock).toHaveBeenCalledTimes(1);
-    expect(mutationMock).toHaveBeenCalledWith(expect.anything(), {});
+    expect(queryMock).toHaveBeenNthCalledWith(1, api.sets.listSets, {});
+    expect(mutationMock).toHaveBeenNthCalledWith(1, api.sets.deleteSet, {
+      id: "set_123",
+    });
+    expect(queryMock).toHaveBeenNthCalledWith(2, api.exercises.listExercises, {
+      includeDeleted: true,
+    });
+    expect(mutationMock).toHaveBeenNthCalledWith(
+      2,
+      api.exercises.deleteExercise,
+      {
+        id: "exercise_123",
+      }
+    );
   });
 
   it("allows local development and executes reset", async () => {
@@ -137,6 +156,7 @@ describe("POST /api/test/reset", () => {
       userId: "user_123",
       getToken: vi.fn().mockResolvedValue("convex-token"),
     });
+    queryMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
     mutationMock.mockResolvedValue(undefined);
 
     const { POST } = await import("./route");
@@ -144,7 +164,8 @@ describe("POST /api/test/reset", () => {
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("User data reset");
-    expect(mutationMock).toHaveBeenCalledTimes(1);
+    expect(queryMock).toHaveBeenCalledTimes(2);
+    expect(mutationMock).not.toHaveBeenCalled();
   });
 
   it("rejects invalid secrets in preview deployments", async () => {
@@ -220,6 +241,7 @@ describe("POST /api/test/reset", () => {
       userId: "user_123",
       getToken: vi.fn().mockResolvedValue("convex-token"),
     });
+    queryMock.mockResolvedValueOnce([{ _id: "set_123" }]);
     mutationMock.mockRejectedValue(new Error("mutation failed"));
 
     const { POST } = await import("./route");

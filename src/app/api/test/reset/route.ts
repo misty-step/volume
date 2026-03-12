@@ -6,6 +6,24 @@ import { isServerProductionDeployment } from "@/lib/environment";
 
 const TEST_SECRET_HEADER = "X-TEST-SECRET";
 
+async function clearAuthenticatedE2EState(convex: ConvexHttpClient) {
+  // CI talks to a hosted Convex deployment, so the reset path must only depend
+  // on already-deployed public APIs instead of a branch-local test mutation.
+  const sets = await convex.query(api.sets.listSets, {});
+  for (const set of sets) {
+    await convex.mutation(api.sets.deleteSet, { id: set._id });
+  }
+
+  const exercises = await convex.query(api.exercises.listExercises, {
+    includeDeleted: true,
+  });
+  for (const exercise of exercises) {
+    await convex.mutation(api.exercises.deleteExercise, {
+      id: exercise._id,
+    });
+  }
+}
+
 export async function POST(request: NextRequest) {
   // Never expose test-reset behavior in production deployments.
   if (isServerProductionDeployment()) {
@@ -41,7 +59,7 @@ export async function POST(request: NextRequest) {
     const convex = new ConvexHttpClient(convexUrl);
     convex.setAuth(token);
 
-    await convex.mutation(api.test.resetUserData.resetUserData, {});
+    await clearAuthenticatedE2EState(convex);
 
     return new NextResponse("User data reset", { status: 200 });
   } catch (error) {
