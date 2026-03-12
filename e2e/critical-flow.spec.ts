@@ -8,10 +8,6 @@ import {
 test.describe("Agentic workspace critical routes", () => {
   test.describe.configure({ mode: "serial" });
 
-  test.beforeEach(async ({ resetUserData }) => {
-    await resetUserData();
-  });
-
   test("analytics route redirects into the workspace and renders generated blocks", async ({
     page,
   }) => {

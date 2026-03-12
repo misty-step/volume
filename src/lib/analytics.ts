@@ -23,6 +23,18 @@ function getPostHog() {
  * TypeScript can prevent typos and enforce required properties.
  */
 export interface AnalyticsEventDefinitions {
+  "Subscription Gate Bootstrap Delayed": {
+    phase: "clerk" | "convex_auth" | "subscription_query" | "user_bootstrap";
+    hasUserId: boolean;
+    isAuthenticated: boolean;
+    isVerifying: boolean;
+  };
+  "Subscription Gate User Bootstrap Failed": {
+    error: string;
+  };
+  "Subscription Gate Checkout Verification Timed Out": {
+    hasAccess: boolean;
+  };
   "Exercise Created": {
     exerciseId: string;
     userId?: string;

@@ -1,16 +1,33 @@
 "use client";
 
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useAuth } from "@clerk/nextjs";
+import { useQuery, useMutation, useAction, useConvexAuth } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useEffectEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { reportError, trackEvent } from "@/lib/analytics";
 
 interface PaywallGateProps {
   children: React.ReactNode;
 }
+
+type BootstrapPhase =
+  | "clerk"
+  | "convex_auth"
+  | "subscription_query"
+  | "user_bootstrap";
+
+const BOOTSTRAP_TIMEOUT_MS = 8000;
+
+const BOOTSTRAP_MESSAGES: Record<BootstrapPhase, string> = {
+  clerk: "Checking your session...",
+  convex_auth: "Connecting your account...",
+  subscription_query: "Loading your workspace...",
+  user_bootstrap: "Setting up your account...",
+};
 
 /**
  * PaywallGate - Wraps authenticated routes to enforce subscription access
@@ -32,25 +49,70 @@ interface PaywallGateProps {
 export function PaywallGate({ children }: PaywallGateProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isLoaded: isClerkLoaded, userId } = useAuth();
+  const { isLoading: isConvexAuthLoading, isAuthenticated } = useConvexAuth();
 
   // Convex hooks
-  const subscriptionStatus = useQuery(api.users.getSubscriptionStatus);
+  const authReady =
+    isClerkLoaded && Boolean(userId) && !isConvexAuthLoading && isAuthenticated;
+  const subscriptionStatus = useQuery(
+    api.users.getSubscriptionStatus,
+    authReady ? {} : "skip"
+  );
   const getOrCreateUser = useMutation(api.users.getOrCreateUser);
   const syncCheckout = useAction(api.stripe.syncCheckoutSession);
 
   // State
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationTimeout, setVerificationTimeout] = useState(false);
+  const [bootstrapTimeoutPhase, setBootstrapTimeoutPhase] =
+    useState<BootstrapPhase | null>(null);
+  const [userBootstrapError, setUserBootstrapError] = useState<Error | null>(
+    null
+  );
 
   // Refs
-  const userCreationInFlight = useRef<Promise<unknown> | null>(null);
+  const hasAttemptedUserCreationRef = useRef(false);
   const hasSyncedRef = useRef(false);
   const hasShownSuccessRef = useRef(false);
+  const reportedBootstrapPhasesRef = useRef<Set<BootstrapPhase>>(new Set());
+  const hasReportedVerificationTimeoutRef = useRef(false);
+  const hasReportedSignedOutRedirectRef = useRef(false);
+  const checkoutContextRef = useRef<{
+    checkoutStatus: string | null;
+    sessionId: string | null;
+  }>({
+    checkoutStatus: null,
+    sessionId: null,
+  });
+
+  const isSignedOut = isClerkLoaded && !userId;
+  const readBootstrapTelemetry = useEffectEvent(() => ({
+    hasUserId: Boolean(userId),
+    isClerkLoaded,
+    isConvexAuthLoading,
+    isAuthenticated,
+    isVerifying,
+  }));
+
+  let bootstrapPhase: BootstrapPhase | null = null;
+  if (!isClerkLoaded) {
+    bootstrapPhase = "clerk";
+  } else if (isSignedOut) {
+    bootstrapPhase = null;
+  } else if (!isAuthenticated || isConvexAuthLoading) {
+    bootstrapPhase = "convex_auth";
+  } else if (authReady && subscriptionStatus === undefined) {
+    bootstrapPhase = "subscription_query";
+  } else if (authReady && subscriptionStatus === null && !userBootstrapError) {
+    bootstrapPhase = "user_bootstrap";
+  }
 
   // 1. Handle checkout redirect on mount
   useEffect(() => {
     const checkoutStatus = searchParams.get("checkout");
     const sessionId = searchParams.get("session_id");
+    checkoutContextRef.current = { checkoutStatus, sessionId };
 
     if (checkoutStatus === "success" && sessionId) {
       // Store session ID for backup sync
@@ -70,7 +132,54 @@ export function PaywallGate({ children }: PaywallGateProps) {
     return undefined;
   }, [searchParams, router]);
 
-  // 2. Handle successful subscription activation
+  useEffect(() => {
+    if (!isSignedOut) return;
+    if (hasReportedSignedOutRedirectRef.current) return;
+    hasReportedSignedOutRedirectRef.current = true;
+    router.replace("/sign-in");
+  }, [isSignedOut, router]);
+
+  // 2. Emit and surface slow bootstrap states instead of spinning forever
+  useEffect(() => {
+    if (!bootstrapPhase) return;
+    const phaseAtSetup = bootstrapPhase;
+
+    const timer = setTimeout(() => {
+      setBootstrapTimeoutPhase((current) => current ?? phaseAtSetup);
+
+      if (reportedBootstrapPhasesRef.current.has(phaseAtSetup)) return;
+      reportedBootstrapPhasesRef.current.add(phaseAtSetup);
+
+      const {
+        hasUserId,
+        isAuthenticated: latestIsAuthenticated,
+        isClerkLoaded: latestIsClerkLoaded,
+        isConvexAuthLoading: latestIsConvexAuthLoading,
+        isVerifying: latestIsVerifying,
+      } = readBootstrapTelemetry();
+
+      trackEvent("Subscription Gate Bootstrap Delayed", {
+        phase: phaseAtSetup,
+        hasUserId,
+        isAuthenticated: latestIsAuthenticated,
+        isVerifying: latestIsVerifying,
+      });
+
+      reportError(new Error("Subscription gate bootstrap timed out"), {
+        component: "PaywallGate",
+        phase: phaseAtSetup,
+        hasUserId,
+        isClerkLoaded: latestIsClerkLoaded,
+        isConvexAuthLoading: latestIsConvexAuthLoading,
+        isAuthenticated: latestIsAuthenticated,
+        isVerifying: latestIsVerifying,
+      });
+    }, BOOTSTRAP_TIMEOUT_MS);
+
+    return () => clearTimeout(timer);
+  }, [bootstrapPhase]);
+
+  // 3. Handle successful subscription activation
   useEffect(() => {
     if (!isVerifying || !subscriptionStatus?.hasAccess) return;
 
@@ -85,7 +194,7 @@ export function PaywallGate({ children }: PaywallGateProps) {
     return () => clearTimeout(cleanup);
   }, [isVerifying, subscriptionStatus?.hasAccess]);
 
-  // 3. Verification timeout and backup sync logic
+  // 4. Verification timeout and backup sync logic
   useEffect(() => {
     if (!isVerifying || subscriptionStatus?.hasAccess) return;
 
@@ -117,41 +226,83 @@ export function PaywallGate({ children }: PaywallGateProps) {
     };
   }, [isVerifying, subscriptionStatus?.hasAccess, syncCheckout]);
 
-  // 4. Auto-create user if no record exists
   useEffect(() => {
-    if (subscriptionStatus === undefined) return;
-    if (subscriptionStatus === null && !userCreationInFlight.current) {
-      userCreationInFlight.current = getOrCreateUser({
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      })
-        .catch((error) => console.error("Failed to create user:", error))
-        .finally(() => {
-          userCreationInFlight.current = null;
-        });
-    }
-  }, [subscriptionStatus, getOrCreateUser]);
+    if (!verificationTimeout || subscriptionStatus?.hasAccess) return;
+    if (hasReportedVerificationTimeoutRef.current) return;
+    hasReportedVerificationTimeoutRef.current = true;
+    const { checkoutStatus, sessionId } = checkoutContextRef.current;
 
-  // 5. Redirect to pricing if no access (but not during verification)
+    trackEvent("Subscription Gate Checkout Verification Timed Out", {
+      hasAccess: Boolean(subscriptionStatus?.hasAccess),
+    });
+    reportError(new Error("Checkout verification timed out"), {
+      component: "PaywallGate",
+      checkoutStatus,
+      hasAccess: Boolean(subscriptionStatus?.hasAccess),
+      sessionIdPresent: Boolean(sessionId),
+    });
+  }, [subscriptionStatus?.hasAccess, verificationTimeout]);
+
+  // 5. Auto-create user once auth is ready and no record exists
+  useEffect(() => {
+    if (!authReady || subscriptionStatus !== null) return;
+    if (hasAttemptedUserCreationRef.current) return;
+
+    hasAttemptedUserCreationRef.current = true;
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    getOrCreateUser({ timezone }).catch((error) => {
+      const bootstrapError =
+        error instanceof Error
+          ? error
+          : new Error("Failed to create authenticated user record");
+
+      setUserBootstrapError(bootstrapError);
+      trackEvent("Subscription Gate User Bootstrap Failed", {
+        error: bootstrapError.message,
+      });
+      reportError(bootstrapError, {
+        component: "PaywallGate",
+        operation: "getOrCreateUser",
+        timezone,
+      });
+    });
+  }, [authReady, getOrCreateUser, subscriptionStatus]);
+
+  // 6. Redirect to pricing if no access (but not during verification)
   useEffect(() => {
     if (subscriptionStatus === undefined || subscriptionStatus === null) return;
-    if (isVerifying && !verificationTimeout) return;
+    if (isVerifying) return;
+    if (verificationTimeout) return;
 
     if (!subscriptionStatus.hasAccess) {
-      if (verificationTimeout) {
-        toast.error(
-          "Verification timed out. Please contact support if you paid."
-        );
-      }
       router.replace("/pricing?reason=expired");
     }
   }, [subscriptionStatus, isVerifying, verificationTimeout, router]);
 
   // --- Render States ---
 
+  if (isSignedOut) {
+    return (
+      <div
+        data-testid="paywall-signed-out"
+        className="flex min-h-screen flex-col items-center justify-center gap-4 p-4 text-center"
+      >
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">
+          Your session expired. Redirecting you to sign in...
+        </p>
+      </div>
+    );
+  }
+
   // Verifying payment
   if (isVerifying && !verificationTimeout) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+      <div
+        data-testid="paywall-verifying"
+        className="flex min-h-screen flex-col items-center justify-center gap-4"
+      >
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="animate-pulse text-muted-foreground">
           Verifying your payment...
@@ -160,7 +311,9 @@ export function PaywallGate({ children }: PaywallGateProps) {
     );
   }
 
-  // Timeout error
+  const activeUserBootstrapError =
+    subscriptionStatus === null ? userBootstrapError : null;
+
   if (verificationTimeout && !subscriptionStatus?.hasAccess) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4 text-center">
@@ -174,11 +327,46 @@ export function PaywallGate({ children }: PaywallGateProps) {
     );
   }
 
-  // Loading state
-  if (subscriptionStatus === undefined || subscriptionStatus === null) {
+  if (
+    (bootstrapTimeoutPhase && !subscriptionStatus?.hasAccess) ||
+    activeUserBootstrapError
+  ) {
+    const title = activeUserBootstrapError
+      ? "We couldn't finish loading your account."
+      : "We couldn't finish connecting to Volume.";
+    const message = activeUserBootstrapError
+      ? "Please refresh the page. If this keeps happening, contact support."
+      : "Authentication took too long. Refresh the page and sign in again if needed.";
+
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div
+        data-testid="paywall-bootstrap-error"
+        className="flex min-h-screen flex-col items-center justify-center gap-4 p-4 text-center"
+      >
+        <p className="text-lg font-medium">{title}</p>
+        <p className="max-w-md text-muted-foreground">{message}</p>
+        <Button onClick={() => window.location.reload()}>Refresh Page</Button>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (
+    bootstrapPhase ||
+    subscriptionStatus === undefined ||
+    subscriptionStatus === null
+  ) {
+    const loadingMessage = bootstrapPhase
+      ? BOOTSTRAP_MESSAGES[bootstrapPhase]
+      : "Loading your workspace...";
+
+    return (
+      <div
+        data-testid="paywall-loading"
+        className="flex min-h-screen flex-col items-center justify-center gap-4"
+      >
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">{loadingMessage}</p>
       </div>
     );
   }
@@ -186,12 +374,14 @@ export function PaywallGate({ children }: PaywallGateProps) {
   // No access - show loading while redirecting
   if (!subscriptionStatus.hasAccess) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div
+        data-testid="paywall-redirecting"
+        className="flex min-h-screen items-center justify-center"
+      >
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  // Access granted
   return <>{children}</>;
 }
