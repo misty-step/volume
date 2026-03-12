@@ -13,6 +13,7 @@ describe("loadE2EEnv", () => {
       CLERK_TEST_USER_EMAIL: "test+e2e@example.com",
       CLERK_TEST_USER_PASSWORD: "secure-password",
       NEXT_PUBLIC_CONVEX_URL: "https://volume-test.convex.cloud",
+      OPENROUTER_API_KEY: "sk-or-v1-test",
       TEST_RESET_SECRET: "reset-secret",
     };
     delete process.env.CLERK_PUBLISHABLE_KEY;
@@ -27,12 +28,19 @@ describe("loadE2EEnv", () => {
 
     expect(env.NEXT_PUBLIC_CONVEX_URL).toBe("https://volume-test.convex.cloud");
     expect(env.CLERK_PUBLISHABLE_KEY).toBe("pk_test_123");
+    expect(env.OPENROUTER_API_KEY).toBe("sk-or-v1-test");
   });
 
   it("fails closed when NEXT_PUBLIC_CONVEX_URL is missing", () => {
     delete process.env.NEXT_PUBLIC_CONVEX_URL;
 
     expect(() => loadE2EEnv()).toThrowError(/NEXT_PUBLIC_CONVEX_URL/);
+  });
+
+  it("fails closed when OPENROUTER_API_KEY is missing", () => {
+    delete process.env.OPENROUTER_API_KEY;
+
+    expect(() => loadE2EEnv()).toThrowError(/OPENROUTER_API_KEY/);
   });
 
   it("normalizes NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY into CLERK_PUBLISHABLE_KEY", () => {
