@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 // Mock resolveVersion before importing the module

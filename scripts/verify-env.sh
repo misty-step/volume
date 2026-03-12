@@ -71,7 +71,7 @@ log() {
 }
 
 log_error() {
-  echo "$@" >&2
+  [[ "$QUIET" == "true" ]] || echo "$@" >&2
 }
 
 # Check if convex CLI is available

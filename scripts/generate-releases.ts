@@ -212,6 +212,7 @@ async function main() {
     baseURL: OPENROUTER_BASE_URL,
     apiKey,
     defaultHeaders: getOpenRouterHeaders(),
+    timeout: RUNTIME_CONFIG.timeoutMs,
   });
 
   // Generate missing releases

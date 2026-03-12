@@ -1,6 +1,6 @@
 $ vitest run --run src/lib/coach/server/runtime.test.ts convex/lib/openrouter.test.ts src/app/api/health/route.test.ts
 
- RUN  v3.2.4 /Users/phaedrus/.codex/worktrees/671d/volume
+ RUN  v3.2.4 <workspace>
 
 stderr | src/lib/coach/server/runtime.test.ts > getCoachRuntime > returns null when OPENROUTER_API_KEY is missing
 [Coach] OPENROUTER_API_KEY missing; coach runtime unavailable.

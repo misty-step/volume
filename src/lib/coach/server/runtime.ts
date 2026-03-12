@@ -1,8 +1,8 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import type { LanguageModel } from "ai";
 import {
-  MODELS,
   RUNTIME_CONFIG,
+  ROUTING_POLICY,
   getOpenRouterApiKey,
   getOpenRouterHeaders,
   resolveCoachModelId,
@@ -32,6 +32,6 @@ export function getCoachRuntime(): CoachRuntime | null {
   return {
     model: openrouter(modelId),
     modelId,
-    classificationModel: openrouter(MODELS.CLASSIFICATION),
+    classificationModel: openrouter(ROUTING_POLICY.CLASSIFICATION),
   };
 }

@@ -1,4 +1,4 @@
-import { RUNTIME_CONFIG } from "../src/lib/openrouter/policy";
+import { RUNTIME_CONFIG } from "@/lib/openrouter/policy";
 
 console.log(`OPENROUTER_API_KEY_VAR=${RUNTIME_CONFIG.apiKeyEnvVar}`);
 console.log(
