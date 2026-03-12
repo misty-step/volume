@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 vi.mock("./tool-set-sound", () => ({
@@ -136,5 +138,35 @@ describe("executeCoachTool", () => {
       mockCtx
     );
     expect(result.outputForModel.set_id).toBe("set_123");
+  });
+
+  it("returns an error result for invalid tool arguments", async () => {
+    const result = await executeCoachTool("edit_set", {}, mockCtx);
+
+    expect(runEditSetTool).not.toHaveBeenCalled();
+    expect(result.outputForModel.error).toBe("invalid_tool_args");
+    expect(result.blocks[0]).toMatchObject({
+      type: "status",
+      tone: "error",
+      title: "Invalid tool arguments",
+    });
+  });
+
+  it("returns an error result when a runner throws", async () => {
+    vi.mocked(runEditSetTool).mockRejectedValueOnce(new Error("boom"));
+
+    const result = await executeCoachTool(
+      "edit_set",
+      { set_id: "set_123", reps: 12 },
+      mockCtx
+    );
+
+    expect(result.outputForModel.error).toBe("tool_failed");
+    expect(result.blocks[0]).toMatchObject({
+      type: "status",
+      tone: "error",
+      title: "Tool failed",
+      description: "boom",
+    });
   });
 });

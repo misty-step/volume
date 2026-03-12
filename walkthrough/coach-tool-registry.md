@@ -24,8 +24,8 @@ graph TD
 
 Evidence:
 
-- [src/lib/coach/server/coach-tools.ts](/Users/phaedrus/.codex/worktrees/e3c6/volume/src/lib/coach/server/coach-tools.ts)
-- [src/lib/coach/tools/execute.ts](/Users/phaedrus/.codex/worktrees/e3c6/volume/src/lib/coach/tools/execute.ts)
+- [src/lib/coach/server/coach-tools.ts](../src/lib/coach/server/coach-tools.ts)
+- [src/lib/coach/tools/execute.ts](../src/lib/coach/tools/execute.ts)
 
 ## What Changed
 
@@ -46,9 +46,9 @@ graph TD
 
 Evidence:
 
-- [src/lib/coach/tools/registry.ts](/Users/phaedrus/.codex/worktrees/e3c6/volume/src/lib/coach/tools/registry.ts)
-- [src/lib/coach/server/coach-tools.test.ts](/Users/phaedrus/.codex/worktrees/e3c6/volume/src/lib/coach/server/coach-tools.test.ts)
-- [src/lib/coach/tools/execute.test.ts](/Users/phaedrus/.codex/worktrees/e3c6/volume/src/lib/coach/tools/execute.test.ts)
+- [src/lib/coach/tools/registry.ts](../src/lib/coach/tools/registry.ts)
+- [src/lib/coach/server/coach-tools.test.ts](../src/lib/coach/server/coach-tools.test.ts)
+- [src/lib/coach/tools/execute.test.ts](../src/lib/coach/tools/execute.test.ts)
 
 ## Verification
 
