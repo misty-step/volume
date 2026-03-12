@@ -18,14 +18,11 @@ set -eo pipefail
 
 OPENROUTER_API_KEY_VAR=""
 OPENROUTER_COACH_MODEL_OVERRIDE_VAR=""
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 load_openrouter_policy() {
   local policy_lines
-  if ! policy_lines=$(bun --eval '
-    import { RUNTIME_CONFIG } from "./src/lib/openrouter/policy.ts";
-    console.log(`OPENROUTER_API_KEY_VAR=${RUNTIME_CONFIG.apiKeyEnvVar}`);
-    console.log(`OPENROUTER_COACH_MODEL_OVERRIDE_VAR=${RUNTIME_CONFIG.coachModelOverrideEnvVar}`);
-  ' 2>/dev/null); then
+  if ! policy_lines=$(bun "$SCRIPT_DIR/print-openrouter-policy.ts" 2>/dev/null); then
     log_error "Error: Could not load canonical OpenRouter policy."
     exit 2
   fi

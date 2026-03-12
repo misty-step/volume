@@ -73,15 +73,13 @@ export function getOpenRouterHeaders(
   };
 }
 
-export function getCoachRuntimeMetadata(env: NodeJS.ProcessEnv = process.env) {
+export function getCoachRuntimeHealthMetadata(
+  env: NodeJS.ProcessEnv = process.env
+) {
   return {
     defaultModel: ROUTING_POLICY.COACH,
     configuredModel: resolveCoachModelId(env),
-    classificationModel: ROUTING_POLICY.CLASSIFICATION,
-    writerModel: ROUTING_POLICY.WRITER,
-    fallbackModel: ROUTING_POLICY.FALLBACK,
     apiKeyEnvVar: RUNTIME_CONFIG.apiKeyEnvVar,
     modelOverrideEnvVar: RUNTIME_CONFIG.coachModelOverrideEnvVar,
-    timeoutMs: RUNTIME_CONFIG.timeoutMs,
   };
 }

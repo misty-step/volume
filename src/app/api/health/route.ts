@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { resolveVersion } from "@/lib/version";
 import { getDeploymentEnvironment } from "@/lib/environment";
 import {
-  getCoachRuntimeMetadata,
+  getCoachRuntimeHealthMetadata,
   isOpenRouterConfigured,
 } from "@/lib/openrouter/policy";
 
@@ -59,7 +59,7 @@ export async function GET() {
 
   const stripeHealthy = stripeConfigured && !keyEnvMismatch;
   const coachRuntimeHealthy = isOpenRouterConfigured();
-  const coachRuntimeMetadata = getCoachRuntimeMetadata();
+  const coachRuntimeMetadata = getCoachRuntimeHealthMetadata();
 
   const isHealthy = convexHealthy && stripeHealthy && coachRuntimeHealthy;
 

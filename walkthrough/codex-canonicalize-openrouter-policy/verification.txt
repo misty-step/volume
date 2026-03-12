@@ -8,13 +8,14 @@ stderr | src/lib/coach/server/runtime.test.ts > getCoachRuntime > returns null w
 stderr | src/lib/coach/server/runtime.test.ts > getCoachRuntime > returns null when OPENROUTER_API_KEY is whitespace only
 [Coach] OPENROUTER_API_KEY missing; coach runtime unavailable.
 
- ✓ src/lib/coach/server/runtime.test.ts (5 tests) 20ms
+ ✓ src/lib/coach/server/runtime.test.ts (5 tests) 17ms
  ✓ convex/lib/openrouter.test.ts (14 tests) 3ms
- ✓ src/app/api/health/route.test.ts (10 tests) 55ms
+ ✓ src/app/api/health/route.test.ts (11 tests) 34ms
 
  Test Files  3 passed (3)
-      Tests  29 passed (29)
-   Start at  13:42:02
-   Duration  727ms (transform 107ms, setup 154ms, collect 92ms, tests 78ms, environment 800ms, prepare 201ms)
+      Tests  30 passed (30)
+   Start at  13:48:16
+   Duration  494ms (transform 91ms, setup 109ms, collect 69ms, tests 55ms, environment 486ms, prepare 156ms)
 
+$ tsc --noEmit
 $ eslint . --max-warnings=0

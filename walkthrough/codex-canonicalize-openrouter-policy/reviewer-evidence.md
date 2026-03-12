@@ -23,7 +23,7 @@ shared contract.
 
 ## Execution Evidence
 
-1. Live branch health response shows the canonical portfolio and runtime config:
+1. Live branch health response shows the canonical coach runtime contract:
    [health-response.json](./health-response.json)
 2. Regression proof for the affected lane:
    [verification.txt](./verification.txt)

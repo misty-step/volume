@@ -1,6 +1,6 @@
 {
   "status": "pass",
-  "timestamp": "2026-03-12T18:42:02.259Z",
+  "timestamp": "2026-03-12T18:48:15.792Z",
   "version": "1.15.2",
   "checks": {
     "convex": { "status": "pass" },
@@ -13,12 +13,8 @@
       "status": "pass",
       "defaultModel": "anthropic/claude-sonnet-4.6",
       "configuredModel": "anthropic/claude-sonnet-4.6",
-      "classificationModel": "minimax/minimax-m2.5",
-      "writerModel": "moonshotai/kimi-k2.5",
-      "fallbackModel": "z-ai/glm-5",
       "apiKeyEnvVar": "OPENROUTER_API_KEY",
-      "modelOverrideEnvVar": "COACH_AGENT_MODEL",
-      "timeoutMs": 30000
+      "modelOverrideEnvVar": "COACH_AGENT_MODEL"
     }
   }
 }
