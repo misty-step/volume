@@ -93,7 +93,7 @@ export function entityActionButton(
     .getByTestId("entity-action-row")
     .filter({
       has: page.locator("p", {
-        hasText: new RegExp(`^${escapeRegExp(itemTitle)}$`),
+        hasText: new RegExp(`^${escapeRegExp(itemTitle)}$`, "i"),
       }),
     })
     .last();

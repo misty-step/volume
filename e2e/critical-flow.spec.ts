@@ -49,6 +49,8 @@ test.describe("Agentic workspace critical routes", () => {
     }
 
     await clickEntityAction(page, exerciseName, /^Open$/i);
+    await waitForCoachText(page, /confirm/i);
+    await sendCoachMessage(page, "yes");
     await waitForCoachText(page, /Set deleted/i);
   });
 

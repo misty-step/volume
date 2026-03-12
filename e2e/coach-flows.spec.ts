@@ -96,7 +96,7 @@ test.describe("Coach chat flows", () => {
   }) => {
     const exerciseName = `archive e2e ${Math.random().toString(36).slice(2, 8)}`;
 
-    await sendCoachMessage(page, `10 ${exerciseName}`);
+    await sendCoachMessage(page, `log 10 reps of "${exerciseName}"`);
     await waitForCoachText(
       page,
       new RegExp(`Logged 10 ${escapeRegExp(exerciseName)}`, "i")
@@ -112,8 +112,10 @@ test.describe("Coach chat flows", () => {
     const restoreButton = coachTimeline(page)
       .getByRole("button", { name: /^Restore$/ })
       .last();
+    await waitForCoachIdle(page);
     await expect(restoreButton).toBeVisible({ timeout: 30_000 });
     await restoreButton.click();
+    await expect(coachInput(page)).toBeDisabled({ timeout: 10_000 });
 
     await waitForCoachText(page, /Exercise restored/i);
     await sendCoachMessage(page, "show exercise library");
