@@ -107,6 +107,14 @@ describe("executeCoachTool", () => {
     expect((status as { tone: string }).tone).toBe("error");
   });
 
+  it("unknown tool -> first block title is 'Unsupported action'", async () => {
+    const result = await executeCoachTool("unknown_tool", {}, mockCtx);
+    expect(result.blocks[0]).toMatchObject({
+      type: "status",
+      title: "Unsupported action",
+    });
+  });
+
   it("unknown tool -> outputForModel.tool contains the tool name", async () => {
     const result = await executeCoachTool("does_not_exist", {}, mockCtx);
     expect(result.outputForModel.tool).toBe("does_not_exist");
