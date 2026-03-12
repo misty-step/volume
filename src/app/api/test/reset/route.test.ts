@@ -3,14 +3,21 @@
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const fetchMutationMock = vi.fn();
-vi.mock("convex/nextjs", () => ({
-  fetchMutation: (...args: unknown[]) => fetchMutationMock(...args),
+const convexMutationMock = vi.fn();
+const convexSetAuthMock = vi.fn();
+const ConvexHttpClientMock = vi.fn(() => ({
+  setAuth: convexSetAuthMock,
+  mutation: convexMutationMock,
+}));
+vi.mock("convex/browser", () => ({
+  ConvexHttpClient: function (...args: unknown[]) {
+    return ConvexHttpClientMock(...args);
+  },
 }));
 
-const currentUserMock = vi.fn();
+const authMock = vi.fn();
 vi.mock("@clerk/nextjs/server", () => ({
-  currentUser: () => currentUserMock(),
+  auth: () => authMock(),
 }));
 
 function createRequest(secret: string) {
@@ -29,9 +36,12 @@ describe("POST /api/test/reset", () => {
     vi.resetModules();
     process.env = { ...originalEnv };
     process.env.TEST_RESET_SECRET = "test-secret";
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
 
-    fetchMutationMock.mockReset();
-    currentUserMock.mockReset();
+    convexMutationMock.mockReset();
+    convexSetAuthMock.mockReset();
+    ConvexHttpClientMock.mockClear();
+    authMock.mockReset();
   });
 
   afterEach(() => {
@@ -47,8 +57,8 @@ describe("POST /api/test/reset", () => {
 
     expect(response.status).toBe(404);
     expect(await response.text()).toBe("Not Found");
-    expect(currentUserMock).not.toHaveBeenCalled();
-    expect(fetchMutationMock).not.toHaveBeenCalled();
+    expect(authMock).not.toHaveBeenCalled();
+    expect(ConvexHttpClientMock).not.toHaveBeenCalled();
   });
 
   it("ignores NEXT_PUBLIC_VERCEL_ENV fallback for the server-side production guard", async () => {
@@ -61,8 +71,8 @@ describe("POST /api/test/reset", () => {
 
     expect(response.status).toBe(404);
     expect(await response.text()).toBe("Not Found");
-    expect(currentUserMock).not.toHaveBeenCalled();
-    expect(fetchMutationMock).not.toHaveBeenCalled();
+    expect(authMock).not.toHaveBeenCalled();
+    expect(ConvexHttpClientMock).not.toHaveBeenCalled();
   });
 
   it("fails closed when TEST_RESET_SECRET is missing", async () => {
@@ -75,8 +85,8 @@ describe("POST /api/test/reset", () => {
 
     expect(response.status).toBe(401);
     expect(await response.text()).toBe("Invalid secret");
-    expect(currentUserMock).not.toHaveBeenCalled();
-    expect(fetchMutationMock).not.toHaveBeenCalled();
+    expect(authMock).not.toHaveBeenCalled();
+    expect(ConvexHttpClientMock).not.toHaveBeenCalled();
   });
 
   it("fails closed when TEST_RESET_SECRET is empty", async () => {
@@ -89,27 +99,33 @@ describe("POST /api/test/reset", () => {
 
     expect(response.status).toBe(401);
     expect(await response.text()).toBe("Invalid secret");
-    expect(currentUserMock).not.toHaveBeenCalled();
-    expect(fetchMutationMock).not.toHaveBeenCalled();
+    expect(authMock).not.toHaveBeenCalled();
+    expect(ConvexHttpClientMock).not.toHaveBeenCalled();
   });
 
   it("allows preview deployments and executes reset", async () => {
     process.env.NODE_ENV = "production";
     process.env.VERCEL_ENV = "preview";
 
-    currentUserMock.mockResolvedValue({ id: "user_123" });
-    fetchMutationMock.mockResolvedValue(undefined);
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("convex-token"),
+    });
+    convexMutationMock.mockResolvedValue(undefined);
 
     const { POST } = await import("./route");
     const response = await POST(createRequest("test-secret"));
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("User data reset");
-    expect(currentUserMock).toHaveBeenCalledTimes(1);
-    expect(fetchMutationMock).toHaveBeenCalledTimes(1);
-    expect(fetchMutationMock).toHaveBeenCalledWith(expect.anything(), {
+    expect(authMock).toHaveBeenCalledTimes(1);
+    expect(ConvexHttpClientMock).toHaveBeenCalledWith(
+      "https://test.convex.cloud"
+    );
+    expect(convexSetAuthMock).toHaveBeenCalledWith("convex-token");
+    expect(convexMutationMock).toHaveBeenCalledTimes(1);
+    expect(convexMutationMock).toHaveBeenCalledWith(expect.anything(), {
       userId: "user_123",
-      secret: "test-secret",
     });
   });
 
@@ -118,15 +134,18 @@ describe("POST /api/test/reset", () => {
     delete process.env.VERCEL_ENV;
     delete process.env.NEXT_PUBLIC_VERCEL_ENV;
 
-    currentUserMock.mockResolvedValue({ id: "user_123" });
-    fetchMutationMock.mockResolvedValue(undefined);
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("convex-token"),
+    });
+    convexMutationMock.mockResolvedValue(undefined);
 
     const { POST } = await import("./route");
     const response = await POST(createRequest("test-secret"));
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("User data reset");
-    expect(fetchMutationMock).toHaveBeenCalledTimes(1);
+    expect(convexMutationMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects invalid secrets in preview deployments", async () => {
@@ -138,30 +157,71 @@ describe("POST /api/test/reset", () => {
 
     expect(response.status).toBe(401);
     expect(await response.text()).toBe("Invalid secret");
-    expect(currentUserMock).not.toHaveBeenCalled();
-    expect(fetchMutationMock).not.toHaveBeenCalled();
+    expect(authMock).not.toHaveBeenCalled();
+    expect(ConvexHttpClientMock).not.toHaveBeenCalled();
   });
 
   it("returns 401 when no authenticated user is present", async () => {
     process.env.NODE_ENV = "production";
     process.env.VERCEL_ENV = "preview";
 
-    currentUserMock.mockResolvedValue(null);
+    authMock.mockResolvedValue({
+      userId: null,
+      getToken: vi.fn(),
+    });
 
     const { POST } = await import("./route");
     const response = await POST(createRequest("test-secret"));
 
     expect(response.status).toBe(401);
     expect(await response.text()).toBe("Unauthorized");
-    expect(fetchMutationMock).not.toHaveBeenCalled();
+    expect(ConvexHttpClientMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when the Convex auth token is unavailable", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.VERCEL_ENV = "preview";
+
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue(null),
+    });
+
+    const { POST } = await import("./route");
+    const response = await POST(createRequest("test-secret"));
+
+    expect(response.status).toBe(401);
+    expect(await response.text()).toBe("Unauthorized");
+    expect(ConvexHttpClientMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when NEXT_PUBLIC_CONVEX_URL is missing", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.VERCEL_ENV = "preview";
+    delete process.env.NEXT_PUBLIC_CONVEX_URL;
+
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("convex-token"),
+    });
+
+    const { POST } = await import("./route");
+    const response = await POST(createRequest("test-secret"));
+
+    expect(response.status).toBe(500);
+    expect(await response.text()).toBe("Missing NEXT_PUBLIC_CONVEX_URL");
+    expect(ConvexHttpClientMock).not.toHaveBeenCalled();
   });
 
   it("returns 500 when reset mutation fails", async () => {
     process.env.NODE_ENV = "production";
     process.env.VERCEL_ENV = "preview";
 
-    currentUserMock.mockResolvedValue({ id: "user_123" });
-    fetchMutationMock.mockRejectedValue(new Error("mutation failed"));
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("convex-token"),
+    });
+    convexMutationMock.mockRejectedValue(new Error("mutation failed"));
 
     const { POST } = await import("./route");
     const response = await POST(createRequest("test-secret"));

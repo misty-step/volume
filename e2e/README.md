@@ -25,13 +25,10 @@ We use Playwright for end-to-end testing. Tests are located in `e2e/`.
    OPENROUTER_API_KEY=sk-or-...
 
    # Test Data Reset (required for deterministic cleanup)
-   # Must match the value set in your Convex Dashboard Environment Variables
    TEST_RESET_SECRET=some_long_random_string
    ```
 
-2. **Convex Config**: Ensure `TEST_RESET_SECRET` is also set in your Convex deployment variables. The authenticated E2E suite expects reset support and now fails fast if it is missing.
-
-3. **GitHub Actions**: The CI workflow fails immediately if any required E2E secret is missing. Configure these repo secrets with the same names used locally:
+2. **GitHub Actions**: The CI workflow fails immediately if any required E2E secret is missing. Configure these repo secrets with the same names used locally:
    `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_JWT_ISSUER_DOMAIN`, `CLERK_TEST_USER_EMAIL`, `CLERK_TEST_USER_PASSWORD`, `NEXT_PUBLIC_CONVEX_URL`, `OPENROUTER_API_KEY`, `TEST_RESET_SECRET`.
 
 ### Running Tests
