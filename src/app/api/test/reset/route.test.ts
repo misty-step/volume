@@ -112,9 +112,10 @@ describe("POST /api/test/reset", () => {
     process.env.NODE_ENV = "production";
     process.env.VERCEL_ENV = "preview";
 
+    const getTokenMock = vi.fn().mockResolvedValue("convex-token");
     authMock.mockResolvedValue({
       userId: "user_123",
-      getToken: vi.fn().mockResolvedValue("convex-token"),
+      getToken: getTokenMock,
     });
     queryMock
       .mockResolvedValueOnce([{ _id: "set_123" }])
@@ -130,6 +131,7 @@ describe("POST /api/test/reset", () => {
     expect(ConvexHttpClientMock).toHaveBeenCalledWith(
       "https://volume-test.convex.cloud"
     );
+    expect(getTokenMock).toHaveBeenCalledWith({ template: "convex" });
     expect(setAuthMock).toHaveBeenCalledWith("convex-token");
     expect(queryMock).toHaveBeenNthCalledWith(1, api.sets.listSets, {});
     expect(mutationMock).toHaveBeenNthCalledWith(1, api.sets.deleteSet, {

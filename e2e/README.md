@@ -25,7 +25,6 @@ We use Playwright for end-to-end testing. Tests are located in `e2e/`.
    OPENROUTER_API_KEY=sk-or-v1_...
 
    # Test Data Reset (required, for deterministic cleanup)
-   # Must match the value set in your Convex Dashboard Environment Variables
    TEST_RESET_SECRET=some_long_random_string
    ```
 
