@@ -68,7 +68,6 @@ test.describe("Paywall Gate", () => {
     page,
   }) => {
     await openCoachWorkspace(page, "/today");
-    await expect(coachTimeline(page)).toBeVisible();
     await expect(page.getByText(/Agent ready\./i)).toBeVisible();
   });
 

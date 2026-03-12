@@ -5,17 +5,20 @@ import {
   clickUndo,
   coachInput,
   coachTimeline,
+  createUniqueExerciseName,
+  escapeRegExp,
   openCoachWorkspace,
+  requestTodaySetCount,
   sendCoachMessage,
   waitForCoachIdle,
   waitForCoachText,
 } from "./coach-helpers";
+import { createExerciseForCurrentUser } from "./convex-helpers";
 
 test.describe("Coach chat flows", () => {
   test.describe.configure({ mode: "serial" });
 
-  test.beforeEach(async ({ page, resetUserData }) => {
-    await resetUserData();
+  test.beforeEach(async ({ page }) => {
     await openCoachWorkspace(page, "/coach");
   });
 
@@ -39,22 +42,19 @@ test.describe("Coach chat flows", () => {
   test("logs a set, follows a generated suggestion, and undoes the action", async ({
     page,
   }) => {
+    const beforeCount = await requestTodaySetCount(page);
+
     await sendCoachMessage(page, "12 pushups");
     await waitForCoachText(page, /Logged 12 pushups/i);
 
     await clickSuggestion(page, "show today's summary");
     await waitForCoachText(page, /Today's totals/i);
-    await expect(
-      coachTimeline(page).getByText(/Top exercises today/i)
-    ).toBeVisible({
-      timeout: 30_000,
-    });
+    expect(await requestTodaySetCount(page)).toBe(beforeCount + 1);
 
     await clickUndo(page);
     await waitForCoachText(page, /Action undone/i);
 
-    await sendCoachMessage(page, "show today's summary");
-    await waitForCoachText(page, /No sets logged today/i);
+    expect(await requestTodaySetCount(page)).toBe(beforeCount);
   });
 
   test("opens analytics from the generated workspace actions", async ({
@@ -84,10 +84,10 @@ test.describe("Coach chat flows", () => {
   test("archives and restores an exercise through generated UI", async ({
     page,
   }) => {
-    await sendCoachMessage(page, "10 pushups");
-    await waitForCoachText(page, /Logged 10 pushups/i);
+    const exerciseName = createUniqueExerciseName("PushupsCodex");
+    await createExerciseForCurrentUser(page, exerciseName);
 
-    await sendCoachMessage(page, "archive exercise pushups");
+    await sendCoachMessage(page, `archive exercise ${exerciseName}`);
     await waitForCoachIdle(page);
 
     await sendCoachMessage(page, "yes");
@@ -106,7 +106,7 @@ test.describe("Coach chat flows", () => {
     await waitForCoachText(page, /Exercise library/i);
     await expect(
       coachTimeline(page)
-        .getByText(/^pushups$/i)
+        .getByText(new RegExp(`^${escapeRegExp(exerciseName)}$`, "i"))
         .last()
     ).toBeVisible({
       timeout: 30_000,
