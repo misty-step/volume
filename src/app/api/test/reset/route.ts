@@ -39,9 +39,29 @@ export async function POST(request: NextRequest) {
   convex.setAuth(token);
 
   try {
-    await convex.mutation(api.test.resetUserData.resetUserData, {
-      userId,
-    });
+    // E2E CI runs the branch's Next app against a long-lived Convex deployment.
+    // Reset through stable public APIs so cleanup stays compatible even when
+    // branch-only test helpers have not been deployed to that backend yet.
+    const [sets, exercises] = await Promise.all([
+      convex.query(api.sets.listSets, {}),
+      convex.query(api.exercises.listExercises, { includeDeleted: true }),
+    ]);
+
+    await Promise.all(
+      sets.map((set) =>
+        convex.mutation(api.sets.deleteSet, {
+          id: set._id,
+        })
+      )
+    );
+
+    await Promise.all(
+      exercises.map((exercise) =>
+        convex.mutation(api.exercises.deleteExercise, {
+          id: exercise._id,
+        })
+      )
+    );
 
     return new NextResponse("User data reset", { status: 200 });
   } catch (error) {
