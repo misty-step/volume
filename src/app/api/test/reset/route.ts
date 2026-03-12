@@ -6,8 +6,25 @@ import { api } from "@/../convex/_generated/api";
 
 const TEST_SECRET_HEADER = "X-TEST-SECRET";
 
+async function clearAuthenticatedE2EState(convex: ConvexHttpClient) {
+  // CI talks to a hosted Convex deployment, so the reset path must only depend
+  // on already-deployed public APIs instead of a branch-local test mutation.
+  const sets = await convex.query(api.sets.listSets, {});
+  for (const set of sets) {
+    await convex.mutation(api.sets.deleteSet, { id: set._id });
+  }
+
+  const exercises = await convex.query(api.exercises.listExercises, {
+    includeDeleted: true,
+  });
+  for (const exercise of exercises) {
+    await convex.mutation(api.exercises.deleteExercise, {
+      id: exercise._id,
+    });
+  }
+}
+
 export async function POST(request: NextRequest) {
-  // Never expose test-reset behavior in production deployments.
   if (isServerProductionDeployment()) {
     return new NextResponse("Not Found", { status: 404 });
   }
@@ -15,7 +32,6 @@ export async function POST(request: NextRequest) {
   const configuredSecret = process.env.TEST_RESET_SECRET;
   const providedSecret = request.headers.get(TEST_SECRET_HEADER);
 
-  // Fail closed when secret config is missing/empty or request secret mismatches.
   if (!configuredSecret || providedSecret !== configuredSecret) {
     return new NextResponse("Invalid secret", { status: 401 });
   }
@@ -30,38 +46,18 @@ export async function POST(request: NextRequest) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-  if (!convexUrl) {
-    return new NextResponse("Missing NEXT_PUBLIC_CONVEX_URL", { status: 500 });
-  }
-
-  const convex = new ConvexHttpClient(convexUrl);
-  convex.setAuth(token);
-
   try {
-    // E2E CI runs the branch's Next app against a long-lived Convex deployment.
-    // Reset through stable public APIs so cleanup stays compatible even when
-    // branch-only test helpers have not been deployed to that backend yet.
-    const [sets, exercises] = await Promise.all([
-      convex.query(api.sets.listSets, {}),
-      convex.query(api.exercises.listExercises, { includeDeleted: true }),
-    ]);
+    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+    if (!convexUrl) {
+      return new NextResponse("Missing NEXT_PUBLIC_CONVEX_URL", {
+        status: 500,
+      });
+    }
 
-    await Promise.all(
-      sets.map((set) =>
-        convex.mutation(api.sets.deleteSet, {
-          id: set._id,
-        })
-      )
-    );
+    const convex = new ConvexHttpClient(convexUrl);
+    convex.setAuth(token);
 
-    await Promise.all(
-      exercises.map((exercise) =>
-        convex.mutation(api.exercises.deleteExercise, {
-          id: exercise._id,
-        })
-      )
-    );
+    await clearAuthenticatedE2EState(convex);
 
     return new NextResponse("User data reset", { status: 200 });
   } catch (error) {

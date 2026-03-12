@@ -103,7 +103,7 @@ Where `data` is a `CoachStreamEvent` JSON object (see `src/lib/coach/schema.ts`)
 
 ## Next Hardening Steps
 
-1. Consolidate duplicate tool registries (`server/coach-tools.ts` vs `tools/definitions.ts` and `tools/execute.ts`) into a single source of truth.
+1. Keep `src/lib/coach/tools/registry.ts` as the single source of truth for tool names, schemas, descriptions, and runner wiring.
 2. Add structured eval dataset for common prompts.
 3. Persist server conversation IDs for stronger long-turn memory.
 4. Add safety/approval layer for destructive actions before expanding tool set.

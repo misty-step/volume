@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
+import { loadE2EEnv } from "./e2e/env";
 
 // Load environment variables from .env.local or .env
 if (fs.existsSync(path.resolve(__dirname, ".env.local"))) {
@@ -10,6 +11,7 @@ if (fs.existsSync(path.resolve(__dirname, ".env.local"))) {
 dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 const authFile = "e2e/.auth/user.json";
+const e2eEnv = loadE2EEnv();
 const playwrightWorkers = Number.parseInt(
   process.env.PLAYWRIGHT_WORKERS || "1",
   10
@@ -36,13 +38,11 @@ export default defineConfig({
     headless: true,
   },
   projects: [
-    // Setup project - runs authentication and saves state
     {
       name: "setup",
       testMatch: /auth\.setup\.ts/,
       retries: 2,
     },
-    // Test project - uses authenticated state from setup
     {
       name: "chromium",
       use: {
@@ -60,18 +60,15 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     stdout: "ignore",
     stderr: "pipe",
-    timeout: 120000, // Give dev server 2 minutes to start
+    timeout: 120000,
     env: {
-      // Pass through Clerk environment variables for authentication
-      // These MUST be set before running E2E tests
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
-        process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!,
-      CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY!,
-      CLERK_JWT_ISSUER_DOMAIN: process.env.CLERK_JWT_ISSUER_DOMAIN!,
-      NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL!,
-      OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY!,
-      TEST_RESET_SECRET: process.env.TEST_RESET_SECRET!,
-      // Disable telemetry during E2E tests
+        e2eEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+      CLERK_SECRET_KEY: e2eEnv.CLERK_SECRET_KEY,
+      CLERK_JWT_ISSUER_DOMAIN: e2eEnv.CLERK_JWT_ISSUER_DOMAIN,
+      NEXT_PUBLIC_CONVEX_URL: e2eEnv.NEXT_PUBLIC_CONVEX_URL,
+      TEST_RESET_SECRET: e2eEnv.TEST_RESET_SECRET,
+      OPENROUTER_API_KEY: e2eEnv.OPENROUTER_API_KEY,
       NEXT_PUBLIC_DISABLE_SENTRY: "true",
       NEXT_PUBLIC_DISABLE_ANALYTICS: "true",
     },

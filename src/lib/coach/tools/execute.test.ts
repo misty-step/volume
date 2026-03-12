@@ -1,3 +1,6 @@
+// @vitest-environment node
+
+import { ZodError } from "zod";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 vi.mock("./tool-set-sound", () => ({
@@ -67,7 +70,16 @@ vi.mock("./tool-exercise-report", () => ({
   }),
 }));
 
+vi.mock("./tool-edit-set", () => ({
+  runEditSetTool: vi.fn().mockResolvedValue({
+    summary: "Set edited.",
+    blocks: [],
+    outputForModel: { status: "ok", set_id: "set_123" },
+  }),
+}));
+
 import { executeCoachTool } from "./execute";
+import { runEditSetTool } from "./tool-edit-set";
 import { runSetSoundTool } from "./tool-set-sound";
 import type { CoachToolContext } from "./types";
 
@@ -95,6 +107,14 @@ describe("executeCoachTool", () => {
     expect((status as { tone: string }).tone).toBe("error");
   });
 
+  it("unknown tool -> first block title is 'Unsupported action'", async () => {
+    const result = await executeCoachTool("unknown_tool", {}, mockCtx);
+    expect(result.blocks[0]).toMatchObject({
+      type: "status",
+      title: "Unsupported action",
+    });
+  });
+
   it("unknown tool -> outputForModel.tool contains the tool name", async () => {
     const result = await executeCoachTool("does_not_exist", {}, mockCtx);
     expect(result.outputForModel.tool).toBe("does_not_exist");
@@ -113,5 +133,77 @@ describe("executeCoachTool", () => {
     );
     expect(result.outputForModel.status).toBe("ok");
     expect(result.outputForModel.enabled).toBe(true);
+  });
+
+  it("supports newer tool registrations through the shared registry", async () => {
+    const result = await executeCoachTool(
+      "edit_set",
+      { set_id: "set_123", reps: 12 },
+      mockCtx
+    );
+
+    expect(runEditSetTool).toHaveBeenCalledWith(
+      { set_id: "set_123", reps: 12 },
+      mockCtx
+    );
+    expect(result.outputForModel.set_id).toBe("set_123");
+  });
+
+  it("returns an error result for invalid tool arguments", async () => {
+    const result = await executeCoachTool("edit_set", {}, mockCtx);
+
+    expect(runEditSetTool).not.toHaveBeenCalled();
+    expect(result.outputForModel.error).toBe("invalid_tool_args");
+    expect(result.blocks[0]).toMatchObject({
+      type: "status",
+      tone: "error",
+      title: "Invalid tool arguments",
+    });
+  });
+
+  it("returns an error result when a runner throws", async () => {
+    vi.mocked(runEditSetTool).mockRejectedValueOnce(new Error("boom"));
+
+    const result = await executeCoachTool(
+      "edit_set",
+      { set_id: "set_123", reps: 12 },
+      mockCtx
+    );
+
+    expect(result.outputForModel.error).toBe("tool_failed");
+    expect(result.blocks[0]).toMatchObject({
+      type: "status",
+      tone: "error",
+      title: "Tool failed",
+      description: "boom",
+    });
+  });
+
+  it("treats runner zod errors as tool failures, not invalid args", async () => {
+    vi.mocked(runEditSetTool).mockRejectedValueOnce(
+      new ZodError([
+        {
+          code: "custom",
+          message: "Runner parse failed.",
+          path: [],
+        },
+      ])
+    );
+
+    const result = await executeCoachTool(
+      "edit_set",
+      { set_id: "set_123", reps: 12 },
+      mockCtx
+    );
+
+    expect(result.outputForModel.error).toBe("tool_failed");
+    expect(result.blocks[0]).toMatchObject({
+      type: "status",
+      tone: "error",
+      title: "Tool failed",
+    });
+    expect(result.blocks[0]).not.toMatchObject({
+      title: "Invalid tool arguments",
+    });
   });
 });
