@@ -4,7 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useQuery, useMutation, useAction, useConvexAuth } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useEffectEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -77,32 +77,23 @@ export function PaywallGate({ children }: PaywallGateProps) {
   const hasShownSuccessRef = useRef(false);
   const reportedBootstrapPhasesRef = useRef<Set<BootstrapPhase>>(new Set());
   const hasReportedVerificationTimeoutRef = useRef(false);
-  const bootstrapTelemetryContextRef = useRef({
+  const hasReportedSignedOutRedirectRef = useRef(false);
+  const checkoutContextRef = useRef<{
+    checkoutStatus: string | null;
+    sessionId: string | null;
+  }>({
+    checkoutStatus: null,
+    sessionId: null,
+  });
+
+  const isSignedOut = isClerkLoaded && !userId;
+  const readBootstrapTelemetry = useEffectEvent(() => ({
     hasUserId: Boolean(userId),
     isClerkLoaded,
     isConvexAuthLoading,
     isAuthenticated,
     isVerifying,
-  });
-  const hasReportedSignedOutRedirectRef = useRef(false);
-
-  const isSignedOut = isClerkLoaded && !userId;
-
-  useEffect(() => {
-    bootstrapTelemetryContextRef.current = {
-      hasUserId: Boolean(userId),
-      isClerkLoaded,
-      isConvexAuthLoading,
-      isAuthenticated,
-      isVerifying,
-    };
-  }, [
-    isAuthenticated,
-    isClerkLoaded,
-    isConvexAuthLoading,
-    isVerifying,
-    userId,
-  ]);
+  }));
 
   let bootstrapPhase: BootstrapPhase | null = null;
   if (!isClerkLoaded) {
@@ -121,6 +112,7 @@ export function PaywallGate({ children }: PaywallGateProps) {
   useEffect(() => {
     const checkoutStatus = searchParams.get("checkout");
     const sessionId = searchParams.get("session_id");
+    checkoutContextRef.current = { checkoutStatus, sessionId };
 
     if (checkoutStatus === "success" && sessionId) {
       // Store session ID for backup sync
@@ -150,12 +142,13 @@ export function PaywallGate({ children }: PaywallGateProps) {
   // 2. Emit and surface slow bootstrap states instead of spinning forever
   useEffect(() => {
     if (!bootstrapPhase) return;
+    const phaseAtSetup = bootstrapPhase;
 
     const timer = setTimeout(() => {
-      setBootstrapTimeoutPhase((current) => current ?? bootstrapPhase);
+      setBootstrapTimeoutPhase((current) => current ?? phaseAtSetup);
 
-      if (reportedBootstrapPhasesRef.current.has(bootstrapPhase)) return;
-      reportedBootstrapPhasesRef.current.add(bootstrapPhase);
+      if (reportedBootstrapPhasesRef.current.has(phaseAtSetup)) return;
+      reportedBootstrapPhasesRef.current.add(phaseAtSetup);
 
       const {
         hasUserId,
@@ -163,10 +156,10 @@ export function PaywallGate({ children }: PaywallGateProps) {
         isClerkLoaded: latestIsClerkLoaded,
         isConvexAuthLoading: latestIsConvexAuthLoading,
         isVerifying: latestIsVerifying,
-      } = bootstrapTelemetryContextRef.current;
+      } = readBootstrapTelemetry();
 
       trackEvent("Subscription Gate Bootstrap Delayed", {
-        phase: bootstrapPhase,
+        phase: phaseAtSetup,
         hasUserId,
         isAuthenticated: latestIsAuthenticated,
         isVerifying: latestIsVerifying,
@@ -174,7 +167,7 @@ export function PaywallGate({ children }: PaywallGateProps) {
 
       reportError(new Error("Subscription gate bootstrap timed out"), {
         component: "PaywallGate",
-        phase: bootstrapPhase,
+        phase: phaseAtSetup,
         hasUserId,
         isClerkLoaded: latestIsClerkLoaded,
         isConvexAuthLoading: latestIsConvexAuthLoading,
@@ -237,17 +230,18 @@ export function PaywallGate({ children }: PaywallGateProps) {
     if (!verificationTimeout || subscriptionStatus?.hasAccess) return;
     if (hasReportedVerificationTimeoutRef.current) return;
     hasReportedVerificationTimeoutRef.current = true;
+    const { checkoutStatus, sessionId } = checkoutContextRef.current;
 
     trackEvent("Subscription Gate Checkout Verification Timed Out", {
       hasAccess: Boolean(subscriptionStatus?.hasAccess),
     });
     reportError(new Error("Checkout verification timed out"), {
       component: "PaywallGate",
-      checkoutStatus: searchParams.get("checkout"),
+      checkoutStatus,
       hasAccess: Boolean(subscriptionStatus?.hasAccess),
-      sessionIdPresent: Boolean(searchParams.get("session_id")),
+      sessionIdPresent: Boolean(sessionId),
     });
-  }, [searchParams, subscriptionStatus?.hasAccess, verificationTimeout]);
+  }, [subscriptionStatus?.hasAccess, verificationTimeout]);
 
   // 5. Auto-create user once auth is ready and no record exists
   useEffect(() => {
@@ -302,11 +296,6 @@ export function PaywallGate({ children }: PaywallGateProps) {
     );
   }
 
-  // Access granted should win over any stale timeout marker.
-  if (subscriptionStatus?.hasAccess) {
-    return <>{children}</>;
-  }
-
   // Verifying payment
   if (isVerifying && !verificationTimeout) {
     return (
@@ -325,7 +314,23 @@ export function PaywallGate({ children }: PaywallGateProps) {
   const activeUserBootstrapError =
     subscriptionStatus === null ? userBootstrapError : null;
 
-  if (bootstrapTimeoutPhase || activeUserBootstrapError) {
+  if (verificationTimeout && !subscriptionStatus?.hasAccess) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4 text-center">
+        <p className="text-lg font-medium">Payment received!</p>
+        <p className="max-w-md text-muted-foreground">
+          Your subscription is being activated. This usually takes a few
+          seconds. Please refresh the page or contact support if this persists.
+        </p>
+        <Button onClick={() => window.location.reload()}>Refresh Page</Button>
+      </div>
+    );
+  }
+
+  if (
+    (bootstrapTimeoutPhase && !subscriptionStatus?.hasAccess) ||
+    activeUserBootstrapError
+  ) {
     const title = activeUserBootstrapError
       ? "We couldn't finish loading your account."
       : "We couldn't finish connecting to Volume.";
@@ -340,20 +345,6 @@ export function PaywallGate({ children }: PaywallGateProps) {
       >
         <p className="text-lg font-medium">{title}</p>
         <p className="max-w-md text-muted-foreground">{message}</p>
-        <Button onClick={() => window.location.reload()}>Refresh Page</Button>
-      </div>
-    );
-  }
-
-  // Timeout error
-  if (verificationTimeout && !subscriptionStatus?.hasAccess) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4 text-center">
-        <p className="text-lg font-medium">Payment received!</p>
-        <p className="max-w-md text-muted-foreground">
-          Your subscription is being activated. This usually takes a few
-          seconds. Please refresh the page or contact support if this persists.
-        </p>
         <Button onClick={() => window.location.reload()}>Refresh Page</Button>
       </div>
     );
@@ -392,12 +383,5 @@ export function PaywallGate({ children }: PaywallGateProps) {
     );
   }
 
-  return (
-    <div
-      data-testid="paywall-redirecting"
-      className="flex min-h-screen items-center justify-center"
-    >
-      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-    </div>
-  );
+  return <>{children}</>;
 }

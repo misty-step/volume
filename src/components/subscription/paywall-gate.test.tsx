@@ -248,10 +248,48 @@ describe("PaywallGate", () => {
       expect.objectContaining({
         component: "PaywallGate",
         checkoutStatus: "success",
+        sessionIdPresent: true,
       })
     );
     expect(mockReplace).toHaveBeenCalledWith(window.location.pathname);
     expect(mockReplace).not.toHaveBeenCalledWith("/pricing?reason=expired");
+  });
+
+  it("keeps access rendering ahead of stale bootstrap timeouts", async () => {
+    vi.useFakeTimers();
+    const authState = {
+      isLoading: false,
+      isAuthenticated: false,
+    };
+    const queryState: { current: unknown } = { current: undefined };
+    mockUseConvexAuth.mockImplementation(() => authState);
+    mockUseQuery.mockImplementation(() => queryState.current);
+
+    const { rerender } = render(
+      <PaywallGate>
+        <div>Protected Content</div>
+      </PaywallGate>
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(8000);
+    });
+
+    expect(screen.getByTestId("paywall-bootstrap-error")).toBeInTheDocument();
+
+    authState.isAuthenticated = true;
+    queryState.current = { hasAccess: true, status: "active" };
+
+    rerender(
+      <PaywallGate>
+        <div>Protected Content</div>
+      </PaywallGate>
+    );
+
+    expect(screen.getByText("Protected Content")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("paywall-bootstrap-error")
+    ).not.toBeInTheDocument();
   });
 
   it("redirects when access is denied", async () => {

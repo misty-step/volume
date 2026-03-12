@@ -137,7 +137,6 @@ test.describe("Paywall Gate", () => {
       await mobilePage.reload();
 
       await waitForCoachText(mobilePage, /Agent ready\./i);
-      await mobilePage.waitForTimeout(1500);
       await expect(mobilePage.getByText(/Agent ready\./i)).toBeVisible();
       await expect(
         mobilePage.getByTestId("paywall-bootstrap-error")
