@@ -21,15 +21,17 @@ We use Playwright for end-to-end testing. Tests are located in `e2e/`.
    # Convex
    NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
 
+   # Coach runtime
+   OPENROUTER_API_KEY=sk-or-v1_...
+
    # Test Data Reset (required, for deterministic cleanup)
-   # Must match the value set in your Convex Dashboard Environment Variables
    TEST_RESET_SECRET=some_long_random_string
    ```
 
-2. **Convex Config**: Ensure `TEST_RESET_SECRET` is also set in your Convex deployment variables if you want to use the data reset feature.
+2. **Reset Route Config**: `TEST_RESET_SECRET` only needs to be present in the Next.js environment that serves `/api/test/reset`. The route forwards authenticated resets to Convex, so there is no second secret to keep in sync.
 
 3. **GitHub Actions**: The CI workflow fails immediately if any required E2E secret is missing. Configure these repo secrets with the same names used locally:
-   `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_JWT_ISSUER_DOMAIN`, `CLERK_TEST_USER_EMAIL`, `CLERK_TEST_USER_PASSWORD`, `NEXT_PUBLIC_CONVEX_URL`, `TEST_RESET_SECRET`.
+   `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_JWT_ISSUER_DOMAIN`, `CLERK_TEST_USER_EMAIL`, `CLERK_TEST_USER_PASSWORD`, `NEXT_PUBLIC_CONVEX_URL`, `OPENROUTER_API_KEY`, `TEST_RESET_SECRET`.
 
 ### Running Tests
 

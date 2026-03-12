@@ -8,6 +8,7 @@ const EnvSchema = z.object({
   CLERK_TEST_USER_EMAIL: z.string().min(1),
   CLERK_TEST_USER_PASSWORD: z.string().min(1),
   NEXT_PUBLIC_CONVEX_URL: z.string().min(1),
+  OPENROUTER_API_KEY: z.string().min(1),
   TEST_RESET_SECRET: z.string().min(1),
 });
 
