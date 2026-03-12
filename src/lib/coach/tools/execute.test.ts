@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { ZodError } from "zod";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 vi.mock("./tool-set-sound", () => ({
@@ -167,6 +168,34 @@ describe("executeCoachTool", () => {
       tone: "error",
       title: "Tool failed",
       description: "boom",
+    });
+  });
+
+  it("treats runner zod errors as tool failures, not invalid args", async () => {
+    vi.mocked(runEditSetTool).mockRejectedValueOnce(
+      new ZodError([
+        {
+          code: "custom",
+          message: "Runner parse failed.",
+          path: [],
+        },
+      ])
+    );
+
+    const result = await executeCoachTool(
+      "edit_set",
+      { set_id: "set_123", reps: 12 },
+      mockCtx
+    );
+
+    expect(result.outputForModel.error).toBe("tool_failed");
+    expect(result.blocks[0]).toMatchObject({
+      type: "status",
+      tone: "error",
+      title: "Tool failed",
+    });
+    expect(result.blocks[0]).not.toMatchObject({
+      title: "Invalid tool arguments",
     });
   });
 });

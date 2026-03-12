@@ -1,4 +1,3 @@
-import { ZodError } from "zod";
 import type {
   CoachToolContext,
   CoachToolExecutionOptions,
@@ -56,20 +55,21 @@ export async function executeCoachTool(
     });
   }
 
-  try {
-    const parsedArgs = definition.inputSchema.parse(rawArgs);
-    return await definition.run(parsedArgs, ctx, options);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const message = error.issues[0]?.message ?? "Invalid tool arguments.";
-      return buildToolErrorResult({
-        toolName,
-        errorCode: "invalid_tool_args",
-        title: "Invalid tool arguments",
-        message,
-      });
-    }
+  const parsedArgs = definition.inputSchema.safeParse(rawArgs);
+  if (!parsedArgs.success) {
+    const message =
+      parsedArgs.error.issues[0]?.message ?? "Invalid tool arguments.";
+    return buildToolErrorResult({
+      toolName,
+      errorCode: "invalid_tool_args",
+      title: "Invalid tool arguments",
+      message,
+    });
+  }
 
+  try {
+    return await definition.run(parsedArgs.data, ctx, options);
+  } catch (error) {
     return buildToolErrorResult({
       toolName,
       errorCode: "tool_failed",
