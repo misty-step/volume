@@ -112,9 +112,11 @@ jobs:
           retention-days: 7
 
   # ─── Lane 3: Flows — subscription, errors, parallelizable ───
+  # Runs after coach to avoid shared test-account data races
+  # (both lanes call resetAuthenticatedE2EState which wipes user data)
   flows:
     name: Flows
-    needs: preflight
+    needs: coach
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     steps:
