@@ -124,10 +124,10 @@ jobs:
   # (both lanes call resetAuthenticatedE2EState which wipes user data)
   flows:
     name: Flows
-    needs: coach
-    if: ${{ !cancelled() }}
+    needs: [preflight, coach]
+    if: ${{ !cancelled() && needs.preflight.result == 'success' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
