@@ -8,7 +8,7 @@ import { WeightUnitProvider } from "@/contexts/WeightUnitContext";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ToasterProvider } from "@/components/toaster-provider";
 import { PostHogProvider } from "@/components/posthog-provider";
-import { getClientClerkPublishableKey } from "@/lib/public-service-config";
+import { getServerClerkPublishableKey } from "@/lib/public-service-config.server";
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -57,7 +57,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const clerkPublishableKey = getClientClerkPublishableKey();
+  const clerkPublishableKey = getServerClerkPublishableKey();
 
   const content = (
     <html lang="en" suppressHydrationWarning className={bricolage.variable}>

@@ -1,4 +1,8 @@
-import { defineConfig, devices } from "@playwright/test";
+import {
+  defineConfig,
+  devices,
+  type ReporterDescription,
+} from "@playwright/test";
 import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
@@ -16,7 +20,10 @@ const playwrightWorkers = Number.parseInt(
   process.env.PLAYWRIGHT_WORKERS || "1",
   10
 );
-
+const ciReporter: ReporterDescription[] = [
+  ["line"],
+  ["html", { open: "never" }],
+];
 export default defineConfig({
   testDir: "./e2e",
   timeout: 120_000,
@@ -31,7 +38,7 @@ export default defineConfig({
     Number.isFinite(playwrightWorkers) && playwrightWorkers > 0
       ? playwrightWorkers
       : 1,
-  reporter: "html",
+  reporter: process.env.CI ? ciReporter : "html",
   globalSetup: "./e2e/global-setup.ts",
   use: {
     baseURL: "http://localhost:3000",

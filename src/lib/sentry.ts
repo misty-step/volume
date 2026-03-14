@@ -277,18 +277,21 @@ export function shouldEnableSentry(dsn: string | undefined): boolean {
 /**
  * Resolve DSN for given target runtime.
  *
- * Client prefers NEXT_PUBLIC_SENTRY_DSN (exposed to browser).
- * Server/edge prefer SENTRY_DSN (server-only).
+ * Client reads NEXT_PUBLIC_SENTRY_DSN (browser-safe).
+ * Server/edge read SENTRY_DSN (server-only).
+ * Whitespace-only values are treated as missing.
  *
  * @param target - Runtime target
  * @returns DSN string or undefined
  */
 function resolveDsn(target: SentryTarget): string | undefined {
   if (target === "client") {
-    return process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN;
+    const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN?.trim();
+    return dsn || undefined;
   }
 
-  return process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN;
+  const dsn = process.env.SENTRY_DSN?.trim();
+  return dsn || undefined;
 }
 
 /**
@@ -317,29 +320,29 @@ function resolveEnvironment(): string | undefined {
  * @returns Release identifier
  */
 function resolveRelease(): string | undefined {
-  // Helper to filter empty strings and whitespace
-  const getEnv = (key: string) => process.env[key]?.trim() || undefined;
-
   const sentryRelease =
-    getEnv("SENTRY_RELEASE") || getEnv("NEXT_PUBLIC_SENTRY_RELEASE");
+    process.env.SENTRY_RELEASE?.trim() ||
+    process.env.NEXT_PUBLIC_SENTRY_RELEASE?.trim() ||
+    undefined;
   if (sentryRelease) {
     return sentryRelease;
   }
 
   const gitSha =
-    getEnv("VERCEL_GIT_COMMIT_SHA") ||
-    getEnv("NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA");
+    process.env.VERCEL_GIT_COMMIT_SHA?.trim() ||
+    process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.trim() ||
+    undefined;
   if (gitSha) {
     return gitSha.slice(0, 7);
   }
 
   // Use injected package version for Sentry release
-  const packageVersion = getEnv("NEXT_PUBLIC_PACKAGE_VERSION");
+  const packageVersion = process.env.NEXT_PUBLIC_PACKAGE_VERSION?.trim();
   if (packageVersion) {
     return packageVersion;
   }
 
-  return getEnv("npm_package_version");
+  return process.env.npm_package_version?.trim() || undefined;
 }
 
 /**
