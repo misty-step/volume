@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.0](https://github.com/misty-step/volume/compare/v1.15.4...v1.16.0) (2026-03-14)
+
+
+### Features
+
+* persist coach conversations server-side in Convex ([#429](https://github.com/misty-step/volume/issues/429)) ([447e433](https://github.com/misty-step/volume/commit/447e4335b0e384bb635eb6ff95aad8d34c5d6fba))
+
 ## [1.15.4](https://github.com/misty-step/volume/compare/v1.15.3...v1.15.4) (2026-03-14)
 
 
