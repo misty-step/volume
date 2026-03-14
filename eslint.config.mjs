@@ -86,6 +86,14 @@ const clientEnvGuard = {
       });
     }
 
+    function reportComputedClientAccess(node) {
+      context.report({
+        node,
+        message:
+          "Client modules may not use computed process.env access. Read NEXT_PUBLIC_* or NODE_ENV directly.",
+      });
+    }
+
     return {
       MemberExpression(node) {
         if (!isProcessEnv(node.object)) return;
@@ -101,6 +109,11 @@ const clientEnvGuard = {
           typeof node.property.value === "string"
         ) {
           reportIfDisallowed(node.property.value, node.property);
+          return;
+        }
+
+        if (node.computed) {
+          reportComputedClientAccess(node.property);
         }
       },
       VariableDeclarator(node) {

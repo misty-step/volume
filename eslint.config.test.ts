@@ -82,6 +82,16 @@ describe("client env guard", () => {
     );
   });
 
+  it("rejects computed process.env access in .client modules", async () => {
+    const messages = await lintClientText(
+      "const key = 'SENTRY_DSN';\nexport const sentryDsn = process.env[key];"
+    );
+
+    expect(messages).toContain(
+      "Client modules may not use computed process.env access. Read NEXT_PUBLIC_* or NODE_ENV directly."
+    );
+  });
+
   it("allows public env reads in .client modules", async () => {
     const messages = await lintClientText(
       "export const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;\nexport const mode = process.env.NODE_ENV;"
