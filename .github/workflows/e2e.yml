@@ -3,29 +3,29 @@ name: E2E Tests
 on:
   pull_request:
     branches: [master]
-  # Allow manual trigger
   workflow_dispatch:
 
+# Cancel in-flight runs for the same PR — only the latest push matters
+concurrency:
+  group: e2e-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+  CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+  CLERK_JWT_ISSUER_DOMAIN: ${{ secrets.CLERK_JWT_ISSUER_DOMAIN }}
+  CLERK_TEST_USER_EMAIL: ${{ secrets.CLERK_TEST_USER_EMAIL }}
+  CLERK_TEST_USER_PASSWORD: ${{ secrets.CLERK_TEST_USER_PASSWORD }}
+  NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
+  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+  TEST_RESET_SECRET: ${{ secrets.TEST_RESET_SECRET }}
+
 jobs:
-  e2e:
-    name: Playwright E2E
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 15
-
-    env:
-      # App + Clerk credentials (set in GitHub Secrets)
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-      CLERK_JWT_ISSUER_DOMAIN: ${{ secrets.CLERK_JWT_ISSUER_DOMAIN }}
-      CLERK_TEST_USER_EMAIL: ${{ secrets.CLERK_TEST_USER_EMAIL }}
-      CLERK_TEST_USER_PASSWORD: ${{ secrets.CLERK_TEST_USER_PASSWORD }}
-      # Convex
-      NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
-      # Coach runtime
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-      # Test reset
-      TEST_RESET_SECRET: ${{ secrets.TEST_RESET_SECRET }}
-
+  # ─── Gate: fail immediately if secrets aren't configured ───
+  preflight:
+    name: Preflight
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 1
     steps:
       - name: Validate required E2E secrets
         run: |
@@ -53,34 +53,94 @@ jobs:
             exit 1
           fi
 
+  # ─── Lane 1: Smoke — fast gate, no auth needed ───
+  smoke:
+    name: Smoke
+    needs: preflight
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 3
+    steps:
       - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Install Playwright browsers
-        run: bunx playwright install --with-deps chromium
-
-      - name: Run E2E tests
-        run: bun run test:e2e
+      - name: Run smoke tests
+        run: bunx playwright test e2e/smoke.spec.ts
         env:
           CI: true
 
-      - name: Upload test results
+      - name: Upload report
         uses: actions/upload-artifact@v6
         if: failure()
         with:
-          name: playwright-report
+          name: smoke-report
           path: playwright-report/
           retention-days: 7
 
-      - name: Upload test traces
+  # ─── Lane 2: Coach — serial, rate-limit sensitive ───
+  coach:
+    name: Coach
+    needs: preflight
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+
+      - name: Run coach tests
+        run: bunx playwright test e2e/critical-flow.spec.ts e2e/coach-flows.spec.ts
+        env:
+          CI: true
+
+      - name: Upload report
         uses: actions/upload-artifact@v6
         if: failure()
         with:
-          name: playwright-traces
+          name: coach-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload traces
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: coach-traces
+          path: test-results/
+          retention-days: 7
+
+  # ─── Lane 3: Flows — subscription, errors, parallelizable ───
+  flows:
+    name: Flows
+    needs: preflight
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+
+      - name: Run flow tests
+        run: bunx playwright test e2e/subscription-flow.spec.ts e2e/error-scenarios.spec.ts
+        env:
+          CI: true
+          PLAYWRIGHT_WORKERS: "2"
+
+      - name: Upload report
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: flows-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload traces
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: flows-traces
           path: test-results/
           retention-days: 7
