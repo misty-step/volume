@@ -1,6 +1,5 @@
 import "server-only";
 
-import { getDeploymentEnvironment } from "./environment";
 import {
   buildClerkPublishableKey,
   getTrimmedEnv,
@@ -8,14 +7,8 @@ import {
 } from "./public-service-config.shared";
 
 function isHostedServerBuild(): boolean {
-  const deploymentEnvironment = getDeploymentEnvironment({
-    preferClientFallback: false,
-  });
-
-  return (
-    deploymentEnvironment === "preview" ||
-    deploymentEnvironment === "production"
-  );
+  const vercelEnv = getTrimmedEnv("VERCEL_ENV");
+  return vercelEnv === "preview" || vercelEnv === "production";
 }
 
 export function getServerClerkPublishableKey(): string {
