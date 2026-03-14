@@ -49,22 +49,23 @@ CONVEX_DEPLOYMENT=prod:whimsical-marten-631 bunx convex deploy -y
 
 ## Env Vars
 
-**Next.js (Vercel):** `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_*_PRICE_ID`, `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `OPENROUTER_API_KEY`
+**Next.js (Vercel):** `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_*_PRICE_ID`, `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `OPENROUTER_API_KEY`
 
 **Convex (both deployments):** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `CLERK_JWT_ISSUER_DOMAIN`, `OPENROUTER_API_KEY`
 
 ## Pitfalls
 
-| Don't                                  | Do                                              |
-| -------------------------------------- | ----------------------------------------------- |
-| Deploy with uncommitted code           | `git status` clean, then deploy                 |
-| Assume code bug on service failure     | Check env vars first: `./scripts/verify-env.sh` |
-| Hard-delete exercises                  | Use soft delete (`deleteExercise` mutation)     |
-| Skip `includeDeleted` param            | History views need `includeDeleted: true`       |
-| Trust Stripe TypeScript types fully    | Docs > types (mode-dependent params)            |
-| Re-validate in handler after `v.union` | Convex validates args before handler runs       |
-| Use relative imports in `convex/`      | Use `@/lib/...` alias (works in convex too)     |
-| Use fake timers in Convex tests        | Prefer time window assertions (before/after)    |
+| Don't                                  | Do                                                                                             |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Deploy with uncommitted code           | `git status` clean, then deploy                                                                |
+| Assume code bug on service failure     | Check env vars first: `./scripts/verify-env.sh`                                                |
+| Hard-delete exercises                  | Use soft delete (`deleteExercise` mutation)                                                    |
+| Skip `includeDeleted` param            | History views need `includeDeleted: true`                                                      |
+| Trust Stripe TypeScript types fully    | Docs > types (mode-dependent params)                                                           |
+| Re-validate in handler after `v.union` | Convex validates args before handler runs                                                      |
+| Use relative imports in `convex/`      | Use `@/lib/...` alias (works in convex too)                                                    |
+| Use fake timers in Convex tests        | Prefer time window assertions (before/after)                                                   |
+| Read server-only env in `.client` code | Keep browser-only env reads in `.client` files and limit them to `NEXT_PUBLIC_*` or `NODE_ENV` |
 
 ## Key Patterns
 

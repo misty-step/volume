@@ -688,12 +688,12 @@ describe("sentry", () => {
         expect(options.dsn).toBe("https://public@sentry.io/456");
       });
 
-      it("client falls back to SENTRY_DSN", () => {
+      it("client does not fall back to SENTRY_DSN", () => {
         vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "");
 
         const options = createSentryOptions("client");
 
-        expect(options.dsn).toBe("https://key@sentry.io/123");
+        expect(options.dsn).toBeUndefined();
       });
 
       it("server prefers SENTRY_DSN", () => {
@@ -702,18 +702,26 @@ describe("sentry", () => {
         expect(options.dsn).toBe("https://key@sentry.io/123");
       });
 
-      it("server falls back to NEXT_PUBLIC_SENTRY_DSN", () => {
+      it("server does not fall back to NEXT_PUBLIC_SENTRY_DSN", () => {
         vi.stubEnv("SENTRY_DSN", "");
 
         const options = createSentryOptions("server");
 
-        expect(options.dsn).toBe("https://public@sentry.io/456");
+        expect(options.dsn).toBeUndefined();
       });
 
       it("edge prefers SENTRY_DSN", () => {
         const options = createSentryOptions("edge");
 
         expect(options.dsn).toBe("https://key@sentry.io/123");
+      });
+
+      it("treats whitespace-only DSNs as missing", () => {
+        vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "   ");
+        vi.stubEnv("SENTRY_DSN", "   ");
+
+        expect(createSentryOptions("client").dsn).toBeUndefined();
+        expect(createSentryOptions("server").dsn).toBeUndefined();
       });
     });
 
