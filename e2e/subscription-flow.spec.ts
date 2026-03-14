@@ -19,24 +19,15 @@ test.describe("Subscription Flow", () => {
   publicTest("Pricing page shows correct plans", async ({ page }) => {
     await page.goto("/pricing");
 
-    // Verify page title
     await expect(page.getByRole("heading", { name: "Go Pro" })).toBeVisible();
-
-    // Verify monthly price
     await expect(page.getByText("$8")).toBeVisible();
     await expect(page.getByText("/month")).toBeVisible();
-
-    // Verify annual price with savings badge
     await expect(page.getByText("$70")).toBeVisible();
     await expect(page.getByText(/^\/year$/)).toBeVisible();
     await expect(page.getByText(/SAVE \$26/i)).toBeVisible();
-
-    // Verify features list
     await expect(page.getByText("Unlimited exercises")).toBeVisible();
     await expect(page.getByText("AI weekly reports")).toBeVisible();
     await expect(page.getByText("CSV data export")).toBeVisible();
-
-    // Verify trial messaging
     await expect(page.getByText("14-day free trial")).toBeVisible();
     await expect(page.getByText("No credit card required")).toBeVisible();
   });

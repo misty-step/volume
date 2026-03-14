@@ -1,5 +1,7 @@
 import { test, expect, publicTest } from "./auth-fixture";
 import {
+  coachComposer,
+  coachInput,
   coachTimeline,
   openCoachWorkspace,
   waitForCoachText,
@@ -62,6 +64,25 @@ test.describe("404 and Navigation Errors", () => {
     await expect(coachTimeline(page).getByText(/^Recent sets$/i)).toBeVisible({
       timeout: 30_000,
     });
+  });
+});
+
+test.describe("Coach Composer Validation", () => {
+  test("Send action stays disabled for blank input", async ({
+    page,
+    resetUserData,
+  }) => {
+    await resetUserData();
+    await openCoachWorkspace(page, "/today");
+
+    const input = coachInput(page);
+    const sendButton = coachComposer(page).getByRole("button", {
+      name: /send/i,
+    });
+
+    await expect(sendButton).toBeDisabled();
+    await input.fill("   ");
+    await expect(sendButton).toBeDisabled();
   });
 });
 

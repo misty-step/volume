@@ -2,6 +2,28 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "./auth-fixture";
 import { ensureAuthenticated } from "./clerk-helpers";
 
+const exerciseAdjectives = [
+  "maple",
+  "summit",
+  "harbor",
+  "ember",
+  "cinder",
+  "meadow",
+  "river",
+  "atlas",
+];
+
+const exerciseNouns = [
+  "press",
+  "row",
+  "lunge",
+  "squat",
+  "hinge",
+  "carry",
+  "stride",
+  "reach",
+];
+
 export function coachTimeline(page: Page): Locator {
   return page.getByTestId("coach-timeline").or(page.locator("main"));
 }
@@ -42,11 +64,26 @@ function parseMetricValue(blockText: string, label: string): string {
   return lines[labelIndex + 1] ?? "";
 }
 
+async function readMetricValueFromLatestBlock(
+  page: Page,
+  title: string | RegExp,
+  label: string
+): Promise<string> {
+  const text = await latestBlockForTitle(page, title).innerText();
+  return parseMetricValue(text, label);
+}
+
+export function randomExerciseName(prefix: string): string {
+  const adjective =
+    exerciseAdjectives[Math.floor(Math.random() * exerciseAdjectives.length)];
+  const noun = exerciseNouns[Math.floor(Math.random() * exerciseNouns.length)];
+  return `${prefix} ${adjective} ${noun}`;
+}
+
 export async function openCoachWorkspace(
   page: Page,
   entryPath = "/today"
 ): Promise<void> {
-  // Coach entry routes like /coach and /settings hydrate into the /today workspace.
   await ensureAuthenticated(page, entryPath);
   await expect(page).toHaveURL(/\/today(?:\?.*)?$/);
   await expect(page.getByText(/Agent ready\./i)).toBeVisible();
@@ -79,7 +116,28 @@ export async function waitForCoachText(
     typeof expected === "string"
       ? coachTimeline(page).getByText(expected, { exact: false })
       : coachTimeline(page).getByText(expected);
-  await expect(locator.first()).toBeVisible({ timeout: 30_000 });
+  await expect(locator.last()).toBeVisible({ timeout: 30_000 });
+}
+
+export function entityActionButton(
+  page: Page,
+  itemTitle: string,
+  actionLabel: string | RegExp = /^Open$/i
+): Locator {
+  const actionContainer = coachTimeline(page)
+    .getByTestId("entity-action-row")
+    .filter({
+      has: page.locator("p", {
+        hasText: new RegExp(`^${escapeRegExp(itemTitle)}$`, "i"),
+      }),
+    })
+    .last();
+
+  return typeof actionLabel === "string"
+    ? actionContainer
+        .getByRole("button")
+        .filter({ hasText: new RegExp(`^${escapeRegExp(actionLabel)}$`) })
+    : actionContainer.getByRole("button", { name: actionLabel });
 }
 
 export async function requestTodaySetCount(page: Page): Promise<number> {
@@ -99,14 +157,17 @@ export async function requestTodaySetCount(page: Page): Promise<number> {
     .toBe(true);
 
   if ((await totalsTitle.count()) > totalsBefore) {
-    const text = await latestBlockForTitle(
-      page,
-      /^Today's totals$/i
-    ).innerText();
-    return Number.parseInt(parseMetricValue(text, "Sets"), 10);
+    return await readTodaySetCount(page);
   }
 
   return 0;
+}
+
+export async function readTodaySetCount(page: Page): Promise<number> {
+  return Number.parseInt(
+    await readMetricValueFromLatestBlock(page, /^Today's totals$/i, "Sets"),
+    10
+  );
 }
 
 export function createUniqueExerciseName(prefix: string): string {
@@ -132,13 +193,7 @@ export async function clickEntityAction(
   actionLabel: string | RegExp = /^Open$/i
 ): Promise<void> {
   await waitForCoachIdle(page);
-  const itemTitleLocator = coachTimeline(page)
-    .getByText(itemTitle, { exact: true })
-    .first();
-  const row = itemTitleLocator.locator(
-    "xpath=ancestor::*[@data-testid='entity-action-row']"
-  );
-  const action = row.getByRole("button", { name: actionLabel });
+  const action = entityActionButton(page, itemTitle, actionLabel);
   await expect(action).toBeVisible({ timeout: 30_000 });
   await action.click();
   await expect(coachInput(page)).toBeDisabled({ timeout: 10_000 });

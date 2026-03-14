@@ -1,8 +1,8 @@
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "../../../../../convex/_generated/api";
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { isServerProductionDeployment } from "@/lib/environment";
+import { api } from "@/../convex/_generated/api";
 
 const TEST_SECRET_HEADER = "X-TEST-SECRET";
 
@@ -25,7 +25,6 @@ async function clearAuthenticatedE2EState(convex: ConvexHttpClient) {
 }
 
 export async function POST(request: NextRequest) {
-  // Never expose test-reset behavior in production deployments.
   if (isServerProductionDeployment()) {
     return new NextResponse("Not Found", { status: 404 });
   }
@@ -33,7 +32,6 @@ export async function POST(request: NextRequest) {
   const configuredSecret = process.env.TEST_RESET_SECRET;
   const providedSecret = request.headers.get(TEST_SECRET_HEADER);
 
-  // Fail closed when secret config is missing/empty or request secret mismatches.
   if (!configuredSecret || providedSecret !== configuredSecret) {
     return new NextResponse("Invalid secret", { status: 401 });
   }

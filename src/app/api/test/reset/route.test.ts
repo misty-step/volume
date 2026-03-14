@@ -2,7 +2,7 @@
 
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api } from "../../../../../convex/_generated/api";
+import { api } from "@/../convex/_generated/api";
 
 const authMock = vi.fn();
 vi.mock("@clerk/nextjs/server", () => ({
@@ -118,8 +118,8 @@ describe("POST /api/test/reset", () => {
       getToken: getTokenMock,
     });
     queryMock
-      .mockResolvedValueOnce([{ _id: "set_123" }])
-      .mockResolvedValueOnce([{ _id: "exercise_123" }]);
+      .mockResolvedValueOnce([{ _id: "set_1" }, { _id: "set_2" }])
+      .mockResolvedValueOnce([{ _id: "exercise_1" }, { _id: "exercise_2" }]);
     mutationMock.mockResolvedValue(undefined);
 
     const { POST } = await import("./route");
@@ -134,17 +134,28 @@ describe("POST /api/test/reset", () => {
     expect(getTokenMock).toHaveBeenCalledWith({ template: "convex" });
     expect(setAuthMock).toHaveBeenCalledWith("convex-token");
     expect(queryMock).toHaveBeenNthCalledWith(1, api.sets.listSets, {});
-    expect(mutationMock).toHaveBeenNthCalledWith(1, api.sets.deleteSet, {
-      id: "set_123",
-    });
     expect(queryMock).toHaveBeenNthCalledWith(2, api.exercises.listExercises, {
       includeDeleted: true,
     });
+    expect(mutationMock).toHaveBeenCalledTimes(4);
+    expect(mutationMock).toHaveBeenNthCalledWith(1, api.sets.deleteSet, {
+      id: "set_1",
+    });
+    expect(mutationMock).toHaveBeenNthCalledWith(2, api.sets.deleteSet, {
+      id: "set_2",
+    });
     expect(mutationMock).toHaveBeenNthCalledWith(
-      2,
+      3,
       api.exercises.deleteExercise,
       {
-        id: "exercise_123",
+        id: "exercise_1",
+      }
+    );
+    expect(mutationMock).toHaveBeenNthCalledWith(
+      4,
+      api.exercises.deleteExercise,
+      {
+        id: "exercise_2",
       }
     );
   });

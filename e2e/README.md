@@ -24,7 +24,7 @@ We use Playwright for end-to-end testing. Tests are located in `e2e/`.
    # Coach runtime
    OPENROUTER_API_KEY=sk-or-v1_...
 
-   # Test Data Reset (required, for deterministic cleanup)
+   # Test Data Reset (required for deterministic cleanup)
    TEST_RESET_SECRET=some_long_random_string
    ```
 
