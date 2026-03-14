@@ -52,6 +52,8 @@ function makeRequest(): Request {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
+  process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
 });
 
 describe("POST /api/stripe/portal", () => {
@@ -74,6 +76,18 @@ describe("POST /api/stripe/portal", () => {
     mocks.query.mockResolvedValue(null);
     const res = await POST(makeRequest());
     expect(res.status).toBe(400);
+  });
+
+  it("missing NEXT_PUBLIC_CONVEX_URL -> 500", async () => {
+    delete process.env.NEXT_PUBLIC_CONVEX_URL;
+    mocks.getToken.mockResolvedValue("tok_123");
+    mocks.auth.mockResolvedValue({ userId: "user1", getToken: mocks.getToken });
+
+    const res = await POST(makeRequest());
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toMatchObject({
+      error: "Missing NEXT_PUBLIC_CONVEX_URL",
+    });
   });
 
   it("Stripe throws -> reportError called, status 500", async () => {

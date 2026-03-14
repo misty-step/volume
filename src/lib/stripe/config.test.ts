@@ -43,25 +43,35 @@ describe("stripe config", () => {
     expect(STRIPE_API_VERSION.length).toBeGreaterThan(0);
   });
 
-  it("PRICE_IDS uses trimmed module-level values", async () => {
+  it("getPriceIds returns trimmed values", async () => {
     process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "  price_monthly_trim  ";
     process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "  price_annual_trim  ";
 
     vi.resetModules();
-    const { PRICE_IDS } = await import("./config");
+    const { getPriceIds } = await import("./config");
 
-    expect(PRICE_IDS).toEqual({
+    expect(getPriceIds()).toEqual({
       monthly: "price_monthly_trim",
       annual: "price_annual_trim",
     });
   });
 
-  it("throws at module load when required price ids are missing", async () => {
+  it("does not throw on import when price ids are missing", async () => {
     delete process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID;
     delete process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID;
 
     vi.resetModules();
-    await expect(import("./config")).rejects.toThrow(
+    await expect(import("./config")).resolves.toBeTruthy();
+  });
+
+  it("throws when getPriceIds is called without required price ids", async () => {
+    delete process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID;
+    delete process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID;
+
+    vi.resetModules();
+    const { getPriceIds } = await import("./config");
+
+    expect(() => getPriceIds()).toThrow(
       "Missing Stripe price IDs: NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID, NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID"
     );
   });

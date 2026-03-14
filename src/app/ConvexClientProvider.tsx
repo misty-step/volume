@@ -5,8 +5,9 @@ import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { useAuth } from "@clerk/nextjs";
 import { type ReactNode } from "react";
 import { useTimezoneSync } from "@/hooks/useTimezoneSync";
+import { getClientConvexUrl } from "@/lib/public-service-config";
 
-const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+const convex = new ConvexReactClient(getClientConvexUrl());
 
 /**
  * Timezone Sync Component
