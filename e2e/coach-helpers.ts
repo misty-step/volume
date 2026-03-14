@@ -92,7 +92,9 @@ export async function openCoachWorkspace(
 }
 
 export async function waitForCoachIdle(page: Page): Promise<void> {
-  await expect(coachInput(page)).toBeEnabled({ timeout: 30_000 });
+  // Must exceed the server-side COACH_TURN_TIMEOUT_MS (60s) to avoid
+  // the test timing out before the coach turn naturally completes or errors.
+  await expect(coachInput(page)).toBeEnabled({ timeout: 75_000 });
 }
 
 export async function sendCoachMessage(
