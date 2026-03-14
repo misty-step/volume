@@ -3,6 +3,7 @@
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/../convex/_generated/api";
+import { E2E_SESSION_COOKIE_NAME } from "@/lib/e2e/test-session";
 
 const authMock = vi.fn();
 vi.mock("@clerk/nextjs/server", () => ({
@@ -157,6 +158,9 @@ describe("POST /api/test/reset", () => {
       {
         id: "exercise_2",
       }
+    );
+    expect(response.headers.get("set-cookie")).toContain(
+      `${E2E_SESSION_COOKIE_NAME}=test-secret`
     );
   });
 

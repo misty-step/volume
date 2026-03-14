@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { resolveVersion } from "@/lib/version";
 import { getDeploymentEnvironment } from "@/lib/environment";
+import {
+  getCoachRuntimeHealthMetadata,
+  isOpenRouterConfigured,
+} from "@/lib/openrouter/policy";
 
 export const dynamic = "force-dynamic";
 
@@ -54,8 +58,8 @@ export async function GET() {
     ((isProd && keyMode === "test") || (!isProd && keyMode === "live"));
 
   const stripeHealthy = stripeConfigured && !keyEnvMismatch;
-  const openRouterApiKey = process.env.OPENROUTER_API_KEY;
-  const coachRuntimeHealthy = Boolean(openRouterApiKey?.trim());
+  const coachRuntimeHealthy = isOpenRouterConfigured();
+  const coachRuntimeMetadata = getCoachRuntimeHealthMetadata();
 
   const isHealthy = convexHealthy && stripeHealthy && coachRuntimeHealthy;
 
@@ -83,8 +87,9 @@ export async function GET() {
       },
       coachRuntime: {
         status: coachRuntimeHealthy ? "pass" : "fail",
+        ...coachRuntimeMetadata,
         ...(!coachRuntimeHealthy && {
-          missing: ["OPENROUTER_API_KEY"],
+          missing: [coachRuntimeMetadata.apiKeyEnvVar],
         }),
       },
     },

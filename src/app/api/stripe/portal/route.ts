@@ -5,8 +5,6 @@ import { reportError } from "@/lib/analytics";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/../convex/_generated/api";
 
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-
 /**
  * Create a Stripe Billing Portal session for the authenticated user.
  */
@@ -23,7 +21,16 @@ export async function POST(_request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.trim();
+  if (!convexUrl) {
+    return NextResponse.json(
+      { error: "Missing NEXT_PUBLIC_CONVEX_URL" },
+      { status: 500 }
+    );
+  }
+
   // Fetch stripeCustomerId server-side to prevent IDOR attacks
+  const convex = new ConvexHttpClient(convexUrl);
   convex.setAuth(token);
   const stripeCustomerId = await convex.query(
     api.subscriptions.getStripeCustomerId

@@ -8,6 +8,7 @@ import { WeightUnitProvider } from "@/contexts/WeightUnitContext";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ToasterProvider } from "@/components/toaster-provider";
 import { PostHogProvider } from "@/components/posthog-provider";
+import { getClientClerkPublishableKey } from "@/lib/public-service-config";
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -56,25 +57,31 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const clerkPublishableKey = getClientClerkPublishableKey();
+
+  const content = (
+    <html lang="en" suppressHydrationWarning className={bricolage.variable}>
+      <body className="antialiased font-sans">
+        <PostHogProvider>
+          <ThemeProvider
+            attribute="data-theme"
+            defaultTheme="dark"
+            enableSystem
+          >
+            <WeightUnitProvider>
+              <ConvexClientProvider>{children}</ConvexClientProvider>
+            </WeightUnitProvider>
+          </ThemeProvider>
+          <ToasterProvider />
+          <SpeedInsights />
+        </PostHogProvider>
+      </body>
+    </html>
+  );
+
   return (
-    <ClerkProvider>
-      <html lang="en" suppressHydrationWarning className={bricolage.variable}>
-        <body className="antialiased font-sans">
-          <PostHogProvider>
-            <ThemeProvider
-              attribute="data-theme"
-              defaultTheme="dark"
-              enableSystem
-            >
-              <WeightUnitProvider>
-                <ConvexClientProvider>{children}</ConvexClientProvider>
-              </WeightUnitProvider>
-            </ThemeProvider>
-            <ToasterProvider />
-            <SpeedInsights />
-          </PostHogProvider>
-        </body>
-      </html>
+    <ClerkProvider publishableKey={clerkPublishableKey}>
+      {content}
     </ClerkProvider>
   );
 }

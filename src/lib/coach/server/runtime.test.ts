@@ -47,4 +47,12 @@ describe("getCoachRuntime", () => {
     const result = getCoachRuntime();
     expect(result!.modelId).toBe("openai/gpt-4o");
   });
+
+  it("ignores whitespace-only COACH_AGENT_MODEL overrides", async () => {
+    process.env.OPENROUTER_API_KEY = "test-key";
+    process.env.COACH_AGENT_MODEL = "   ";
+    const { getCoachRuntime } = await import("./runtime");
+    const result = getCoachRuntime();
+    expect(result!.modelId).toBe("anthropic/claude-sonnet-4.6");
+  });
 });

@@ -53,19 +53,12 @@ setup("authenticate", async ({ page }) => {
 
   console.log("Sign-in successful, verifying authenticated state...");
 
-  // Navigate to the authenticated workspace and verify the current coach UI.
+  // Only verify the authenticated session here.
+  // Workspace readiness belongs to the authenticated fixture/tests because
+  // /today is also gated by subscription and Convex bootstrap state.
   await page.goto("/today");
+  await expect(page).not.toHaveURL(/\/sign-in(?:\/.*)?(?:\?.*)?$/);
   await expect(page).toHaveURL(/\/today(?:\?.*)?$/);
-  await expect(page.getByText(/Agent ready\./i)).toBeVisible({
-    timeout: 10000,
-  });
-  await expect(
-    page
-      .getByRole("textbox", { name: /log fast/i })
-      .or(page.getByPlaceholder(/log fast:/i))
-  ).toBeVisible({
-    timeout: 10000,
-  });
 
   // Save authenticated state for reuse in all tests
   await page.context().storageState({ path: authFile });

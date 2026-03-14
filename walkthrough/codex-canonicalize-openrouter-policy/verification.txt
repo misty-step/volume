@@ -1,0 +1,21 @@
+$ vitest run --run src/lib/coach/server/runtime.test.ts convex/lib/openrouter.test.ts src/app/api/health/route.test.ts
+
+ RUN  v3.2.4 <workspace>
+
+stderr | src/lib/coach/server/runtime.test.ts > getCoachRuntime > returns null when OPENROUTER_API_KEY is missing
+[Coach] OPENROUTER_API_KEY missing; coach runtime unavailable.
+
+stderr | src/lib/coach/server/runtime.test.ts > getCoachRuntime > returns null when OPENROUTER_API_KEY is whitespace only
+[Coach] OPENROUTER_API_KEY missing; coach runtime unavailable.
+
+ ✓ src/lib/coach/server/runtime.test.ts (5 tests) 17ms
+ ✓ convex/lib/openrouter.test.ts (14 tests) 3ms
+ ✓ src/app/api/health/route.test.ts (11 tests) 34ms
+
+ Test Files  3 passed (3)
+      Tests  30 passed (30)
+   Start at  13:48:16
+   Duration  494ms (transform 91ms, setup 109ms, collect 69ms, tests 55ms, environment 486ms, prepare 156ms)
+
+$ tsc --noEmit
+$ eslint . --max-warnings=0

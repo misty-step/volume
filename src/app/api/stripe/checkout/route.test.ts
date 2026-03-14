@@ -100,6 +100,25 @@ describe("Stripe checkout route", () => {
     expect(data.error).toBe("Price ID required");
   });
 
+  it("returns 500 when NEXT_PUBLIC_CONVEX_URL is missing", async () => {
+    mockAuth.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token_123"),
+    });
+    delete process.env.NEXT_PUBLIC_CONVEX_URL;
+
+    const request = new Request("http://localhost:3000/api/stripe/checkout", {
+      method: "POST",
+      body: JSON.stringify({ priceId: "price_123" }),
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(data.error).toBe("Missing NEXT_PUBLIC_CONVEX_URL");
+  });
+
   it("creates subscription session without customer_creation for new users", async () => {
     mockAuth.mockResolvedValue({
       userId: "user_123",

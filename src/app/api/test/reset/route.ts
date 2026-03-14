@@ -1,8 +1,9 @@
 import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/../convex/_generated/api";
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { isServerProductionDeployment } from "@/lib/environment";
-import { api } from "@/../convex/_generated/api";
+import { applyE2ETestSessionCookie } from "@/lib/e2e/test-session";
 
 const TEST_SECRET_HEADER = "X-TEST-SECRET";
 
@@ -59,7 +60,9 @@ export async function POST(request: NextRequest) {
 
     await clearAuthenticatedE2EState(convex);
 
-    return new NextResponse("User data reset", { status: 200 });
+    return applyE2ETestSessionCookie(
+      new NextResponse("User data reset", { status: 200 })
+    );
   } catch (error) {
     console.error("Reset failed:", error);
     return new NextResponse("Internal Server Error", { status: 500 });

@@ -6,8 +6,6 @@ import { reportError } from "@/lib/analytics";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/../convex/_generated/api";
 
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-
 /** 14-day trial period in milliseconds */
 const TRIAL_PERIOD_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -38,7 +36,20 @@ export async function POST(request: Request) {
   }
   const { priceId } = body;
 
+  if (!priceId) {
+    return NextResponse.json({ error: "Price ID required" }, { status: 400 });
+  }
+
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.trim();
+  if (!convexUrl) {
+    return NextResponse.json(
+      { error: "Missing NEXT_PUBLIC_CONVEX_URL" },
+      { status: 500 }
+    );
+  }
+
   // Fetch user data server-side to prevent IDOR attacks and get trial info
+  const convex = new ConvexHttpClient(convexUrl);
   convex.setAuth(token);
   const [stripeCustomerId, user] = await Promise.all([
     convex.query(api.subscriptions.getStripeCustomerId),
@@ -63,10 +74,6 @@ export async function POST(request: Request) {
     trialEndSeconds - nowSeconds >= MIN_TRIAL_LEAD_TIME_SECONDS
       ? trialEndSeconds
       : undefined;
-
-  if (!priceId) {
-    return NextResponse.json({ error: "Price ID required" }, { status: 400 });
-  }
 
   const stripe = getStripe();
 
