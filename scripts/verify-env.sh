@@ -16,67 +16,29 @@ set -eo pipefail
 #   1 = Missing env vars (lists which ones)
 #   2 = Tool not available (convex CLI, etc.)
 
-# --- Configuration ---
-# Define required env vars per service. Add new services here.
-# Using simple arrays instead of associative arrays for portability.
+OPENROUTER_API_KEY_VAR=""
+OPENROUTER_COACH_MODEL_OVERRIDE_VAR=""
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
-CONVEX_REQUIRED_VARS=(
-  "STRIPE_SECRET_KEY"
-  "STRIPE_WEBHOOK_SECRET"
-  "CLERK_JWT_ISSUER_DOMAIN"
-  "OPENROUTER_API_KEY"
-)
+load_openrouter_policy() {
+  local policy_lines
+  if ! policy_lines=$(bun "$SCRIPT_DIR/print-openrouter-policy.ts" 2>/dev/null); then
+    log_error "Error: Could not load canonical OpenRouter policy."
+    exit 2
+  fi
 
-CONVEX_REQUIRED_DESCRIPTIONS=(
-  "Stripe API key for payment processing"
-  "Stripe webhook signature verification"
-  "Clerk JWT issuer for auth validation"
-  "OpenRouter API for AI features"
-)
+  while IFS='=' read -r key value; do
+    case "$key" in
+      OPENROUTER_API_KEY_VAR) OPENROUTER_API_KEY_VAR="$value" ;;
+      OPENROUTER_COACH_MODEL_OVERRIDE_VAR) OPENROUTER_COACH_MODEL_OVERRIDE_VAR="$value" ;;
+    esac
+  done <<< "$policy_lines"
 
-CONVEX_OPTIONAL_VARS=(
-  "TEST_RESET_SECRET"
-)
-
-CONVEX_OPTIONAL_DESCRIPTIONS=(
-  "Test data reset (optional, for E2E tests)"
-)
-
-VERCEL_REQUIRED_VARS=(
-  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
-  "CLERK_SECRET_KEY"
-  "CLERK_JWT_ISSUER_DOMAIN"
-  "STRIPE_SECRET_KEY"
-  "NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID"
-  "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID"
-  "OPENROUTER_API_KEY"
-)
-
-VERCEL_REQUIRED_DESCRIPTIONS=(
-  "Clerk publishable key for browser auth"
-  "Clerk secret key for server auth"
-  "Clerk JWT issuer for auth validation"
-  "Stripe API key for checkout and billing"
-  "Stripe monthly price ID"
-  "Stripe annual price ID"
-  "OpenRouter API for coach runtime"
-)
-
-# `vercel env pull` exposes stable value data for public/runtime config here, but
-# secret values are redacted in this workflow. Secret health is checked via
-# production runtime probes below instead of pretending we can lint redacted data.
-VERCEL_VALUE_VALIDATED_VARS=(
-  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
-  "CLERK_JWT_ISSUER_DOMAIN"
-  "NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID"
-  "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID"
-)
-
-PRODUCTION_HEALTH_URL="https://volume.fitness/api/health"
-
-# Convex deployment identifiers
-CONVEX_DEV="dev:curious-salamander-943"
-CONVEX_PROD="prod:whimsical-marten-631"
+  if [[ -z "$OPENROUTER_API_KEY_VAR" || -z "$OPENROUTER_COACH_MODEL_OVERRIDE_VAR" ]]; then
+    log_error "Error: Canonical OpenRouter policy returned incomplete config."
+    exit 2
+  fi
+}
 
 # --- Parse Arguments ---
 PROD_ONLY=false
@@ -109,12 +71,12 @@ log() {
 }
 
 log_error() {
-  echo "$@" >&2
+  [[ "$QUIET" == "true" ]] || echo "$@" >&2
 }
 
 # Check if convex CLI is available
-if ! command -v bunx &> /dev/null; then
-  log_error "Error: bunx not found. Install Bun."
+if ! command -v bun &> /dev/null || ! command -v bunx &> /dev/null; then
+  log_error "Error: bun/bunx not found. Install Bun."
   exit 2
 fi
 
@@ -122,6 +84,74 @@ if ! command -v vercel &> /dev/null; then
   log_error "Error: vercel CLI not found. Install Vercel CLI."
   exit 2
 fi
+
+load_openrouter_policy
+
+# --- Configuration ---
+# Define required env vars per service. Add new services here.
+# Using simple arrays instead of associative arrays for portability.
+
+CONVEX_REQUIRED_VARS=(
+  "STRIPE_SECRET_KEY"
+  "STRIPE_WEBHOOK_SECRET"
+  "CLERK_JWT_ISSUER_DOMAIN"
+  "$OPENROUTER_API_KEY_VAR"
+)
+
+CONVEX_REQUIRED_DESCRIPTIONS=(
+  "Stripe API key for payment processing"
+  "Stripe webhook signature verification"
+  "Clerk JWT issuer for auth validation"
+  "OpenRouter API for AI features"
+)
+
+CONVEX_OPTIONAL_VARS=(
+  "TEST_RESET_SECRET"
+)
+
+CONVEX_OPTIONAL_DESCRIPTIONS=(
+  "Test data reset (optional, for E2E tests)"
+)
+
+VERCEL_REQUIRED_VARS=(
+  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
+  "CLERK_SECRET_KEY"
+  "CLERK_JWT_ISSUER_DOMAIN"
+  "STRIPE_SECRET_KEY"
+  "NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID"
+  "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID"
+  "$OPENROUTER_API_KEY_VAR"
+)
+
+VERCEL_REQUIRED_DESCRIPTIONS=(
+  "Clerk publishable key for browser auth"
+  "Clerk secret key for server auth"
+  "Clerk JWT issuer for auth validation"
+  "Stripe API key for checkout and billing"
+  "Stripe monthly price ID"
+  "Stripe annual price ID"
+  "OpenRouter API for coach runtime"
+)
+
+VERCEL_OPTIONAL_VALUE_VALIDATED_VARS=(
+  "$OPENROUTER_COACH_MODEL_OVERRIDE_VAR"
+)
+
+# `vercel env pull` exposes stable value data for public/runtime config here, but
+# secret values are redacted in this workflow. Secret health is checked via
+# production runtime probes below instead of pretending we can lint redacted data.
+VERCEL_VALUE_VALIDATED_VARS=(
+  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
+  "CLERK_JWT_ISSUER_DOMAIN"
+  "NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID"
+  "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID"
+)
+
+PRODUCTION_HEALTH_URL="https://volume.fitness/api/health"
+
+# Convex deployment identifiers
+CONVEX_DEV="dev:curious-salamander-943"
+CONVEX_PROD="prod:whimsical-marten-631"
 
 run_vercel() {
   if vercel "$@" 2>/dev/null; then
@@ -278,9 +308,9 @@ check_production_health() {
     return 1
   fi
 
-  if ! echo "$health_json" | grep -q '"coachRuntime":{"status":"pass"}'; then
-    log "    [INVALID] OPENROUTER_API_KEY - coach runtime health failed"
-    MISSING_VARS+=("Vercel:OPENROUTER_API_KEY (HEALTH CHECK FAIL)")
+  if ! echo "$health_json" | grep -q '"coachRuntime":{"status":"pass"'; then
+    log "    [INVALID] $OPENROUTER_API_KEY_VAR - coach runtime health failed"
+    MISSING_VARS+=("Vercel:${OPENROUTER_API_KEY_VAR} (HEALTH CHECK FAIL)")
     return 1
   fi
 
@@ -434,6 +464,41 @@ check_vercel_environment() {
     log "    [OK] $var"
   done
 
+  for var in "${VERCEL_OPTIONAL_VALUE_VALIDATED_VARS[@]}"; do
+    if ! vercel_var_exists "$var" "$env_names"; then
+      log "    [--] $var - optional coach model override not set"
+      continue
+    fi
+
+    local raw_value
+    raw_value=$(get_env_value "$var" "$env_list")
+    local trimmed_value
+    trimmed_value=$(trim_env_value "$raw_value")
+
+    if [[ -z "$trimmed_value" ]]; then
+      log "    [BLANK] $var - optional override is blank"
+      MISSING_VARS+=("Vercel:${var} (BLANK OVERRIDE)")
+      missing_here=$((missing_here + 1))
+      continue
+    fi
+
+    if value_has_wrapped_whitespace "$raw_value"; then
+      log "    [INVALID] $var - leading/trailing whitespace"
+      MISSING_VARS+=("Vercel:${var} (LEADING/TRAILING WHITESPACE)")
+      missing_here=$((missing_here + 1))
+      continue
+    fi
+
+    if value_has_literal_newline_escape "$raw_value"; then
+      log "    [INVALID] $var - literal newline escape sequence"
+      MISSING_VARS+=("Vercel:${var} (LITERAL NEWLINE ESCAPE)")
+      missing_here=$((missing_here + 1))
+      continue
+    fi
+
+    log "    [OK] $var (optional override)"
+  done
+
   if ! check_production_health; then
     missing_here=$((missing_here + 1))
   fi
@@ -470,6 +535,6 @@ else
   log ""
   log "Example:"
   log "  CONVEX_DEPLOYMENT=$CONVEX_PROD bunx convex env set STRIPE_SECRET_KEY \"sk_live_...\""
-  log "  vercel env add OPENROUTER_API_KEY production < secret.txt"
+  log "  vercel env add ${OPENROUTER_API_KEY_VAR} production < secret.txt"
   exit 1
 fi

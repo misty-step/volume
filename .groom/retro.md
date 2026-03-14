@@ -17,3 +17,12 @@
 **Pattern:** refactors need tests on the extracted seam itself, not just end behavior; adding `turn-runner.test.ts` made the boundary explicit before moving code
 
 ---
+
+## Entry: #339 — [P1] Canonicalize OpenRouter model portfolio, routing policy, and runtime config (2026-03-12)
+
+**Effort:** predicted medium → actual medium
+**Scope changes:** landed the shared OpenRouter policy module, routed coach/Convex/release scripts through it, trimmed the public health payload to coach-relevant metadata, and added a tiny script bridge so bash env validation can consume the same contract
+**Blockers:** local production build and pre-push build-check were blocked by missing valid Stripe and Clerk env vars in this worktree, so the branch shipped with targeted verification, coverage, and live local health proof instead of a clean local build
+**Pattern:** if a shell script depends on typed app config, bridge through a tiny script rooted at the script directory rather than importing source relative to the caller's current working directory
+
+---

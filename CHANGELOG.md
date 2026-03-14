@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.3](https://github.com/misty-step/volume/compare/v1.15.2...v1.15.3) (2026-03-14)
+
+
+### Bug Fixes
+
+* canonicalize openrouter runtime policy ([#422](https://github.com/misty-step/volume/issues/422)) ([dd6d578](https://github.com/misty-step/volume/commit/dd6d57800c96b8f404f75b345066a5a729ac7c79))
+
 ## [1.15.2](https://github.com/misty-step/volume/compare/v1.15.1...v1.15.2) (2026-03-07)
 
 

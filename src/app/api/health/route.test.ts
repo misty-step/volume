@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 // Mock resolveVersion before importing the module
@@ -35,7 +37,39 @@ describe("GET /api/health", () => {
     expect(data.checks.convex.status).toBe("pass");
     expect(data.checks.stripe.status).toBe("pass");
     expect(data.checks.coachRuntime.status).toBe("pass");
+    expect(data.checks.coachRuntime.defaultModel).toBe(
+      "anthropic/claude-sonnet-4.6"
+    );
+    expect(data.checks.coachRuntime.configuredModel).toBe(
+      "anthropic/claude-sonnet-4.6"
+    );
+    expect(data.checks.coachRuntime.modelOverrideEnvVar).toBe(
+      "COACH_AGENT_MODEL"
+    );
     expect(data.checks.stripe.missing).toBeUndefined();
+  });
+
+  it("reflects the configured coach model override", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
+    process.env.STRIPE_SECRET_KEY = "sk_test_123";
+    process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
+    process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
+    process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
+    process.env.COACH_AGENT_MODEL = "openai/gpt-4o-mini";
+
+    vi.resetModules();
+    vi.mock("@/lib/version", () => ({
+      resolveVersion: () => "test-version-123",
+    }));
+    const { GET } = await import("./route");
+    const response = await GET();
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.checks.coachRuntime.defaultModel).toBe(
+      "anthropic/claude-sonnet-4.6"
+    );
+    expect(data.checks.coachRuntime.configuredModel).toBe("openai/gpt-4o-mini");
   });
 
   it("returns fail when Convex URL is missing", async () => {

@@ -65,6 +65,11 @@ If `CLERK_TEST_USER_EMAIL` is missing, tests requiring auth will fail or be skip
 
 ### Shared account state
 
-Authenticated E2E tests run against one dedicated Clerk user. Specs should avoid
-assuming an empty account and instead use unique exercise names or assert
-relative changes from the current workspace state.
+Authenticated tests now start from a reset-backed fixture automatically. The
+fixture calls `resetUserData()` before each test to wipe the test user's app
+state and establish an E2E-only server session for coach flows.
+
+You can still call `resetUserData()` manually inside a test when a flow needs a
+mid-test reset.
+
+**WARNING**: Only use with a dedicated test user!

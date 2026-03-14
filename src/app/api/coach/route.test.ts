@@ -2,6 +2,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { readCoachStreamEvents } from "@/lib/coach/sse-client";
+import { E2E_SESSION_COOKIE_NAME } from "@/lib/e2e/test-session";
 
 const authMock = vi.fn();
 vi.mock("@clerk/nextjs/server", () => ({
@@ -316,6 +317,43 @@ describe("POST /api/coach", () => {
     const response = await POST(request);
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBeTruthy();
+  });
+
+  it("bypasses coach turn rate limits for authenticated E2E sessions", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    process.env.TEST_RESET_SECRET = "test-secret";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub({ rateLimitOk: false });
+    ConvexHttpClientMock.mockReturnValue(convex);
+
+    getCoachRuntimeMock.mockReturnValue(null);
+    runPlannerTurnMock.mockReset();
+
+    const { POST } = await import("./route");
+
+    const request = new Request("https://volume.fitness/api/coach", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        cookie: `${E2E_SESSION_COOKIE_NAME}=test-secret`,
+      },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "show today's summary" }],
+        preferences: {
+          unit: "lbs",
+          soundEnabled: true,
+          timezoneOffsetMinutes: 0,
+        },
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    expect(convex.mutation).not.toHaveBeenCalled();
   });
 
   it("returns JSON when streaming is not requested", async () => {
