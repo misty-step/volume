@@ -13,10 +13,6 @@ import {
 test.describe("Agentic workspace critical routes", () => {
   test.describe.configure({ mode: "serial" });
 
-  test.beforeEach(async ({ resetUserData }) => {
-    await resetUserData();
-  });
-
   test("logs and deletes a set through the workspace history flow", async ({
     page,
   }) => {
@@ -87,7 +83,6 @@ test.describe("Agentic workspace critical routes", () => {
 
     await waitForCoachText(page, /Set deleted/i);
   });
-
   test("analytics route redirects into the workspace and renders generated blocks", async ({
     page,
   }) => {

@@ -16,13 +16,18 @@ concurrency:
 
 jobs:
   ci:
-    name: merge-gate
+    name: quality-checks
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 45
+    permissions:
+      contents: read
+      statuses: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -42,3 +47,38 @@ jobs:
         run: bun run test:coverage
         env:
           CI: true
+
+      - name: Publish merge-gate status on PR head
+        if: ${{ github.event_name == 'pull_request' && always() }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          JOB_STATUS: ${{ job.status }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          state="error"
+          description="Quality checks did not complete."
+
+          case "$JOB_STATUS" in
+            success)
+              state="success"
+              description="Quality checks passed on PR head."
+              ;;
+            failure)
+              state="failure"
+              description="Quality checks failed on PR head."
+              ;;
+            cancelled)
+              description="Quality checks were cancelled."
+              ;;
+          esac
+
+          gh api "repos/${REPOSITORY}/statuses/${HEAD_SHA}" \
+            -X POST \
+            -f state="${state}" \
+            -f context="merge-gate" \
+            -f description="${description}" \
+            -f target_url="${RUN_URL}"

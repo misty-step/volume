@@ -18,8 +18,7 @@ import { createExerciseForCurrentUser } from "./convex-helpers";
 test.describe("Coach chat flows", () => {
   test.describe.configure({ mode: "serial" });
 
-  test.beforeEach(async ({ page, resetUserData }) => {
-    await resetUserData();
+  test.beforeEach(async ({ page }) => {
     await openCoachWorkspace(page, "/coach");
   });
 

@@ -18,6 +18,7 @@ import {
 import { runCoachTurn } from "@/lib/coach/server/turn-runner";
 import { generateText } from "ai";
 import type { Exercise } from "@/types/domain";
+import { hasValidE2ETestSession } from "@/lib/e2e/test-session";
 
 export async function POST(request: Request) {
   const { userId, getToken } = await auth();
@@ -75,46 +76,48 @@ export async function POST(request: Request) {
   const convex = new ConvexHttpClient(convexUrl);
   convex.setAuth(token);
 
-  try {
-    const rateLimit = (await convex.mutation(
-      api.coach.checkCoachTurnRateLimit,
-      {}
-    )) as
-      | { ok: true; limit: number; remaining: number; resetAt: number }
-      | {
-          ok: false;
-          limit: number;
-          remaining: number;
-          resetAt: number;
-          retryAfterMs: number;
-        };
+  if (!hasValidE2ETestSession(request)) {
+    try {
+      const rateLimit = (await convex.mutation(
+        api.coach.checkCoachTurnRateLimit,
+        {}
+      )) as
+        | { ok: true; limit: number; remaining: number; resetAt: number }
+        | {
+            ok: false;
+            limit: number;
+            remaining: number;
+            resetAt: number;
+            retryAfterMs: number;
+          };
 
-    if (!rateLimit.ok) {
-      const retryAfterSeconds = Math.max(
-        Math.ceil(rateLimit.retryAfterMs / 1000),
-        1
-      );
-      return NextResponse.json(
-        {
-          error: "Rate limit exceeded. Try again soon.",
-          retryAfterSeconds,
-          resetAt: rateLimit.resetAt,
-        },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": String(retryAfterSeconds),
+      if (!rateLimit.ok) {
+        const retryAfterSeconds = Math.max(
+          Math.ceil(rateLimit.retryAfterMs / 1000),
+          1
+        );
+        return NextResponse.json(
+          {
+            error: "Rate limit exceeded. Try again soon.",
+            retryAfterSeconds,
+            resetAt: rateLimit.resetAt,
           },
-        }
+          {
+            status: 429,
+            headers: {
+              "Retry-After": String(retryAfterSeconds),
+            },
+          }
+        );
+      }
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      reportError(err, { route: "coach", operation: "rate_limit_check" });
+      return NextResponse.json(
+        { error: "Failed to check rate limit" },
+        { status: 500 }
       );
     }
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error));
-    reportError(err, { route: "coach", operation: "rate_limit_check" });
-    return NextResponse.json(
-      { error: "Failed to check rate limit" },
-      { status: 500 }
-    );
   }
 
   const turnId = crypto.randomUUID();
