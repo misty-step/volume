@@ -35,6 +35,14 @@ export const getOrCreateTodaySession = mutation({
     timezoneOffsetMinutes: v.number(),
   },
   handler: async (ctx, args) => {
+    if (
+      !Number.isInteger(args.timezoneOffsetMinutes) ||
+      args.timezoneOffsetMinutes < -840 ||
+      args.timezoneOffsetMinutes > 840
+    ) {
+      throw new Error("Invalid timezone offset");
+    }
+
     const userId = await requireUserId(ctx);
     const now = Date.now();
     const todayRange = getTodayRangeForTimezoneOffset(
@@ -102,7 +110,6 @@ export const addMessage = mutation({
     content: v.string(),
     blocks: v.optional(v.string()),
     turnId: v.optional(v.string()),
-    createdAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
@@ -110,7 +117,7 @@ export const addMessage = mutation({
     if (session.status !== "active") {
       throw new Error("Cannot add messages to an archived session");
     }
-    const createdAt = args.createdAt ?? Date.now();
+    const createdAt = Date.now();
 
     const messageId = await ctx.db.insert("coachMessages", {
       sessionId: args.sessionId,
@@ -123,7 +130,7 @@ export const addMessage = mutation({
     });
 
     await ctx.db.patch(session._id, {
-      lastActiveAt: createdAt,
+      lastActiveAt: Math.max(session.lastActiveAt, createdAt),
     });
 
     return messageId;

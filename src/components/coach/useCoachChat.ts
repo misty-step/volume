@@ -13,6 +13,7 @@ import { trackEvent, reportError } from "@/lib/analytics";
 import {
   CoachTurnResponseSchema,
   DEFAULT_COACH_SUGGESTIONS,
+  MAX_COACH_MESSAGES,
   type CoachBlock,
   type CoachTurnResponse,
 } from "@/lib/coach/schema";
@@ -200,8 +201,12 @@ export function useCoachChat() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [timeline, isWorking]);
 
+  const sessionDateRef = useRef<string | null>(null);
+
   async function ensureSessionId(): Promise<string | null> {
-    if (sessionId) {
+    // Revalidate at day boundary: if the local date changed, force a new session lookup
+    const today = new Date().toDateString();
+    if (sessionId && sessionDateRef.current === today) {
       return sessionId;
     }
 
@@ -212,6 +217,7 @@ export function useCoachChat() {
         .then((result) => {
           const nextSessionId = result.session._id as string;
           setSessionId(nextSessionId);
+          sessionDateRef.current = new Date().toDateString();
           return nextSessionId;
         })
         .catch((error) => {
@@ -230,30 +236,9 @@ export function useCoachChat() {
     return await sessionBootstrapRef.current;
   }
 
+  // Bootstrap session on mount — reuses ensureSessionId to avoid duplicate calls
   useEffect(() => {
-    if (sessionId) return;
-
-    let cancelled = false;
-
-    getOrCreateTodaySession({
-      timezoneOffsetMinutes: new Date().getTimezoneOffset(),
-    })
-      .then((result) => {
-        if (!cancelled) {
-          setSessionId(result.session._id as string);
-        }
-      })
-      .catch((error) => {
-        const err = error instanceof Error ? error : new Error(String(error));
-        reportError(err, {
-          component: "useCoachChat",
-          operation: "bootstrapSession",
-        });
-      });
-
-    return () => {
-      cancelled = true;
-    };
+    void ensureSessionId();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -262,9 +247,17 @@ export function useCoachChat() {
       return;
     }
 
+    // Skip hydration if local conversation is ahead of server data (avoids
+    // briefly overwriting a just-completed turn before the subscription catches up)
+    if (sessionMessages.length < conversation.length) {
+      return;
+    }
+
     const hydrated = hydrateStoredSession(sessionMessages);
     setConversation(hydrated.conversation);
     setTimeline(hydrated.timeline);
+    // conversation intentionally excluded — we only want server-data-driven rerenders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionMessages, isWorking]);
 
   function appendStatusMessage({
@@ -409,8 +402,8 @@ export function useCoachChat() {
           Accept: "text/event-stream",
         },
         body: JSON.stringify({
-          sessionId: activeSessionId,
-          messages: nextConversation,
+          ...(activeSessionId ? { sessionId: activeSessionId } : {}),
+          messages: nextConversation.slice(-MAX_COACH_MESSAGES),
           preferences: {
             unit,
             soundEnabled,

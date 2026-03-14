@@ -40,8 +40,12 @@ type CoachContextState = {
   messages: StoredCoachMessage[];
 };
 
-function deserializeStoredMessage(content: string): ModelMessage {
-  return JSON.parse(content) as ModelMessage;
+function deserializeStoredMessage(content: string): ModelMessage | null {
+  try {
+    return JSON.parse(content) as ModelMessage;
+  } catch {
+    return null;
+  }
 }
 
 function serializeUserMessage(text: string): string {
@@ -113,19 +117,35 @@ async function buildCoachHistory({
     };
   }
 
-  const [contextState, allMessages] = (await Promise.all([
-    convex.query(api.coachSessions.getSessionMessagesForContext, {
-      sessionId: sessionId as never,
-    }) as Promise<CoachContextState>,
-    convex.query(api.coachSessions.getSessionMessages, {
-      sessionId: sessionId as never,
-    }) as Promise<StoredCoachMessage[]>,
-  ])) as [CoachContextState, StoredCoachMessage[]];
+  let contextState: CoachContextState;
+  let allMessages: StoredCoachMessage[];
+  try {
+    [contextState, allMessages] = (await Promise.all([
+      convex.query(api.coachSessions.getSessionMessagesForContext, {
+        sessionId: sessionId as never,
+      }) as Promise<CoachContextState>,
+      convex.query(api.coachSessions.getSessionMessages, {
+        sessionId: sessionId as never,
+      }) as Promise<StoredCoachMessage[]>,
+    ])) as [CoachContextState, StoredCoachMessage[]];
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    reportError(err, { route: "coach", operation: "fetch_session_history" });
+    return {
+      history: fallbackHistory,
+      conversationSummary: undefined as string | undefined,
+    };
+  }
 
   const unsummarizedMessages = allMessages.filter(
     (message) => message.summarizedAt === undefined
   );
   let conversationSummary = contextState.summary ?? undefined;
+
+  // Always apply the recent message window — never send unbounded history to the LLM
+  let recentMessages = unsummarizedMessages.slice(
+    -CONTEXT_RECENT_MESSAGE_WINDOW
+  );
 
   if (
     runtime &&
@@ -137,42 +157,48 @@ async function buildCoachHistory({
     );
 
     if (messagesToSummarize.length > 0) {
-      const { text } = await generateText({
-        model: runtime.model,
-        messages: [
-          {
-            role: "user",
-            content: buildSummaryPrompt({
-              existingSummary: conversationSummary,
-              messagesToSummarize: messagesToSummarize.map((message) =>
-                deserializeStoredMessage(message.content)
-              ),
-            }),
-          },
-        ],
-      });
+      try {
+        const { text } = await generateText({
+          model: runtime.model,
+          messages: [
+            {
+              role: "user",
+              content: buildSummaryPrompt({
+                existingSummary: conversationSummary,
+                messagesToSummarize: messagesToSummarize
+                  .map((message) => deserializeStoredMessage(message.content))
+                  .filter(
+                    (message): message is ModelMessage => message !== null
+                  ),
+              }),
+            },
+          ],
+        });
 
-      conversationSummary = text.trim();
+        conversationSummary = text.trim();
 
-      await convex.mutation(api.coachSessions.applySummary, {
-        sessionId: sessionId as never,
-        summary: conversationSummary,
-        summarizeThroughCreatedAt:
-          messagesToSummarize[messagesToSummarize.length - 1]!.createdAt,
-      });
+        await convex.mutation(api.coachSessions.applySummary, {
+          sessionId: sessionId as never,
+          summary: conversationSummary,
+          summarizeThroughCreatedAt:
+            messagesToSummarize[messagesToSummarize.length - 1]!.createdAt,
+        });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        reportError(err, { route: "coach", operation: "context_summary" });
+        // Fall back to unsummarized recent window
+        recentMessages = unsummarizedMessages.slice(
+          -CONTEXT_RECENT_MESSAGE_WINDOW
+        );
+      }
     }
   }
 
-  // Always apply the recent message window — never send unbounded history to the LLM
-  const recentMessages = unsummarizedMessages.slice(
-    -CONTEXT_RECENT_MESSAGE_WINDOW
-  );
-
   return {
     history: [
-      ...recentMessages.map((message) =>
-        deserializeStoredMessage(message.content)
-      ),
+      ...recentMessages
+        .map((message) => deserializeStoredMessage(message.content))
+        .filter((message): message is ModelMessage => message !== null),
       latestUserMessage,
     ],
     conversationSummary,
@@ -196,13 +222,11 @@ async function persistCoachTurn({
     return;
   }
 
-  const createdAtBase = Date.now();
   await convex.mutation(api.coachSessions.addMessage, {
     sessionId: sessionId as never,
     role: "user",
     content: serializeUserMessage(latestUserText),
     turnId,
-    createdAt: createdAtBase,
   });
 
   const persistedResponseMessages = getPersistedResponseMessages(response);
@@ -210,23 +234,22 @@ async function persistCoachTurn({
     (m) => m.role === "assistant"
   );
 
-  await Promise.all(
-    persistedResponseMessages.map((message, index) => {
-      const blocks =
-        index === firstAssistantIndex && response.blocks.length > 0
-          ? JSON.stringify(response.blocks)
-          : undefined;
+  // Persist response messages sequentially to preserve ordering via server timestamps
+  for (let index = 0; index < persistedResponseMessages.length; index++) {
+    const message = persistedResponseMessages[index]!;
+    const blocks =
+      index === firstAssistantIndex && response.blocks.length > 0
+        ? JSON.stringify(response.blocks)
+        : undefined;
 
-      return convex.mutation(api.coachSessions.addMessage, {
-        sessionId: sessionId as never,
-        role: message.role === "tool" ? "tool" : "assistant",
-        content: JSON.stringify(message),
-        blocks,
-        turnId,
-        createdAt: createdAtBase + index + 1,
-      });
-    })
-  );
+    await convex.mutation(api.coachSessions.addMessage, {
+      sessionId: sessionId as never,
+      role: message.role === "tool" ? "tool" : "assistant",
+      content: JSON.stringify(message),
+      blocks,
+      turnId,
+    });
+  }
 }
 
 export async function POST(request: Request) {
@@ -429,14 +452,23 @@ export async function POST(request: Request) {
             },
           });
 
-          await persistCoachTurn({
-            convex,
-            sessionId: parsed.data.sessionId,
-            latestUserText,
-            turnId,
-            response,
-          });
           send({ type: "final", response });
+          try {
+            await persistCoachTurn({
+              convex,
+              sessionId: parsed.data.sessionId,
+              latestUserText,
+              turnId,
+              response,
+            });
+          } catch (error) {
+            const err =
+              error instanceof Error ? error : new Error(String(error));
+            reportError(err, {
+              route: "coach",
+              operation: "persist_turn_sse",
+            });
+          }
         } finally {
           close();
         }
@@ -455,13 +487,18 @@ export async function POST(request: Request) {
     requestSignal: request.signal,
   });
 
-  await persistCoachTurn({
-    convex,
-    sessionId: parsed.data.sessionId,
-    latestUserText,
-    turnId,
-    response,
-  });
+  try {
+    await persistCoachTurn({
+      convex,
+      sessionId: parsed.data.sessionId,
+      latestUserText,
+      turnId,
+      response,
+    });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    reportError(err, { route: "coach", operation: "persist_turn_json" });
+  }
 
   return NextResponse.json(response);
 }

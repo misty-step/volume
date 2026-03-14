@@ -46,6 +46,7 @@ describe("useCoachChat", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useQueryState.sessionMessages = [];
 
     getOrCreateTodaySessionMock.mockResolvedValue({
       session: { _id: "session_123", status: "active" },
