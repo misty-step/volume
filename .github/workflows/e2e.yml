@@ -58,7 +58,7 @@ jobs:
     name: Smoke
     needs: preflight
     runs-on: blacksmith-2vcpu-ubuntu-2404
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
@@ -76,6 +76,14 @@ jobs:
         with:
           name: smoke-report
           path: playwright-report/
+          retention-days: 7
+
+      - name: Upload traces
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: smoke-traces
+          path: test-results/
           retention-days: 7
 
   # ─── Lane 2: Coach — serial, rate-limit sensitive ───
