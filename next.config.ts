@@ -15,6 +15,9 @@ const nextConfig: NextConfig = {
   env: {
     // Inject package.json version at build time for client-side access
     NEXT_PUBLIC_PACKAGE_VERSION: packageVersion,
+    // Expose deployment environment so browser-safe config can fail closed
+    // during SSR before hydration in preview/production builds.
+    NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV,
   },
   async redirects() {
     // Block test endpoints in production deployments.

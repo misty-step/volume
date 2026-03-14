@@ -1,41 +1,32 @@
-import {
-  buildClerkPublishableKey,
-  getTrimmedEnv,
-  LOCAL_BUILD_CLERK_FRONTEND_API,
-  LOCAL_BUILD_CONVEX_URL,
-} from "./public-service-config.shared";
+import { LOCAL_BUILD_CONVEX_URL } from "./public-service-config.shared";
 
-function isLocalBrowserRuntime(): boolean {
-  if (typeof window === "undefined") return true;
+function getTrimmedPublicEnv(key: `NEXT_PUBLIC_${string}`): string | undefined {
+  const value = process.env[key]?.trim();
+  return value || undefined;
+}
+
+function isHostedSsrRuntime(): boolean {
+  const vercelEnv = getTrimmedPublicEnv("NEXT_PUBLIC_VERCEL_ENV");
+  return vercelEnv === "preview" || vercelEnv === "production";
+}
+
+function isLocalClientRuntime(): boolean {
+  if (typeof window === "undefined") {
+    return !isHostedSsrRuntime();
+  }
 
   const hostname = window.location.hostname.toLowerCase();
   return ["", "localhost", "127.0.0.1", "[::1]"].includes(hostname);
 }
 
-export function getClientClerkPublishableKey(): string {
-  const publishableKey = getTrimmedEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY");
-
-  if (publishableKey) {
-    return publishableKey;
-  }
-
-  if (!isLocalBrowserRuntime()) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY for hosted client runtime"
-    );
-  }
-
-  return buildClerkPublishableKey(LOCAL_BUILD_CLERK_FRONTEND_API);
-}
-
 export function getClientConvexUrl(): string {
-  const convexUrl = getTrimmedEnv("NEXT_PUBLIC_CONVEX_URL");
+  const convexUrl = getTrimmedPublicEnv("NEXT_PUBLIC_CONVEX_URL");
 
   if (convexUrl) {
     return convexUrl;
   }
 
-  if (!isLocalBrowserRuntime()) {
+  if (!isLocalClientRuntime()) {
     throw new Error("Missing NEXT_PUBLIC_CONVEX_URL for hosted client runtime");
   }
 

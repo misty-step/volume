@@ -46,10 +46,9 @@ describe("GET /api/health", () => {
     expect(data.checks.coachRuntime.configuredModel).toBe(
       "anthropic/claude-sonnet-4.6"
     );
-    expect(data.checks.coachRuntime.modelOverrideEnvVar).toBe(
-      "COACH_AGENT_MODEL"
-    );
-    expect(data.checks.stripe.missing).toBeUndefined();
+    expect(data.checks.coachRuntime.apiKeyEnvVar).toBeUndefined();
+    expect(data.checks.coachRuntime.modelOverrideEnvVar).toBeUndefined();
+    expect(data.checks.stripe.reason).toBeUndefined();
   });
 
   it("reflects the configured coach model override", async () => {
@@ -102,7 +101,10 @@ describe("GET /api/health", () => {
     expect(response.status).toBe(503);
     expect(data.status).toBe("fail");
     expect(data.checks.coachRuntime.status).toBe("fail");
-    expect(data.checks.coachRuntime.missing).toContain("OPENROUTER_API_KEY");
+    expect(data.checks.coachRuntime.reason).toBe(
+      "missing required coach runtime configuration"
+    );
+    expect(data.checks.coachRuntime.apiKeyEnvVar).toBeUndefined();
   });
 
   it("treats whitespace-only OpenRouter key as missing", async () => {
@@ -119,7 +121,9 @@ describe("GET /api/health", () => {
     expect(response.status).toBe(503);
     expect(data.status).toBe("fail");
     expect(data.checks.coachRuntime.status).toBe("fail");
-    expect(data.checks.coachRuntime.missing).toContain("OPENROUTER_API_KEY");
+    expect(data.checks.coachRuntime.reason).toBe(
+      "missing required coach runtime configuration"
+    );
   });
 
   it("returns fail when Stripe secret key is missing", async () => {
@@ -136,7 +140,9 @@ describe("GET /api/health", () => {
     expect(response.status).toBe(503);
     expect(data.status).toBe("fail");
     expect(data.checks.stripe.status).toBe("fail");
-    expect(data.checks.stripe.missing).toContain("STRIPE_SECRET_KEY");
+    expect(data.checks.stripe.reason).toBe(
+      "missing required billing configuration"
+    );
   });
 
   it("returns fail when Stripe price IDs are missing", async () => {
@@ -154,11 +160,8 @@ describe("GET /api/health", () => {
     expect(response.status).toBe(503);
     expect(data.status).toBe("fail");
     expect(data.checks.stripe.status).toBe("fail");
-    expect(data.checks.stripe.missing).toContain(
-      "NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID"
-    );
-    expect(data.checks.stripe.missing).toContain(
-      "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID"
+    expect(data.checks.stripe.reason).toBe(
+      "missing required billing configuration"
     );
   });
 
@@ -241,7 +244,9 @@ describe("GET /api/health", () => {
     expect(response.status).toBe(503);
     expect(data.status).toBe("fail");
     expect(data.checks.sentry.status).toBe("fail");
-    expect(data.checks.sentry.missing).toContain("NEXT_PUBLIC_SENTRY_DSN");
+    expect(data.checks.sentry.reason).toBe(
+      "missing required error-tracking configuration"
+    );
   });
 
   it("returns fail when Clerk publishable key is missing", async () => {
@@ -258,8 +263,8 @@ describe("GET /api/health", () => {
     expect(response.status).toBe(503);
     expect(data.status).toBe("fail");
     expect(data.checks.clientRuntime.status).toBe("fail");
-    expect(data.checks.clientRuntime.missing).toContain(
-      "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
+    expect(data.checks.clientRuntime.reason).toBe(
+      "missing required public auth/bootstrap configuration"
     );
   });
 });

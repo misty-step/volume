@@ -85,6 +85,11 @@ if ! command -v vercel &> /dev/null; then
   exit 2
 fi
 
+if ! command -v jq &> /dev/null; then
+  log_error "Error: jq not found. Install jq."
+  exit 2
+fi
+
 load_openrouter_policy
 
 # --- Configuration ---
@@ -310,31 +315,31 @@ check_production_health() {
     return 1
   fi
 
-  if ! echo "$health_json" | grep -q '"status":"pass"'; then
+  if ! echo "$health_json" | jq -e '.status == "pass"' >/dev/null; then
     log "    [INVALID] /api/health - overall production health failed"
     MISSING_VARS+=("Vercel:/api/health (FAIL)")
     return 1
   fi
 
-  if ! echo "$health_json" | grep -q '"clientRuntime":{"status":"pass"'; then
+  if ! echo "$health_json" | jq -e '.checks.clientRuntime.status == "pass"' >/dev/null; then
     log "    [INVALID] public client runtime env - browser bootstrap health failed"
     MISSING_VARS+=("Vercel:clientRuntime (HEALTH CHECK FAIL)")
     return 1
   fi
 
-  if ! echo "$health_json" | grep -q '"coachRuntime":{"status":"pass"'; then
+  if ! echo "$health_json" | jq -e '.checks.coachRuntime.status == "pass"' >/dev/null; then
     log "    [INVALID] $OPENROUTER_API_KEY_VAR - coach runtime health failed"
     MISSING_VARS+=("Vercel:${OPENROUTER_API_KEY_VAR} (HEALTH CHECK FAIL)")
     return 1
   fi
 
-  if ! echo "$health_json" | grep -q '"stripe":{"status":"pass"'; then
+  if ! echo "$health_json" | jq -e '.checks.stripe.status == "pass"' >/dev/null; then
     log "    [INVALID] STRIPE_SECRET_KEY - stripe health failed"
     MISSING_VARS+=("Vercel:STRIPE_SECRET_KEY (HEALTH CHECK FAIL)")
     return 1
   fi
 
-  if ! echo "$health_json" | grep -q '"sentry":{"status":"pass"'; then
+  if ! echo "$health_json" | jq -e '.checks.sentry.status == "pass"' >/dev/null; then
     log "    [INVALID] Sentry runtime health failed"
     MISSING_VARS+=("Vercel:SENTRY (HEALTH CHECK FAIL)")
     return 1

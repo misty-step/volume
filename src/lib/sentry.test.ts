@@ -693,7 +693,7 @@ describe("sentry", () => {
 
         const options = createSentryOptions("client");
 
-        expect(options.dsn).toBe("");
+        expect(options.dsn).toBeUndefined();
       });
 
       it("server prefers SENTRY_DSN", () => {
@@ -707,13 +707,21 @@ describe("sentry", () => {
 
         const options = createSentryOptions("server");
 
-        expect(options.dsn).toBe("");
+        expect(options.dsn).toBeUndefined();
       });
 
       it("edge prefers SENTRY_DSN", () => {
         const options = createSentryOptions("edge");
 
         expect(options.dsn).toBe("https://key@sentry.io/123");
+      });
+
+      it("treats whitespace-only DSNs as missing", () => {
+        vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "   ");
+        vi.stubEnv("SENTRY_DSN", "   ");
+
+        expect(createSentryOptions("client").dsn).toBeUndefined();
+        expect(createSentryOptions("server").dsn).toBeUndefined();
       });
     });
 

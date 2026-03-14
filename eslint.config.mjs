@@ -34,6 +34,14 @@ const clientEnvGuard = {
       );
     }
 
+    function reportProcessEnvAlias(node) {
+      context.report({
+        node,
+        message:
+          "Client modules may not alias process.env. Read NEXT_PUBLIC_* or NODE_ENV directly.",
+      });
+    }
+
     return {
       MemberExpression(node) {
         if (!isProcessEnv(node.object)) return;
@@ -52,6 +60,11 @@ const clientEnvGuard = {
         }
       },
       VariableDeclarator(node) {
+        if (node.id.type === "Identifier" && isProcessEnv(node.init)) {
+          reportProcessEnvAlias(node.id);
+          return;
+        }
+
         if (
           node.id.type !== "ObjectPattern" ||
           !isProcessEnv(node.init)
@@ -72,6 +85,11 @@ const clientEnvGuard = {
           if (key) {
             reportIfDisallowed(key, property.key);
           }
+        }
+      },
+      AssignmentExpression(node) {
+        if (node.left.type === "Identifier" && isProcessEnv(node.right)) {
+          reportProcessEnvAlias(node.left);
         }
       },
     };

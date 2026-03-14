@@ -1,10 +1,16 @@
 import "server-only";
 
-import {
-  buildClerkPublishableKey,
-  getTrimmedEnv,
-  LOCAL_BUILD_CLERK_FRONTEND_API,
-} from "./public-service-config.shared";
+import { Buffer } from "node:buffer";
+import { LOCAL_BUILD_CLERK_FRONTEND_API } from "./public-service-config.shared";
+
+function getTrimmedEnv(key: string): string | undefined {
+  const value = process.env[key]?.trim();
+  return value || undefined;
+}
+
+function buildClerkPublishableKey(frontendApi: string): string {
+  return `pk_test_${Buffer.from(`${frontendApi}$`).toString("base64")}`;
+}
 
 function isHostedServerBuild(): boolean {
   const vercelEnv = getTrimmedEnv("VERCEL_ENV");

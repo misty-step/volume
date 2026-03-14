@@ -8,6 +8,15 @@ import {
 
 export const dynamic = "force-dynamic";
 
+type HealthCheckStatus = "pass" | "fail";
+
+function createCheck(
+  status: HealthCheckStatus,
+  details: Record<string, unknown> = {}
+) {
+  return { status, ...details };
+}
+
 /**
  * Parse Stripe key mode from prefix.
  */
@@ -80,48 +89,34 @@ export async function GET() {
     timestamp,
     version,
     checks: {
-      clientRuntime: {
-        status: clientRuntimeHealthy ? "pass" : "fail",
-        ...(!clientRuntimeHealthy && {
-          missing: [
-            !clerkPublishableKey && "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
-            !convexUrl && "NEXT_PUBLIC_CONVEX_URL",
-          ].filter(Boolean),
-        }),
-      },
-      convex: { status: convexHealthy ? "pass" : "fail" },
-      stripe: {
-        status: stripeHealthy ? "pass" : "fail",
+      clientRuntime: clientRuntimeHealthy
+        ? createCheck("pass")
+        : createCheck("fail", {
+            reason: "missing required public auth/bootstrap configuration",
+          }),
+      convex: createCheck(convexHealthy ? "pass" : "fail"),
+      stripe: createCheck(stripeHealthy ? "pass" : "fail", {
         keyMode,
         environment: deploymentEnv,
-        // Only expose missing config names, never values
         ...(!stripeConfigured && {
-          missing: [
-            !stripeSecretKey && "STRIPE_SECRET_KEY",
-            !monthlyPriceId && "NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID",
-            !annualPriceId && "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID",
-          ].filter(Boolean),
+          reason: "missing required billing configuration",
         }),
         ...(keyEnvMismatch && {
           warning: `KEY/ENV MISMATCH: ${keyMode} key in ${deploymentEnv}`,
         }),
-      },
-      coachRuntime: {
-        status: coachRuntimeHealthy ? "pass" : "fail",
-        ...coachRuntimeMetadata,
+      }),
+      coachRuntime: createCheck(coachRuntimeHealthy ? "pass" : "fail", {
+        defaultModel: coachRuntimeMetadata.defaultModel,
+        configuredModel: coachRuntimeMetadata.configuredModel,
         ...(!coachRuntimeHealthy && {
-          missing: [coachRuntimeMetadata.apiKeyEnvVar],
+          reason: "missing required coach runtime configuration",
         }),
-      },
-      sentry: {
-        status: sentryHealthy ? "pass" : "fail",
-        ...(!sentryHealthy && {
-          missing: [
-            !clientSentryDsn && "NEXT_PUBLIC_SENTRY_DSN",
-            !serverSentryDsn && "SENTRY_DSN",
-          ].filter(Boolean),
-        }),
-      },
+      }),
+      sentry: sentryHealthy
+        ? createCheck("pass")
+        : createCheck("fail", {
+            reason: "missing required error-tracking configuration",
+          }),
     },
   };
 

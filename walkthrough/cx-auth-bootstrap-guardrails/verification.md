@@ -2,7 +2,7 @@
 
 ## Tests
 
-RUN v3.2.4 /Users/phaedrus/.codex/worktrees/50f2/volume
+RUN v3.2.4 <repo-root>
 
 ✓ src/app/api/health/route.test.ts (13 tests) 51ms
 ✓ src/lib/public-service-config.client.test.ts (4 tests) 3ms
