@@ -56,10 +56,14 @@ setup("authenticate", async ({ page }) => {
   // Navigate to the authenticated workspace and verify the current coach UI.
   await page.goto("/today");
   await expect(page).toHaveURL(/\/today(?:\?.*)?$/);
-  await expect(page.getByTestId("coach-timeline")).toBeVisible({
+  await expect(page.getByText(/Agent ready\./i)).toBeVisible({
     timeout: 10000,
   });
-  await expect(page.getByTestId("coach-composer")).toBeVisible({
+  await expect(
+    page
+      .getByRole("textbox", { name: /log fast/i })
+      .or(page.getByPlaceholder(/log fast:/i))
+  ).toBeVisible({
     timeout: 10000,
   });
 

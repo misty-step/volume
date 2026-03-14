@@ -24,7 +24,7 @@ We use Playwright for end-to-end testing. Tests are located in `e2e/`.
    # Coach runtime
    OPENROUTER_API_KEY=sk-or-v1_...
 
-   # Test Data Reset (required, for deterministic cleanup)
+   # Test Data Reset (required for deterministic cleanup)
    TEST_RESET_SECRET=some_long_random_string
    ```
 
@@ -63,8 +63,8 @@ We use a global setup (`e2e/global-setup.ts`) to sign in once and reuse the sess
 The session state is stored in `e2e/.auth/user.json` (gitignored).
 If `CLERK_TEST_USER_EMAIL` is missing, tests requiring auth will fail or be skipped.
 
-### Data Reset
+### Shared account state
 
-To ensure clean state, tests can call `resetUserData()` from the test fixture.
-This triggers a guarded API endpoint that wipes the test user's data in Convex.
-**WARNING**: Only use with a dedicated test user!
+Authenticated E2E tests run against one dedicated Clerk user. Specs should avoid
+assuming an empty account and instead use unique exercise names or assert
+relative changes from the current workspace state.

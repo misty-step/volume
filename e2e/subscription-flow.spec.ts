@@ -1,3 +1,4 @@
+import { devices } from "@playwright/test";
 import { expect, publicTest, test } from "./auth-fixture";
 import {
   coachTimeline,
@@ -18,24 +19,15 @@ test.describe("Subscription Flow", () => {
   publicTest("Pricing page shows correct plans", async ({ page }) => {
     await page.goto("/pricing");
 
-    // Verify page title
     await expect(page.getByRole("heading", { name: "Go Pro" })).toBeVisible();
-
-    // Verify monthly price
     await expect(page.getByText("$8")).toBeVisible();
     await expect(page.getByText("/month")).toBeVisible();
-
-    // Verify annual price with savings badge
     await expect(page.getByText("$70")).toBeVisible();
     await expect(page.getByText(/^\/year$/)).toBeVisible();
     await expect(page.getByText(/SAVE \$26/i)).toBeVisible();
-
-    // Verify features list
     await expect(page.getByText("Unlimited exercises")).toBeVisible();
     await expect(page.getByText("AI weekly reports")).toBeVisible();
     await expect(page.getByText("CSV data export")).toBeVisible();
-
-    // Verify trial messaging
     await expect(page.getByText("14-day free trial")).toBeVisible();
     await expect(page.getByText("No credit card required")).toBeVisible();
   });
@@ -67,7 +59,6 @@ test.describe("Paywall Gate", () => {
     page,
   }) => {
     await openCoachWorkspace(page, "/today");
-    await expect(coachTimeline(page)).toBeVisible();
     await expect(page.getByText(/Agent ready\./i)).toBeVisible();
   });
 
@@ -76,5 +67,79 @@ test.describe("Paywall Gate", () => {
     await expect(page).toHaveURL(/\/today(?:\?.*)?$/);
     await waitForCoachText(page, /Training preferences/i);
     await expect(page.getByText(/Agent ready\./i)).toBeVisible();
+  });
+
+  test("Authenticated mobile reload recovers to the workspace without a stuck paywall spinner", async ({
+    baseURL,
+    browser,
+    page,
+  }) => {
+    const storageState = await page.context().storageState();
+    const mobileContext = await browser.newContext({
+      ...devices["iPhone 12"],
+      baseURL,
+      storageState,
+    });
+
+    await mobileContext.addInitScript(() => {
+      const win = window as Window & {
+        __sawPaywallBootstrapError?: boolean;
+        __observePaywallBootstrapError?: () => void;
+      };
+
+      win.__sawPaywallBootstrapError = false;
+      win.__observePaywallBootstrapError = () => {
+        const markIfPresent = () => {
+          if (
+            document.querySelector('[data-testid="paywall-bootstrap-error"]')
+          ) {
+            win.__sawPaywallBootstrapError = true;
+          }
+        };
+
+        markIfPresent();
+        const observer = new MutationObserver(markIfPresent);
+        observer.observe(document.documentElement, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ["data-testid"],
+        });
+      };
+
+      if (document.readyState === "loading") {
+        document.addEventListener(
+          "DOMContentLoaded",
+          () => win.__observePaywallBootstrapError?.(),
+          { once: true }
+        );
+      } else {
+        win.__observePaywallBootstrapError();
+      }
+    });
+
+    const mobilePage = await mobileContext.newPage();
+
+    try {
+      await openCoachWorkspace(mobilePage, "/today");
+      await expect(mobilePage.getByText(/Agent ready\./i)).toBeVisible();
+
+      await mobilePage.reload();
+
+      await waitForCoachText(mobilePage, /Agent ready\./i);
+      await expect(mobilePage.getByText(/Agent ready\./i)).toBeVisible();
+      await expect(
+        mobilePage.getByTestId("paywall-bootstrap-error")
+      ).not.toBeVisible();
+      const sawBootstrapError = await mobilePage.evaluate(() =>
+        Boolean(
+          (window as Window & { __sawPaywallBootstrapError?: boolean })
+            .__sawPaywallBootstrapError
+        )
+      );
+      expect(sawBootstrapError).toBe(false);
+    } finally {
+      await mobileContext.close();
+    }
   });
 });
