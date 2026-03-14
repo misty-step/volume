@@ -1,12 +1,14 @@
 import { LOCAL_BUILD_CONVEX_URL } from "./public-service-config.shared";
 
-function getTrimmedPublicEnv(key: `NEXT_PUBLIC_${string}`): string | undefined {
-  const value = process.env[key]?.trim();
+function readPublicConvexUrl(): string | undefined {
+  // Literal access is required so Next.js/Turbopack can expose the value
+  // to browser bundles instead of dropping it during compilation.
+  const value = process.env.NEXT_PUBLIC_CONVEX_URL?.trim();
   return value || undefined;
 }
 
 function isHostedSsrRuntime(): boolean {
-  const vercelEnv = getTrimmedPublicEnv("NEXT_PUBLIC_VERCEL_ENV");
+  const vercelEnv = process.env.NEXT_PUBLIC_VERCEL_ENV?.trim();
   return vercelEnv === "preview" || vercelEnv === "production";
 }
 
@@ -20,7 +22,7 @@ function isLocalClientRuntime(): boolean {
 }
 
 export function getClientConvexUrl(): string {
-  const convexUrl = getTrimmedPublicEnv("NEXT_PUBLIC_CONVEX_URL");
+  const convexUrl = readPublicConvexUrl();
 
   if (convexUrl) {
     return convexUrl;

@@ -320,29 +320,29 @@ function resolveEnvironment(): string | undefined {
  * @returns Release identifier
  */
 function resolveRelease(): string | undefined {
-  // Helper to filter empty strings and whitespace
-  const getEnv = (key: string) => process.env[key]?.trim() || undefined;
-
   const sentryRelease =
-    getEnv("SENTRY_RELEASE") || getEnv("NEXT_PUBLIC_SENTRY_RELEASE");
+    process.env.SENTRY_RELEASE?.trim() ||
+    process.env.NEXT_PUBLIC_SENTRY_RELEASE?.trim() ||
+    undefined;
   if (sentryRelease) {
     return sentryRelease;
   }
 
   const gitSha =
-    getEnv("VERCEL_GIT_COMMIT_SHA") ||
-    getEnv("NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA");
+    process.env.VERCEL_GIT_COMMIT_SHA?.trim() ||
+    process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.trim() ||
+    undefined;
   if (gitSha) {
     return gitSha.slice(0, 7);
   }
 
   // Use injected package version for Sentry release
-  const packageVersion = getEnv("NEXT_PUBLIC_PACKAGE_VERSION");
+  const packageVersion = process.env.NEXT_PUBLIC_PACKAGE_VERSION?.trim();
   if (packageVersion) {
     return packageVersion;
   }
 
-  return getEnv("npm_package_version");
+  return process.env.npm_package_version?.trim() || undefined;
 }
 
 /**

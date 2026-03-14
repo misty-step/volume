@@ -1,7 +1,17 @@
 export const STRIPE_API_VERSION = "2026-01-28.clover";
 
-export function getRequiredEnv(key: string): string {
-  const value = process.env[key]?.trim();
+type RequiredStripeEnvKey = "STRIPE_SECRET_KEY";
+
+function readRequiredStripeEnv(key: RequiredStripeEnvKey): string | undefined {
+  if (key === "STRIPE_SECRET_KEY") {
+    return process.env.STRIPE_SECRET_KEY?.trim() || undefined;
+  }
+
+  return undefined;
+}
+
+export function getRequiredEnv(key: RequiredStripeEnvKey): string {
+  const value = readRequiredStripeEnv(key);
   if (!value) {
     throw new Error(`Missing required Stripe environment variable: ${key}`);
   }

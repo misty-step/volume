@@ -1,5 +1,59 @@
 import next from "eslint-config-next";
 
+function isProcessEnv(node) {
+  return (
+    node?.type === "MemberExpression" &&
+    node.object?.type === "Identifier" &&
+    node.object.name === "process" &&
+    node.property?.type === "Identifier" &&
+    node.property.name === "env"
+  );
+}
+
+const nextEnvDirectAccessGuard = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Require direct process.env.NAME access so Next.js can statically expose env variables",
+    },
+    schema: [],
+  },
+  create(context) {
+    function reportComputedAccess(node) {
+      context.report({
+        node,
+        message:
+          "Read environment variables as process.env.NAME so Next.js can statically expose them.",
+      });
+    }
+
+    function reportProcessEnvAlias(node) {
+      context.report({
+        node,
+        message:
+          "Do not alias process.env in app code. Read environment variables as process.env.NAME.",
+      });
+    }
+
+    return {
+      MemberExpression(node) {
+        if (!isProcessEnv(node.object) || !node.computed) return;
+        reportComputedAccess(node.property);
+      },
+      VariableDeclarator(node) {
+        if (!isProcessEnv(node.init)) return;
+        reportProcessEnvAlias(node.id);
+      },
+      AssignmentExpression(node) {
+        if (node.left.type === "Identifier" && isProcessEnv(node.right)) {
+          reportProcessEnvAlias(node.left);
+        }
+      },
+    };
+  },
+};
+
 const clientEnvGuard = {
   meta: {
     type: "problem",
@@ -22,16 +76,6 @@ const clientEnvGuard = {
         message:
           "Client modules may only read NEXT_PUBLIC_* or NODE_ENV from process.env.",
       });
-    }
-
-    function isProcessEnv(node) {
-      return (
-        node?.type === "MemberExpression" &&
-        node.object?.type === "Identifier" &&
-        node.object.name === "process" &&
-        node.property?.type === "Identifier" &&
-        node.property.name === "env"
-      );
     }
 
     function reportProcessEnvAlias(node) {
@@ -113,7 +157,17 @@ const config = [
   ...next,
   {
     files: ["src/**/*.{js,jsx,ts,tsx}"],
+    ignores: ["src/**/*.test.{js,jsx,ts,tsx}", "src/**/*.spec.{js,jsx,ts,tsx}"],
+    plugins: {
+      local: {
+        rules: {
+          "next-env-direct-access": nextEnvDirectAccessGuard,
+          "client-env-guard": clientEnvGuard,
+        },
+      },
+    },
     rules: {
+      "local/next-env-direct-access": "error",
       "no-console": ["error", { allow: ["warn", "error"] }],
       // TODO: @typescript-eslint/no-floating-promises requires typed linting (parserOptions.project).
       // Add tsconfig.eslint.json + wire parserOptions when ready to take the lint-speed hit.
@@ -144,13 +198,6 @@ const config = [
   },
   {
     files: ["src/**/*.client.{js,jsx,ts,tsx}"],
-    plugins: {
-      local: {
-        rules: {
-          "client-env-guard": clientEnvGuard,
-        },
-      },
-    },
     rules: {
       "local/client-env-guard": "error",
     },

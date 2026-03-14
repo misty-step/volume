@@ -4,17 +4,25 @@
 
 RUN v3.2.4 <repo-root>
 
-✓ src/app/api/health/route.test.ts (13 tests) 51ms
-✓ src/lib/public-service-config.client.test.ts (4 tests) 3ms
+✓ src/lib/public-service-config.client.test.ts (4 tests) 4ms
+✓ src/lib/stripe/config.test.ts (6 tests) 19ms
+✓ src/lib/sentry.test.ts (74 tests) 6ms
+✓ src/app/api/health/route.test.ts (13 tests) 48ms
 ✓ src/lib/public-service-config.server.test.ts (3 tests) 2ms
-✓ src/lib/sentry.test.ts (73 tests) 6ms
+✓ eslint.config.test.ts (6 tests) 1131ms
 
-Test Files 4 passed (4)
-Tests 93 passed (93)
-Start at 12:22:35
-Duration 522ms (transform 139ms, setup 151ms, collect 118ms, tests 62ms, environment 813ms, prepare 253ms)
+Test Files 6 passed (6)
+Tests 106 passed (106)
+Start at 14:22:35
+Duration 2.02s (transform 163ms, setup 424ms, collect 292ms, tests 1.21s, environment 1.97s, prepare 431ms)
 
 ## Lint
+
+`bun run lint` completed successfully with no warnings.
+
+## Typecheck
+
+`bun run typecheck` completed successfully.
 
 ## Build
 

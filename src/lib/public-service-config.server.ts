@@ -3,8 +3,10 @@ import "server-only";
 import { Buffer } from "node:buffer";
 import { LOCAL_BUILD_CLERK_FRONTEND_API } from "./public-service-config.shared";
 
-function getTrimmedEnv(key: string): string | undefined {
-  const value = process.env[key]?.trim();
+function readPublicClerkPublishableKey(): string | undefined {
+  // Literal access is required so Next.js/Turbopack keeps the value available
+  // in the app bundle instead of treating it as an opaque runtime lookup.
+  const value = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
   return value || undefined;
 }
 
@@ -13,12 +15,12 @@ function buildClerkPublishableKey(frontendApi: string): string {
 }
 
 function isHostedServerBuild(): boolean {
-  const vercelEnv = getTrimmedEnv("VERCEL_ENV");
+  const vercelEnv = process.env.VERCEL_ENV?.trim();
   return vercelEnv === "preview" || vercelEnv === "production";
 }
 
 export function getServerClerkPublishableKey(): string {
-  const publishableKey = getTrimmedEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY");
+  const publishableKey = readPublicClerkPublishableKey();
 
   if (publishableKey) {
     return publishableKey;
