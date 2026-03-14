@@ -117,6 +117,7 @@ jobs:
   flows:
     name: Flows
     needs: coach
+    if: ${{ !cancelled() }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     steps:
