@@ -285,10 +285,10 @@ export function shouldEnableSentry(dsn: string | undefined): boolean {
  */
 function resolveDsn(target: SentryTarget): string | undefined {
   if (target === "client") {
-    return process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN;
+    return process.env.NEXT_PUBLIC_SENTRY_DSN;
   }
 
-  return process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN;
+  return process.env.SENTRY_DSN;
 }
 
 /**

@@ -13,6 +13,14 @@ describe("GET /api/health", () => {
   beforeEach(() => {
     // Reset to known state
     process.env = { ...originalEnv };
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_123";
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
+    process.env.STRIPE_SECRET_KEY = "sk_test_123";
+    process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
+    process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
+    process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://public@sentry.io/456";
+    process.env.SENTRY_DSN = "https://server@sentry.io/123";
   });
 
   afterEach(() => {
@@ -20,13 +28,6 @@ describe("GET /api/health", () => {
   });
 
   it("returns pass when all env vars are configured", async () => {
-    // Set all required env vars
-    process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
-    process.env.STRIPE_SECRET_KEY = "sk_test_123";
-    process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
-    process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
-    process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
-
     // Dynamic import to pick up env changes
     const { GET } = await import("./route");
     const response = await GET();
@@ -34,9 +35,11 @@ describe("GET /api/health", () => {
 
     expect(response.status).toBe(200);
     expect(data.status).toBe("pass");
+    expect(data.checks.clientRuntime.status).toBe("pass");
     expect(data.checks.convex.status).toBe("pass");
     expect(data.checks.stripe.status).toBe("pass");
     expect(data.checks.coachRuntime.status).toBe("pass");
+    expect(data.checks.sentry.status).toBe("pass");
     expect(data.checks.coachRuntime.defaultModel).toBe(
       "anthropic/claude-sonnet-4.6"
     );
@@ -50,11 +53,6 @@ describe("GET /api/health", () => {
   });
 
   it("reflects the configured coach model override", async () => {
-    process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
-    process.env.STRIPE_SECRET_KEY = "sk_test_123";
-    process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
-    process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
-    process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
     process.env.COACH_AGENT_MODEL = "openai/gpt-4o-mini";
 
     vi.resetModules();
@@ -74,10 +72,6 @@ describe("GET /api/health", () => {
 
   it("returns fail when Convex URL is missing", async () => {
     delete process.env.NEXT_PUBLIC_CONVEX_URL;
-    process.env.STRIPE_SECRET_KEY = "sk_test_123";
-    process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
-    process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
-    process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
 
     // Re-import to pick up env changes
     vi.resetModules();
@@ -90,14 +84,11 @@ describe("GET /api/health", () => {
 
     expect(response.status).toBe(503);
     expect(data.status).toBe("fail");
+    expect(data.checks.clientRuntime.status).toBe("fail");
     expect(data.checks.convex.status).toBe("fail");
   });
 
   it("returns fail when OpenRouter key is missing", async () => {
-    process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
-    process.env.STRIPE_SECRET_KEY = "sk_test_123";
-    process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
-    process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
     delete process.env.OPENROUTER_API_KEY;
 
     vi.resetModules();
@@ -115,10 +106,6 @@ describe("GET /api/health", () => {
   });
 
   it("treats whitespace-only OpenRouter key as missing", async () => {
-    process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
-    process.env.STRIPE_SECRET_KEY = "sk_test_123";
-    process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
-    process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
     process.env.OPENROUTER_API_KEY = "   ";
 
     vi.resetModules();
@@ -136,11 +123,7 @@ describe("GET /api/health", () => {
   });
 
   it("returns fail when Stripe secret key is missing", async () => {
-    process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
     delete process.env.STRIPE_SECRET_KEY;
-    process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
-    process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
-    process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
 
     vi.resetModules();
     vi.mock("@/lib/version", () => ({
@@ -157,11 +140,8 @@ describe("GET /api/health", () => {
   });
 
   it("returns fail when Stripe price IDs are missing", async () => {
-    process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
-    process.env.STRIPE_SECRET_KEY = "sk_test_123";
     delete process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID;
     delete process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID;
-    process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
 
     vi.resetModules();
     vi.mock("@/lib/version", () => ({
@@ -199,11 +179,7 @@ describe("GET /api/health", () => {
       process.env.VERCEL_ENV = env;
       process.env.NODE_ENV =
         env === "production" ? "production" : "development";
-      process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
       process.env.STRIPE_SECRET_KEY = key;
-      process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
-      process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
-      process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
 
       vi.resetModules();
       vi.mock("@/lib/version", () => ({
@@ -226,12 +202,6 @@ describe("GET /api/health", () => {
   );
 
   it("includes version and timestamp in response", async () => {
-    process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
-    process.env.STRIPE_SECRET_KEY = "sk_test_123";
-    process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
-    process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
-    process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
-
     vi.resetModules();
     vi.mock("@/lib/version", () => ({
       resolveVersion: () => "test-version-123",
@@ -245,12 +215,6 @@ describe("GET /api/health", () => {
   });
 
   it("sets no-cache headers", async () => {
-    process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
-    process.env.STRIPE_SECRET_KEY = "sk_test_123";
-    process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
-    process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
-    process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
-
     vi.resetModules();
     vi.mock("@/lib/version", () => ({
       resolveVersion: () => "test-version-123",
@@ -260,6 +224,42 @@ describe("GET /api/health", () => {
 
     expect(response.headers.get("Cache-Control")).toBe(
       "no-cache, no-store, must-revalidate"
+    );
+  });
+
+  it("returns fail when client Sentry DSN is missing", async () => {
+    delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+
+    vi.resetModules();
+    vi.mock("@/lib/version", () => ({
+      resolveVersion: () => "test-version-123",
+    }));
+    const { GET } = await import("./route");
+    const response = await GET();
+    const data = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(data.status).toBe("fail");
+    expect(data.checks.sentry.status).toBe("fail");
+    expect(data.checks.sentry.missing).toContain("NEXT_PUBLIC_SENTRY_DSN");
+  });
+
+  it("returns fail when Clerk publishable key is missing", async () => {
+    delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+    vi.resetModules();
+    vi.mock("@/lib/version", () => ({
+      resolveVersion: () => "test-version-123",
+    }));
+    const { GET } = await import("./route");
+    const response = await GET();
+    const data = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(data.status).toBe("fail");
+    expect(data.checks.clientRuntime.status).toBe("fail");
+    expect(data.checks.clientRuntime.missing).toContain(
+      "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
     );
   });
 });

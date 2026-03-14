@@ -27,9 +27,11 @@ function getStripeKeyMode(
  * like UptimeRobot, BetterUptime, or Pingdom.
  *
  * Checks:
+ * - Client runtime: public auth/backend config for browser bootstrap
  * - Convex: Backend connectivity
  * - Stripe: Payment configuration (checkout and pricing)
  * - Coach runtime: OpenRouter API key availability for agent execution
+ * - Sentry: client and server DSNs for production error capture
  *
  * @returns 200 with health status when healthy, 503 when unhealthy
  */
@@ -37,8 +39,10 @@ export async function GET() {
   const timestamp = new Date().toISOString();
   const version = resolveVersion();
 
-  // Check Convex connectivity (basic check - URL must be configured)
-  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+  const clerkPublishableKey =
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.trim();
+  const clientRuntimeHealthy = Boolean(clerkPublishableKey && convexUrl);
   const convexHealthy = Boolean(convexUrl);
 
   // Check Stripe configuration (all required for checkout flow)
@@ -60,14 +64,31 @@ export async function GET() {
   const stripeHealthy = stripeConfigured && !keyEnvMismatch;
   const coachRuntimeHealthy = isOpenRouterConfigured();
   const coachRuntimeMetadata = getCoachRuntimeHealthMetadata();
+  const clientSentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN?.trim();
+  const serverSentryDsn = process.env.SENTRY_DSN?.trim();
+  const sentryHealthy = Boolean(clientSentryDsn && serverSentryDsn);
 
-  const isHealthy = convexHealthy && stripeHealthy && coachRuntimeHealthy;
+  const isHealthy =
+    clientRuntimeHealthy &&
+    convexHealthy &&
+    stripeHealthy &&
+    coachRuntimeHealthy &&
+    sentryHealthy;
 
   const response = {
     status: isHealthy ? "pass" : "fail",
     timestamp,
     version,
     checks: {
+      clientRuntime: {
+        status: clientRuntimeHealthy ? "pass" : "fail",
+        ...(!clientRuntimeHealthy && {
+          missing: [
+            !clerkPublishableKey && "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
+            !convexUrl && "NEXT_PUBLIC_CONVEX_URL",
+          ].filter(Boolean),
+        }),
+      },
       convex: { status: convexHealthy ? "pass" : "fail" },
       stripe: {
         status: stripeHealthy ? "pass" : "fail",
@@ -90,6 +111,15 @@ export async function GET() {
         ...coachRuntimeMetadata,
         ...(!coachRuntimeHealthy && {
           missing: [coachRuntimeMetadata.apiKeyEnvVar],
+        }),
+      },
+      sentry: {
+        status: sentryHealthy ? "pass" : "fail",
+        ...(!sentryHealthy && {
+          missing: [
+            !clientSentryDsn && "NEXT_PUBLIC_SENTRY_DSN",
+            !serverSentryDsn && "SENTRY_DSN",
+          ].filter(Boolean),
         }),
       },
     },

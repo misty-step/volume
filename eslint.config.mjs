@@ -1,5 +1,83 @@
 import next from "eslint-config-next";
 
+const clientEnvGuard = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow server-only environment variables inside .client modules",
+    },
+    schema: [],
+  },
+  create(context) {
+    function isAllowedEnvName(name) {
+      return name === "NODE_ENV" || name.startsWith("NEXT_PUBLIC_");
+    }
+
+    function reportIfDisallowed(name, node) {
+      if (isAllowedEnvName(name)) return;
+
+      context.report({
+        node,
+        message:
+          "Client modules may only read NEXT_PUBLIC_* or NODE_ENV from process.env.",
+      });
+    }
+
+    function isProcessEnv(node) {
+      return (
+        node?.type === "MemberExpression" &&
+        node.object?.type === "Identifier" &&
+        node.object.name === "process" &&
+        node.property?.type === "Identifier" &&
+        node.property.name === "env"
+      );
+    }
+
+    return {
+      MemberExpression(node) {
+        if (!isProcessEnv(node.object)) return;
+
+        if (!node.computed && node.property.type === "Identifier") {
+          reportIfDisallowed(node.property.name, node.property);
+          return;
+        }
+
+        if (
+          node.computed &&
+          node.property.type === "Literal" &&
+          typeof node.property.value === "string"
+        ) {
+          reportIfDisallowed(node.property.value, node.property);
+        }
+      },
+      VariableDeclarator(node) {
+        if (
+          node.id.type !== "ObjectPattern" ||
+          !isProcessEnv(node.init)
+        ) {
+          return;
+        }
+
+        for (const property of node.id.properties) {
+          if (property.type !== "Property") continue;
+
+          const key =
+            property.key.type === "Identifier"
+              ? property.key.name
+              : typeof property.key.value === "string"
+                ? property.key.value
+                : null;
+
+          if (key) {
+            reportIfDisallowed(key, property.key);
+          }
+        }
+      },
+    };
+  },
+};
+
 /** @type {import("eslint").Linter.FlatConfig[]} */
 const config = [
   {
@@ -44,6 +122,19 @@ const config = [
             "Use design token CSS variables, not hardcoded hex colors in className",
         },
       ],
+    },
+  },
+  {
+    files: ["src/**/*.client.{js,jsx,ts,tsx}"],
+    plugins: {
+      local: {
+        rules: {
+          "client-env-guard": clientEnvGuard,
+        },
+      },
+    },
+    rules: {
+      "local/client-env-guard": "error",
     },
   },
   {

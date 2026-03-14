@@ -1,21 +1,29 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import {
   getClientClerkPublishableKey,
   getClientConvexUrl,
-} from "./public-service-config";
+} from "./public-service-config.client";
 
-describe("public service config", () => {
+describe("public service config client", () => {
   const originalEnv = process.env;
+
+  function stubHostname(hostname: string) {
+    vi.stubGlobal("window", {
+      location: { hostname },
+    });
+  }
 
   beforeEach(() => {
     process.env = { ...originalEnv };
     delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
     delete process.env.NEXT_PUBLIC_CONVEX_URL;
-    delete process.env.VERCEL_ENV;
+    stubHostname("localhost");
   });
 
   afterEach(() => {
     process.env = originalEnv;
+    vi.unstubAllGlobals();
   });
 
   it("returns trimmed public env values when configured", () => {
@@ -26,7 +34,7 @@ describe("public service config", () => {
     expect(getClientConvexUrl()).toBe("https://configured.convex.cloud");
   });
 
-  it("uses deterministic local build fallbacks outside hosted Vercel", () => {
+  it("uses deterministic local fallbacks on localhost", () => {
     const publishableKey = getClientClerkPublishableKey();
 
     expect(publishableKey.startsWith("pk_test_")).toBe(true);
@@ -38,19 +46,19 @@ describe("public service config", () => {
     );
   });
 
-  it("fails closed for hosted Vercel builds missing Clerk config", () => {
-    process.env.VERCEL_ENV = "preview";
+  it("fails closed for hosted browser runtimes missing Convex config", () => {
+    stubHostname("volume.fitness");
 
-    expect(() => getClientClerkPublishableKey()).toThrow(
-      "Missing NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY for hosted Vercel build"
+    expect(() => getClientConvexUrl()).toThrow(
+      "Missing NEXT_PUBLIC_CONVEX_URL for hosted client runtime"
     );
   });
 
-  it("fails closed for hosted Vercel builds missing Convex config", () => {
-    process.env.VERCEL_ENV = "production";
+  it("fails closed for hosted browser runtimes missing Clerk config", () => {
+    stubHostname("volume.fitness");
 
-    expect(() => getClientConvexUrl()).toThrow(
-      "Missing NEXT_PUBLIC_CONVEX_URL for hosted Vercel build"
+    expect(() => getClientClerkPublishableKey()).toThrow(
+      "Missing NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY for hosted client runtime"
     );
   });
 });
