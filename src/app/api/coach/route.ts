@@ -126,7 +126,6 @@ async function buildCoachHistory({
     (message) => message.summarizedAt === undefined
   );
   let conversationSummary = contextState.summary ?? undefined;
-  let recentMessages = unsummarizedMessages;
 
   if (
     runtime &&
@@ -134,9 +133,6 @@ async function buildCoachHistory({
   ) {
     const messagesToSummarize = unsummarizedMessages.slice(
       0,
-      -CONTEXT_RECENT_MESSAGE_WINDOW
-    );
-    const recentWindow = unsummarizedMessages.slice(
       -CONTEXT_RECENT_MESSAGE_WINDOW
     );
 
@@ -157,7 +153,6 @@ async function buildCoachHistory({
       });
 
       conversationSummary = text.trim();
-      recentMessages = recentWindow;
 
       await convex.mutation(api.coachSessions.applySummary, {
         sessionId: sessionId as never,
@@ -166,9 +161,12 @@ async function buildCoachHistory({
           messagesToSummarize[messagesToSummarize.length - 1]!.createdAt,
       });
     }
-  } else if (conversationSummary) {
-    recentMessages = unsummarizedMessages.slice(-CONTEXT_RECENT_MESSAGE_WINDOW);
   }
+
+  // Always apply the recent message window — never send unbounded history to the LLM
+  const recentMessages = unsummarizedMessages.slice(
+    -CONTEXT_RECENT_MESSAGE_WINDOW
+  );
 
   return {
     history: [
@@ -208,20 +206,16 @@ async function persistCoachTurn({
   });
 
   const persistedResponseMessages = getPersistedResponseMessages(response);
-  let attachedBlocks = false;
+  const firstAssistantIndex = persistedResponseMessages.findIndex(
+    (m) => m.role === "assistant"
+  );
 
   await Promise.all(
     persistedResponseMessages.map((message, index) => {
       const blocks =
-        !attachedBlocks &&
-        message.role === "assistant" &&
-        response.blocks.length > 0
+        index === firstAssistantIndex && response.blocks.length > 0
           ? JSON.stringify(response.blocks)
           : undefined;
-
-      if (blocks) {
-        attachedBlocks = true;
-      }
 
       return convex.mutation(api.coachSessions.addMessage, {
         sessionId: sessionId as never,

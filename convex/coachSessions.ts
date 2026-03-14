@@ -107,6 +107,9 @@ export const addMessage = mutation({
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
     const session = await requireOwnedSession(ctx, args.sessionId, userId);
+    if (session.status !== "active") {
+      throw new Error("Cannot add messages to an archived session");
+    }
     const createdAt = args.createdAt ?? Date.now();
 
     const messageId = await ctx.db.insert("coachMessages", {

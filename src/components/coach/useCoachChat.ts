@@ -80,16 +80,26 @@ function hydrateStoredSession(messages: StoredCoachMessage[]) {
   const timeline: CoachTimelineMessage[] = [];
 
   for (const storedMessage of messages) {
-    const parsed = JSON.parse(storedMessage.content) as ModelMessage;
+    let parsed: ModelMessage;
+    try {
+      parsed = JSON.parse(storedMessage.content) as ModelMessage;
+    } catch {
+      continue; // skip malformed messages
+    }
     conversation.push(parsed);
 
     if (storedMessage.role === "tool") {
       continue;
     }
 
-    const blocks = storedMessage.blocks
-      ? withIds(JSON.parse(storedMessage.blocks) as CoachBlock[])
-      : undefined;
+    let blocks: CoachTimelineBlock[] | undefined;
+    try {
+      blocks = storedMessage.blocks
+        ? withIds(JSON.parse(storedMessage.blocks) as CoachBlock[])
+        : undefined;
+    } catch {
+      // skip malformed blocks, still show the message
+    }
 
     timeline.push({
       id: storedMessage._id,
