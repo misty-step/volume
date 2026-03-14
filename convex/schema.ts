@@ -171,6 +171,29 @@ export default defineSchema({
     .index("by_user_turn", ["userId", "turnId"])
     .index("by_user_performed", ["userId", "performedAt"]),
 
+  coachSessions: defineTable({
+    userId: v.string(),
+    createdAt: v.number(),
+    lastActiveAt: v.number(),
+    summary: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("archived")),
+  })
+    .index("by_user_status", ["userId", "status"])
+    .index("by_user_active", ["userId", "lastActiveAt"]),
+
+  coachMessages: defineTable({
+    sessionId: v.id("coachSessions"),
+    userId: v.string(),
+    role: v.union(v.literal("user"), v.literal("assistant"), v.literal("tool")),
+    content: v.string(),
+    blocks: v.optional(v.string()),
+    turnId: v.optional(v.string()),
+    createdAt: v.number(),
+    summarizedAt: v.optional(v.number()),
+  })
+    .index("by_session", ["sessionId", "createdAt"])
+    .index("by_user_session", ["userId", "sessionId"]),
+
   /**
    * Pre-aggregated platform statistics cache for landing page social proof.
    * Updated daily via cron job to avoid full table scans on every page load.

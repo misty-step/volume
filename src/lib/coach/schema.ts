@@ -13,6 +13,7 @@ const MAX_CONVERSATION_JSON_BYTES = 200_000;
 
 export const CoachTurnRequestSchema = z
   .object({
+    sessionId: z.string().min(1).max(256).optional(),
     messages: z.array(modelMessageSchema).min(1).max(MAX_COACH_MESSAGES),
     preferences: CoachPreferencesSchema,
   })

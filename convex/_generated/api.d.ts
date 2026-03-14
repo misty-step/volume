@@ -22,6 +22,7 @@ import type * as analyticsFocus from "../analyticsFocus.js";
 import type * as analyticsProgressiveOverload from "../analyticsProgressiveOverload.js";
 import type * as analyticsRecovery from "../analyticsRecovery.js";
 import type * as coach from "../coach.js";
+import type * as coachSessions from "../coachSessions.js";
 import type * as crons from "../crons.js";
 import type * as exercises from "../exercises.js";
 import type * as http from "../http.js";
@@ -59,6 +60,7 @@ declare const fullApi: ApiFromModules<{
   analyticsProgressiveOverload: typeof analyticsProgressiveOverload;
   analyticsRecovery: typeof analyticsRecovery;
   coach: typeof coach;
+  coachSessions: typeof coachSessions;
   crons: typeof crons;
   exercises: typeof exercises;
   http: typeof http;

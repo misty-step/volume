@@ -19,7 +19,19 @@ vi.mock("@/lib/coach/server/planner", () => ({
   runPlannerTurn: (args: unknown) => runPlannerTurnMock(args),
 }));
 
-function createConvexStub(options?: { rateLimitOk?: boolean }) {
+const generateTextMock = vi.fn();
+vi.mock("ai", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    generateText: (...args: unknown[]) => generateTextMock(...args),
+  };
+});
+
+function createConvexStub(options?: {
+  rateLimitOk?: boolean;
+  sessionMessages?: Array<Record<string, unknown>>;
+}) {
   const now = Date.UTC(2026, 1, 16, 12, 0, 0);
   const exercises = [{ _id: "ex_push", name: "Push-ups" }];
   const todaySets = [{ exerciseId: "ex_push", performedAt: now, reps: 10 }];
@@ -37,6 +49,9 @@ function createConvexStub(options?: { rateLimitOk?: boolean }) {
         "endDate" in args
       ) {
         return todaySets;
+      }
+      if (args && typeof args === "object" && "sessionId" in args) {
+        return options?.sessionMessages ?? [];
       }
       if (args && typeof args === "object" && Object.keys(args).length === 0) {
         return [];
@@ -59,6 +74,27 @@ function createConvexStub(options?: { rateLimitOk?: boolean }) {
           limit: 10,
           remaining: 9,
           resetAt: Date.now() + 60_000,
+        };
+      }
+      if (
+        args &&
+        typeof args === "object" &&
+        "sessionId" in args &&
+        "role" in args &&
+        "content" in args
+      ) {
+        return `msg_${String((args as { role: string }).role)}`;
+      }
+      if (
+        args &&
+        typeof args === "object" &&
+        "sessionId" in args &&
+        "summary" in args &&
+        "summarizeThroughCreatedAt" in args
+      ) {
+        return {
+          summary: (args as { summary: string }).summary,
+          summarizedAt: Date.now(),
         };
       }
       return null;
@@ -452,6 +488,298 @@ describe("POST /api/coach", () => {
     expect(json.trace.fallbackUsed).toBe(false);
     expect(json.trace.toolsUsed).toEqual(["get_today_summary"]);
     expect(runPlannerTurnMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("loads session history from Convex when sessionId is provided", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub({
+      sessionMessages: [
+        {
+          _id: "msg_1",
+          role: "user",
+          content: JSON.stringify({
+            role: "user",
+            content: "previous question",
+          }),
+          createdAt: 1,
+        },
+        {
+          _id: "msg_2",
+          role: "assistant",
+          content: JSON.stringify({
+            role: "assistant",
+            content: [{ type: "text", text: "previous answer" }],
+          }),
+          createdAt: 2,
+        },
+      ],
+    });
+    ConvexHttpClientMock.mockReturnValue(convex);
+
+    getCoachRuntimeMock.mockReturnValue({
+      model: {},
+      modelId: "mock-model-id",
+    });
+    runPlannerTurnMock.mockReset();
+    runPlannerTurnMock.mockResolvedValue({
+      kind: "ok",
+      assistantText: "Fresh answer.",
+      blocks: [],
+      toolsUsed: [],
+      hitToolLimit: false,
+      responseMessages: [],
+    });
+
+    const { POST } = await import("./route");
+
+    const response = await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "session_123",
+          messages: [{ role: "user", content: "stale fallback history" }],
+          preferences: {
+            unit: "lbs",
+            soundEnabled: true,
+            timezoneOffsetMinutes: 0,
+          },
+        }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(runPlannerTurnMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        history: [
+          { role: "user", content: "previous question" },
+          {
+            role: "assistant",
+            content: [{ type: "text", text: "previous answer" }],
+          },
+          { role: "user", content: "stale fallback history" },
+        ],
+      })
+    );
+  });
+
+  it("persists the latest user message and verbatim responseMessages when sessionId is provided", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub({ sessionMessages: [] });
+    ConvexHttpClientMock.mockReturnValue(convex);
+
+    getCoachRuntimeMock.mockReturnValue({
+      model: {},
+      modelId: "mock-model-id",
+    });
+    runPlannerTurnMock.mockReset();
+    runPlannerTurnMock.mockResolvedValue({
+      kind: "ok",
+      assistantText: "Logged it.",
+      blocks: [{ type: "status", tone: "success", title: "Logged" }],
+      toolsUsed: ["log_set"],
+      hitToolLimit: false,
+      responseMessages: [
+        {
+          role: "assistant",
+          content: [
+            { type: "text", text: "Logged it." },
+            {
+              type: "tool-call",
+              toolCallId: "tool_1",
+              toolName: "log_set",
+              input: { reps: 10 },
+            },
+          ],
+        },
+        {
+          role: "tool",
+          content: [
+            {
+              type: "tool-result",
+              toolCallId: "tool_1",
+              toolName: "log_set",
+              output: { status: "ok" },
+            },
+          ],
+        },
+      ],
+    });
+
+    const { POST } = await import("./route");
+
+    const response = await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "session_123",
+          messages: [{ role: "user", content: "log 10 pushups" }],
+          preferences: {
+            unit: "lbs",
+            soundEnabled: true,
+            timezoneOffsetMinutes: 0,
+          },
+        }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+
+    const persistedCalls = convex.mutation.mock.calls.filter(
+      ([, args]) =>
+        args &&
+        typeof args === "object" &&
+        "sessionId" in args &&
+        "role" in args &&
+        "content" in args
+    );
+
+    expect(persistedCalls).toHaveLength(3);
+    expect(persistedCalls[0]?.[1]).toEqual(
+      expect.objectContaining({
+        sessionId: "session_123",
+        role: "user",
+        content: JSON.stringify({ role: "user", content: "log 10 pushups" }),
+      })
+    );
+    expect(persistedCalls[1]?.[1]).toEqual(
+      expect.objectContaining({
+        role: "assistant",
+        content: JSON.stringify({
+          role: "assistant",
+          content: [
+            { type: "text", text: "Logged it." },
+            {
+              type: "tool-call",
+              toolCallId: "tool_1",
+              toolName: "log_set",
+              input: { reps: 10 },
+            },
+          ],
+        }),
+        blocks: JSON.stringify([
+          { type: "status", tone: "success", title: "Logged" },
+        ]),
+      })
+    );
+    expect(persistedCalls[2]?.[1]).toEqual(
+      expect.objectContaining({
+        role: "tool",
+        content: JSON.stringify({
+          role: "tool",
+          content: [
+            {
+              type: "tool-result",
+              toolCallId: "tool_1",
+              toolName: "log_set",
+              output: { status: "ok" },
+            },
+          ],
+        }),
+      })
+    );
+  });
+
+  it("summarizes older stored messages before planning when session history exceeds the context threshold", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const sessionMessages = Array.from({ length: 45 }, (_, index) => ({
+      _id: `msg_${index}`,
+      role: index % 2 === 0 ? "user" : "assistant",
+      content: JSON.stringify({
+        role: index % 2 === 0 ? "user" : "assistant",
+        content:
+          index % 2 === 0
+            ? `user-${index}`
+            : [{ type: "text", text: `assistant-${index}` }],
+      }),
+      createdAt: index + 1,
+    }));
+    const convex = createConvexStub({ sessionMessages });
+    ConvexHttpClientMock.mockReturnValue(convex);
+
+    generateTextMock.mockReset();
+    generateTextMock.mockResolvedValue({
+      text: "Earlier conversation: user logged multiple sets and reviewed weekly progress.",
+    });
+
+    getCoachRuntimeMock.mockReturnValue({
+      model: {},
+      modelId: "mock-model-id",
+    });
+    runPlannerTurnMock.mockReset();
+    runPlannerTurnMock.mockResolvedValue({
+      kind: "ok",
+      assistantText: "Fresh answer.",
+      blocks: [],
+      toolsUsed: [],
+      hitToolLimit: false,
+      responseMessages: [],
+    });
+
+    const { POST } = await import("./route");
+
+    const response = await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "session_123",
+          messages: [{ role: "user", content: "what next?" }],
+          preferences: {
+            unit: "lbs",
+            soundEnabled: true,
+            timezoneOffsetMinutes: 0,
+          },
+        }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(generateTextMock).toHaveBeenCalledTimes(1);
+    expect(runPlannerTurnMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationSummary:
+          "Earlier conversation: user logged multiple sets and reviewed weekly progress.",
+        history: [
+          ...sessionMessages
+            .slice(-20)
+            .map((message) => JSON.parse(message.content as string)),
+          { role: "user", content: "what next?" },
+        ],
+      })
+    );
+
+    const summarizeCall = convex.mutation.mock.calls.find(
+      ([, args]) =>
+        args &&
+        typeof args === "object" &&
+        "summary" in args &&
+        "summarizeThroughCreatedAt" in args
+    );
+    expect(summarizeCall?.[1]).toEqual(
+      expect.objectContaining({
+        sessionId: "session_123",
+        summary:
+          "Earlier conversation: user logged multiple sets and reviewed weekly progress.",
+        summarizeThroughCreatedAt: 25,
+      })
+    );
   });
 
   it("emits equivalent final responses for JSON and SSE transports", async () => {

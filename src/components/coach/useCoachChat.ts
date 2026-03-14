@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import type { ModelMessage } from "ai";
 import { api } from "@/../convex/_generated/api";
@@ -17,6 +17,14 @@ import {
   type CoachBlock,
   type CoachTurnResponse,
 } from "@/lib/coach/schema";
+
+type StoredCoachMessage = {
+  _id: string;
+  role: "user" | "assistant" | "tool";
+  content: string;
+  blocks?: string;
+  createdAt: number;
+};
 
 type CoachTimelineBlock = {
   id: string;
@@ -55,11 +63,66 @@ function parseAgentActionId(actionId: string): Id<"agentActions"> | null {
   return trimmed as Id<"agentActions">;
 }
 
-function trimCoachConversation(messages: ModelMessage[]): ModelMessage[] {
-  if (messages.length <= MAX_COACH_MESSAGES) return messages;
-  const slice = messages.slice(messages.length - MAX_COACH_MESSAGES);
-  if (slice.length > 1 && slice[0]?.role === "assistant") return slice.slice(1);
-  return slice;
+function getMessageText(content: ModelMessage["content"]): string {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+
+  return content
+    .filter(
+      (part): part is Extract<(typeof content)[number], { type: "text" }> =>
+        typeof part === "object" && part?.type === "text" && "text" in part
+    )
+    .map((part) => part.text)
+    .join("\n");
+}
+
+function hydrateStoredSession(messages: StoredCoachMessage[]) {
+  const conversation: ModelMessage[] = [];
+  const timeline: CoachTimelineMessage[] = [];
+
+  for (const storedMessage of messages) {
+    let parsed: ModelMessage;
+    try {
+      parsed = JSON.parse(storedMessage.content) as ModelMessage;
+    } catch {
+      continue; // skip malformed messages
+    }
+    conversation.push(parsed);
+
+    if (storedMessage.role === "tool") {
+      continue;
+    }
+
+    let blocks: CoachTimelineBlock[] | undefined;
+    try {
+      blocks = storedMessage.blocks
+        ? withIds(JSON.parse(storedMessage.blocks) as CoachBlock[])
+        : undefined;
+    } catch {
+      // skip malformed blocks, still show the message
+    }
+
+    timeline.push({
+      id: storedMessage._id,
+      role: storedMessage.role,
+      text: getMessageText(parsed.content),
+      blocks,
+    });
+  }
+
+  return {
+    conversation,
+    timeline:
+      timeline.length > 0
+        ? timeline
+        : [
+            {
+              id: createId(),
+              role: "assistant" as const,
+              text: "Agent ready. Ask to log a set, review progress, or update settings.",
+            },
+          ],
+  };
 }
 
 function trackCoachResponse(payload: CoachTurnResponse, startMs: number) {
@@ -105,8 +168,12 @@ export function useCoachChat() {
   const router = useRouter();
   const { unit, setUnit } = useWeightUnit();
   const { soundEnabled, setSoundEnabled } = useTactileSoundPreference();
+  const getOrCreateTodaySession = useMutation(
+    api.coachSessions.getOrCreateTodaySession
+  );
   const undoAgentActionMutation = useMutation(api.agentActions.undoAgentAction);
 
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<CoachTimelineMessage[]>([
     {
       id: createId(),
@@ -124,10 +191,74 @@ export function useCoachChat() {
   } | null>(null);
 
   const endRef = useRef<HTMLDivElement>(null);
+  const sessionBootstrapRef = useRef<Promise<string | null> | null>(null);
+  const sessionMessages = useQuery(
+    api.coachSessions.getSessionMessages,
+    sessionId ? { sessionId: sessionId as Id<"coachSessions"> } : "skip"
+  ) as StoredCoachMessage[] | undefined;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [timeline, isWorking]);
+
+  const sessionDateRef = useRef<string | null>(null);
+
+  async function ensureSessionId(): Promise<string | null> {
+    // Revalidate at day boundary: if the local date changed, force a new session lookup
+    const today = new Date().toDateString();
+    if (sessionId && sessionDateRef.current === today) {
+      return sessionId;
+    }
+
+    if (!sessionBootstrapRef.current) {
+      sessionBootstrapRef.current = getOrCreateTodaySession({
+        timezoneOffsetMinutes: new Date().getTimezoneOffset(),
+      })
+        .then((result) => {
+          const nextSessionId = result.session._id as string;
+          setSessionId(nextSessionId);
+          sessionDateRef.current = new Date().toDateString();
+          return nextSessionId;
+        })
+        .catch((error) => {
+          const err = error instanceof Error ? error : new Error(String(error));
+          reportError(err, {
+            component: "useCoachChat",
+            operation: "bootstrapSession",
+          });
+          return null;
+        })
+        .finally(() => {
+          sessionBootstrapRef.current = null;
+        });
+    }
+
+    return await sessionBootstrapRef.current;
+  }
+
+  // Bootstrap session on mount — reuses ensureSessionId to avoid duplicate calls
+  useEffect(() => {
+    void ensureSessionId();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!sessionMessages || isWorking) {
+      return;
+    }
+
+    // Skip hydration if local conversation is ahead of server data (avoids
+    // briefly overwriting a just-completed turn before the subscription catches up)
+    if (sessionMessages.length < conversation.length) {
+      return;
+    }
+
+    const hydrated = hydrateStoredSession(sessionMessages);
+    setConversation(hydrated.conversation);
+    setTimeline(hydrated.timeline);
+    // conversation intentionally excluded — we only want server-data-driven rerenders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionMessages, isWorking]);
 
   function appendStatusMessage({
     tone,
@@ -229,6 +360,7 @@ export function useCoachChat() {
 
     const seenClientActions = new Set<string>();
     const timezoneOffsetMinutes = new Date().getTimezoneOffset();
+    const activeSessionId = await ensureSessionId();
     const assistantId = createId();
     const userMessage: CoachTimelineMessage = {
       id: createId(),
@@ -236,10 +368,10 @@ export function useCoachChat() {
       text: trimmed,
     };
 
-    const nextConversation = trimCoachConversation([
+    const nextConversation: ModelMessage[] = [
       ...conversation,
-      { role: "user", content: trimmed },
-    ]);
+      { role: "user" as const, content: trimmed },
+    ];
 
     setTimeline((prev) => [
       ...prev,
@@ -270,7 +402,8 @@ export function useCoachChat() {
           Accept: "text/event-stream",
         },
         body: JSON.stringify({
-          messages: nextConversation,
+          ...(activeSessionId ? { sessionId: activeSessionId } : {}),
+          messages: nextConversation.slice(-MAX_COACH_MESSAGES),
           preferences: {
             unit,
             soundEnabled,
@@ -361,12 +494,11 @@ export function useCoachChat() {
 
           if (event.type === "final") {
             const payload = CoachTurnResponseSchema.parse(event.response);
+            const responseMessages = (payload.responseMessages ??
+              []) as ModelMessage[];
             applyClientActions(payload.blocks, seenClientActions);
             setLastTrace(payload.trace);
-            setConversation([
-              ...nextConversation,
-              ...((payload.responseMessages as ModelMessage[]) ?? []),
-            ]);
+            setConversation([...nextConversation, ...responseMessages]);
             setTimeline((prev) =>
               prev.map((message) =>
                 message.id === assistantId
@@ -388,12 +520,11 @@ export function useCoachChat() {
       }
 
       const payload = CoachTurnResponseSchema.parse(await response.json());
+      const responseMessages = (payload.responseMessages ??
+        []) as ModelMessage[];
       applyClientActions(payload.blocks, seenClientActions);
       setLastTrace(payload.trace);
-      setConversation([
-        ...nextConversation,
-        ...((payload.responseMessages as ModelMessage[]) ?? []),
-      ]);
+      setConversation([...nextConversation, ...responseMessages]);
       setTimeline((prev) =>
         prev.map((message) =>
           message.id === assistantId
@@ -416,13 +547,11 @@ export function useCoachChat() {
         error: message,
         durationMs: Date.now() - fetchStartMs,
       });
-      setConversation([
-        ...nextConversation,
-        {
-          role: "assistant" as const,
-          content: [{ type: "text" as const, text: "I hit an error." }],
-        },
-      ]);
+      const errorMessage: ModelMessage = {
+        role: "assistant",
+        content: [{ type: "text", text: "I hit an error." }],
+      };
+      setConversation([...nextConversation, errorMessage]);
       setTimeline((prev) =>
         prev.map((entry) =>
           entry.id === assistantId
