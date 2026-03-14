@@ -9,6 +9,7 @@ describe("coach schema", () => {
   it("parses a turn request", () => {
     expect(
       CoachTurnRequestSchema.parse({
+        sessionId: "session_123",
         messages: [{ role: "user", content: "10 pushups" }],
         preferences: {
           unit: "lbs",
@@ -17,6 +18,7 @@ describe("coach schema", () => {
         },
       })
     ).toEqual({
+      sessionId: "session_123",
       messages: [{ role: "user", content: "10 pushups" }],
       preferences: {
         unit: "lbs",

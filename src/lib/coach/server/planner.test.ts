@@ -162,6 +162,33 @@ describe("buildEndOfTurnSuggestions", () => {
   });
 });
 
+describe("buildPlannerSystemPrompt", () => {
+  it("includes the stored conversation summary when provided", async () => {
+    const { buildPlannerSystemPrompt } = await import("./planner");
+
+    const prompt = buildPlannerSystemPrompt({
+      preferences: { unit: "lbs", soundEnabled: true },
+      conversationSummary:
+        "Earlier conversation: user logged push-ups and checked analytics.",
+    });
+
+    expect(prompt).toContain("Conversation summary:");
+    expect(prompt).toContain("user logged push-ups and checked analytics");
+  });
+
+  it("omits the conversation summary section when not provided", async () => {
+    const { buildPlannerSystemPrompt } = await import("./planner");
+
+    const prompt = buildPlannerSystemPrompt({
+      preferences: { unit: "kg", soundEnabled: false },
+    });
+
+    expect(prompt).not.toContain("Conversation summary:");
+    expect(prompt).toContain("default weight unit: kg");
+    expect(prompt).toContain("tactile sounds: disabled");
+  });
+});
+
 describe("runPlannerTurn", () => {
   beforeEach(() => {
     mockLogSetExecute.mockReset();

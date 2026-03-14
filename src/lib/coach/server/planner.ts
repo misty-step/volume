@@ -37,6 +37,30 @@ export type PlannerRunResult =
 const MAX_TOOL_ROUNDS = 5;
 const MODEL_CALL_TIMEOUT_MS = 30_000;
 
+export function buildPlannerSystemPrompt({
+  preferences,
+  conversationSummary,
+}: {
+  preferences: {
+    unit: string;
+    soundEnabled: boolean;
+  };
+  conversationSummary?: string | null;
+}) {
+  const promptUnit = preferences.unit === "kg" ? "kg" : "lbs";
+  const promptSound = preferences.soundEnabled ? "enabled" : "disabled";
+  const summarySection =
+    typeof conversationSummary === "string" && conversationSummary.trim()
+      ? `\n\nConversation summary:\n${conversationSummary.trim()}`
+      : "";
+
+  return `${COACH_AGENT_SYSTEM_PROMPT}
+
+User local prefs:
+- default weight unit: ${promptUnit}
+- tactile sounds: ${promptSound}${summarySection}`;
+}
+
 /**
  * Build a single end-of-turn suggestions block based on which tools ran.
  * Returns null if no suggestions are warranted (e.g., no tools ran and the
@@ -216,6 +240,7 @@ function createModelAbortSignal(signal?: AbortSignal): AbortSignal {
 export async function runPlannerTurn({
   runtime,
   history,
+  conversationSummary,
   preferences,
   ctx,
   emitEvent,
@@ -223,6 +248,7 @@ export async function runPlannerTurn({
 }: {
   runtime: CoachRuntime;
   history: ModelMessage[];
+  conversationSummary?: string | null;
   preferences: {
     unit: string;
     soundEnabled: boolean;
@@ -248,15 +274,10 @@ export async function runPlannerTurn({
   }
 
   const seenToolCallIds = new Set<string>();
-  // Sanitize user preferences before interpolation into the system prompt.
-  const promptUnit = preferences.unit === "kg" ? "kg" : "lbs";
-  const promptSound = preferences.soundEnabled ? "enabled" : "disabled";
-
-  const systemPrompt = `${COACH_AGENT_SYSTEM_PROMPT}
-
-User local prefs:
-- default weight unit: ${promptUnit}
-- tactile sounds: ${promptSound}`;
+  const systemPrompt = buildPlannerSystemPrompt({
+    preferences,
+    conversationSummary,
+  });
 
   const tools = createCoachTools(ctx, {
     onBlocks: (toolName, toolBlocks) => {

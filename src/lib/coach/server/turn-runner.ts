@@ -20,6 +20,7 @@ export const COACH_TURN_TIMEOUT_MS = 60_000;
 type RunCoachTurnParams = {
   runtime: CoachRuntime | null;
   history: ModelMessage[];
+  conversationSummary?: string | null;
   preferences: CoachPreferences;
   ctx: CoachToolContext;
   requestSignal: AbortSignal;
@@ -72,6 +73,7 @@ function buildPlannerResultResponse({
 export async function runCoachTurn({
   runtime,
   history,
+  conversationSummary,
   preferences,
   ctx,
   requestSignal,
@@ -105,6 +107,7 @@ export async function runCoachTurn({
     const plannerResult = await runPlannerTurn({
       runtime,
       history,
+      conversationSummary,
       preferences,
       ctx,
       emitEvent,

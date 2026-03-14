@@ -120,6 +120,42 @@ describe("runCoachTurn", () => {
     ]);
   });
 
+  it("forwards the conversation summary into the planner call", async () => {
+    runPlannerTurnMock.mockReset();
+    runPlannerTurnMock.mockResolvedValue({
+      kind: "ok",
+      assistantText: "Summary ready.",
+      blocks: [],
+      toolsUsed: [],
+      hitToolLimit: false,
+      responseMessages: [],
+    });
+
+    const { runCoachTurn } = await import("./turn-runner");
+
+    await runCoachTurn({
+      runtime: { model: {}, modelId: "mock-model-id" } as never,
+      history: [{ role: "user", content: "summary" }],
+      conversationSummary:
+        "Earlier: user logged chest work and reviewed recovery.",
+      preferences: {
+        unit: "lbs",
+        soundEnabled: true,
+        timezoneOffsetMinutes: 0,
+      },
+      ctx: {} as never,
+      requestSignal: new AbortController().signal,
+      timeoutMs: 25,
+    });
+
+    expect(runPlannerTurnMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationSummary:
+          "Earlier: user logged chest work and reviewed recovery.",
+      })
+    );
+  });
+
   it("treats aborted no-tool planner failures as full failures", async () => {
     runPlannerTurnMock.mockReset();
     const requestController = new AbortController();
