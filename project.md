@@ -8,7 +8,7 @@ Volume is a chat-first workout tracker where an AI coach replaces traditional UI
 
 **Target User:** Anyone who tracks workouts and wants the friction removed. Power users who log daily. Beginners who need guidance. People who find traditional workout apps tedious.
 
-**Current Focus:** Build the agentic foundation — generative UI catalog, AI SDK 6 agent loop, Mastra memory, CSS variable design tokens.
+**Current Focus:** Targeted restructuring — conversation persistence, user memory, tool consolidation, json-render migration, observability.
 
 **Key Differentiators:**
 
@@ -37,18 +37,19 @@ Volume is a chat-first workout tracker where an AI coach replaces traditional UI
 ## Active Focus
 
 - **Milestone:** Agentic Foundation
-- **Key Issues:** #341 (epic), #342 (AI SDK 6 + json-render), #349 (catalog), #344 (Mastra memory), #350 (design tokens)
-- **Theme:** Make the agent robust, generative, and memory-aware. Consolidate all UX through the coach.
-- **Execution docs:** `docs/specs/341-agentic-ui-pivot-spec.md`, `docs/design/341-agentic-ui-pivot-architecture.md`
+- **Key Issues:** #344 (conversation persistence), #425 (user memory), #426 (tool consolidation), #424 (json-render), #411 (summary accuracy), #403 (exercise routing)
+- **Theme:** Fix foundations — persistence, memory, observability, architecture simplification. Then ship proactive intelligence.
 
-**Locked technical directions (2026-02-22 /groom):**
+**Locked technical directions (2026-03-14 /groom):**
 
-- Generative UI: **json-render** (Vercel Labs) — catalog-constrained JSONL patches
-- Agent framework: **AI SDK 6 Agent** — `prepareStep`, `stopWhen`, tool factory
-- Tool pattern: **Moneta-style factory** — `createCoachTools(userId)` scoped object
-- Memory: **Mastra Observational Memory** — 94.87% LongMemEval, AI SDK plugin
-- Design tokens: **CSS variables + Tailwind** — semantic tokens, light/dark/system
-- Accent color: TBD (exploring beyond current safety-orange)
+- Generative UI: **json-render** (Vercel Labs, v0.14.0) — catalog-constrained JSONL streaming. Tools return data, model generates UI spec.
+- Agent framework: **AI SDK 6** `streamText` with `stopWhen` — keep current loop, do NOT adopt `@convex-dev/agent` (pre-1.0, revisit at 1.0)
+- Tool surface: **Consolidate 26 → ~10 capability groups** — fewer, deeper tools = better model accuracy
+- Conversation persistence: **Custom Convex tables** (`coachSessions` + `coachMessages`) — server-side message storage, hydrate on reconnect
+- User memory: **Saved facts** (ChatGPT pattern, flat text in system prompt) + **observation log** (Mastra pattern, post-session compression). No vector DB.
+- Observability: **Helicone** via OpenRouter headers — cost, latency, quality dashboards
+- Design tokens: **CSS variables + Tailwind** — semantic tokens, light/dark/system (shipped)
+- Accent color: TBD
 
 ## Quality Bar
 
@@ -109,14 +110,18 @@ await ctx.db.patch(id, { deletedAt: Date.now() });
 
 ## Lessons Learned
 
-| Decision                      | Outcome                                                    | Lesson                                                          |
-| ----------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------- |
-| Custom planner loop           | Brittle — 8 failure modes, no prepareStep, regex parsing   | Use AI SDK Agent class; don't roll your own tool loop           |
-| TypeScript design token files | Not wired to CSS — values diverge, hardcoded in components | CSS variables + Tailwind config from day one                    |
-| 30-message sliding window     | Context loss in long sessions, no summarization            | Use Mastra Observational Memory for compression                 |
-| Regex intent parsing          | 15 hardcoded aliases, 20% failure rate on natural input    | Route via LLM only; fail explicitly when runtime is unavailable |
+| Decision                      | Outcome                                                      | Lesson                                                            |
+| ----------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Custom planner loop           | Brittle — 8 failure modes, no prepareStep, regex parsing     | Use AI SDK Agent class; don't roll your own tool loop             |
+| TypeScript design token files | Not wired to CSS — values diverge, hardcoded in components   | CSS variables + Tailwind config from day one                      |
+| 30-message sliding window     | Context loss in long sessions, no summarization              | Persist conversations server-side; compress with observer pattern |
+| Regex intent parsing          | 15 hardcoded aliases, 20% failure rate on natural input      | Route via LLM only; fail explicitly when runtime is unavailable   |
+| 26 flat tools                 | Wide surface taxes model selection accuracy                  | Consolidate to ~10 capability groups; fewer, deeper tools         |
+| `buildEndOfTurnSuggestions`   | 130 lines of hardcoded if/else for what the LLM already does | Delete — let the model generate contextual suggestions            |
+| Custom block SSE protocol     | Works but bespoke; no ecosystem leverage                     | Migrate to json-render for catalog-constrained JSONL streaming    |
+| `@convex-dev/agent` (v0.3.2)  | Pre-1.0, open data-corruption bugs, block schema doesn't fit | Wait for 1.0; build conversation persistence on plain Convex      |
 
 ---
 
-_Last updated: 2026-02-23_
+_Last updated: 2026-03-14_
 _Updated during: /groom session_
