@@ -3,7 +3,7 @@ import { reportError } from "@/lib/analytics";
 import { ConvexHttpClient } from "convex/browser";
 import { auth } from "@clerk/nextjs/server";
 import { api } from "@/../convex/_generated/api";
-import { CoachTurnRequestSchema } from "@/lib/coach/schema";
+import { CoachPreferencesSchema } from "@/lib/coach/schema";
 import { getCoachRuntime } from "@/lib/coach/server/runtime";
 import { buildPlannerSystemPrompt } from "@/lib/coach/server/planner";
 import { createCoachTools } from "@/lib/coach/server/coach-tools";
@@ -11,14 +11,17 @@ import { buildRuntimeUnavailableResponse } from "@/lib/coach/server/blocks";
 import {
   streamText,
   generateText,
+  convertToModelMessages,
   stepCountIs,
   createUIMessageStream,
   createUIMessageStreamResponse,
   type ModelMessage,
+  type UIMessage,
 } from "ai";
 import { pipeJsonRender } from "@json-render/core";
 import type { Exercise } from "@/types/domain";
 import { hasValidE2ETestSession } from "@/lib/e2e/test-session";
+import { z } from "zod";
 
 const CONTEXT_SUMMARY_TRIGGER_MESSAGES = 40;
 const CONTEXT_RECENT_MESSAGE_WINDOW = 20;
@@ -235,7 +238,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const parsed = CoachTurnRequestSchema.safeParse(body);
+  // The AI SDK DefaultChatTransport sends UIMessages ({ id, role, parts })
+  // with extra body fields. Parse loosely, then convert to ModelMessages.
+  const TransportBodySchema = z.object({
+    messages: z.array(z.object({ role: z.string() }).passthrough()).min(1),
+    sessionId: z.string().min(1).max(256).optional(),
+    preferences: CoachPreferencesSchema.optional(),
+  });
+
+  const parsed = TransportBodySchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid request body" },
@@ -243,9 +254,25 @@ export async function POST(request: Request) {
     );
   }
 
-  const fallbackHistory = parsed.data.messages.filter(
-    (message) => message.role !== "system"
-  );
+  const preferences = parsed.data.preferences ?? {
+    unit: "lbs" as const,
+    soundEnabled: true,
+  };
+  const sessionId = parsed.data.sessionId;
+
+  // Convert UIMessages to ModelMessages for history building.
+  const uiMessages = parsed.data.messages as unknown as UIMessage[];
+  let fallbackHistory: ModelMessage[];
+  try {
+    fallbackHistory = (await convertToModelMessages(uiMessages)).filter(
+      (m) => m.role !== "system"
+    );
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid message format" },
+      { status: 400 }
+    );
+  }
 
   const latestUserMsg = [...fallbackHistory]
     .reverse()
@@ -259,7 +286,16 @@ export async function POST(request: Request) {
   }
 
   const latestUserText =
-    typeof latestUserMsg.content === "string" ? latestUserMsg.content : "";
+    typeof latestUserMsg.content === "string"
+      ? latestUserMsg.content
+      : Array.isArray(latestUserMsg.content)
+        ? latestUserMsg.content
+            .filter(
+              (p): p is { type: "text"; text: string } => p.type === "text"
+            )
+            .map((p) => p.text)
+            .join("\n")
+        : "";
 
   const convex = new ConvexHttpClient(convexUrl);
   convex.setAuth(token);
@@ -331,6 +367,7 @@ export async function POST(request: Request) {
           content: `User wants: "${safeName}"\nExisting exercises: ${list}\nReply with ONLY the exact exercise name if ONE clearly matches (same movement, different spelling/abbreviation is fine). Reply "none" if no match or if multiple exercises match equally well (ambiguous).`,
         },
       ],
+      abortSignal: request.signal,
     });
     const picked = text.trim().replace(/^["']|["']$/g, "");
     if (picked.toLowerCase() === "none") return null;
@@ -339,8 +376,8 @@ export async function POST(request: Request) {
 
   const context = {
     convex,
-    defaultUnit: parsed.data.preferences.unit,
-    timezoneOffsetMinutes: parsed.data.preferences.timezoneOffsetMinutes ?? 0,
+    defaultUnit: preferences.unit,
+    timezoneOffsetMinutes: preferences.timezoneOffsetMinutes ?? 0,
     turnId,
     userInput: latestUserText,
     resolveExerciseName,
@@ -353,13 +390,13 @@ export async function POST(request: Request) {
   const { history, conversationSummary } = await buildCoachHistory({
     convex,
     runtime,
-    sessionId: parsed.data.sessionId,
+    sessionId,
     fallbackHistory,
     latestUserMessage,
   });
 
   const systemPrompt = buildPlannerSystemPrompt({
-    preferences: parsed.data.preferences,
+    preferences,
     conversationSummary,
   });
 
@@ -380,12 +417,32 @@ export async function POST(request: Request) {
     execute: async ({ writer }) => {
       writer.merge(pipeJsonRender(result.toUIMessageStream()));
 
-      // After the stream completes, persist the turn.
+      // After the stream completes, check step limit and persist.
       try {
-        const response = await result.response;
+        const [finishReason, text, response] = await Promise.all([
+          result.finishReason,
+          result.text,
+          result.response,
+        ]);
+
+        // Inject fallback message if the model hit the tool-call step limit
+        // without producing text (mirrors planner.ts hitToolLimit logic).
+        const hitToolLimit = !text.trim() && finishReason === "tool-calls";
+        if (hitToolLimit) {
+          const fallbackId = `step-limit-${turnId}`;
+          writer.write({ type: "text-start", id: fallbackId });
+          writer.write({
+            type: "text-delta",
+            delta:
+              "I reached the step limit. Ask a follow-up and I'll continue.",
+            id: fallbackId,
+          });
+          writer.write({ type: "text-end", id: fallbackId });
+        }
+
         await persistCoachTurn({
           convex,
-          sessionId: parsed.data.sessionId,
+          sessionId,
           latestUserText,
           turnId,
           responseMessages: response.messages as ModelMessage[],

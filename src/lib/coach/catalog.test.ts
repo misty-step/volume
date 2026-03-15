@@ -43,7 +43,11 @@ describe("coach catalog", () => {
     const result = catalog.validate({
       root: "s1",
       elements: {
-        s1: leaf("Status", { tone: "success", title: "Logged set" }),
+        s1: leaf("Status", {
+          tone: "success",
+          title: "Logged set",
+          description: null,
+        }),
       },
     });
     expect(result.success).toBe(true);
@@ -80,6 +84,7 @@ describe("coach catalog", () => {
           actionId: "action_123",
           turnId: "turn_456",
           title: "Undo this log",
+          description: null,
         }),
       },
     });

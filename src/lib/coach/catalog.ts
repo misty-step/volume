@@ -200,6 +200,12 @@ export type CoachBlock = z.infer<typeof CoachBlockSchema>;
 // ---------------------------------------------------------------------------
 // json-render catalog — generative UI vocabulary for the coach model.
 // Uses .nullable() for optional catalog props (json-render convention).
+//
+// DESIGN NOTE: Catalog prop schemas are intentionally looser than the shared
+// schemas above (no .max() constraints). The catalog communicates the prop
+// structure to the model; strict validation (length limits, refinements)
+// happens through CoachBlockSchema when tool results are constructed.
+// TODO: generate catalog props from shared schemas with an optional→nullable transform.
 // ---------------------------------------------------------------------------
 
 export const catalog = defineCatalog(schema, {

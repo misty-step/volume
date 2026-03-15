@@ -1,11 +1,12 @@
 "use client";
 
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { PaperPlaneIcon, ReloadIcon } from "@radix-ui/react-icons";
 import { CoachSpecRenderer } from "@/components/coach/CoachBlockRenderer";
 import { useCoachChat } from "@/components/coach/useCoachChat";
+import { CoachChatContext } from "@/lib/coach/coach-chat-context";
 import { cn } from "@/lib/utils";
 import type { UIMessage } from "ai";
 
@@ -21,8 +22,22 @@ export function CoachPrototype() {
   const promptedRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
-  const { input, setInput, isWorking, messages, spec, endRef, sendPrompt } =
-    useCoachChat();
+  const {
+    input,
+    setInput,
+    isWorking,
+    messages,
+    spec,
+    endRef,
+    sendPrompt,
+    undoAction,
+    runClientAction,
+  } = useCoachChat();
+
+  const chatCallbacks = useMemo(
+    () => ({ sendPrompt, undoAction, runClientAction }),
+    [sendPrompt, undoAction, runClientAction]
+  );
 
   // Refocus input whenever the agent finishes working.
   const prevWorking = useRef(isWorking);
@@ -131,9 +146,11 @@ export function CoachPrototype() {
               >
                 {/* json-render spec for the latest assistant message */}
                 {isLatestAssistant && spec ? (
-                  <div className="space-y-3">
-                    <CoachSpecRenderer spec={spec} loading={isWorking} />
-                  </div>
+                  <CoachChatContext.Provider value={chatCallbacks}>
+                    <div className="space-y-3">
+                      <CoachSpecRenderer spec={spec} loading={isWorking} />
+                    </div>
+                  </CoachChatContext.Provider>
                 ) : null}
 
                 {/* Text content */}

@@ -3,7 +3,7 @@ import { modelMessageSchema, type ModelMessage } from "ai";
 
 // Block types are defined as catalog components in catalog.ts (the single
 // source of truth for the json-render generative UI vocabulary).
-export { CoachBlockSchema, type CoachBlock } from "./catalog";
+export { CoachBlockSchema, type CoachBlock } from "@/lib/coach/catalog";
 
 export const MAX_COACH_MESSAGES = 30;
 

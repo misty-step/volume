@@ -4,6 +4,7 @@ import {
   type CoachToolDefinition,
 } from "@/lib/coach/tools/registry";
 import type { CoachToolContext, ToolResult } from "@/lib/coach/tools/types";
+import { sanitizeError } from "@/lib/coach/sanitize-error";
 
 export type ToolOutput = Record<string, unknown>;
 
@@ -21,14 +22,15 @@ function wrap(result: ToolResult): ToolOutput {
 }
 
 function toolError(message: string): ToolOutput {
+  const safe = sanitizeError(message);
   return {
-    error: message,
+    error: safe,
     _uiBlocks: [
       {
         type: "status",
         tone: "error",
         title: "Tool failed",
-        description: message,
+        description: safe,
       },
     ],
   };

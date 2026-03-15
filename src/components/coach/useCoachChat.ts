@@ -31,6 +31,7 @@ export function useCoachChat() {
   const [input, setInput] = useState("");
   const sessionBootstrapRef = useRef<Promise<string | null> | null>(null);
   const sessionDateRef = useRef<string | null>(null);
+  const processedActionsRef = useRef(new Set<string>());
   const endRef = useRef<HTMLDivElement>(null);
 
   async function ensureSessionId(): Promise<string | null> {
@@ -103,11 +104,14 @@ export function useCoachChat() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isWorking]);
 
-  // Process client actions from spec elements.
+  // Process client actions from spec elements (deduplicated by element key).
   useEffect(() => {
     if (!spec?.elements) return;
-    for (const element of Object.values(spec.elements)) {
+    for (const [key, element] of Object.entries(spec.elements)) {
       if (element.type !== "ClientAction") continue;
+      if (processedActionsRef.current.has(key)) continue;
+      processedActionsRef.current.add(key);
+
       const props = element.props as {
         action: string;
         payload: Record<string, unknown>;
@@ -160,7 +164,19 @@ export function useCoachChat() {
       turnIndex: messages.length,
     });
 
-    await sendMessage({ text: trimmed });
+    await sendMessage(
+      { text: trimmed },
+      {
+        body: {
+          sessionId,
+          preferences: {
+            unit,
+            soundEnabled,
+            timezoneOffsetMinutes: new Date().getTimezoneOffset(),
+          },
+        },
+      }
+    );
     setInput("");
   }
 

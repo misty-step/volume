@@ -74,7 +74,13 @@ vi.mock("convex/browser", () => ({
 
 function validBody() {
   return JSON.stringify({
-    messages: [{ role: "user", content: "show today's summary" }],
+    messages: [
+      {
+        id: "msg_1",
+        role: "user",
+        parts: [{ type: "text", text: "show today's summary" }],
+      },
+    ],
     preferences: {
       unit: "lbs",
       soundEnabled: true,

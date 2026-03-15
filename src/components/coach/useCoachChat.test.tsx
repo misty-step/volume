@@ -96,8 +96,18 @@ describe("useCoachChat", () => {
       await result.current.sendPrompt("log 10 pushups");
     });
 
-    expect(mockSendMessage).toHaveBeenCalledWith({
-      text: "log 10 pushups",
-    });
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      { text: "log 10 pushups" },
+      {
+        body: {
+          sessionId: "session_123",
+          preferences: {
+            unit: "lbs",
+            soundEnabled: true,
+            timezoneOffsetMinutes: expect.any(Number),
+          },
+        },
+      }
+    );
   });
 });
