@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.0](https://github.com/misty-step/volume/compare/v1.16.0...v1.17.0) (2026-03-15)
+
+
+### Features
+
+* enforce auth guards via shared validate.ts helpers ([#438](https://github.com/misty-step/volume/issues/438)) ([9193426](https://github.com/misty-step/volume/commit/919342615df2769281c62027c37fa35bc72ed9e8))
+
+
+### Bug Fixes
+
+* make today's coach summary accurate after every log ([#437](https://github.com/misty-step/volume/issues/437)) ([9ac779a](https://github.com/misty-step/volume/commit/9ac779a7df85d03c3c7d43c0a8860dfc0a9c3c83))
+* route coach requests cleanly and disambiguate exercises ([#435](https://github.com/misty-step/volume/issues/435)) ([521f9f2](https://github.com/misty-step/volume/commit/521f9f2245f7087f40f71a56b29430f9a8c98a86))
+
 ## [1.16.0](https://github.com/misty-step/volume/compare/v1.15.4...v1.16.0) (2026-03-14)
 
 
