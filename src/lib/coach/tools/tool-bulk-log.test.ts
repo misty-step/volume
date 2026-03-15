@@ -27,6 +27,7 @@ vi.mock("./data", () => ({
     totalReps: 0,
     totalDurationSeconds: 0,
     topExercises: [],
+    exerciseCount: 0,
   }),
 }));
 
@@ -94,6 +95,11 @@ describe("runBulkLogTool", () => {
     expect(result.outputForModel.status).toBe("ok");
     expect(result.outputForModel.logged).toBe(2);
     expect(result.outputForModel.failed).toBe(0);
+    expect(result.outputForModel.today_totals).toEqual({
+      total_sets: 0,
+      total_reps: 0,
+      exercise_count: 0,
+    });
     expect((result.blocks[0] as any).title).toBe("All sets logged");
   });
 

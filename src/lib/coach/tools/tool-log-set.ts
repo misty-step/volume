@@ -155,7 +155,17 @@ export async function runLogSetTool(
   // Post-commit: fetch fresh today's totals so the model has accurate
   // day-level data without needing a separate get_today_summary call.
   // This eliminates the race condition when both tools run in parallel.
-  const todayTotals = await buildTodayTotals(ctx);
+  // Guarded: a query failure must not convert a successful log into an error.
+  let todayTotals: Awaited<ReturnType<typeof buildTodayTotals>> | null = null;
+  try {
+    todayTotals = await buildTodayTotals(ctx);
+  } catch (error) {
+    console.warn("Failed to fetch today totals after log_set", {
+      turnId: ctx.turnId,
+      setId: String(setId),
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
 
   return {
     summary: `Logged set for ${ensured.exercise.name}.`,
@@ -169,11 +179,15 @@ export async function runLogSetTool(
       exercise_name: ensured.exercise.name,
       created_exercise: ensured.created,
       warning: undoWarningBlock ? "undo_unavailable" : undefined,
-      today_totals: {
-        total_sets: todayTotals.totalSets,
-        total_reps: todayTotals.totalReps,
-        exercise_count: todayTotals.topExercises.length,
-      },
+      ...(todayTotals
+        ? {
+            today_totals: {
+              total_sets: todayTotals.totalSets,
+              total_reps: todayTotals.totalReps,
+              exercise_count: todayTotals.exerciseCount,
+            },
+          }
+        : {}),
     },
   };
 }

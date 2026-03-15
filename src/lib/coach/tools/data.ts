@@ -30,20 +30,25 @@ export async function getTodaySets(ctx: CoachToolContext): Promise<SetInput[]> {
 /**
  * Single source of truth for today's aggregated totals.
  * Queries persisted sets post-commit, so callers always get fresh data.
+ * Returns `exerciseCount` from the full set (not the top-4 truncation).
  */
 export async function buildTodayTotals(ctx: CoachToolContext) {
-  const [sets, exercises] = await Promise.all([
-    getTodaySets(ctx),
-    listExercises(ctx),
-  ]);
+  const sets = await getTodaySets(ctx);
+  if (sets.length === 0) {
+    return { ...summarizeTodaySets([], new Map()), exerciseCount: 0 };
+  }
+
+  const exercises = await listExercises(ctx);
   const names = new Map<string, string>();
   for (const exercise of exercises) {
     names.set(String(exercise._id), exercise.name);
   }
-  return summarizeTodaySets(
+  const totals = summarizeTodaySets(
     sets.map((set) => toAnalyticsSetInput(set)),
     names
   );
+  const exerciseCount = new Set(sets.map((s) => String(s.exerciseId))).size;
+  return { ...totals, exerciseCount };
 }
 
 export async function getRecentExerciseSets(

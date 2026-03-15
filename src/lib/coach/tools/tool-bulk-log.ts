@@ -47,7 +47,16 @@ export async function runBulkLogTool(
       : `Logged ${successes} of ${results.length} sets (${failures} failed).`;
 
   // Post-commit: single fresh query for today's totals after all mutations.
-  const todayTotals = await buildTodayTotals(ctx);
+  // Guarded: a query failure must not convert successful writes into an error.
+  let todayTotals: Awaited<ReturnType<typeof buildTodayTotals>> | null = null;
+  try {
+    todayTotals = await buildTodayTotals(ctx);
+  } catch (error) {
+    console.warn("Failed to fetch today totals after bulk_log", {
+      turnId: ctx.turnId,
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
 
   return {
     summary: summaryLine,
@@ -65,11 +74,15 @@ export async function runBulkLogTool(
       logged: successes,
       failed: failures,
       results: results.map((r) => r.outputForModel),
-      today_totals: {
-        total_sets: todayTotals.totalSets,
-        total_reps: todayTotals.totalReps,
-        exercise_count: todayTotals.topExercises.length,
-      },
+      ...(todayTotals
+        ? {
+            today_totals: {
+              total_sets: todayTotals.totalSets,
+              total_reps: todayTotals.totalReps,
+              exercise_count: todayTotals.exerciseCount,
+            },
+          }
+        : {}),
     },
   };
 }

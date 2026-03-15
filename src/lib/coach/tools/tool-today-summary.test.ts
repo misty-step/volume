@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 vi.mock("./data", () => ({
@@ -27,6 +28,7 @@ describe("runTodaySummaryTool", () => {
       totalReps: 0,
       totalDurationSeconds: 0,
       topExercises: [],
+      exerciseCount: 0,
     });
     const result = await runTodaySummaryTool(mockCtx);
     expect(result.blocks[0]?.type).toBe("status");
@@ -41,6 +43,7 @@ describe("runTodaySummaryTool", () => {
       totalReps: 0,
       totalDurationSeconds: 0,
       topExercises: [],
+      exerciseCount: 0,
     });
     const result = await runTodaySummaryTool(mockCtx);
     expect(result.outputForModel.status).toBe("ok");
@@ -61,6 +64,7 @@ describe("runTodaySummaryTool", () => {
           durationSeconds: 0,
         },
       ],
+      exerciseCount: 1,
     });
     const result = await runTodaySummaryTool(mockCtx);
     expect(result.blocks[0]?.type).toBe("metrics");
@@ -80,6 +84,7 @@ describe("runTodaySummaryTool", () => {
           durationSeconds: 0,
         },
       ],
+      exerciseCount: 1,
     });
     const result = await runTodaySummaryTool(mockCtx);
     const table = result.blocks.find((b) => b.type === "table");
@@ -107,6 +112,7 @@ describe("runTodaySummaryTool", () => {
           durationSeconds: 120,
         },
       ],
+      exerciseCount: 2,
     });
     const result = await runTodaySummaryTool(mockCtx);
     expect(result.outputForModel.status).toBe("ok");
@@ -121,6 +127,7 @@ describe("runTodaySummaryTool", () => {
       totalReps: 0,
       totalDurationSeconds: 0,
       topExercises: [],
+      exerciseCount: 0,
     });
     await runTodaySummaryTool(mockCtx);
     expect(buildTodayTotals).toHaveBeenCalledWith(mockCtx);

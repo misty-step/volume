@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { LogSetArgsSchema } from "./schemas";
 
@@ -48,6 +49,7 @@ describe("runLogSetTool", () => {
           durationSeconds: 0,
         },
       ],
+      exerciseCount: 1,
     });
 
     const result = await runLogSetTool(
@@ -84,6 +86,7 @@ describe("runLogSetTool", () => {
           durationSeconds: 0,
         },
       ],
+      exerciseCount: 1,
     });
 
     const result = await runLogSetTool(
@@ -117,6 +120,7 @@ describe("runLogSetTool", () => {
         totalReps: 10,
         totalDurationSeconds: 0,
         topExercises: [],
+        exerciseCount: 0,
       };
     });
 

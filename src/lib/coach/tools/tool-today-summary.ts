@@ -60,7 +60,7 @@ export async function runTodaySummaryTool(
       status: "ok",
       total_sets: summary.totalSets,
       total_reps: summary.totalReps,
-      exercise_count: summary.topExercises.length,
+      exercise_count: summary.exerciseCount,
     },
   };
 }

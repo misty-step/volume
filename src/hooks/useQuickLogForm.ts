@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form";
+import { useRef } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
@@ -98,6 +99,16 @@ export function useQuickLogForm({
     endDate: todayEnd,
   });
 
+  // Ref guard: ensure session-start fires at most once per calendar day,
+  // even under rapid submissions or background completions.
+  const sessionStartedDayRef = useRef<number | null>(null);
+  const maybeTrackSessionStarted = (exerciseId: string) => {
+    if (!todaySets || todaySets.length !== 0) return;
+    if (sessionStartedDayRef.current === todayStart) return;
+    sessionStartedDayRef.current = todayStart;
+    trackEvent("Session Started", { exerciseId });
+  };
+
   const onSubmit = async (values: QuickLogFormValues) => {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -125,6 +136,7 @@ export function useQuickLogForm({
           .then((setId) => {
             onSetLogged?.(setId);
             trackSetLogged(String(setId), values);
+            maybeTrackSessionStarted(values.exerciseId);
             toast.success("Set saved!", { duration: 3000 });
           })
           .catch((error) => {
@@ -146,13 +158,7 @@ export function useQuickLogForm({
       const setId = raceResult as Id<"sets">;
 
       trackSetLogged(String(setId), values);
-
-      // Session-start: fire once per local day, regardless of exercise.
-      // todaySets reflects pre-mutation state (reactive update hasn't landed yet),
-      // so length === 0 means this is the first set of the day.
-      if (todaySets && todaySets.length === 0) {
-        trackEvent("Session Started", { exerciseId: values.exerciseId });
-      }
+      maybeTrackSessionStarted(values.exerciseId);
 
       // Check for PR before showing success toast (only for rep-based exercises)
       let isPR = false;
