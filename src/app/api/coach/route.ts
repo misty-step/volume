@@ -103,8 +103,11 @@ async function buildCoachHistory({
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     reportError(err, { route: "coach", operation: "fetch_session_history" });
+    // Session read failed — reject rather than falling back to untrusted
+    // client-supplied history which could let a crafted transcript influence
+    // the model. The only safe fallback is an empty history.
     return {
-      history: fallbackHistory,
+      history: [latestUserMessage],
       conversationSummary: undefined as string | undefined,
     };
   }

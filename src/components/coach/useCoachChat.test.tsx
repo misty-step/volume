@@ -46,8 +46,10 @@ vi.mock("@ai-sdk/react", () => ({
   })),
 }));
 
+const mockUseJsonRenderMessage = vi.fn(() => ({ spec: null }));
 vi.mock("@json-render/react", () => ({
-  useJsonRenderMessage: vi.fn(() => ({ spec: null })),
+  useJsonRenderMessage: (...args: unknown[]) =>
+    mockUseJsonRenderMessage(...args),
 }));
 
 describe("useCoachChat", () => {
@@ -107,5 +109,77 @@ describe("useCoachChat", () => {
         }),
       })
     );
+  });
+
+  it("applies set_weight_unit ClientAction from spec elements", async () => {
+    mockUseJsonRenderMessage.mockReturnValue({
+      spec: {
+        root: "ca1",
+        elements: {
+          ca1: {
+            type: "ClientAction",
+            props: {
+              action: "set_weight_unit",
+              payload: { unit: "kg" },
+            },
+            children: [],
+          },
+        },
+      },
+    });
+
+    renderHook(() => useCoachChat());
+
+    await waitFor(() => {
+      expect(mockSetUnit).toHaveBeenCalledWith("kg");
+    });
+  });
+
+  it("applies set_sound ClientAction from spec elements", async () => {
+    mockUseJsonRenderMessage.mockReturnValue({
+      spec: {
+        root: "ca1",
+        elements: {
+          ca1: {
+            type: "ClientAction",
+            props: {
+              action: "set_sound",
+              payload: { enabled: false },
+            },
+            children: [],
+          },
+        },
+      },
+    });
+
+    renderHook(() => useCoachChat());
+
+    await waitFor(() => {
+      expect(mockSetSoundEnabled).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it("navigates to pricing for open_checkout ClientAction", async () => {
+    mockUseJsonRenderMessage.mockReturnValue({
+      spec: {
+        root: "ca1",
+        elements: {
+          ca1: {
+            type: "ClientAction",
+            props: {
+              action: "open_checkout",
+              payload: { mode: "checkout" },
+            },
+            children: [],
+          },
+        },
+      },
+    });
+
+    renderHook(() => useCoachChat());
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/pricing");
+    });
   });
 });
