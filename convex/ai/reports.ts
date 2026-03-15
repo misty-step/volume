@@ -11,6 +11,7 @@ import { query, action } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { getLimits, type RateLimitResult } from "../lib/rateLimit";
+import { requireAuth } from "../lib/validate";
 
 type ReportDoc = Doc<"aiReports">;
 type ReportId = Id<"aiReports">;
@@ -116,11 +117,7 @@ export const getReportHistory = query({
 export const generateOnDemandReport = action({
   args: {},
   handler: async (ctx): Promise<ReportId> => {
-    // Verify authentication
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("You must be signed in to generate reports");
-    }
+    const identity = await requireAuth(ctx);
 
     const userId = identity.subject;
 
@@ -179,13 +176,8 @@ export const backfillWeeklyReports = action({
   handler: async (ctx, args): Promise<WeeklyBackfillSummary> => {
     const { userId } = args;
 
-    // Security check
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Unauthorized");
-    }
+    const identity = await requireAuth(ctx);
     if (identity.subject !== userId) {
-      // Could also check for admin role here
       throw new Error("You can only generate reports for your own account");
     }
 
@@ -305,11 +297,7 @@ export const backfillDailyReports = action({
   handler: async (ctx, args): Promise<DailyBackfillSummary> => {
     const { userId, daysBack = 14 } = args;
 
-    // Security check
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Unauthorized");
-    }
+    const identity = await requireAuth(ctx);
     if (identity.subject !== userId) {
       throw new Error("You can only generate reports for your own account");
     }

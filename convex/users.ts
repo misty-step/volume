@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v, Validator } from "convex/values";
 import { GOAL_TYPES, type GoalType } from "@/lib/goals";
+import { requireAuth } from "./lib/validate";
 
 // Derive validator from GOAL_TYPES constant (single source of truth)
 // Type assertion needed because v.union loses literal inference with spread
@@ -33,14 +34,7 @@ export const getOrCreateUser = mutation({
     timezone: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      // Provide actionable error context for debugging auth issues
-      // Common causes: token expired, auth still loading, invalid JWT
-      throw new Error(
-        "Unauthorized: No valid authentication token. Please sign in again."
-      );
-    }
+    const identity = await requireAuth(ctx);
 
     // Check if user exists
     const existing = await ctx.db
@@ -277,8 +271,7 @@ export const updatePreferences = mutation({
     coachNotes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
+    const identity = await requireAuth(ctx);
 
     const user = await ctx.db
       .query("users")
@@ -328,8 +321,7 @@ export const updatePreferences = mutation({
 export const dismissOnboardingNudge = mutation({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
+    const identity = await requireAuth(ctx);
 
     const user = await ctx.db
       .query("users")

@@ -1,34 +1,9 @@
 import { v } from "convex/values";
-import {
-  mutation,
-  query,
-  type MutationCtx,
-  type QueryCtx,
-} from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { getTodayRangeForTimezoneOffset } from "@/lib/date-utils";
-import type { Id } from "./_generated/dataModel";
+import { requireAuth, requireOwnership } from "./lib/validate";
 
 const CONTEXT_WINDOW_MESSAGES = 20;
-
-async function requireUserId(ctx: MutationCtx | QueryCtx) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) {
-    throw new Error("Unauthorized");
-  }
-  return identity.subject;
-}
-
-async function requireOwnedSession(
-  ctx: MutationCtx | QueryCtx,
-  sessionId: Id<"coachSessions">,
-  userId: string
-) {
-  const session = await ctx.db.get(sessionId);
-  if (!session || session.userId !== userId) {
-    throw new Error("Not authorized to access this session");
-  }
-  return session;
-}
 
 export const getOrCreateTodaySession = mutation({
   args: {
@@ -43,7 +18,8 @@ export const getOrCreateTodaySession = mutation({
       throw new Error("Invalid timezone offset");
     }
 
-    const userId = await requireUserId(ctx);
+    const identity = await requireAuth(ctx);
+    const userId = identity.subject;
     const now = Date.now();
     const todayRange = getTodayRangeForTimezoneOffset(
       args.timezoneOffsetMinutes,
@@ -112,8 +88,10 @@ export const addMessage = mutation({
     turnId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx);
-    const session = await requireOwnedSession(ctx, args.sessionId, userId);
+    const identity = await requireAuth(ctx);
+    const userId = identity.subject;
+    const session = await ctx.db.get(args.sessionId);
+    requireOwnership(session, userId, "session");
     if (session.status !== "active") {
       throw new Error("Cannot add messages to an archived session");
     }
@@ -142,8 +120,9 @@ export const getSessionMessages = query({
     sessionId: v.id("coachSessions"),
   },
   handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx);
-    await requireOwnedSession(ctx, args.sessionId, userId);
+    const identity = await requireAuth(ctx);
+    const session = await ctx.db.get(args.sessionId);
+    requireOwnership(session, identity.subject, "session");
 
     return await ctx.db
       .query("coachMessages")
@@ -158,8 +137,9 @@ export const getSessionMessagesForContext = query({
     sessionId: v.id("coachSessions"),
   },
   handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx);
-    const session = await requireOwnedSession(ctx, args.sessionId, userId);
+    const identity = await requireAuth(ctx);
+    const session = await ctx.db.get(args.sessionId);
+    requireOwnership(session, identity.subject, "session");
     const messages = await ctx.db
       .query("coachMessages")
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
@@ -185,8 +165,9 @@ export const applySummary = mutation({
     summarizeThroughCreatedAt: v.number(),
   },
   handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx);
-    const session = await requireOwnedSession(ctx, args.sessionId, userId);
+    const identity = await requireAuth(ctx);
+    const session = await ctx.db.get(args.sessionId);
+    requireOwnership(session, identity.subject, "session");
     const summarizedAt = Date.now();
     const messages = await ctx.db
       .query("coachMessages")
@@ -224,8 +205,9 @@ export const archiveSession = mutation({
     sessionId: v.id("coachSessions"),
   },
   handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx);
-    const session = await requireOwnedSession(ctx, args.sessionId, userId);
+    const identity = await requireAuth(ctx);
+    const session = await ctx.db.get(args.sessionId);
+    requireOwnership(session, identity.subject, "session");
 
     await ctx.db.patch(session._id, {
       status: "archived",

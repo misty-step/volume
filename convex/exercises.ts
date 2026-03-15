@@ -27,10 +27,7 @@ export const createExercise = action({
     name: v.string(),
   },
   handler: async (ctx, args): Promise<Id<"exercises">> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Unauthorized");
-    }
+    const identity = await requireAuth(ctx);
 
     // Rate limit: per-user exercise creation (via internal mutation for action context)
     const limits = getLimits();

@@ -370,15 +370,14 @@ export const editSet = mutation({
     const identity = await requireAuth(ctx);
     const set = await ctx.db.get(args.id);
     requireOwnership(set, identity.subject, "set");
-    const existingSet = set!;
 
     if (args.reps !== undefined && args.duration !== undefined) {
       throw new Error("Must provide either reps or duration (not both)");
     }
 
     const patch: Record<string, unknown> = {};
-    let nextReps = existingSet.reps;
-    let nextDuration = existingSet.duration;
+    let nextReps = set.reps;
+    let nextDuration = set.duration;
 
     if (args.reps !== undefined) {
       validateReps(args.reps);
@@ -401,13 +400,13 @@ export const editSet = mutation({
       throw new Error("Must provide either reps or duration (not both)");
     }
 
-    let nextWeight = existingSet.weight;
+    let nextWeight = set.weight;
     if (args.weight !== undefined) {
       nextWeight = validateWeight(args.weight);
       patch.weight = nextWeight;
     }
 
-    let nextUnit = existingSet.unit;
+    let nextUnit = set.unit;
     if (args.unit !== undefined) {
       nextUnit = args.unit;
       patch.unit = args.unit;

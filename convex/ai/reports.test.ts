@@ -269,7 +269,7 @@ describe("AI Report Queries and Mutations", () => {
     test("should throw error when not authenticated", async () => {
       await expect(
         t.action(aiApi.ai.reports.generateOnDemandReport, {})
-      ).rejects.toThrow("You must be signed in");
+      ).rejects.toThrow("Not authenticated");
     });
 
     test("rate limit should be per-user", async () => {
