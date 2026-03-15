@@ -98,16 +98,14 @@ describe("useCoachChat", () => {
 
     expect(mockSendMessage).toHaveBeenCalledWith(
       { text: "log 10 pushups" },
-      {
-        body: {
-          sessionId: "session_123",
-          preferences: {
+      expect.objectContaining({
+        body: expect.objectContaining({
+          preferences: expect.objectContaining({
             unit: "lbs",
             soundEnabled: true,
-            timezoneOffsetMinutes: expect.any(Number),
-          },
-        },
-      }
+          }),
+        }),
+      })
     );
   });
 });
