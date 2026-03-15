@@ -370,7 +370,7 @@ export async function POST(request: Request) {
           messages: [
             {
               role: "user",
-              content: `User wants to log: "${safeName}"\nExisting exercises: ${list}\nReply with ONLY the exact exercise name if it clearly matches (same movement, different spelling is fine). Reply "none" if no good match.`,
+              content: `User wants: "${safeName}"\nExisting exercises: ${list}\nReply with ONLY the exact exercise name if ONE clearly matches (same movement, different spelling/abbreviation is fine). Reply "none" if no match or if multiple exercises match equally well (ambiguous).`,
             },
           ],
         });
