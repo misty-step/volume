@@ -2,23 +2,12 @@ import { format } from "date-fns";
 import { api } from "@/../convex/_generated/api";
 import type { Set } from "@/types/domain";
 import { listExercises } from "./data";
-import { formatSecondsShort } from "./helpers";
+import { describeSetSummary, formatSecondsShort } from "./helpers";
 import { HistoryArgsSchema } from "./schemas";
 import type { CoachToolContext, ToolResult } from "./types";
 
 function formatWithOffset(ms: number, offset: number) {
   return format(new Date(ms - offset * 60_000), "MMM d, yyyy p");
-}
-
-function describeSet(set: Set, defaultUnit: "lbs" | "kg"): string {
-  if (set.duration !== undefined) {
-    return formatSecondsShort(set.duration);
-  }
-  const reps = set.reps ?? 0;
-  if (set.weight === undefined) {
-    return `${reps} reps`;
-  }
-  return `${reps} reps @ ${set.weight} ${set.unit ?? defaultUnit}`;
 }
 
 export async function runHistoryOverviewTool(
@@ -75,7 +64,7 @@ export async function runHistoryOverviewTool(
           return {
             id: String(set._id),
             title: exercise?.name ?? "Unknown exercise",
-            subtitle: `${describeSet(set, ctx.defaultUnit)} • ${when}`,
+            subtitle: `${describeSetSummary(set, ctx.defaultUnit)} • ${when}`,
             meta: `set_id=${String(set._id)}`,
             prompt: `delete set ${String(set._id)}`,
           };

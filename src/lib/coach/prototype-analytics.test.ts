@@ -62,6 +62,7 @@ describe("summarizeTodaySets", () => {
     expect(summary.totalSets).toBe(3);
     expect(summary.totalReps).toBe(22);
     expect(summary.totalDurationSeconds).toBe(45);
+    expect(summary.exerciseCount).toBe(2);
     expect(summary.topExercises[0]?.exerciseName).toBe("Push-ups");
     expect(summary.topExercises[0]?.sets).toBe(2);
   });
@@ -108,6 +109,7 @@ describe("summarizeTodaySets", () => {
     expect(summary.totalSets).toBe(0);
     expect(summary.totalReps).toBe(0);
     expect(summary.totalDurationSeconds).toBe(0);
+    expect(summary.exerciseCount).toBe(0);
     expect(summary.topExercises).toHaveLength(0);
   });
 });

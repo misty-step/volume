@@ -1,4 +1,5 @@
 import { buildTodayTotals } from "./data";
+import { toTodayTotalsOutput } from "./helpers";
 import { BulkLogArgsSchema } from "./schemas";
 import { runLogSetTool } from "./tool-log-set";
 import type { CoachToolContext, ToolResult } from "./types";
@@ -13,7 +14,7 @@ export async function runBulkLogTool(
   for (const item of args.sets) {
     let result: ToolResult;
     try {
-      result = await runLogSetTool(item, ctx);
+      result = await runLogSetTool(item, ctx, { skipTotals: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       result = {
@@ -75,13 +76,7 @@ export async function runBulkLogTool(
       failed: failures,
       results: results.map((r) => r.outputForModel),
       ...(todayTotals
-        ? {
-            today_totals: {
-              total_sets: todayTotals.totalSets,
-              total_reps: todayTotals.totalReps,
-              exercise_count: todayTotals.exerciseCount,
-            },
-          }
+        ? { today_totals: toTodayTotalsOutput(todayTotals) }
         : {}),
     },
   };

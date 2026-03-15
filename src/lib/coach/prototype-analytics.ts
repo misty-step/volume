@@ -28,6 +28,8 @@ export interface TodayTotalsSummary {
   totalSets: number;
   totalReps: number;
   totalDurationSeconds: number;
+  /** Full count of distinct exercises (unlike topExercises which is capped at 4). */
+  exerciseCount: number;
   topExercises: Array<{
     exerciseId: string;
     exerciseName: string;
@@ -146,6 +148,7 @@ export function summarizeTodaySets(
     totalSets: sets.length,
     totalReps,
     totalDurationSeconds,
+    exerciseCount: topMap.size,
     topExercises,
   };
 }

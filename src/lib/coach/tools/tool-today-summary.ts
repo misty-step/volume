@@ -1,12 +1,10 @@
 import type { TodayTotalsSummary } from "@/lib/coach/prototype-analytics";
 import type { CoachBlock } from "@/lib/coach/schema";
 import { buildTodayTotals } from "./data";
-import { formatSecondsShort } from "./helpers";
+import { formatSecondsShort, toTodayTotalsOutput } from "./helpers";
 import type { CoachToolContext, ToolResult } from "./types";
 
-function buildTodaySummaryBlocks(
-  summary: TodayTotalsSummary & { exerciseCount: number }
-): CoachBlock[] {
+function buildTodaySummaryBlocks(summary: TodayTotalsSummary): CoachBlock[] {
   if (summary.totalSets === 0) {
     return [
       {
@@ -60,9 +58,7 @@ export async function runTodaySummaryTool(
     blocks,
     outputForModel: {
       status: "ok",
-      total_sets: summary.totalSets,
-      total_reps: summary.totalReps,
-      exercise_count: summary.exerciseCount,
+      ...toTodayTotalsOutput(summary),
     },
   };
 }

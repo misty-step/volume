@@ -92,16 +92,16 @@ export function useQuickLogForm({
   );
 
   // Day-scoped query for session-start detection.
-  // Reactive: auto-updates after each log so the check fires at most once per day.
+  // Skipped after session-start fires to avoid unnecessary reactive traffic.
   const { start: todayStart, end: todayEnd } = getTodayRange();
-  const todaySets = useQuery(api.sets.listSetsForDateRange, {
-    startDate: todayStart,
-    endDate: todayEnd,
-  });
-
-  // Ref guard: ensure session-start fires at most once per calendar day,
-  // even under rapid submissions or background completions.
   const sessionStartedDayRef = useRef<number | null>(null);
+  const todaySets = useQuery(
+    api.sets.listSetsForDateRange,
+    sessionStartedDayRef.current === todayStart
+      ? "skip"
+      : { startDate: todayStart, endDate: todayEnd }
+  );
+
   const maybeTrackSessionStarted = (exerciseId: string) => {
     if (!todaySets || todaySets.length !== 0) return;
     if (sessionStartedDayRef.current === todayStart) return;

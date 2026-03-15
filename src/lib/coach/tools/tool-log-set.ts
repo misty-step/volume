@@ -3,7 +3,7 @@ import type { Id } from "@/../convex/_generated/dataModel";
 import type { CoachBlock } from "@/lib/coach/schema";
 import { sanitizeError } from "@/lib/coach/sanitize-error";
 import { buildTodayTotals, ensureExercise } from "./data";
-import { formatSecondsShort } from "./helpers";
+import { formatSecondsShort, toTodayTotalsOutput } from "./helpers";
 import { LogSetArgsSchema } from "./schemas";
 import type {
   CoachToolContext,
@@ -154,17 +154,21 @@ export async function runLogSetTool(
 
   // Post-commit: fetch fresh today's totals so the model has accurate
   // day-level data without needing a separate get_today_summary call.
-  // This eliminates the race condition when both tools run in parallel.
+  // Skipped when called from bulk_log (which fetches once at the end).
   // Guarded: a query failure must not convert a successful log into an error.
   let todayTotals: Awaited<ReturnType<typeof buildTodayTotals>> | null = null;
-  try {
-    todayTotals = await buildTodayTotals(ctx);
-  } catch (error) {
-    console.warn("Failed to fetch today totals after log_set", {
-      turnId: ctx.turnId,
-      setId: String(setId),
-      message: error instanceof Error ? error.message : "Unknown error",
-    });
+  if (!options?.skipTotals) {
+    try {
+      todayTotals = await buildTodayTotals(ctx, {
+        exercises: ensured.exercises,
+      });
+    } catch (error) {
+      console.warn("Failed to fetch today totals after log_set", {
+        turnId: ctx.turnId,
+        setId: String(setId),
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   }
 
   return {
@@ -180,13 +184,7 @@ export async function runLogSetTool(
       created_exercise: ensured.created,
       warning: undoWarningBlock ? "undo_unavailable" : undefined,
       ...(todayTotals
-        ? {
-            today_totals: {
-              total_sets: todayTotals.totalSets,
-              total_reps: todayTotals.totalReps,
-              exercise_count: todayTotals.exerciseCount,
-            },
-          }
+        ? { today_totals: toTodayTotalsOutput(todayTotals) }
         : {}),
     },
   };

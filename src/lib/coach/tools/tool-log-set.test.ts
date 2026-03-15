@@ -126,7 +126,9 @@ describe("runLogSetTool", () => {
 
     await runLogSetTool({ exercise_name: "Push-ups", reps: 10 }, mockCtx);
 
-    expect(buildTodayTotals).toHaveBeenCalledWith(mockCtx);
+    expect(buildTodayTotals).toHaveBeenCalledWith(mockCtx, {
+      exercises: [],
+    });
   });
 });
 
