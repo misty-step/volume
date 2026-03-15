@@ -13,6 +13,8 @@ import {
   generateText,
   convertToModelMessages,
   stepCountIs,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
   type ModelMessage,
   type UIMessage,
 } from "ai";
@@ -351,69 +353,76 @@ export async function POST(request: Request) {
     return NextResponse.json(buildRuntimeUnavailableResponse());
   }
 
-  const resolveExerciseName = async (
-    name: string,
-    candidates: Exercise[]
-  ): Promise<Exercise | null> => {
-    const safeName = name.replace(/[\r\n\t]/g, " ").slice(0, 200);
-    const list = candidates
-      .map((e) => `"${e.name.replace(/[\r\n\t]/g, " ")}"`)
-      .join(", ");
-    const { text } = await generateText({
-      model: runtime.classificationModel,
-      messages: [
-        {
-          role: "user",
-          content: `User wants: "${safeName}"\nExisting exercises: ${list}\nReply with ONLY the exact exercise name if ONE clearly matches (same movement, different spelling/abbreviation is fine). Reply "none" if no match or if multiple exercises match equally well (ambiguous).`,
-        },
-      ],
-      abortSignal: request.signal,
-    });
-    const picked = text.trim().replace(/^["']|["']$/g, "");
-    if (picked.toLowerCase() === "none") return null;
-    return candidates.find((e) => e.name === picked) ?? null;
-  };
+  // Return the streaming Response immediately. The slow work (history
+  // building, model call, persistence) runs inside the execute callback.
+  // This prevents client-side fetch timeouts during setup.
+  const stream = createUIMessageStream({
+    execute: async ({ writer }) => {
+      const resolveExerciseName = async (
+        name: string,
+        candidates: Exercise[]
+      ): Promise<Exercise | null> => {
+        const safeName = name.replace(/[\r\n\t]/g, " ").slice(0, 200);
+        const list = candidates
+          .map((e) => `"${e.name.replace(/[\r\n\t]/g, " ")}"`)
+          .join(", ");
+        const { text } = await generateText({
+          model: runtime.classificationModel,
+          messages: [
+            {
+              role: "user",
+              content: `User wants: "${safeName}"\nExisting exercises: ${list}\nReply with ONLY the exact exercise name if ONE clearly matches (same movement, different spelling/abbreviation is fine). Reply "none" if no match or if multiple exercises match equally well (ambiguous).`,
+            },
+          ],
+          abortSignal: request.signal,
+        });
+        const picked = text.trim().replace(/^["']|["']$/g, "");
+        if (picked.toLowerCase() === "none") return null;
+        return candidates.find((e) => e.name === picked) ?? null;
+      };
 
-  const context = {
-    convex,
-    defaultUnit: preferences.unit,
-    timezoneOffsetMinutes: preferences.timezoneOffsetMinutes ?? 0,
-    turnId,
-    userInput: latestUserText,
-    resolveExerciseName,
-  };
+      const context = {
+        convex,
+        defaultUnit: preferences.unit,
+        timezoneOffsetMinutes: preferences.timezoneOffsetMinutes ?? 0,
+        turnId,
+        userInput: latestUserText,
+        resolveExerciseName,
+      };
 
-  const latestUserMessage: ModelMessage = {
-    role: "user",
-    content: latestUserText,
-  };
-  const { history, conversationSummary } = await buildCoachHistory({
-    convex,
-    runtime,
-    sessionId,
-    fallbackHistory,
-    latestUserMessage,
-  });
+      const latestUserMessage: ModelMessage = {
+        role: "user",
+        content: latestUserText,
+      };
+      const { history, conversationSummary } = await buildCoachHistory({
+        convex,
+        runtime,
+        sessionId,
+        fallbackHistory,
+        latestUserMessage,
+      });
 
-  const systemPrompt = buildPlannerSystemPrompt({
-    preferences,
-    conversationSummary,
-  });
+      const systemPrompt = buildPlannerSystemPrompt({
+        preferences,
+        conversationSummary,
+      });
 
-  const tools = createCoachTools(context);
+      const tools = createCoachTools(context);
 
-  // Stream the model response via AI SDK's UIMessageStream protocol.
-  // pipeJsonRender intercepts text deltas, converting JSONL patches into
-  // data-spec parts for the client's json-render Renderer.
-  const result = streamText({
-    model: runtime.model,
-    system: systemPrompt,
-    messages: history,
-    tools,
-    stopWhen: stepCountIs(MAX_TOOL_ROUNDS),
-    abortSignal: request.signal,
-    onFinish: async ({ response }) => {
+      const result = streamText({
+        model: runtime.model,
+        system: systemPrompt,
+        messages: history,
+        tools,
+        stopWhen: stepCountIs(MAX_TOOL_ROUNDS),
+        abortSignal: request.signal,
+      });
+
+      writer.merge(result.toUIMessageStream());
+
+      // After the stream completes, persist the turn.
       try {
+        const response = await result.response;
         await persistCoachTurn({
           convex,
           sessionId,
@@ -428,5 +437,5 @@ export async function POST(request: Request) {
     },
   });
 
-  return result.toUIMessageStreamResponse();
+  return createUIMessageStreamResponse({ stream });
 }
