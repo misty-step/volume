@@ -6,7 +6,7 @@ import {
   type ToolModelMessage,
 } from "ai";
 import { COACH_AGENT_SYSTEM_PROMPT } from "@/lib/coach/agent-prompt";
-import type { CoachBlock, CoachStreamEvent } from "@/lib/coach/schema";
+import { catalog } from "@/lib/coach/catalog";
 import { normalizeAssistantText } from "./blocks";
 import { createCoachTools } from "./coach-tools";
 import type { CoachToolContext } from "@/lib/coach/tools/types";
@@ -14,12 +14,10 @@ import type { CoachRuntime } from "./runtime";
 
 export type ResponseMessage = AssistantModelMessage | ToolModelMessage;
 
-// Keep the same result shape so route.ts doesn't need structural changes.
 export type PlannerRunResult =
   | {
       kind: "ok";
       assistantText: string;
-      blocks: CoachBlock[];
       toolsUsed: string[];
       hitToolLimit: boolean;
       responseMessages: ResponseMessage[];
@@ -27,7 +25,6 @@ export type PlannerRunResult =
   | {
       kind: "error";
       assistantText: string;
-      blocks: CoachBlock[];
       toolsUsed: string[];
       errorMessage: string;
       hitToolLimit: boolean;
@@ -36,6 +33,18 @@ export type PlannerRunResult =
 
 const MAX_TOOL_ROUNDS = 5;
 const MODEL_CALL_TIMEOUT_MS = 30_000;
+
+/** Custom catalog rules that guide the model's JSONL generation. */
+const CATALOG_CUSTOM_RULES = [
+  "When a tool returns `_uiBlocks`, convert each block to the matching json-render component. " +
+    "Map the block `type` to the catalog component name: status→Status, metrics→Metrics, " +
+    "trend→Trend, table→Table, suggestions→Suggestions, entity_list→EntityList, " +
+    "detail_panel→DetailPanel, billing_panel→BillingPanel, quick_log_form→QuickLogForm, " +
+    "confirmation→Confirmation, client_action→ClientAction, undo→Undo.",
+  "Preserve ALL data values exactly (IDs, numbers, strings). Never invent or modify actionId, turnId, or payload values.",
+  "After all tools complete, append a Suggestions component with relevant follow-up prompts.",
+  "ClientAction components are invisible side-effects — always emit them when present in _uiBlocks.",
+];
 
 export function buildPlannerSystemPrompt({
   preferences,
@@ -54,11 +63,18 @@ export function buildPlannerSystemPrompt({
       ? `\n\nConversation summary:\n${conversationSummary.trim()}`
       : "";
 
+  const catalogPrompt = catalog.prompt({
+    mode: "inline",
+    customRules: CATALOG_CUSTOM_RULES,
+  });
+
   return `${COACH_AGENT_SYSTEM_PROMPT}
 
 User local prefs:
 - default weight unit: ${promptUnit}
-- tactile sounds: ${promptSound}${summarySection}`;
+- tactile sounds: ${promptSound}${summarySection}
+
+${catalogPrompt}`;
 }
 
 /**
@@ -68,54 +84,35 @@ User local prefs:
  */
 export function buildEndOfTurnSuggestions(
   toolsUsed: string[]
-): CoachBlock | null {
+): string[] | null {
   const set = new Set(toolsUsed);
 
   if (set.has("log_set")) {
-    return {
-      type: "suggestions",
-      prompts: [
-        "show today's summary",
-        "what should I work on today?",
-        "show trend for pushups",
-      ],
-    };
+    return [
+      "show today's summary",
+      "what should I work on today?",
+      "show trend for pushups",
+    ];
   }
 
   if (set.has("get_exercise_snapshot") || set.has("get_exercise_trend")) {
-    return {
-      type: "suggestions",
-      prompts: [
-        "10 pushups",
-        "show today's summary",
-        "show analytics overview",
-      ],
-    };
+    return ["10 pushups", "show today's summary", "show analytics overview"];
   }
 
   if (set.has("get_today_summary")) {
-    return {
-      type: "suggestions",
-      prompts: [
-        "what should I work on today?",
-        "show trend for pushups",
-        "show analytics overview",
-      ],
-    };
+    return [
+      "what should I work on today?",
+      "show trend for pushups",
+      "show analytics overview",
+    ];
   }
 
   if (set.has("get_focus_suggestions")) {
-    return {
-      type: "suggestions",
-      prompts: ["show today's summary", "show trend for pushups", "10 pushups"],
-    };
+    return ["show today's summary", "show trend for pushups", "10 pushups"];
   }
 
   if (set.has("delete_set")) {
-    return {
-      type: "suggestions",
-      prompts: ["show history overview", "show today's summary"],
-    };
+    return ["show history overview", "show today's summary"];
   }
 
   if (
@@ -126,36 +123,27 @@ export function buildEndOfTurnSuggestions(
     set.has("update_exercise_muscle_groups") ||
     set.has("get_exercise_library")
   ) {
-    return {
-      type: "suggestions",
-      prompts: [
-        "show exercise library",
-        "show today's summary",
-        "show history overview",
-      ],
-    };
+    return [
+      "show exercise library",
+      "show today's summary",
+      "show history overview",
+    ];
   }
 
   if (set.has("get_analytics_overview") || set.has("get_report_history")) {
-    return {
-      type: "suggestions",
-      prompts: [
-        "show today's summary",
-        "show history overview",
-        "show exercise library",
-      ],
-    };
+    return [
+      "show today's summary",
+      "show history overview",
+      "show exercise library",
+    ];
   }
 
   if (set.has("get_history_overview")) {
-    return {
-      type: "suggestions",
-      prompts: [
-        "show today's summary",
-        "show analytics overview",
-        "show settings overview",
-      ],
-    };
+    return [
+      "show today's summary",
+      "show analytics overview",
+      "show settings overview",
+    ];
   }
 
   if (
@@ -164,35 +152,24 @@ export function buildEndOfTurnSuggestions(
     set.has("set_weight_unit") ||
     set.has("set_sound")
   ) {
-    return {
-      type: "suggestions",
-      prompts: [
-        "show today's summary",
-        "what should I work on today?",
-        "show analytics overview",
-      ],
-    };
+    return [
+      "show today's summary",
+      "what should I work on today?",
+      "show analytics overview",
+    ];
   }
 
   if (set.has("show_workspace")) {
-    return {
-      type: "suggestions",
-      prompts: [
-        "show today's summary",
-        "10 pushups",
-        "what should I work on today?",
-      ],
-    };
+    return [
+      "show today's summary",
+      "10 pushups",
+      "what should I work on today?",
+    ];
   }
 
-  // No tools ran — no suggestions (model just chatted)
   if (toolsUsed.length === 0) return null;
 
-  // Fallback for unknown tools
-  return {
-    type: "suggestions",
-    prompts: ["show today's summary", "what should I work on today?"],
-  };
+  return ["show today's summary", "what should I work on today?"];
 }
 
 function formatAbortMessage(reason: unknown): string {
@@ -243,7 +220,6 @@ export async function runPlannerTurn({
   conversationSummary,
   preferences,
   ctx,
-  emitEvent,
   signal,
 }: {
   runtime: CoachRuntime;
@@ -255,17 +231,14 @@ export async function runPlannerTurn({
     timezoneOffsetMinutes?: number;
   };
   ctx: CoachToolContext;
-  emitEvent?: (event: CoachStreamEvent) => void;
   signal?: AbortSignal;
 }): Promise<PlannerRunResult> {
   const toolsUsed: string[] = [];
-  const blocks: CoachBlock[] = [];
 
   if (signal?.aborted) {
     return {
       kind: "error",
       assistantText: "",
-      blocks,
       toolsUsed,
       errorMessage: formatAbortMessage(signal.reason),
       hitToolLimit: false,
@@ -279,16 +252,7 @@ export async function runPlannerTurn({
     conversationSummary,
   });
 
-  const tools = createCoachTools(ctx, {
-    onBlocks: (toolName, toolBlocks) => {
-      blocks.push(...toolBlocks);
-      emitEvent?.({
-        type: "tool_result",
-        toolName,
-        blocks: toolBlocks,
-      });
-    },
-  });
+  const tools = createCoachTools(ctx);
 
   try {
     const modelAbortSignal = createModelAbortSignal(signal);
@@ -306,7 +270,6 @@ export async function runPlannerTurn({
             seenToolCallIds.add(chunk.toolCallId);
           }
           toolsUsed.push(chunk.toolName);
-          emitEvent?.({ type: "tool_start", toolName: chunk.toolName });
         }
       },
       abortSignal: modelAbortSignal,
@@ -328,25 +291,9 @@ export async function runPlannerTurn({
         ? "I reached the step limit. Ask a follow-up and I'll continue."
         : "");
 
-    if (hitToolLimit) {
-      blocks.push({
-        type: "status",
-        tone: "info",
-        title: "Step limit reached",
-        description:
-          "I stopped early to avoid an infinite tool loop. Ask a follow-up and I will continue.",
-      });
-    }
-
-    const endSuggestions = buildEndOfTurnSuggestions(toolsUsed);
-    if (endSuggestions) {
-      blocks.push(endSuggestions);
-    }
-
     return {
       kind: "ok",
       assistantText,
-      blocks,
       toolsUsed,
       hitToolLimit,
       responseMessages: response.messages,
@@ -357,7 +304,6 @@ export async function runPlannerTurn({
     return {
       kind: "error",
       assistantText: "",
-      blocks,
       toolsUsed,
       errorMessage: message,
       hitToolLimit: false,

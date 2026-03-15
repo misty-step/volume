@@ -1,8 +1,6 @@
 import type OpenAI from "openai";
 import {
   CoachTurnResponseSchema,
-  DEFAULT_COACH_SUGGESTIONS,
-  type CoachBlock,
   type CoachTurnResponse,
 } from "@/lib/coach/schema";
 import { sanitizeError } from "@/lib/coach/sanitize-error";
@@ -19,33 +17,13 @@ export function normalizeAssistantText(
   return stripped.trim();
 }
 
-export function toolErrorBlocks(message: string): CoachBlock[] {
+export function toolErrorBlocks(message: string) {
   return [
     {
-      type: "status",
-      tone: "error",
+      type: "status" as const,
+      tone: "error" as const,
       title: "Tool execution failed",
       description: sanitizeError(message),
-    },
-    {
-      type: "suggestions",
-      prompts: DEFAULT_COACH_SUGGESTIONS,
-    },
-  ];
-}
-
-function runtimeUnavailableBlocks(): CoachBlock[] {
-  return [
-    {
-      type: "status",
-      tone: "error",
-      title: "Coach is unavailable",
-      description:
-        "The AI runtime is unavailable right now. Please try again shortly.",
-    },
-    {
-      type: "suggestions",
-      prompts: DEFAULT_COACH_SUGGESTIONS,
     },
   ];
 }
@@ -53,7 +31,6 @@ function runtimeUnavailableBlocks(): CoachBlock[] {
 export function buildRuntimeUnavailableResponse(): CoachTurnResponse {
   return buildCoachTurnResponse({
     assistantText: "I can't process that request right now.",
-    blocks: runtimeUnavailableBlocks(),
     toolsUsed: [],
     model: "runtime-unavailable",
     fallbackUsed: false,
@@ -69,8 +46,7 @@ export function buildPlannerFailedResponse({
   errorMessage: string;
 }): CoachTurnResponse {
   return buildCoachTurnResponse({
-    assistantText: "I hit an error while planning this turn.",
-    blocks: toolErrorBlocks(errorMessage),
+    assistantText: `I hit an error while planning this turn. ${sanitizeError(errorMessage)}`,
     toolsUsed: [],
     model: `${modelId} (planner_failed)`,
     fallbackUsed: false,
@@ -81,20 +57,16 @@ export function buildPlannerFailedResponse({
 export function buildPlannerPartialFailureResponse({
   modelId,
   errorMessage,
-  blocks,
   toolsUsed,
   responseMessages,
 }: {
   modelId: string;
   errorMessage: string;
-  blocks: CoachBlock[];
   toolsUsed: string[];
   responseMessages?: unknown[];
 }): CoachTurnResponse {
   return buildCoachTurnResponse({
-    assistantText:
-      "I hit an error while finishing that. Here's what I have so far.",
-    blocks: [...toolErrorBlocks(errorMessage), ...blocks],
+    assistantText: `I hit an error while finishing that. ${sanitizeError(errorMessage)}`,
     toolsUsed,
     model: `${modelId} (planner_failed_partial)`,
     fallbackUsed: false,
@@ -104,28 +76,19 @@ export function buildPlannerPartialFailureResponse({
 
 export function buildCoachTurnResponse({
   assistantText,
-  blocks,
   toolsUsed,
   model,
   fallbackUsed,
   responseMessages,
 }: {
   assistantText: string;
-  blocks: CoachBlock[];
   toolsUsed: string[];
   model: string;
   fallbackUsed: boolean;
   responseMessages?: unknown[];
 }): CoachTurnResponse {
-  const finalAssistantText = assistantText.trim();
-  const finalBlocks =
-    blocks.length > 0
-      ? blocks
-      : [{ type: "suggestions", prompts: DEFAULT_COACH_SUGGESTIONS }];
-
   return CoachTurnResponseSchema.parse({
-    assistantText: finalAssistantText,
-    blocks: finalBlocks,
+    assistantText: assistantText.trim(),
     responseMessages,
     trace: {
       toolsUsed,

@@ -1,22 +1,29 @@
 import { describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen } from "../../test/utils";
-import { CoachBlockRenderer } from "./CoachBlockRenderer";
+import {
+  StatusBlock,
+  UndoBlock,
+  BillingPanelBlock,
+  QuickLogFormBlock,
+} from "@/components/ui/coach-block";
 
-describe("CoachBlockRenderer", () => {
+/**
+ * These tests verify visual rendering of coach block UI components is
+ * unchanged after the json-render migration. The components themselves
+ * are unchanged — only the orchestration layer that calls them changed
+ * (from a switch statement to defineRegistry).
+ */
+describe("Coach block UI components", () => {
   it("renders undo blocks and calls onUndo with action and turn ids", async () => {
     const onUndo = vi.fn();
 
     render(
-      <CoachBlockRenderer
-        block={{
-          type: "undo",
-          actionId: "action_123",
-          turnId: "turn_456",
-          title: "Undo this log",
-          description: "Revert the logged set.",
-        }}
-        onPrompt={() => {}}
+      <UndoBlock
+        title="Undo this log"
+        description="Revert the logged set."
+        actionId="action_123"
+        turnId="turn_456"
         onUndo={onUndo}
       />
     );
@@ -30,7 +37,7 @@ describe("CoachBlockRenderer", () => {
     const onClientAction = vi.fn();
 
     render(
-      <CoachBlockRenderer
+      <BillingPanelBlock
         block={{
           type: "billing_panel",
           status: "trial",
@@ -38,7 +45,6 @@ describe("CoachBlockRenderer", () => {
           ctaLabel: "Upgrade",
           ctaAction: "open_checkout",
         }}
-        onPrompt={() => {}}
         onClientAction={onClientAction}
       />
     );
@@ -51,7 +57,7 @@ describe("CoachBlockRenderer", () => {
     const onPrompt = vi.fn();
 
     render(
-      <CoachBlockRenderer
+      <QuickLogFormBlock
         block={{
           type: "quick_log_form",
           title: "Quick log",

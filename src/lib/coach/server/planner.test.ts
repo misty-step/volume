@@ -2,7 +2,6 @@
 
 import { MockLanguageModelV3, simulateReadableStream } from "ai/test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CoachBlock } from "@/lib/coach/schema";
 
 // ---------------------------------------------------------------------------
 // Mock tool runners so planner tests use real createCoachTools wrapping.
@@ -23,10 +22,6 @@ vi.mock("@/lib/coach/tools/tool-today-summary", () => ({
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-const SUCCESS_BLOCKS: CoachBlock[] = [
-  { type: "status", tone: "success", title: "Logged", description: "ok" },
-];
 
 function makeRuntime(
   streamFn:
@@ -133,19 +128,20 @@ const DEFAULT_ARGS = {
 // ---------------------------------------------------------------------------
 
 describe("buildEndOfTurnSuggestions", () => {
-  it("returns suggestions for log_set", async () => {
+  it("returns prompt strings for log_set", async () => {
     const { buildEndOfTurnSuggestions } = await import("./planner");
     const result = buildEndOfTurnSuggestions(["log_set"]);
     expect(result).not.toBeNull();
-    expect(result!.type).toBe("suggestions");
-    expect((result as any).prompts.length).toBeGreaterThan(0);
+    expect(Array.isArray(result)).toBe(true);
+    expect(result!.length).toBeGreaterThan(0);
+    expect(typeof result![0]).toBe("string");
   });
 
-  it("returns suggestions for get_exercise_snapshot", async () => {
+  it("returns prompt strings for get_exercise_snapshot", async () => {
     const { buildEndOfTurnSuggestions } = await import("./planner");
     const result = buildEndOfTurnSuggestions(["get_exercise_snapshot"]);
     expect(result).not.toBeNull();
-    expect(result!.type).toBe("suggestions");
+    expect(Array.isArray(result)).toBe(true);
   });
 
   it("returns null when no tools ran", async () => {
@@ -158,7 +154,7 @@ describe("buildEndOfTurnSuggestions", () => {
     const { buildEndOfTurnSuggestions } = await import("./planner");
     const result = buildEndOfTurnSuggestions(["some_future_tool"]);
     expect(result).not.toBeNull();
-    expect(result!.type).toBe("suggestions");
+    expect(Array.isArray(result)).toBe(true);
   });
 });
 
@@ -200,7 +196,9 @@ describe("runPlannerTurn", () => {
 
     mockLogSetExecute.mockResolvedValue({
       summary: "logged",
-      blocks: SUCCESS_BLOCKS,
+      blocks: [
+        { type: "status", tone: "success", title: "Logged", description: "ok" },
+      ],
       outputForModel: { status: "ok" },
     });
 
@@ -224,21 +222,18 @@ describe("runPlannerTurn", () => {
     expect(result.kind).toBe("ok");
     expect(result.assistantText).toBe("Done.");
     expect(result.toolsUsed).toEqual(["log_set"]);
-    expect(result.blocks[0]).toEqual(SUCCESS_BLOCKS[0]);
-    // Planner appends end-of-turn suggestions
-    expect(result.blocks[result.blocks.length - 1]?.type).toBe("suggestions");
     expect(mockLogSetExecute).toHaveBeenCalledTimes(1);
     // responseMessages captures the full tool interaction for multi-turn context
     expect(Array.isArray(result.responseMessages)).toBe(true);
     expect(result.responseMessages.length).toBeGreaterThan(0);
   });
 
-  it("emits tool_start and tool_result events", async () => {
+  it("tracks toolsUsed without emitting SSE events", async () => {
     const { runPlannerTurn } = await import("./planner");
 
     mockGetTodaySummaryExecute.mockResolvedValue({
       summary: "summary",
-      blocks: SUCCESS_BLOCKS,
+      blocks: [],
       outputForModel: { status: "ok" },
     });
 
@@ -254,22 +249,14 @@ describe("runPlannerTurn", () => {
       return { stream: textStream("Summary."), rawCall: {} };
     });
 
-    const events: unknown[] = [];
     const result = await runPlannerTurn({
       runtime,
       ...DEFAULT_ARGS,
       history: [{ role: "user", content: "show today's summary" }],
-      emitEvent: (event) => events.push(event),
     });
 
     expect(result.kind).toBe("ok");
-    const types = (events as Array<{ type: string }>).map((e) => e.type);
-    expect(types).toContain("tool_start");
-    expect(types).toContain("tool_result");
-    const toolStart = (
-      events as Array<{ type: string; toolName?: string }>
-    ).find((e) => e.type === "tool_start");
-    expect(toolStart?.toolName).toBe("get_today_summary");
+    expect(result.toolsUsed).toContain("get_today_summary");
   });
 
   it("deduplicates repeated tool-call chunks by toolCallId", async () => {
@@ -277,7 +264,7 @@ describe("runPlannerTurn", () => {
 
     mockGetTodaySummaryExecute.mockResolvedValue({
       summary: "summary",
-      blocks: SUCCESS_BLOCKS,
+      blocks: [],
       outputForModel: { status: "ok" },
     });
 
@@ -293,61 +280,14 @@ describe("runPlannerTurn", () => {
       return { stream: textStream("Summary."), rawCall: {} };
     });
 
-    const events: unknown[] = [];
     const result = await runPlannerTurn({
       runtime,
       ...DEFAULT_ARGS,
       history: [{ role: "user", content: "show today's summary" }],
-      emitEvent: (event) => events.push(event),
     });
 
     expect(result.kind).toBe("ok");
     expect(result.toolsUsed).toEqual(["get_today_summary"]);
-    const toolStartEvents = (
-      events as Array<{ type: string; toolName?: string }>
-    ).filter((event) => event.type === "tool_start");
-    expect(toolStartEvents).toHaveLength(1);
-    expect(toolStartEvents[0]?.toolName).toBe("get_today_summary");
-  });
-
-  it("includes blocks from tool results in the final response", async () => {
-    const { runPlannerTurn } = await import("./planner");
-
-    const blocks: CoachBlock[] = [
-      {
-        type: "metrics",
-        title: "Today",
-        metrics: [{ label: "Sets", value: "5" }],
-      },
-    ];
-    mockGetTodaySummaryExecute.mockResolvedValue({
-      summary: "summary",
-      blocks,
-      outputForModel: { status: "ok" },
-    });
-
-    let callCount = 0;
-    const runtime = makeRuntime(async () => {
-      callCount++;
-      if (callCount === 1) {
-        return {
-          stream: toolCallStream("get_today_summary", {}),
-          rawCall: {},
-        };
-      }
-      return { stream: textStream("Here's your summary."), rawCall: {} };
-    });
-
-    const result = await runPlannerTurn({
-      runtime,
-      ...DEFAULT_ARGS,
-      history: [{ role: "user", content: "show today's summary" }],
-    });
-
-    expect(result.kind).toBe("ok");
-    // Tool blocks are first, planner appends suggestions at end
-    expect(result.blocks.slice(0, blocks.length)).toEqual(blocks);
-    expect(result.blocks[result.blocks.length - 1]?.type).toBe("suggestions");
   });
 
   it("returns an error result when the model stream throws", async () => {
@@ -389,7 +329,7 @@ describe("runPlannerTurn", () => {
     expect(result.responseMessages).toEqual([]);
   });
 
-  it("emits error block when a tool throws", async () => {
+  it("records tool name in toolsUsed when a tool throws", async () => {
     const { runPlannerTurn } = await import("./planner");
 
     mockLogSetExecute.mockRejectedValue(new Error("tool failed"));
@@ -412,12 +352,7 @@ describe("runPlannerTurn", () => {
     const result = await runPlannerTurn({ runtime, ...DEFAULT_ARGS });
 
     expect(result.kind).toBe("ok");
-    expect(
-      result.blocks.some(
-        (b) =>
-          b.type === "status" && b.tone === "error" && b.title === "Tool failed"
-      )
-    ).toBe(true);
+    expect(result.toolsUsed).toContain("log_set");
   });
 
   it("stops after MAX_TOOL_ROUNDS and reports step limit", async () => {
@@ -429,7 +364,7 @@ describe("runPlannerTurn", () => {
       outputForModel: { status: "ok" },
     });
 
-    // Model always returns a tool call → forces the loop
+    // Model always returns a tool call -> forces the loop
     const runtime = makeRuntime(async () => ({
       stream: toolCallStream("get_today_summary", {}),
       rawCall: {},
@@ -446,11 +381,6 @@ describe("runPlannerTurn", () => {
     expect(result.assistantText).toBe(
       "I reached the step limit. Ask a follow-up and I'll continue."
     );
-    expect(
-      result.blocks.some(
-        (b) => b.type === "status" && b.title === "Step limit reached"
-      )
-    ).toBe(true);
   });
 
   it("does not report step limit when it exits before MAX_TOOL_ROUNDS", async () => {
@@ -482,10 +412,5 @@ describe("runPlannerTurn", () => {
 
     expect(result.kind).toBe("ok");
     expect(result.hitToolLimit).toBe(false);
-    expect(
-      result.blocks.some(
-        (b) => b.type === "status" && b.title === "Step limit reached"
-      )
-    ).toBe(false);
   });
 });

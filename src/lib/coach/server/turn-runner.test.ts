@@ -9,7 +9,6 @@ vi.mock("./planner", () => ({
 describe("runCoachTurn", () => {
   it("returns the runtime-unavailable response without invoking the planner", async () => {
     runPlannerTurnMock.mockReset();
-    const events: unknown[] = [];
 
     const { runCoachTurn } = await import("./turn-runner");
 
@@ -23,27 +22,23 @@ describe("runCoachTurn", () => {
       },
       ctx: {} as never,
       requestSignal: new AbortController().signal,
-      emitEvent: (event) => events.push(event),
       timeoutMs: 25,
     });
 
     expect(response).toEqual(buildRuntimeUnavailableResponse());
-    expect(events).toEqual([{ type: "start", model: "runtime-unavailable" }]);
     expect(runPlannerTurnMock).not.toHaveBeenCalled();
   });
 
-  it("shares planner failure orchestration across transports", async () => {
+  it("returns planner failure response for error with no tools used", async () => {
     runPlannerTurnMock.mockReset();
     runPlannerTurnMock.mockResolvedValue({
       kind: "error",
       assistantText: "",
-      blocks: [],
       toolsUsed: [],
       errorMessage: "planner exploded",
       hitToolLimit: false,
       responseMessages: [],
     });
-    const events: unknown[] = [];
 
     const { runCoachTurn } = await import("./turn-runner");
 
@@ -57,35 +52,22 @@ describe("runCoachTurn", () => {
       },
       ctx: {} as never,
       requestSignal: new AbortController().signal,
-      emitEvent: (event) => events.push(event),
       timeoutMs: 25,
     });
 
-    expect(events).toEqual([
-      { type: "start", model: "mock-model-id" },
-      { type: "error", message: "planner exploded" },
-    ]);
     expect(response.trace.model).toBe("mock-model-id (planner_failed)");
     expect(response.trace.toolsUsed).toEqual([]);
   });
 
-  it("returns the successful planner response unchanged", async () => {
+  it("returns the successful planner response", async () => {
     runPlannerTurnMock.mockReset();
     runPlannerTurnMock.mockResolvedValue({
       kind: "ok",
       assistantText: "Summary ready.",
-      blocks: [
-        {
-          type: "metrics",
-          title: "Today",
-          metrics: [{ label: "Sets", value: "3" }],
-        },
-      ],
       toolsUsed: ["get_today_summary"],
       hitToolLimit: false,
       responseMessages: [{ role: "assistant", content: "Summary ready." }],
     });
-    const events: unknown[] = [];
 
     const { runCoachTurn } = await import("./turn-runner");
 
@@ -99,24 +81,15 @@ describe("runCoachTurn", () => {
       },
       ctx: {} as never,
       requestSignal: new AbortController().signal,
-      emitEvent: (event) => events.push(event),
       timeoutMs: 25,
     });
 
-    expect(events).toEqual([{ type: "start", model: "mock-model-id" }]);
     expect(response.assistantText).toBe("Summary ready.");
     expect(response.trace.model).toBe("mock-model-id");
     expect(response.trace.fallbackUsed).toBe(false);
     expect(response.trace.toolsUsed).toEqual(["get_today_summary"]);
     expect(response.responseMessages).toEqual([
       { role: "assistant", content: "Summary ready." },
-    ]);
-    expect(response.blocks).toEqual([
-      {
-        type: "metrics",
-        title: "Today",
-        metrics: [{ label: "Sets", value: "3" }],
-      },
     ]);
   });
 
@@ -125,7 +98,6 @@ describe("runCoachTurn", () => {
     runPlannerTurnMock.mockResolvedValue({
       kind: "ok",
       assistantText: "Summary ready.",
-      blocks: [],
       toolsUsed: [],
       hitToolLimit: false,
       responseMessages: [],
@@ -164,14 +136,12 @@ describe("runCoachTurn", () => {
       return {
         kind: "error",
         assistantText: "",
-        blocks: [],
         toolsUsed: [],
         errorMessage: "planner exploded",
         hitToolLimit: false,
         responseMessages: [],
       };
     });
-    const events: unknown[] = [];
 
     const { runCoachTurn } = await import("./turn-runner");
 
@@ -185,14 +155,9 @@ describe("runCoachTurn", () => {
       },
       ctx: {} as never,
       requestSignal: requestController.signal,
-      emitEvent: (event) => events.push(event),
       timeoutMs: 25,
     });
 
-    expect(events).toEqual([
-      { type: "start", model: "mock-model-id" },
-      { type: "error", message: "planner exploded" },
-    ]);
     expect(response.trace.model).toBe("mock-model-id (planner_failed)");
     expect(response.trace.toolsUsed).toEqual([]);
   });
@@ -208,7 +173,6 @@ describe("runCoachTurn", () => {
         return {
           kind: "error",
           assistantText: "",
-          blocks: [],
           toolsUsed: [],
           errorMessage: "Planner aborted: client_aborted",
           hitToolLimit: false,
@@ -216,7 +180,6 @@ describe("runCoachTurn", () => {
         };
       }
     );
-    const events: unknown[] = [];
 
     const { runCoachTurn } = await import("./turn-runner");
 
@@ -230,14 +193,9 @@ describe("runCoachTurn", () => {
       },
       ctx: {} as never,
       requestSignal: requestController.signal,
-      emitEvent: (event) => events.push(event),
       timeoutMs: 25,
     });
 
-    expect(events).toEqual([
-      { type: "start", model: "mock-model-id" },
-      { type: "error", message: "Planner aborted: client_aborted" },
-    ]);
     expect(response.trace.model).toBe("mock-model-id (planner_failed)");
     expect(response.trace.toolsUsed).toEqual([]);
   });
@@ -247,19 +205,11 @@ describe("runCoachTurn", () => {
     runPlannerTurnMock.mockResolvedValue({
       kind: "error",
       assistantText: "",
-      blocks: [
-        {
-          type: "metrics",
-          title: "Today",
-          metrics: [{ label: "Sets", value: "1" }],
-        },
-      ],
       toolsUsed: ["get_today_summary"],
       errorMessage: "planner exploded",
       hitToolLimit: false,
       responseMessages: [{ role: "assistant", content: "partial" }],
     });
-    const events: unknown[] = [];
 
     const { runCoachTurn } = await import("./turn-runner");
 
@@ -273,27 +223,17 @@ describe("runCoachTurn", () => {
       },
       ctx: {} as never,
       requestSignal: new AbortController().signal,
-      emitEvent: (event) => events.push(event),
       timeoutMs: 25,
     });
 
-    expect(events).toEqual([
-      { type: "start", model: "mock-model-id" },
-      { type: "error", message: "planner exploded" },
-    ]);
-    expect(response.assistantText).toBe(
-      "I hit an error while finishing that. Here's what I have so far."
+    expect(response.assistantText).toContain(
+      "I hit an error while finishing that."
     );
     expect(response.trace.model).toBe("mock-model-id (planner_failed_partial)");
     expect(response.trace.toolsUsed).toEqual(["get_today_summary"]);
     expect(response.responseMessages).toEqual([
       { role: "assistant", content: "partial" },
     ]);
-    expect(response.blocks.at(-1)).toEqual({
-      type: "metrics",
-      title: "Today",
-      metrics: [{ label: "Sets", value: "1" }],
-    });
   });
 
   it("uses the default timeout to abort a stalled planner turn", async () => {
@@ -307,7 +247,6 @@ describe("runCoachTurn", () => {
               resolve({
                 kind: "error",
                 assistantText: "",
-                blocks: [],
                 toolsUsed: [],
                 errorMessage:
                   signal.reason instanceof Error
@@ -321,7 +260,6 @@ describe("runCoachTurn", () => {
         })
     );
     vi.useFakeTimers();
-    const events: unknown[] = [];
 
     const { COACH_TURN_TIMEOUT_MS, runCoachTurn } =
       await import("./turn-runner");
@@ -336,24 +274,13 @@ describe("runCoachTurn", () => {
       },
       ctx: {} as never,
       requestSignal: new AbortController().signal,
-      emitEvent: (event) => events.push(event),
     });
 
     await vi.advanceTimersByTimeAsync(COACH_TURN_TIMEOUT_MS);
     const response = await responsePromise;
     vi.useRealTimers();
 
-    expect(events).toEqual([
-      { type: "start", model: "mock-model-id" },
-      { type: "error", message: "Turn timed out" },
-    ]);
     expect(response.trace.model).toBe("mock-model-id (planner_failed)");
     expect(response.trace.toolsUsed).toEqual([]);
-    expect(response.blocks[0]).toEqual({
-      type: "status",
-      tone: "error",
-      title: "Tool execution failed",
-      description: "Turn timed out",
-    });
   });
 });

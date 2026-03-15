@@ -3,26 +3,26 @@ import { reportError } from "@/lib/analytics";
 import { ConvexHttpClient } from "convex/browser";
 import { auth } from "@clerk/nextjs/server";
 import { api } from "@/../convex/_generated/api";
-import {
-  CoachTurnRequestSchema,
-  type CoachTurnResponse,
-  type CoachStreamEvent,
-} from "@/lib/coach/schema";
+import { CoachTurnRequestSchema } from "@/lib/coach/schema";
 import { getCoachRuntime } from "@/lib/coach/server/runtime";
+import { buildPlannerSystemPrompt } from "@/lib/coach/server/planner";
+import { createCoachTools } from "@/lib/coach/server/coach-tools";
+import { buildRuntimeUnavailableResponse } from "@/lib/coach/server/blocks";
 import {
-  encodeSse,
-  encodeSseComment,
-  SSE_HEADERS,
-  SSE_PADDING_BYTES,
-  wantsEventStream,
-} from "@/lib/coach/server/sse";
-import { runCoachTurn } from "@/lib/coach/server/turn-runner";
-import { generateText, type ModelMessage } from "ai";
+  streamText,
+  generateText,
+  stepCountIs,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  type ModelMessage,
+} from "ai";
+import { pipeJsonRender } from "@json-render/core";
 import type { Exercise } from "@/types/domain";
 import { hasValidE2ETestSession } from "@/lib/e2e/test-session";
 
 const CONTEXT_SUMMARY_TRIGGER_MESSAGES = 40;
 const CONTEXT_RECENT_MESSAGE_WINDOW = 20;
+const MAX_TOOL_ROUNDS = 5;
 
 type StoredCoachMessage = {
   _id: string;
@@ -50,34 +50,6 @@ function deserializeStoredMessage(content: string): ModelMessage | null {
 
 function serializeUserMessage(text: string): string {
   return JSON.stringify({ role: "user", content: text });
-}
-
-function buildSyntheticAssistantMessage(
-  response: CoachTurnResponse
-): ModelMessage | null {
-  if (!response.assistantText.trim() && response.blocks.length === 0) {
-    return null;
-  }
-
-  return {
-    role: "assistant",
-    content: response.assistantText.trim()
-      ? [{ type: "text", text: response.assistantText }]
-      : [],
-  };
-}
-
-function getPersistedResponseMessages(
-  response: CoachTurnResponse
-): ModelMessage[] {
-  const messages =
-    (response.responseMessages as ModelMessage[] | undefined) ?? [];
-  if (messages.length > 0) {
-    return messages;
-  }
-
-  const syntheticAssistant = buildSyntheticAssistantMessage(response);
-  return syntheticAssistant ? [syntheticAssistant] : [];
 }
 
 function buildSummaryPrompt({
@@ -142,7 +114,6 @@ async function buildCoachHistory({
   );
   let conversationSummary = contextState.summary ?? undefined;
 
-  // Always apply the recent message window — never send unbounded history to the LLM
   let recentMessages = unsummarizedMessages.slice(
     -CONTEXT_RECENT_MESSAGE_WINDOW
   );
@@ -186,7 +157,6 @@ async function buildCoachHistory({
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
         reportError(err, { route: "coach", operation: "context_summary" });
-        // Fall back to unsummarized recent window
         recentMessages = unsummarizedMessages.slice(
           -CONTEXT_RECENT_MESSAGE_WINDOW
         );
@@ -210,13 +180,13 @@ async function persistCoachTurn({
   sessionId,
   latestUserText,
   turnId,
-  response,
+  responseMessages,
 }: {
   convex: ConvexHttpClient;
   sessionId?: string;
   latestUserText: string;
   turnId: string;
-  response: CoachTurnResponse;
+  responseMessages: ModelMessage[];
 }) {
   if (!sessionId) {
     return;
@@ -229,24 +199,11 @@ async function persistCoachTurn({
     turnId,
   });
 
-  const persistedResponseMessages = getPersistedResponseMessages(response);
-  const firstAssistantIndex = persistedResponseMessages.findIndex(
-    (m) => m.role === "assistant"
-  );
-
-  // Persist response messages sequentially to preserve ordering via server timestamps
-  for (let index = 0; index < persistedResponseMessages.length; index++) {
-    const message = persistedResponseMessages[index]!;
-    const blocks =
-      index === firstAssistantIndex && response.blocks.length > 0
-        ? JSON.stringify(response.blocks)
-        : undefined;
-
+  for (const message of responseMessages) {
     await convex.mutation(api.coachSessions.addMessage, {
       sessionId: sessionId as never,
       role: message.role === "tool" ? "tool" : "assistant",
       content: JSON.stringify(message),
-      blocks,
       turnId,
     });
   }
@@ -301,7 +258,6 @@ export async function POST(request: Request) {
     );
   }
 
-  // User messages always have string content from our client.
   const latestUserText =
     typeof latestUserMsg.content === "string" ? latestUserMsg.content : "";
 
@@ -355,38 +311,36 @@ export async function POST(request: Request) {
   const turnId = crypto.randomUUID();
 
   const runtime = getCoachRuntime();
+  if (!runtime) {
+    return NextResponse.json(buildRuntimeUnavailableResponse());
+  }
 
-  const resolveExerciseName = runtime
-    ? async (
-        name: string,
-        candidates: Exercise[]
-      ): Promise<Exercise | null> => {
-        const safeName = name.replace(/[\r\n\t]/g, " ").slice(0, 200);
-        const list = candidates
-          .map((e) => `"${e.name.replace(/[\r\n\t]/g, " ")}"`)
-          .join(", ");
-        const { text } = await generateText({
-          model: runtime.classificationModel,
-          messages: [
-            {
-              role: "user",
-              content: `User wants: "${safeName}"\nExisting exercises: ${list}\nReply with ONLY the exact exercise name if ONE clearly matches (same movement, different spelling/abbreviation is fine). Reply "none" if no match or if multiple exercises match equally well (ambiguous).`,
-            },
-          ],
-        });
-        const picked = text.trim().replace(/^["']|["']$/g, "");
-        if (picked.toLowerCase() === "none") return null;
-        return candidates.find((e) => e.name === picked) ?? null;
-      }
-    : undefined;
+  const resolveExerciseName = async (
+    name: string,
+    candidates: Exercise[]
+  ): Promise<Exercise | null> => {
+    const safeName = name.replace(/[\r\n\t]/g, " ").slice(0, 200);
+    const list = candidates
+      .map((e) => `"${e.name.replace(/[\r\n\t]/g, " ")}"`)
+      .join(", ");
+    const { text } = await generateText({
+      model: runtime.classificationModel,
+      messages: [
+        {
+          role: "user",
+          content: `User wants: "${safeName}"\nExisting exercises: ${list}\nReply with ONLY the exact exercise name if ONE clearly matches (same movement, different spelling/abbreviation is fine). Reply "none" if no match or if multiple exercises match equally well (ambiguous).`,
+        },
+      ],
+    });
+    const picked = text.trim().replace(/^["']|["']$/g, "");
+    if (picked.toLowerCase() === "none") return null;
+    return candidates.find((e) => e.name === picked) ?? null;
+  };
 
   const context = {
     convex,
     defaultUnit: parsed.data.preferences.unit,
-    timezoneOffsetMinutes:
-      // If the client didn't provide a timezone offset, default to UTC instead of
-      // the server's timezone (which would be wrong for most users).
-      parsed.data.preferences.timezoneOffsetMinutes ?? 0,
+    timezoneOffsetMinutes: parsed.data.preferences.timezoneOffsetMinutes ?? 0,
     turnId,
     userInput: latestUserText,
     resolveExerciseName,
@@ -404,101 +358,44 @@ export async function POST(request: Request) {
     latestUserMessage,
   });
 
-  const streamRequested = wantsEventStream(request);
-
-  if (streamRequested) {
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream<Uint8Array>({
-      async start(controller) {
-        let closed = false;
-        const send = (event: CoachStreamEvent) => {
-          if (closed) return false;
-          try {
-            controller.enqueue(encoder.encode(encodeSse(event)));
-            if (event.type === "start") {
-              controller.enqueue(
-                encoder.encode(encodeSseComment(" ".repeat(SSE_PADDING_BYTES)))
-              );
-            }
-            return true;
-          } catch {
-            closed = true;
-            return false;
-          }
-        };
-
-        const close = () => {
-          if (closed) return;
-          closed = true;
-          try {
-            controller.close();
-          } catch {
-            // ignore close races
-          }
-        };
-
-        try {
-          const response = await runCoachTurn({
-            runtime,
-            history,
-            conversationSummary,
-            preferences: parsed.data.preferences,
-            ctx: context,
-            requestSignal: request.signal,
-            emitEvent: (event) => {
-              if (!send(event) || request.signal.aborted) {
-                close();
-              }
-            },
-          });
-
-          send({ type: "final", response });
-          try {
-            await persistCoachTurn({
-              convex,
-              sessionId: parsed.data.sessionId,
-              latestUserText,
-              turnId,
-              response,
-            });
-          } catch (error) {
-            const err =
-              error instanceof Error ? error : new Error(String(error));
-            reportError(err, {
-              route: "coach",
-              operation: "persist_turn_sse",
-            });
-          }
-        } finally {
-          close();
-        }
-      },
-    });
-
-    return new Response(stream, { headers: SSE_HEADERS });
-  }
-
-  const response = await runCoachTurn({
-    runtime,
-    history,
-    conversationSummary,
+  const systemPrompt = buildPlannerSystemPrompt({
     preferences: parsed.data.preferences,
-    ctx: context,
-    requestSignal: request.signal,
+    conversationSummary,
   });
 
-  try {
-    await persistCoachTurn({
-      convex,
-      sessionId: parsed.data.sessionId,
-      latestUserText,
-      turnId,
-      response,
-    });
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error));
-    reportError(err, { route: "coach", operation: "persist_turn_json" });
-  }
+  const tools = createCoachTools(context);
 
-  return NextResponse.json(response);
+  // Stream the model response through json-render's JSONL transform.
+  // pipeJsonRender separates JSONL patches (→ data-spec parts) from text.
+  const result = streamText({
+    model: runtime.model,
+    system: systemPrompt,
+    messages: history,
+    tools,
+    stopWhen: stepCountIs(MAX_TOOL_ROUNDS),
+    abortSignal: request.signal,
+  });
+
+  const stream = createUIMessageStream({
+    execute: async ({ writer }) => {
+      writer.merge(pipeJsonRender(result.toUIMessageStream()));
+
+      // After the stream completes, persist the turn.
+      try {
+        const response = await result.response;
+        await persistCoachTurn({
+          convex,
+          sessionId: parsed.data.sessionId,
+          latestUserText,
+          turnId,
+          responseMessages: response.messages as ModelMessage[],
+        });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        reportError(err, { route: "coach", operation: "persist_turn" });
+      }
+    },
+  });
+
+  return createUIMessageStreamResponse({ stream });
 }

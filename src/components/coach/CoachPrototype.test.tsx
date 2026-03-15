@@ -4,6 +4,7 @@ import { act } from "@testing-library/react";
 import { render, screen, waitFor } from "@/test/utils";
 import { CoachPrototype } from "./CoachPrototype";
 import { useCoachChat } from "@/components/coach/useCoachChat";
+import type { UIMessage } from "ai";
 
 vi.mock("@/components/coach/useCoachChat", () => ({
   useCoachChat: vi.fn(),
@@ -15,6 +16,19 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
+function makeUIMessage(
+  overrides: Partial<UIMessage> & { role: UIMessage["role"]; text?: string }
+): UIMessage {
+  const { text, ...rest } = overrides;
+  return {
+    id: rest.id ?? crypto.randomUUID(),
+    role: rest.role,
+    parts: text ? [{ type: "text" as const, text }] : [],
+    createdAt: new Date(),
+    ...rest,
+  } as UIMessage;
+}
+
 describe("CoachPrototype", () => {
   const mockedUseCoachChat = vi.mocked(useCoachChat);
   const originalVisualViewport = window.visualViewport;
@@ -25,8 +39,8 @@ describe("CoachPrototype", () => {
       input: "",
       setInput: vi.fn(),
       isWorking: false,
-      lastTrace: null,
-      timeline: [{ id: "m1", role: "assistant", text: "Hi" }],
+      messages: [makeUIMessage({ id: "m1", role: "assistant", text: "Hi" })],
+      spec: null,
       unit: "lbs",
       soundEnabled: false,
       endRef: { current: null },
@@ -55,9 +69,9 @@ describe("CoachPrototype", () => {
     mockedUseCoachChat.mockReturnValue(
       buildChatState({
         input: "Hello coach",
-        timeline: [
-          { id: "m1", role: "assistant", text: "Hi" },
-          { id: "m2", role: "user", text: "Hello coach" },
+        messages: [
+          makeUIMessage({ id: "m1", role: "assistant", text: "Hi" }),
+          makeUIMessage({ id: "m2", role: "user", text: "Hello coach" }),
         ],
       })
     );
