@@ -84,6 +84,17 @@ describe("findCloseMatches", () => {
     expect(findCloseMatches("", [exercise()])).toEqual([]);
     expect(findCloseMatches("bench", [])).toEqual([]);
   });
+
+  it("skips short tokens to avoid trivial substring matches", () => {
+    const ab = exercise({ _id: "ex_1", name: "Ab Crunch" });
+    const barbell = exercise({ _id: "ex_3", name: "Barbell Row" });
+
+    // "ab" is too short (< 3 chars) — should not match
+    expect(findCloseMatches("ab", [ab, barbell])).toEqual([]);
+
+    // Longer queries work normally
+    expect(findCloseMatches("barbell", [barbell])).toEqual([barbell]);
+  });
 });
 
 describe("findExercise", () => {

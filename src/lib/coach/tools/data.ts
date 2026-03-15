@@ -48,10 +48,13 @@ export function findCloseMatches(
   const normalized = normalizeLookup(exerciseName);
   if (!normalized) return [];
 
+  const MIN_MATCH_LEN = 3;
   return exercises
     .filter((e) => {
       const n = normalizeLookup(e.name);
       if (n === normalized) return false; // skip exact matches
+      if (normalized.length < MIN_MATCH_LEN || n.length < MIN_MATCH_LEN)
+        return false; // avoid trivial substring matches
       return n.includes(normalized) || normalized.includes(n);
     })
     .slice(0, limit);
