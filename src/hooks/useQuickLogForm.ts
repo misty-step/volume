@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form";
+import { useRef } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
@@ -6,6 +7,7 @@ import { z } from "zod";
 import { api } from "../../convex/_generated/api";
 import { type Id } from "../../convex/_generated/dataModel";
 import { handleMutationError } from "@/lib/error-handler";
+import { getTodayRange } from "@/lib/date-utils";
 import { trackEvent } from "@/lib/analytics";
 import { checkForPR } from "@/lib/pr-detection";
 import { showPRCelebration } from "@/components/dashboard/pr-celebration";
@@ -89,6 +91,24 @@ export function useQuickLogForm({
       : "skip"
   );
 
+  // Day-scoped query for session-start detection.
+  // Skipped after session-start fires to avoid unnecessary reactive traffic.
+  const { start: todayStart, end: todayEnd } = getTodayRange();
+  const sessionStartedDayRef = useRef<number | null>(null);
+  const todaySets = useQuery(
+    api.sets.listSetsForDateRange,
+    sessionStartedDayRef.current === todayStart
+      ? "skip"
+      : { startDate: todayStart, endDate: todayEnd }
+  );
+
+  const maybeTrackSessionStarted = (exerciseId: string) => {
+    if (!todaySets || todaySets.length !== 0) return;
+    if (sessionStartedDayRef.current === todayStart) return;
+    sessionStartedDayRef.current = todayStart;
+    trackEvent("Session Started", { exerciseId });
+  };
+
   const onSubmit = async (values: QuickLogFormValues) => {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -116,6 +136,7 @@ export function useQuickLogForm({
           .then((setId) => {
             onSetLogged?.(setId);
             trackSetLogged(String(setId), values);
+            maybeTrackSessionStarted(values.exerciseId);
             toast.success("Set saved!", { duration: 3000 });
           })
           .catch((error) => {
@@ -137,8 +158,7 @@ export function useQuickLogForm({
       const setId = raceResult as Id<"sets">;
 
       trackSetLogged(String(setId), values);
-      // Session-start tracking deferred to #385 (needs day-scoped query,
-      // not the exercise-scoped previousSets available here).
+      maybeTrackSessionStarted(values.exerciseId);
 
       // Check for PR before showing success toast (only for rep-based exercises)
       let isPR = false;

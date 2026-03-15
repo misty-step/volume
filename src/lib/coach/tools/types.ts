@@ -30,6 +30,8 @@ export type ToolResult = {
 
 export type CoachToolExecutionOptions = {
   onBlocks?: (blocks: CoachBlock[]) => void;
+  /** Skip post-commit today totals query (used by bulk_log to avoid N+1). */
+  skipTotals?: boolean;
 };
 
 export interface CoachToolContext {

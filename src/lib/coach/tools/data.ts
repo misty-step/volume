@@ -1,8 +1,12 @@
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
+import {
+  summarizeTodaySets,
+  type TodayTotalsSummary,
+} from "@/lib/coach/prototype-analytics";
 import { getTodayRangeForTimezoneOffset } from "@/lib/date-utils";
 import type { Exercise } from "@/types/domain";
-import { normalizeLookup, titleCase } from "./helpers";
+import { normalizeLookup, titleCase, toAnalyticsSetInput } from "./helpers";
 import type { CoachToolContext, SetInput } from "./types";
 
 const RECENT_EXERCISE_SET_LIMIT = 120; // Keep tool output small while covering recent trend.
@@ -24,6 +28,32 @@ export async function getTodaySets(ctx: CoachToolContext): Promise<SetInput[]> {
     startDate: start,
     endDate: end,
   })) as SetInput[];
+}
+
+/**
+ * Single source of truth for today's aggregated totals.
+ * Queries persisted sets post-commit, so callers always get fresh data.
+ * Pass `exercises` to avoid a redundant listExercises call when the caller
+ * already fetched the list (e.g. after ensureExercise).
+ */
+export async function buildTodayTotals(
+  ctx: CoachToolContext,
+  options?: { exercises?: Exercise[] }
+): Promise<TodayTotalsSummary> {
+  const sets = await getTodaySets(ctx);
+  if (sets.length === 0) {
+    return summarizeTodaySets([], new Map());
+  }
+
+  const exercises = options?.exercises ?? (await listExercises(ctx));
+  const names = new Map<string, string>();
+  for (const exercise of exercises) {
+    names.set(String(exercise._id), exercise.name);
+  }
+  return summarizeTodaySets(
+    sets.map((set) => toAnalyticsSetInput(set)),
+    names
+  );
 }
 
 export async function getRecentExerciseSets(

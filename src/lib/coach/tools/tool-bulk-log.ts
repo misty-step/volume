@@ -1,3 +1,5 @@
+import { buildTodayTotals } from "./data";
+import { toTodayTotalsOutput } from "./helpers";
 import { BulkLogArgsSchema } from "./schemas";
 import { runLogSetTool } from "./tool-log-set";
 import type { CoachToolContext, ToolResult } from "./types";
@@ -12,7 +14,7 @@ export async function runBulkLogTool(
   for (const item of args.sets) {
     let result: ToolResult;
     try {
-      result = await runLogSetTool(item, ctx);
+      result = await runLogSetTool(item, ctx, { skipTotals: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       result = {
@@ -45,6 +47,18 @@ export async function runBulkLogTool(
       ? `Logged ${successes} set${successes === 1 ? "" : "s"}.`
       : `Logged ${successes} of ${results.length} sets (${failures} failed).`;
 
+  // Post-commit: single fresh query for today's totals after all mutations.
+  // Guarded: a query failure must not convert successful writes into an error.
+  let todayTotals: Awaited<ReturnType<typeof buildTodayTotals>> | null = null;
+  try {
+    todayTotals = await buildTodayTotals(ctx);
+  } catch (error) {
+    console.warn("Failed to fetch today totals after bulk_log", {
+      turnId: ctx.turnId,
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+
   return {
     summary: summaryLine,
     blocks: [
@@ -61,6 +75,9 @@ export async function runBulkLogTool(
       logged: successes,
       failed: failures,
       results: results.map((r) => r.outputForModel),
+      ...(todayTotals
+        ? { today_totals: toTodayTotalsOutput(todayTotals) }
+        : {}),
     },
   };
 }

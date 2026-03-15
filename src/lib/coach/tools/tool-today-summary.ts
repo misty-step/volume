@@ -1,12 +1,10 @@
-import { summarizeTodaySets } from "@/lib/coach/prototype-analytics";
+import type { TodayTotalsSummary } from "@/lib/coach/prototype-analytics";
 import type { CoachBlock } from "@/lib/coach/schema";
-import { getTodaySets, listExercises } from "./data";
-import { formatSecondsShort, toAnalyticsSetInput } from "./helpers";
+import { buildTodayTotals } from "./data";
+import { formatSecondsShort, toTodayTotalsOutput } from "./helpers";
 import type { CoachToolContext, ToolResult } from "./types";
 
-type TodaySummary = ReturnType<typeof summarizeTodaySets>;
-
-function buildTodaySummaryBlocks(summary: TodaySummary): CoachBlock[] {
+function buildTodaySummaryBlocks(summary: TodayTotalsSummary): CoachBlock[] {
   if (summary.totalSets === 0) {
     return [
       {
@@ -29,7 +27,7 @@ function buildTodaySummaryBlocks(summary: TodaySummary): CoachBlock[] {
           label: "Duration",
           value: formatSecondsShort(summary.totalDurationSeconds),
         },
-        { label: "Exercises", value: String(summary.topExercises.length) },
+        { label: "Exercises", value: String(summary.exerciseCount) },
       ],
     },
     {
@@ -52,19 +50,7 @@ function buildTodaySummaryBlocks(summary: TodaySummary): CoachBlock[] {
 export async function runTodaySummaryTool(
   ctx: CoachToolContext
 ): Promise<ToolResult> {
-  const [sets, exercises] = await Promise.all([
-    getTodaySets(ctx),
-    listExercises(ctx),
-  ]);
-  const names = new Map<string, string>();
-  for (const exercise of exercises) {
-    names.set(String(exercise._id), exercise.name);
-  }
-
-  const summary = summarizeTodaySets(
-    sets.map((set) => toAnalyticsSetInput(set)),
-    names
-  );
+  const summary = await buildTodayTotals(ctx);
   const blocks = buildTodaySummaryBlocks(summary);
 
   return {
@@ -72,9 +58,7 @@ export async function runTodaySummaryTool(
     blocks,
     outputForModel: {
       status: "ok",
-      total_sets: summary.totalSets,
-      total_reps: summary.totalReps,
-      exercise_count: summary.topExercises.length,
+      ...toTodayTotalsOutput(summary),
     },
   };
 }

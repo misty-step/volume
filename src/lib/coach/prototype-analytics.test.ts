@@ -62,8 +62,55 @@ describe("summarizeTodaySets", () => {
     expect(summary.totalSets).toBe(3);
     expect(summary.totalReps).toBe(22);
     expect(summary.totalDurationSeconds).toBe(45);
+    expect(summary.exerciseCount).toBe(2);
     expect(summary.topExercises[0]?.exerciseName).toBe("Push-ups");
     expect(summary.topExercises[0]?.sets).toBe(2);
+  });
+
+  it("counts correctly across 4+ exercises in same day", () => {
+    const sets = [
+      { exerciseId: "bench", performedAt: 1, reps: 8, weight: 135 },
+      { exerciseId: "bench", performedAt: 2, reps: 8, weight: 135 },
+      { exerciseId: "squat", performedAt: 3, reps: 5, weight: 225 },
+      { exerciseId: "squat", performedAt: 4, reps: 5, weight: 225 },
+      { exerciseId: "squat", performedAt: 5, reps: 5, weight: 225 },
+      { exerciseId: "curl", performedAt: 6, reps: 12 },
+      { exerciseId: "plank", performedAt: 7, duration: 60 },
+    ];
+
+    const names = new Map([
+      ["bench", "Bench Press"],
+      ["squat", "Squat"],
+      ["curl", "Bicep Curl"],
+      ["plank", "Plank"],
+    ]);
+
+    const summary = summarizeTodaySets(sets, names);
+    expect(summary.totalSets).toBe(7);
+    expect(summary.totalReps).toBe(43);
+    expect(summary.totalDurationSeconds).toBe(60);
+    // Top 4 exercises sorted by set count (squat=3, bench=2, curl=1, plank=1)
+    expect(summary.topExercises).toHaveLength(4);
+    expect(summary.topExercises[0]?.exerciseName).toBe("Squat");
+    expect(summary.topExercises[0]?.sets).toBe(3);
+  });
+
+  it("handles single set correctly (no undercount)", () => {
+    const sets = [{ exerciseId: "push", performedAt: 1, reps: 15 }];
+    const names = new Map([["push", "Push-ups"]]);
+
+    const summary = summarizeTodaySets(sets, names);
+    expect(summary.totalSets).toBe(1);
+    expect(summary.totalReps).toBe(15);
+  });
+
+  it("empty array returns zero totals", () => {
+    const summary = summarizeTodaySets([], new Map());
+    expect(summary.totalSets).toBe(0);
+    expect(summary.totalReps).toBe(0);
+    expect(summary.totalDurationSeconds).toBe(0);
+    expect(summary.exerciseCount).toBe(0);
+    expect(summary.topExercises).toHaveLength(0);
   });
 });
 

@@ -1,4 +1,5 @@
 import { formatDuration } from "@/lib/date-utils";
+import type { TodayTotalsSummary } from "@/lib/coach/prototype-analytics";
 import type { Set } from "@/types/domain";
 import type { SetInput, ToolResult } from "./types";
 
@@ -124,5 +125,14 @@ export function exerciseNotFoundResult(
       error: errorCode,
       ...(hasMatches && { close_matches: closeMatches }),
     },
+  };
+}
+
+/** Snake-case model-output shape for today's totals. */
+export function toTodayTotalsOutput(totals: TodayTotalsSummary) {
+  return {
+    total_sets: totals.totalSets,
+    total_reps: totals.totalReps,
+    exercise_count: totals.exerciseCount,
   };
 }

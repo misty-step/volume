@@ -2,8 +2,8 @@ import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import type { CoachBlock } from "@/lib/coach/schema";
 import { sanitizeError } from "@/lib/coach/sanitize-error";
-import { ensureExercise } from "./data";
-import { formatSecondsShort } from "./helpers";
+import { buildTodayTotals, ensureExercise } from "./data";
+import { formatSecondsShort, toTodayTotalsOutput } from "./helpers";
 import { LogSetArgsSchema } from "./schemas";
 import type {
   CoachToolContext,
@@ -152,6 +152,25 @@ export async function runLogSetTool(
     options?.onBlocks?.([undoWarningBlock]);
   }
 
+  // Post-commit: fetch fresh today's totals so the model has accurate
+  // day-level data without needing a separate get_today_summary call.
+  // Skipped when called from bulk_log (which fetches once at the end).
+  // Guarded: a query failure must not convert a successful log into an error.
+  let todayTotals: Awaited<ReturnType<typeof buildTodayTotals>> | null = null;
+  if (!options?.skipTotals) {
+    try {
+      todayTotals = await buildTodayTotals(ctx, {
+        exercises: ensured.exercises,
+      });
+    } catch (error) {
+      console.warn("Failed to fetch today totals after log_set", {
+        turnId: ctx.turnId,
+        setId: String(setId),
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+
   return {
     summary: `Logged set for ${ensured.exercise.name}.`,
     blocks: [
@@ -164,6 +183,9 @@ export async function runLogSetTool(
       exercise_name: ensured.exercise.name,
       created_exercise: ensured.created,
       warning: undoWarningBlock ? "undo_unavailable" : undefined,
+      ...(todayTotals
+        ? { today_totals: toTodayTotalsOutput(todayTotals) }
+        : {}),
     },
   };
 }
