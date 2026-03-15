@@ -1,7 +1,12 @@
 // @vitest-environment node
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ensureExercise, findExercise, resolveExercise } from "./data";
+import {
+  ensureExercise,
+  findCloseMatches,
+  findExercise,
+  resolveExercise,
+} from "./data";
 import type { CoachToolContext } from "./types";
 
 vi.mock("@/../convex/_generated/api", () => ({
@@ -37,6 +42,61 @@ function exercise(overrides: Record<string, unknown> = {}) {
   } as any;
 }
 
+describe("findCloseMatches", () => {
+  it("finds exercises whose names contain the query", () => {
+    const bench = exercise({ _id: "ex_1", name: "Bench Press" });
+    const incline = exercise({ _id: "ex_2", name: "Incline Bench" });
+    const squat = exercise({ _id: "ex_3", name: "Squat" });
+
+    const result = findCloseMatches("bench", [bench, incline, squat]);
+
+    expect(result).toEqual([bench, incline]);
+  });
+
+  it("finds exercises where query contains the exercise name", () => {
+    const curl = exercise({ _id: "ex_1", name: "Curl" });
+    const squat = exercise({ _id: "ex_2", name: "Squat" });
+
+    const result = findCloseMatches("bicep curl", [curl, squat]);
+
+    expect(result).toEqual([curl]);
+  });
+
+  it("excludes exact normalized matches", () => {
+    const bench = exercise({ _id: "ex_1", name: "Bench Press" });
+
+    const result = findCloseMatches("bench press", [bench]);
+
+    expect(result).toEqual([]);
+  });
+
+  it("respects limit parameter", () => {
+    const exercises = Array.from({ length: 10 }, (_, i) =>
+      exercise({ _id: `ex_${i}`, name: `Bench Variation ${i}` })
+    );
+
+    const result = findCloseMatches("bench", exercises, 3);
+
+    expect(result).toHaveLength(3);
+  });
+
+  it("returns empty for empty input", () => {
+    expect(findCloseMatches("", [exercise()])).toEqual([]);
+    expect(findCloseMatches("bench", [])).toEqual([]);
+  });
+
+  it("skips short tokens to avoid trivial substring matches", () => {
+    const ab = exercise({ _id: "ex_1", name: "Ab Crunch" });
+    const barbell = exercise({ _id: "ex_3", name: "Barbell Row" });
+
+    // "ab" is too short (< 3 chars) — should not match
+    expect(findCloseMatches("ab", [ab, barbell])).toEqual([]);
+
+    // Longer queries work normally
+    expect(findCloseMatches("barbell", [barbell])).toEqual([barbell]);
+  });
+});
+
 describe("findExercise", () => {
   it("returns exact normalized match", async () => {
     const ex = exercise({ name: "Bench Press" });
@@ -48,6 +108,17 @@ describe("findExercise", () => {
     const ex = exercise({ name: "Pull Ups" });
     const result = await findExercise(makeCtx(), "pull-ups!", [ex]);
     expect(result).toBe(ex);
+  });
+
+  it("returns null for empty or punctuation-only names without calling resolver", async () => {
+    const ex = exercise({ name: "Bench Press" });
+    const resolveExerciseName = vi.fn();
+    const ctx = makeCtx({ resolveExerciseName });
+
+    expect(await findExercise(ctx, "", [ex])).toBeNull();
+    expect(await findExercise(ctx, "---", [ex])).toBeNull();
+    expect(await findExercise(ctx, "  !@#  ", [ex])).toBeNull();
+    expect(resolveExerciseName).not.toHaveBeenCalled();
   });
 
   it("falls through to semantic resolver when no normalized match", async () => {
@@ -124,7 +195,7 @@ describe("resolveExercise", () => {
     });
   });
 
-  it("returns matched exercise and full list", async () => {
+  it("returns matched exercise and full list with empty closeMatches", async () => {
     const ex = exercise({ name: "Squat" });
     query.mockResolvedValue([ex]);
 
@@ -132,15 +203,28 @@ describe("resolveExercise", () => {
 
     expect(result.exercise).toBe(ex);
     expect(result.exercises).toEqual([ex]);
+    expect(result.closeMatches).toEqual([]);
   });
 
-  it("returns null exercise when no match", async () => {
+  it("returns null exercise with closeMatches when no match", async () => {
+    const bench = exercise({ _id: "ex_bench", name: "Bench Press" });
+    const incline = exercise({ _id: "ex_incline", name: "Incline Bench" });
+    query.mockResolvedValue([bench, incline]);
+
+    const result = await resolveExercise(makeCtx(), "bench");
+
+    expect(result.exercise).toBeNull();
+    expect(result.closeMatches).toEqual([bench, incline]);
+  });
+
+  it("returns empty closeMatches when no match and no partial overlap", async () => {
     query.mockResolvedValue([exercise({ name: "Squat" })]);
 
     const result = await resolveExercise(makeCtx(), "deadlift");
 
     expect(result.exercise).toBeNull();
     expect(result.exercises).toHaveLength(1);
+    expect(result.closeMatches).toEqual([]);
   });
 });
 

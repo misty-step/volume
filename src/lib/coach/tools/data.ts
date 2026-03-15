@@ -37,6 +37,30 @@ export async function getRecentExerciseSets(
 }
 
 /**
+ * Find exercises whose normalized names contain the query or vice versa.
+ * Returns up to `limit` candidates, excluding exact matches (those are handled separately).
+ */
+export function findCloseMatches(
+  exerciseName: string,
+  exercises: Exercise[],
+  limit = 5
+): Exercise[] {
+  const normalized = normalizeLookup(exerciseName);
+  if (!normalized) return [];
+
+  const MIN_MATCH_LEN = 3;
+  return exercises
+    .filter((e) => {
+      const n = normalizeLookup(e.name);
+      if (n === normalized) return false; // skip exact matches
+      if (normalized.length < MIN_MATCH_LEN || n.length < MIN_MATCH_LEN)
+        return false; // avoid trivial substring matches
+      return n.includes(normalized) || normalized.includes(n);
+    })
+    .slice(0, limit);
+}
+
+/**
  * Shared resolution: normalized match then semantic/LLM match.
  * Returns null on no match (never creates).
  */
@@ -46,6 +70,7 @@ export async function findExercise(
   exercises: Exercise[]
 ): Promise<Exercise | null> {
   const normalized = normalizeLookup(exerciseName);
+  if (!normalized) return null;
   const exact = exercises.find((e) => normalizeLookup(e.name) === normalized);
   if (exact) return exact;
 
@@ -64,15 +89,23 @@ export async function findExercise(
 /**
  * Resolve an exercise name to an existing exercise.
  * Does NOT create exercises — use `ensureExercise` for create-on-miss.
+ * Returns closeMatches when no match found for disambiguation.
  */
 export async function resolveExercise(
   ctx: CoachToolContext,
   exerciseName: string,
   options: { includeDeleted?: boolean } = {}
-): Promise<{ exercise: Exercise | null; exercises: Exercise[] }> {
+): Promise<{
+  exercise: Exercise | null;
+  exercises: Exercise[];
+  closeMatches: Exercise[];
+}> {
   const exercises = await listExercises(ctx, options);
   const exercise = await findExercise(ctx, exerciseName, exercises);
-  return { exercise, exercises };
+  const closeMatches = exercise
+    ? []
+    : findCloseMatches(exerciseName, exercises);
+  return { exercise, exercises, closeMatches };
 }
 
 export async function ensureExercise(

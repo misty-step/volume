@@ -53,7 +53,11 @@ describe("runExerciseHistoryTool", () => {
 
   it("returns entity_list with sets for known exercise", async () => {
     const ex = makeExercise();
-    mockResolveExercise.mockResolvedValue({ exercise: ex, exercises: [ex] });
+    mockResolveExercise.mockResolvedValue({
+      exercise: ex,
+      exercises: [ex],
+      closeMatches: [],
+    });
     mockGetRecentExerciseSets.mockResolvedValue([
       makeSet({ _id: "set_1", reps: 10, weight: 135 }),
       makeSet({
@@ -78,7 +82,11 @@ describe("runExerciseHistoryTool", () => {
   });
 
   it("returns exercise_not_found for unknown exercise", async () => {
-    mockResolveExercise.mockResolvedValue({ exercise: null, exercises: [] });
+    mockResolveExercise.mockResolvedValue({
+      exercise: null,
+      exercises: [],
+      closeMatches: [],
+    });
 
     const result = await runExerciseHistoryTool(
       { exercise_name: "Nope" },
@@ -92,9 +100,34 @@ describe("runExerciseHistoryTool", () => {
     expect((result.blocks[0] as any).title).toBe("Exercise not found");
   });
 
+  it("includes close matches when similar exercises exist", async () => {
+    const bench = makeExercise();
+    mockResolveExercise.mockResolvedValue({
+      exercise: null,
+      exercises: [bench],
+      closeMatches: [bench],
+    });
+
+    const result = await runExerciseHistoryTool(
+      { exercise_name: "bench" },
+      TEST_CTX as any
+    );
+
+    expect((result.blocks[0] as any).tone).toBe("info");
+    expect((result.blocks[0] as any).title).toBe("Did you mean one of these?");
+    expect(result.outputForModel).toMatchObject({
+      status: "error",
+      close_matches: ["Bench Press"],
+    });
+  });
+
   it("returns empty entity_list when no sets logged", async () => {
     const ex = makeExercise();
-    mockResolveExercise.mockResolvedValue({ exercise: ex, exercises: [ex] });
+    mockResolveExercise.mockResolvedValue({
+      exercise: ex,
+      exercises: [ex],
+      closeMatches: [],
+    });
     mockGetRecentExerciseSets.mockResolvedValue([]);
 
     const result = await runExerciseHistoryTool(
@@ -108,7 +141,11 @@ describe("runExerciseHistoryTool", () => {
 
   it("respects limit param", async () => {
     const ex = makeExercise();
-    mockResolveExercise.mockResolvedValue({ exercise: ex, exercises: [ex] });
+    mockResolveExercise.mockResolvedValue({
+      exercise: ex,
+      exercises: [ex],
+      closeMatches: [],
+    });
     const manySets = Array.from({ length: 50 }, (_, i) =>
       makeSet({ _id: `set_${i}`, reps: 10 })
     );
@@ -125,7 +162,11 @@ describe("runExerciseHistoryTool", () => {
 
   it("formats duration sets correctly", async () => {
     const ex = makeExercise();
-    mockResolveExercise.mockResolvedValue({ exercise: ex, exercises: [ex] });
+    mockResolveExercise.mockResolvedValue({
+      exercise: ex,
+      exercises: [ex],
+      closeMatches: [],
+    });
     mockGetRecentExerciseSets.mockResolvedValue([
       makeSet({
         _id: "set_1",

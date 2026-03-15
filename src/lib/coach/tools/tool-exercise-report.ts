@@ -5,33 +5,30 @@ import {
   summarizeExercisePerformance,
 } from "@/lib/coach/prototype-analytics";
 import { resolveExercise, getRecentExerciseSets } from "./data";
-import { formatSecondsShort, toAnalyticsSetInput } from "./helpers";
+import {
+  exerciseNotFoundResult,
+  formatSecondsShort,
+  toAnalyticsSetInput,
+} from "./helpers";
 import { ExerciseReportArgsSchema } from "./schemas";
 import type { CoachToolContext, ToolResult } from "./types";
 
 async function resolveExerciseData(rawArgs: unknown, ctx: CoachToolContext) {
   const args = ExerciseReportArgsSchema.parse(rawArgs);
-  const { exercise } = await resolveExercise(ctx, args.exercise_name);
+  const { exercise, closeMatches } = await resolveExercise(
+    ctx,
+    args.exercise_name
+  );
 
   if (!exercise) {
     return {
       ok: false as const,
-      errorResult: {
-        summary: `Exercise "${args.exercise_name}" not found.`,
-        blocks: [
-          {
-            type: "status",
-            tone: "error",
-            title: `I can't find "${args.exercise_name}"`,
-            description: "Log a set first, then ask for a trend or report.",
-          },
-        ],
-        outputForModel: {
-          status: "error",
-          error: "exercise_not_found",
-          exercise_name: args.exercise_name,
-        },
-      } satisfies ToolResult,
+      errorResult: exerciseNotFoundResult(
+        args.exercise_name,
+        "exercise_not_found",
+        "Log a set first, then ask for a trend or report.",
+        closeMatches.map((e) => e.name)
+      ),
     };
   }
 

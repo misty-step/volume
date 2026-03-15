@@ -62,7 +62,11 @@ describe("runDeleteSetTool", () => {
   });
 
   it("returns error when exercise cannot be found", async () => {
-    mockResolveExercise.mockResolvedValue({ exercise: null, exercises: [] });
+    mockResolveExercise.mockResolvedValue({
+      exercise: null,
+      exercises: [],
+      closeMatches: [],
+    });
 
     const result = await runDeleteSetTool(
       { exercise_name: "Nope" },
@@ -77,11 +81,34 @@ describe("runDeleteSetTool", () => {
     expect(mutation).not.toHaveBeenCalled();
   });
 
+  it("includes close matches in error when similar exercises exist", async () => {
+    const bench = makeExercise({ _id: "ex_bench", name: "Bench Press" });
+    mockResolveExercise.mockResolvedValue({
+      exercise: null,
+      exercises: [bench],
+      closeMatches: [bench],
+    });
+
+    const result = await runDeleteSetTool(
+      { exercise_name: "bench" },
+      TEST_CTX as any
+    );
+
+    expect((result.blocks[0] as any).tone).toBe("info");
+    expect((result.blocks[0] as any).title).toBe("Did you mean one of these?");
+    expect(result.outputForModel).toMatchObject({
+      status: "error",
+      error: "exercise_not_found",
+      close_matches: ["Bench Press"],
+    });
+  });
+
   it("returns info when no recent sets exist for exercise", async () => {
     const ex = makeExercise();
     mockResolveExercise.mockResolvedValue({
       exercise: ex,
       exercises: [ex],
+      closeMatches: [],
     });
     mockGetRecentExerciseSets.mockResolvedValue([]);
 
@@ -104,6 +131,7 @@ describe("runDeleteSetTool", () => {
     mockResolveExercise.mockResolvedValue({
       exercise: ex,
       exercises: [ex],
+      closeMatches: [],
     });
     mockGetRecentExerciseSets.mockResolvedValue([
       {
