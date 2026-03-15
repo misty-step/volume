@@ -75,7 +75,7 @@ describe("User Management", () => {
 
     test("throws error for unauthenticated requests", async () => {
       await expect(t.mutation(api.users.getOrCreateUser, {})).rejects.toThrow(
-        "Unauthorized"
+        "Not authenticated"
       );
     });
   });

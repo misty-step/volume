@@ -273,7 +273,7 @@ describe("coachSessions", () => {
       t.mutation(api.coachSessions.getOrCreateTodaySession, {
         timezoneOffsetMinutes: 360,
       })
-    ).rejects.toThrow("Unauthorized");
+    ).rejects.toThrow("Not authenticated");
 
     await expect(
       t.mutation(api.coachSessions.addMessage, {
@@ -281,10 +281,10 @@ describe("coachSessions", () => {
         role: "user",
         content: serializedMessage("user", "hello"),
       })
-    ).rejects.toThrow("Unauthorized");
+    ).rejects.toThrow("Not authenticated");
 
     await expect(
       t.mutation(api.coachSessions.archiveSession, { sessionId })
-    ).rejects.toThrow("Unauthorized");
+    ).rejects.toThrow("Not authenticated");
   });
 });

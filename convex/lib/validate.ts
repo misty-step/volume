@@ -140,6 +140,7 @@ export async function requireAuth(
 /**
  * Require resource ownership.
  * Throws if resource doesn't exist or doesn't belong to user.
+ * Narrows the resource type to non-null on success.
  *
  * @param resource - Resource to check (must have userId property)
  * @param userId - User ID to verify ownership
@@ -150,7 +151,7 @@ export function requireOwnership<T extends { userId: string }>(
   resource: T | null,
   userId: string,
   resourceType: string
-): void {
+): asserts resource is T {
   if (!resource) {
     throw new Error(`${resourceType} not found`);
   }
