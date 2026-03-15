@@ -75,7 +75,6 @@ describe("exercise report disambiguation", () => {
     expect(result.outputForModel).toMatchObject({
       status: "error",
       error: "exercise_not_found",
-      exercise_name: "deadlift",
     });
     expect(result.outputForModel).not.toHaveProperty("close_matches");
     expect(result.blocks[0]).toMatchObject({

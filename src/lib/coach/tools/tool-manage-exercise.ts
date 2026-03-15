@@ -176,7 +176,8 @@ export async function runMergeExerciseTool(
   );
 
   if (!sourceExercise) {
-    const sourceMatches = findCloseMatches(args.source_exercise, exercises);
+    const active = exercises.filter((e) => !e.deletedAt);
+    const sourceMatches = findCloseMatches(args.source_exercise, active);
     return exerciseNotFoundResult(
       args.source_exercise,
       "source_exercise_not_found",
@@ -205,7 +206,8 @@ export async function runMergeExerciseTool(
   }
 
   if (!targetExercise) {
-    const targetMatches = findCloseMatches(args.target_exercise, exercises);
+    const active = exercises.filter((e) => !e.deletedAt);
+    const targetMatches = findCloseMatches(args.target_exercise, active);
     return exerciseNotFoundResult(
       args.target_exercise,
       "target_exercise_not_found",

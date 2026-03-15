@@ -99,6 +99,17 @@ describe("findExercise", () => {
     expect(result).toBe(ex);
   });
 
+  it("returns null for empty or punctuation-only names without calling resolver", async () => {
+    const ex = exercise({ name: "Bench Press" });
+    const resolveExerciseName = vi.fn();
+    const ctx = makeCtx({ resolveExerciseName });
+
+    expect(await findExercise(ctx, "", [ex])).toBeNull();
+    expect(await findExercise(ctx, "---", [ex])).toBeNull();
+    expect(await findExercise(ctx, "  !@#  ", [ex])).toBeNull();
+    expect(resolveExerciseName).not.toHaveBeenCalled();
+  });
+
   it("falls through to semantic resolver when no normalized match", async () => {
     const ex = exercise({ name: "Barbell Bench Press" });
     const resolveExerciseName = vi.fn().mockResolvedValue(ex);

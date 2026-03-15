@@ -8,7 +8,12 @@ import {
   runRestoreExerciseTool,
   runUpdateExerciseMuscleGroupsTool,
 } from "./tool-manage-exercise";
-import { findExercise, listExercises, resolveExercise } from "./data";
+import {
+  findCloseMatches,
+  findExercise,
+  listExercises,
+  resolveExercise,
+} from "./data";
 
 vi.mock("@/../convex/_generated/api", () => ({
   api: {
@@ -32,6 +37,7 @@ vi.mock("./data", () => ({
 const mockResolveExercise = vi.mocked(resolveExercise);
 const mockListExercises = vi.mocked(listExercises);
 const mockFindExercise = vi.mocked(findExercise);
+const mockFindCloseMatches = vi.mocked(findCloseMatches);
 const mutation = vi.fn();
 
 const TEST_CTX = {
@@ -56,6 +62,7 @@ describe("tool-manage-exercise", () => {
     mockResolveExercise.mockReset();
     mockListExercises.mockReset();
     mockFindExercise.mockReset();
+    mockFindCloseMatches.mockReset().mockReturnValue([]);
     mutation.mockReset();
   });
 
@@ -77,6 +84,26 @@ describe("tool-manage-exercise", () => {
     });
     expect((result.blocks[0] as any).tone).toBe("error");
     expect(mutation).not.toHaveBeenCalled();
+  });
+
+  it("includes close matches when rename target has similar exercises", async () => {
+    const bench = exercise({ _id: "ex_bench", name: "Bench Press" });
+    mockResolveExercise.mockResolvedValue({
+      exercise: null,
+      exercises: [bench],
+      closeMatches: [bench],
+    });
+
+    const result = await runRenameExerciseTool(
+      { exercise_name: "bench", new_name: "Flat Bench" },
+      TEST_CTX as any
+    );
+
+    expect((result.blocks[0] as any).tone).toBe("info");
+    expect(result.outputForModel).toMatchObject({
+      status: "error",
+      close_matches: ["Bench Press"],
+    });
   });
 
   it("renames exercise and returns success status", async () => {
@@ -142,6 +169,25 @@ describe("tool-manage-exercise", () => {
       error: "source_exercise_not_found",
     });
     expect(mutation).not.toHaveBeenCalled();
+  });
+
+  it("includes close matches for missing merge source", async () => {
+    const bench = exercise({ _id: "ex_bench", name: "Bench Press" });
+    mockListExercises.mockResolvedValue([bench]);
+    mockFindExercise.mockResolvedValueOnce(null);
+    mockFindCloseMatches.mockReturnValueOnce([bench]);
+
+    const result = await runMergeExerciseTool(
+      { source_exercise: "bench", target_exercise: "Bench Press" },
+      TEST_CTX as any
+    );
+
+    expect((result.blocks[0] as any).tone).toBe("info");
+    expect(result.outputForModel).toMatchObject({
+      status: "error",
+      error: "source_exercise_not_found",
+      close_matches: ["Bench Press"],
+    });
   });
 
   it("returns error when target exercise is missing for merge", async () => {

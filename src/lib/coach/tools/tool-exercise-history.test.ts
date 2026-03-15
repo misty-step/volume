@@ -100,6 +100,27 @@ describe("runExerciseHistoryTool", () => {
     expect((result.blocks[0] as any).title).toBe("Exercise not found");
   });
 
+  it("includes close matches when similar exercises exist", async () => {
+    const bench = makeExercise();
+    mockResolveExercise.mockResolvedValue({
+      exercise: null,
+      exercises: [bench],
+      closeMatches: [bench],
+    });
+
+    const result = await runExerciseHistoryTool(
+      { exercise_name: "bench" },
+      TEST_CTX as any
+    );
+
+    expect((result.blocks[0] as any).tone).toBe("info");
+    expect((result.blocks[0] as any).title).toBe("Did you mean one of these?");
+    expect(result.outputForModel).toMatchObject({
+      status: "error",
+      close_matches: ["Bench Press"],
+    });
+  });
+
   it("returns empty entity_list when no sets logged", async () => {
     const ex = makeExercise();
     mockResolveExercise.mockResolvedValue({

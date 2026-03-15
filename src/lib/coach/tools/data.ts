@@ -67,6 +67,7 @@ export async function findExercise(
   exercises: Exercise[]
 ): Promise<Exercise | null> {
   const normalized = normalizeLookup(exerciseName);
+  if (!normalized) return null;
   const exact = exercises.find((e) => normalizeLookup(e.name) === normalized);
   if (exact) return exact;
 
