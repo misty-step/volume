@@ -11,25 +11,37 @@ import type { CoachToolContext, ToolResult } from "./types";
 
 async function resolveExerciseData(rawArgs: unknown, ctx: CoachToolContext) {
   const args = ExerciseReportArgsSchema.parse(rawArgs);
-  const { exercise } = await resolveExercise(ctx, args.exercise_name);
+  const { exercise, closeMatches } = await resolveExercise(
+    ctx,
+    args.exercise_name
+  );
 
   if (!exercise) {
+    const hasCloseMatches = closeMatches.length > 0;
+    const matchNames = closeMatches.map((e) => e.name);
     return {
       ok: false as const,
       errorResult: {
-        summary: `Exercise "${args.exercise_name}" not found.`,
+        summary: hasCloseMatches
+          ? `"${args.exercise_name}" not found. Close matches: ${matchNames.join(", ")}.`
+          : `Exercise "${args.exercise_name}" not found.`,
         blocks: [
           {
             type: "status",
-            tone: "error",
-            title: `I can't find "${args.exercise_name}"`,
-            description: "Log a set first, then ask for a trend or report.",
+            tone: hasCloseMatches ? "info" : "error",
+            title: hasCloseMatches
+              ? `Did you mean one of these?`
+              : `I can't find "${args.exercise_name}"`,
+            description: hasCloseMatches
+              ? matchNames.join(", ")
+              : "Log a set first, then ask for a trend or report.",
           },
         ],
         outputForModel: {
           status: "error",
           error: "exercise_not_found",
           exercise_name: args.exercise_name,
+          ...(hasCloseMatches && { close_matches: matchNames }),
         },
       } satisfies ToolResult,
     };

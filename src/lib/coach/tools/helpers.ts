@@ -103,18 +103,26 @@ export function describeSetSummary(
 export function exerciseNotFoundResult(
   name: string,
   errorCode = "exercise_not_found",
-  description = "I couldn't find that exercise in your library."
+  description = "I couldn't find that exercise in your library.",
+  closeMatches: string[] = []
 ): ToolResult {
+  const hasMatches = closeMatches.length > 0;
   return {
-    summary: `Could not find "${name}".`,
+    summary: hasMatches
+      ? `"${name}" not found. Close matches: ${closeMatches.join(", ")}.`
+      : `Could not find "${name}".`,
     blocks: [
       {
         type: "status",
-        tone: "error",
-        title: "Exercise not found",
-        description,
+        tone: hasMatches ? "info" : "error",
+        title: hasMatches ? "Did you mean one of these?" : "Exercise not found",
+        description: hasMatches ? closeMatches.join(", ") : description,
       },
     ],
-    outputForModel: { status: "error", error: errorCode },
+    outputForModel: {
+      status: "error",
+      error: errorCode,
+      ...(hasMatches && { close_matches: closeMatches }),
+    },
   };
 }
