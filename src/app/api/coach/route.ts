@@ -13,12 +13,9 @@ import {
   generateText,
   convertToModelMessages,
   stepCountIs,
-  createUIMessageStream,
-  createUIMessageStreamResponse,
   type ModelMessage,
   type UIMessage,
 } from "ai";
-import { pipeJsonRender } from "@json-render/core";
 import type { Exercise } from "@/types/domain";
 import { hasValidE2ETestSession } from "@/lib/e2e/test-session";
 import { z } from "zod";
@@ -402,8 +399,9 @@ export async function POST(request: Request) {
 
   const tools = createCoachTools(context);
 
-  // Stream the model response through json-render's JSONL transform.
-  // pipeJsonRender separates JSONL patches (→ data-spec parts) from text.
+  // Stream the model response via AI SDK's UIMessageStream protocol.
+  // pipeJsonRender intercepts text deltas, converting JSONL patches into
+  // data-spec parts for the client's json-render Renderer.
   const result = streamText({
     model: runtime.model,
     system: systemPrompt,
@@ -411,35 +409,8 @@ export async function POST(request: Request) {
     tools,
     stopWhen: stepCountIs(MAX_TOOL_ROUNDS),
     abortSignal: request.signal,
-  });
-
-  const stream = createUIMessageStream({
-    execute: async ({ writer }) => {
-      writer.merge(pipeJsonRender(result.toUIMessageStream()));
-
-      // After the stream completes, check step limit and persist.
+    onFinish: async ({ response }) => {
       try {
-        const [finishReason, text, response] = await Promise.all([
-          result.finishReason,
-          result.text,
-          result.response,
-        ]);
-
-        // Inject fallback message if the model hit the tool-call step limit
-        // without producing text (mirrors planner.ts hitToolLimit logic).
-        const hitToolLimit = !text.trim() && finishReason === "tool-calls";
-        if (hitToolLimit) {
-          const fallbackId = `step-limit-${turnId}`;
-          writer.write({ type: "text-start", id: fallbackId });
-          writer.write({
-            type: "text-delta",
-            delta:
-              "I reached the step limit. Ask a follow-up and I'll continue.",
-            id: fallbackId,
-          });
-          writer.write({ type: "text-end", id: fallbackId });
-        }
-
         await persistCoachTurn({
           convex,
           sessionId,
@@ -454,5 +425,5 @@ export async function POST(request: Request) {
     },
   });
 
-  return createUIMessageStreamResponse({ stream });
+  return result.toUIMessageStreamResponse();
 }
