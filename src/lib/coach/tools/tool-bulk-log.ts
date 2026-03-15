@@ -1,3 +1,4 @@
+import { buildTodayTotals } from "./data";
 import { BulkLogArgsSchema } from "./schemas";
 import { runLogSetTool } from "./tool-log-set";
 import type { CoachToolContext, ToolResult } from "./types";
@@ -45,6 +46,9 @@ export async function runBulkLogTool(
       ? `Logged ${successes} set${successes === 1 ? "" : "s"}.`
       : `Logged ${successes} of ${results.length} sets (${failures} failed).`;
 
+  // Post-commit: single fresh query for today's totals after all mutations.
+  const todayTotals = await buildTodayTotals(ctx);
+
   return {
     summary: summaryLine,
     blocks: [
@@ -61,6 +65,11 @@ export async function runBulkLogTool(
       logged: successes,
       failed: failures,
       results: results.map((r) => r.outputForModel),
+      today_totals: {
+        total_sets: todayTotals.totalSets,
+        total_reps: todayTotals.totalReps,
+        exercise_count: todayTotals.topExercises.length,
+      },
     },
   };
 }

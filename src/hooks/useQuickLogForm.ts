@@ -6,6 +6,7 @@ import { z } from "zod";
 import { api } from "../../convex/_generated/api";
 import { type Id } from "../../convex/_generated/dataModel";
 import { handleMutationError } from "@/lib/error-handler";
+import { getTodayRange } from "@/lib/date-utils";
 import { trackEvent } from "@/lib/analytics";
 import { checkForPR } from "@/lib/pr-detection";
 import { showPRCelebration } from "@/components/dashboard/pr-celebration";
@@ -89,6 +90,14 @@ export function useQuickLogForm({
       : "skip"
   );
 
+  // Day-scoped query for session-start detection.
+  // Reactive: auto-updates after each log so the check fires at most once per day.
+  const { start: todayStart, end: todayEnd } = getTodayRange();
+  const todaySets = useQuery(api.sets.listSetsForDateRange, {
+    startDate: todayStart,
+    endDate: todayEnd,
+  });
+
   const onSubmit = async (values: QuickLogFormValues) => {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -137,8 +146,13 @@ export function useQuickLogForm({
       const setId = raceResult as Id<"sets">;
 
       trackSetLogged(String(setId), values);
-      // Session-start tracking deferred to #385 (needs day-scoped query,
-      // not the exercise-scoped previousSets available here).
+
+      // Session-start: fire once per local day, regardless of exercise.
+      // todaySets reflects pre-mutation state (reactive update hasn't landed yet),
+      // so length === 0 means this is the first set of the day.
+      if (todaySets && todaySets.length === 0) {
+        trackEvent("Session Started", { exerciseId: values.exerciseId });
+      }
 
       // Check for PR before showing success toast (only for rep-based exercises)
       let isPR = false;

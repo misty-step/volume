@@ -102,6 +102,9 @@ export interface AnalyticsEventDefinitions {
     error: string;
     userId?: string;
   };
+  "Session Started": {
+    exerciseId: string;
+  };
   "Coach Message Sent": { messageLength: number; turnIndex: number };
   "Coach Response Received": {
     blocks: number;

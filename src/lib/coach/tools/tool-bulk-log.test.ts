@@ -22,6 +22,12 @@ vi.mock("@/../convex/_generated/api", () => ({
 vi.mock("./data", () => ({
   ensureExercise: vi.fn(),
   listExercises: vi.fn(),
+  buildTodayTotals: vi.fn().mockResolvedValue({
+    totalSets: 0,
+    totalReps: 0,
+    totalDurationSeconds: 0,
+    topExercises: [],
+  }),
 }));
 
 import { ensureExercise } from "./data";

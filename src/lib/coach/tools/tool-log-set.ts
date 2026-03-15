@@ -2,7 +2,7 @@ import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import type { CoachBlock } from "@/lib/coach/schema";
 import { sanitizeError } from "@/lib/coach/sanitize-error";
-import { ensureExercise } from "./data";
+import { buildTodayTotals, ensureExercise } from "./data";
 import { formatSecondsShort } from "./helpers";
 import { LogSetArgsSchema } from "./schemas";
 import type {
@@ -152,6 +152,11 @@ export async function runLogSetTool(
     options?.onBlocks?.([undoWarningBlock]);
   }
 
+  // Post-commit: fetch fresh today's totals so the model has accurate
+  // day-level data without needing a separate get_today_summary call.
+  // This eliminates the race condition when both tools run in parallel.
+  const todayTotals = await buildTodayTotals(ctx);
+
   return {
     summary: `Logged set for ${ensured.exercise.name}.`,
     blocks: [
@@ -164,6 +169,11 @@ export async function runLogSetTool(
       exercise_name: ensured.exercise.name,
       created_exercise: ensured.created,
       warning: undoWarningBlock ? "undo_unavailable" : undefined,
+      today_totals: {
+        total_sets: todayTotals.totalSets,
+        total_reps: todayTotals.totalReps,
+        exercise_count: todayTotals.topExercises.length,
+      },
     },
   };
 }
