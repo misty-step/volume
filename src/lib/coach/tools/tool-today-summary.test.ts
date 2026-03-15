@@ -121,6 +121,54 @@ describe("runTodaySummaryTool", () => {
     expect(result.outputForModel.exercise_count).toBe(2);
   });
 
+  it("exercise_count uses exerciseCount, not truncated topExercises.length", async () => {
+    vi.mocked(buildTodayTotals).mockResolvedValue({
+      totalSets: 10,
+      totalReps: 80,
+      totalDurationSeconds: 120,
+      topExercises: [
+        {
+          exerciseId: "a",
+          exerciseName: "Bench",
+          sets: 3,
+          reps: 30,
+          durationSeconds: 0,
+        },
+        {
+          exerciseId: "b",
+          exerciseName: "Squat",
+          sets: 3,
+          reps: 25,
+          durationSeconds: 0,
+        },
+        {
+          exerciseId: "c",
+          exerciseName: "Curl",
+          sets: 2,
+          reps: 15,
+          durationSeconds: 0,
+        },
+        {
+          exerciseId: "d",
+          exerciseName: "Plank",
+          sets: 1,
+          reps: 0,
+          durationSeconds: 120,
+        },
+      ],
+      exerciseCount: 6, // More than 4 topExercises entries
+    });
+    const result = await runTodaySummaryTool(mockCtx);
+    // outputForModel uses full count, not truncated
+    expect(result.outputForModel.exercise_count).toBe(6);
+    // UI block also shows full count
+    const metrics = result.blocks.find((b) => b.type === "metrics") as any;
+    const exerciseMetric = metrics.metrics.find(
+      (m: any) => m.label === "Exercises"
+    );
+    expect(exerciseMetric.value).toBe("6");
+  });
+
   it("uses buildTodayTotals as single source of truth", async () => {
     vi.mocked(buildTodayTotals).mockResolvedValue({
       totalSets: 0,

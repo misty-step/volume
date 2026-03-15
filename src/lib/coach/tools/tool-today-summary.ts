@@ -4,7 +4,9 @@ import { buildTodayTotals } from "./data";
 import { formatSecondsShort } from "./helpers";
 import type { CoachToolContext, ToolResult } from "./types";
 
-function buildTodaySummaryBlocks(summary: TodayTotalsSummary): CoachBlock[] {
+function buildTodaySummaryBlocks(
+  summary: TodayTotalsSummary & { exerciseCount: number }
+): CoachBlock[] {
   if (summary.totalSets === 0) {
     return [
       {
@@ -27,7 +29,7 @@ function buildTodaySummaryBlocks(summary: TodayTotalsSummary): CoachBlock[] {
           label: "Duration",
           value: formatSecondsShort(summary.totalDurationSeconds),
         },
-        { label: "Exercises", value: String(summary.topExercises.length) },
+        { label: "Exercises", value: String(summary.exerciseCount) },
       ],
     },
     {
