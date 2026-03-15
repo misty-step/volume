@@ -26,6 +26,7 @@ vi.mock("./data", () => ({
   resolveExercise: vi.fn(),
   listExercises: vi.fn(),
   findExercise: vi.fn(),
+  findCloseMatches: vi.fn().mockReturnValue([]),
 }));
 
 const mockResolveExercise = vi.mocked(resolveExercise);
@@ -59,7 +60,11 @@ describe("tool-manage-exercise", () => {
   });
 
   it("returns error when exercise not found for rename", async () => {
-    mockResolveExercise.mockResolvedValue({ exercise: null, exercises: [] });
+    mockResolveExercise.mockResolvedValue({
+      exercise: null,
+      exercises: [],
+      closeMatches: [],
+    });
 
     const result = await runRenameExerciseTool(
       { exercise_name: "Push Ups", new_name: "Bench Press" },
@@ -78,6 +83,7 @@ describe("tool-manage-exercise", () => {
     mockResolveExercise.mockResolvedValue({
       exercise: exercise(),
       exercises: [exercise()],
+      closeMatches: [],
     });
     mutation.mockResolvedValue(undefined);
 
@@ -102,6 +108,7 @@ describe("tool-manage-exercise", () => {
     mockResolveExercise.mockResolvedValue({
       exercise: exercise({ deletedAt: Date.now(), name: "Push Ups" }),
       exercises: [exercise({ deletedAt: Date.now(), name: "Push Ups" })],
+      closeMatches: [],
     });
 
     const result = await runRenameExerciseTool(
@@ -240,6 +247,7 @@ describe("tool-manage-exercise", () => {
     mockResolveExercise.mockResolvedValue({
       exercise: exercise({ name: "Squat" }),
       exercises: [exercise({ name: "Squat" })],
+      closeMatches: [],
     });
     mutation.mockResolvedValue(undefined);
 
@@ -263,6 +271,7 @@ describe("tool-manage-exercise", () => {
     mockResolveExercise.mockResolvedValue({
       exercise: exercise({ name: "Deadlift", deletedAt: Date.now() }),
       exercises: [exercise({ name: "Deadlift", deletedAt: Date.now() })],
+      closeMatches: [],
     });
     mutation.mockResolvedValue(undefined);
 
@@ -284,6 +293,7 @@ describe("tool-manage-exercise", () => {
     mockResolveExercise.mockResolvedValue({
       exercise: exercise({ name: "Press" }),
       exercises: [exercise({ name: "Press" })],
+      closeMatches: [],
     });
 
     const result = await runRestoreExerciseTool(
@@ -303,6 +313,7 @@ describe("tool-manage-exercise", () => {
     mockResolveExercise.mockResolvedValue({
       exercise: exercise({ name: "Row" }),
       exercises: [exercise({ name: "Row" })],
+      closeMatches: [],
     });
     mutation.mockResolvedValue(undefined);
 
@@ -326,7 +337,11 @@ describe("tool-manage-exercise", () => {
   });
 
   it("returns error when exercise is missing for muscle-group update", async () => {
-    mockResolveExercise.mockResolvedValue({ exercise: null, exercises: [] });
+    mockResolveExercise.mockResolvedValue({
+      exercise: null,
+      exercises: [],
+      closeMatches: [],
+    });
 
     const result = await runUpdateExerciseMuscleGroupsTool(
       {

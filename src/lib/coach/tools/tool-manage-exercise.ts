@@ -1,5 +1,10 @@
 import { api } from "@/../convex/_generated/api";
-import { findExercise, listExercises, resolveExercise } from "./data";
+import {
+  findCloseMatches,
+  findExercise,
+  listExercises,
+  resolveExercise,
+} from "./data";
 import { exerciseNotFoundResult, titleCase } from "./helpers";
 import {
   ExerciseNameArgsSchema,
@@ -14,15 +19,18 @@ export async function runRenameExerciseTool(
   ctx: CoachToolContext
 ): Promise<ToolResult> {
   const args = RenameExerciseArgsSchema.parse(rawArgs);
-  const { exercise } = await resolveExercise(ctx, args.exercise_name, {
-    includeDeleted: true,
-  });
+  const { exercise, closeMatches } = await resolveExercise(
+    ctx,
+    args.exercise_name,
+    { includeDeleted: true }
+  );
 
   if (!exercise || exercise.deletedAt !== undefined) {
     return exerciseNotFoundResult(
       args.exercise_name,
       "exercise_not_found",
-      "I couldn't find an active exercise with that name to rename."
+      "I couldn't find an active exercise with that name to rename.",
+      closeMatches.map((e) => e.name)
     );
   }
 
@@ -55,10 +63,18 @@ export async function runDeleteExerciseTool(
   ctx: CoachToolContext
 ): Promise<ToolResult> {
   const args = ExerciseNameArgsSchema.parse(rawArgs);
-  const { exercise } = await resolveExercise(ctx, args.exercise_name);
+  const { exercise, closeMatches } = await resolveExercise(
+    ctx,
+    args.exercise_name
+  );
 
   if (!exercise) {
-    return exerciseNotFoundResult(args.exercise_name);
+    return exerciseNotFoundResult(
+      args.exercise_name,
+      "exercise_not_found",
+      "I couldn't find that exercise in your library.",
+      closeMatches.map((e) => e.name)
+    );
   }
 
   await ctx.convex.mutation(api.exercises.deleteExercise, {
@@ -94,12 +110,19 @@ export async function runRestoreExerciseTool(
   ctx: CoachToolContext
 ): Promise<ToolResult> {
   const args = ExerciseNameArgsSchema.parse(rawArgs);
-  const { exercise } = await resolveExercise(ctx, args.exercise_name, {
-    includeDeleted: true,
-  });
+  const { exercise, closeMatches } = await resolveExercise(
+    ctx,
+    args.exercise_name,
+    { includeDeleted: true }
+  );
 
   if (!exercise) {
-    return exerciseNotFoundResult(args.exercise_name);
+    return exerciseNotFoundResult(
+      args.exercise_name,
+      "exercise_not_found",
+      "I couldn't find that exercise in your library.",
+      closeMatches.map((e) => e.name)
+    );
   }
 
   if (exercise.deletedAt === undefined) {
@@ -153,10 +176,12 @@ export async function runMergeExerciseTool(
   );
 
   if (!sourceExercise) {
+    const sourceMatches = findCloseMatches(args.source_exercise, exercises);
     return exerciseNotFoundResult(
       args.source_exercise,
       "source_exercise_not_found",
-      "I couldn't find that source exercise in your library."
+      "I couldn't find that source exercise in your library.",
+      sourceMatches.map((e) => e.name)
     );
   }
 
@@ -180,10 +205,12 @@ export async function runMergeExerciseTool(
   }
 
   if (!targetExercise) {
+    const targetMatches = findCloseMatches(args.target_exercise, exercises);
     return exerciseNotFoundResult(
       args.target_exercise,
       "target_exercise_not_found",
-      "I couldn't find that target exercise in your library."
+      "I couldn't find that target exercise in your library.",
+      targetMatches.map((e) => e.name)
     );
   }
 
@@ -250,10 +277,18 @@ export async function runUpdateExerciseMuscleGroupsTool(
   ctx: CoachToolContext
 ): Promise<ToolResult> {
   const args = UpdateMuscleGroupsArgsSchema.parse(rawArgs);
-  const { exercise } = await resolveExercise(ctx, args.exercise_name);
+  const { exercise, closeMatches } = await resolveExercise(
+    ctx,
+    args.exercise_name
+  );
 
   if (!exercise) {
-    return exerciseNotFoundResult(args.exercise_name);
+    return exerciseNotFoundResult(
+      args.exercise_name,
+      "exercise_not_found",
+      "I couldn't find that exercise in your library.",
+      closeMatches.map((e) => e.name)
+    );
   }
 
   const muscleGroups = Array.from(

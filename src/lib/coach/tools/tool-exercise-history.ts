@@ -27,11 +27,18 @@ export async function runExerciseHistoryTool(
   const args = ExerciseHistoryArgsSchema.parse(rawArgs);
   const limit = args.limit ?? 20;
 
-  const { exercise } = await resolveExercise(ctx, args.exercise_name, {
-    includeDeleted: true,
-  });
+  const { exercise, closeMatches } = await resolveExercise(
+    ctx,
+    args.exercise_name,
+    { includeDeleted: true }
+  );
   if (!exercise) {
-    return exerciseNotFoundResult(args.exercise_name);
+    return exerciseNotFoundResult(
+      args.exercise_name,
+      "exercise_not_found",
+      "I couldn't find that exercise in your library.",
+      closeMatches.map((e) => e.name)
+    );
   }
 
   const allSets = (await getRecentExerciseSets(ctx, exercise._id)) as Set[];

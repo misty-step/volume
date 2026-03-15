@@ -62,7 +62,11 @@ describe("runDeleteSetTool", () => {
   });
 
   it("returns error when exercise cannot be found", async () => {
-    mockResolveExercise.mockResolvedValue({ exercise: null, exercises: [] });
+    mockResolveExercise.mockResolvedValue({
+      exercise: null,
+      exercises: [],
+      closeMatches: [],
+    });
 
     const result = await runDeleteSetTool(
       { exercise_name: "Nope" },
@@ -82,6 +86,7 @@ describe("runDeleteSetTool", () => {
     mockResolveExercise.mockResolvedValue({
       exercise: ex,
       exercises: [ex],
+      closeMatches: [],
     });
     mockGetRecentExerciseSets.mockResolvedValue([]);
 
@@ -104,6 +109,7 @@ describe("runDeleteSetTool", () => {
     mockResolveExercise.mockResolvedValue({
       exercise: ex,
       exercises: [ex],
+      closeMatches: [],
     });
     mockGetRecentExerciseSets.mockResolvedValue([
       {
