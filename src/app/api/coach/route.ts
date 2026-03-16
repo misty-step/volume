@@ -432,12 +432,12 @@ export async function POST(request: Request) {
   // them to data-spec parts that the client's json-render Renderer can use.
   // Without this, JSONL patches render as raw text code blocks.
   const stream = createUIMessageStream({
-    execute: async ({ writer }) => {
+    execute: ({ writer }) => {
+      // pipeJsonRender intercepts JSONL patches in text deltas and converts
+      // them to data-spec parts. The merged stream drives the execute
+      // lifetime — createUIMessageStream keeps the response open until
+      // the merged stream ends.
       writer.merge(pipeJsonRender(result.toUIMessageStream()));
-      // Wait for the model stream to complete so the UIMessageStream
-      // closes properly and the client's useChat status transitions
-      // from "streaming" back to "ready".
-      await result.response;
     },
   });
 
