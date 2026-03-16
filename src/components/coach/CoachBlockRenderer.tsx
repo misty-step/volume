@@ -1,14 +1,14 @@
 "use client";
 
-import { Renderer } from "@json-render/react";
+import { Renderer, JSONUIProvider } from "@json-render/react";
 import { registry } from "@/lib/coach/registry";
 import type { Spec } from "@json-render/core";
 
 /**
  * Renders a json-render spec using the coach component registry.
  *
- * Replaces the former switch-based CoachBlock renderer with json-render's
- * catalog-constrained Renderer component.
+ * JSONUIProvider wraps Renderer with all required contexts
+ * (state, visibility, actions, validation).
  */
 export function CoachSpecRenderer({
   spec,
@@ -18,5 +18,9 @@ export function CoachSpecRenderer({
   loading?: boolean;
 }) {
   if (!spec) return null;
-  return <Renderer spec={spec} registry={registry} loading={loading} />;
+  return (
+    <JSONUIProvider registry={registry} handlers={{}}>
+      <Renderer spec={spec} registry={registry} loading={loading} />
+    </JSONUIProvider>
+  );
 }
