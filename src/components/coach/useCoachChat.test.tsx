@@ -32,25 +32,32 @@ vi.mock("@/lib/analytics", () => ({
 }));
 
 const mockSendMessage = vi.fn();
-const mockMessages: Array<{ role: string; content: string }> = [];
+const mockMessages: Array<{
+  id: string;
+  role: string;
+  parts: Array<{ type: string; text?: string }>;
+}> = [];
 
 vi.mock("@ai-sdk/react", () => ({
   useChat: vi.fn(() => ({
     messages: mockMessages,
-    input: "",
-    setInput: vi.fn(),
-    handleSubmit: vi.fn(),
     status: "ready",
     error: undefined,
     sendMessage: mockSendMessage,
   })),
 }));
 
-const mockUseJsonRenderMessage = vi.fn(() => ({ spec: null }));
-vi.mock("@json-render/react", () => ({
-  useJsonRenderMessage: (...args: unknown[]) =>
-    mockUseJsonRenderMessage(...args),
-}));
+/** Build JSONL patches for a single json-render element. */
+function makeJsonl(
+  rootKey: string,
+  type: string,
+  props: Record<string, unknown>
+): string {
+  return [
+    `{"op":"add","path":"/root","value":"${rootKey}"}`,
+    `{"op":"add","path":"/elements/${rootKey}","value":{"type":"${type}","props":${JSON.stringify(props)},"children":[]}}`,
+  ].join("\n");
+}
 
 describe("useCoachChat", () => {
   const getOrCreateTodaySessionMock = vi.fn();
@@ -111,21 +118,15 @@ describe("useCoachChat", () => {
     );
   });
 
-  it("applies set_weight_unit ClientAction from spec elements", async () => {
-    mockUseJsonRenderMessage.mockReturnValue({
-      spec: {
-        root: "ca1",
-        elements: {
-          ca1: {
-            type: "ClientAction",
-            props: {
-              action: "set_weight_unit",
-              payload: { unit: "kg" },
-            },
-            children: [],
-          },
-        },
-      },
+  it("applies set_weight_unit ClientAction from spec in text parts", async () => {
+    const jsonl = makeJsonl("ca1", "ClientAction", {
+      action: "set_weight_unit",
+      payload: { unit: "kg" },
+    });
+    mockMessages.push({
+      id: "msg1",
+      role: "assistant",
+      parts: [{ type: "text", text: jsonl }],
     });
 
     renderHook(() => useCoachChat());
@@ -135,21 +136,15 @@ describe("useCoachChat", () => {
     });
   });
 
-  it("applies set_sound ClientAction from spec elements", async () => {
-    mockUseJsonRenderMessage.mockReturnValue({
-      spec: {
-        root: "ca1",
-        elements: {
-          ca1: {
-            type: "ClientAction",
-            props: {
-              action: "set_sound",
-              payload: { enabled: false },
-            },
-            children: [],
-          },
-        },
-      },
+  it("applies set_sound ClientAction from spec in text parts", async () => {
+    const jsonl = makeJsonl("ca1", "ClientAction", {
+      action: "set_sound",
+      payload: { enabled: false },
+    });
+    mockMessages.push({
+      id: "msg1",
+      role: "assistant",
+      parts: [{ type: "text", text: jsonl }],
     });
 
     renderHook(() => useCoachChat());
@@ -160,20 +155,14 @@ describe("useCoachChat", () => {
   });
 
   it("navigates to pricing for open_checkout ClientAction", async () => {
-    mockUseJsonRenderMessage.mockReturnValue({
-      spec: {
-        root: "ca1",
-        elements: {
-          ca1: {
-            type: "ClientAction",
-            props: {
-              action: "open_checkout",
-              payload: { mode: "checkout" },
-            },
-            children: [],
-          },
-        },
-      },
+    const jsonl = makeJsonl("ca1", "ClientAction", {
+      action: "open_checkout",
+      payload: { mode: "checkout" },
+    });
+    mockMessages.push({
+      id: "msg1",
+      role: "assistant",
+      parts: [{ type: "text", text: jsonl }],
     });
 
     renderHook(() => useCoachChat());

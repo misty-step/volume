@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
-import { useJsonRenderMessage } from "@json-render/react";
+import { compileSpecStream } from "@json-render/core";
+import type { Spec } from "@json-render/core";
 import { DefaultChatTransport } from "ai";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
@@ -90,11 +91,37 @@ export function useCoachChat() {
 
   const isWorking = status === "streaming" || status === "submitted";
 
-  // Extract json-render spec from the latest assistant message.
-  const lastAssistantMessage = [...messages]
-    .reverse()
-    .find((m) => m.role === "assistant");
-  const { spec } = useJsonRenderMessage(lastAssistantMessage?.parts ?? []);
+  // Extract json-render spec from JSONL patches in the latest assistant
+  // message's text parts. The model generates JSONL inline; we compile it
+  // into a Spec client-side since pipeJsonRender breaks stream closure.
+  const spec = useMemo<Spec | null>(() => {
+    const lastAssistant = [...messages]
+      .reverse()
+      .find((m) => m.role === "assistant");
+    if (!lastAssistant) return null;
+
+    const textParts = lastAssistant.parts
+      .filter(
+        (p): p is Extract<typeof p, { type: "text" }> => p.type === "text"
+      )
+      .map((p) => p.text);
+    const fullText = textParts.join("\n");
+
+    // Extract JSONL lines that look like RFC 6902 patches
+    const jsonlLines = fullText.split("\n").filter((line) => {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("{")) return false;
+      try {
+        const obj = JSON.parse(trimmed);
+        return obj.op && obj.path;
+      } catch {
+        return false;
+      }
+    });
+
+    if (jsonlLines.length === 0) return null;
+    return compileSpecStream(jsonlLines.join("\n")) as unknown as Spec;
+  }, [messages]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
