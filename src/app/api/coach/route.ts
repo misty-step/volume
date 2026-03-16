@@ -13,9 +13,12 @@ import {
   generateText,
   convertToModelMessages,
   stepCountIs,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
   type ModelMessage,
   type UIMessage,
 } from "ai";
+import { pipeJsonRender } from "@json-render/core";
 import type { Exercise } from "@/types/domain";
 import { hasValidE2ETestSession } from "@/lib/e2e/test-session";
 import { z } from "zod";
@@ -425,7 +428,17 @@ export async function POST(request: Request) {
     },
   });
 
-  return result.toUIMessageStreamResponse({
+  // pipeJsonRender intercepts JSONL patches in the text stream and converts
+  // them to data-spec parts that the client's json-render Renderer can use.
+  // Without this, JSONL patches render as raw text code blocks.
+  const stream = createUIMessageStream({
+    execute: ({ writer }) => {
+      writer.merge(pipeJsonRender(result.toUIMessageStream()));
+    },
+  });
+
+  return createUIMessageStreamResponse({
+    stream,
     headers: {
       "Transfer-Encoding": "chunked",
       Connection: "keep-alive",
