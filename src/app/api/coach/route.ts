@@ -409,28 +409,25 @@ export async function POST(request: Request) {
     tools,
     stopWhen: stepCountIs(MAX_TOOL_ROUNDS),
     abortSignal: request.signal,
-    onFinish: async ({ response }) => {
-      try {
-        await persistCoachTurn({
-          convex,
-          sessionId,
-          latestUserText,
-          turnId,
-          responseMessages: response.messages as ModelMessage[],
-        });
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        reportError(err, { route: "coach", operation: "persist_turn" });
-      }
-    },
   });
 
-  // Use the standard AI SDK streaming response. JSONL patch parsing
-  // is handled client-side via useJsonRenderMessage.
-  return result.toUIMessageStreamResponse({
-    headers: {
-      "Transfer-Encoding": "chunked",
-      Connection: "keep-alive",
-    },
+  // Persist the turn after the stream completes (fire-and-forget).
+  // Using result.response instead of onFinish avoids potential stream
+  // closure timing issues with the SSE transport.
+  void result.response.then(async (response) => {
+    try {
+      await persistCoachTurn({
+        convex,
+        sessionId,
+        latestUserText,
+        turnId,
+        responseMessages: response.messages as ModelMessage[],
+      });
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      reportError(err, { route: "coach", operation: "persist_turn" });
+    }
   });
+
+  return result.toUIMessageStreamResponse();
 }
