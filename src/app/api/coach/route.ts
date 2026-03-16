@@ -425,5 +425,10 @@ export async function POST(request: Request) {
     },
   });
 
-  return result.toUIMessageStreamResponse();
+  return result.toUIMessageStreamResponse({
+    headers: {
+      "Transfer-Encoding": "chunked",
+      Connection: "keep-alive",
+    },
+  });
 }

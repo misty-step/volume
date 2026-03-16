@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
@@ -71,19 +71,15 @@ export function useCoachChat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // AI SDK v6 useChat — transport sends to /api/coach with session metadata.
+  // Stable transport instance — must NOT be recreated on every render.
+  // Session/preference data is passed per-request via sendMessage body.
+  const transport = useMemo(
+    () => new DefaultChatTransport({ api: "/api/coach" }),
+    []
+  );
+
   const { messages, sendMessage, status } = useChat({
-    transport: new DefaultChatTransport({
-      api: "/api/coach",
-      body: {
-        sessionId,
-        preferences: {
-          unit,
-          soundEnabled,
-          timezoneOffsetMinutes: new Date().getTimezoneOffset(),
-        },
-      },
-    }),
+    transport,
     onError: (error) => {
       reportError(error instanceof Error ? error : new Error(String(error)), {
         component: "useCoachChat",
