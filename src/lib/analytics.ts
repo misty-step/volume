@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { captureException as canaryCapture } from "@canary-obs/sdk";
 import { sanitizeEmail } from "./sanitize";
 import { shouldEnableSentry } from "./sentry";
 import type posthogJs from "posthog-js";
@@ -449,20 +450,21 @@ export function reportError(
   error: Error,
   context?: Record<string, unknown>
 ): void {
-  if (!isSentryEnabled()) return;
+  const sanitizedContext = context
+    ? sanitizeEventProperties(context)
+    : undefined;
 
-  try {
-    const sanitizedContext = context
-      ? sanitizeEventProperties(context)
-      : undefined;
-
-    Sentry.captureException(error, {
-      extra: sanitizedContext,
-    });
-  } catch (sentryError) {
-    // Never break user flow due to Sentry errors
-    if (process.env.NODE_ENV === "development") {
-      console.warn("Sentry reportError failed:", sentryError);
+  if (isSentryEnabled()) {
+    try {
+      Sentry.captureException(error, {
+        extra: sanitizedContext,
+      });
+    } catch (sentryError) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("Sentry reportError failed:", sentryError);
+      }
     }
   }
+
+  canaryCapture(error, { context: sanitizedContext }).catch(() => {});
 }

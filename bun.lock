@@ -6,6 +6,7 @@
       "name": "volume",
       "dependencies": {
         "@ai-sdk/react": "^3.0.118",
+        "@canary-obs/sdk": "workspace:*",
         "@clerk/nextjs": "^6.37.4",
         "@hookform/resolvers": "^5.2.2",
         "@json-render/core": "^0.14.0",
