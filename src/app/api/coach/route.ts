@@ -242,7 +242,7 @@ export async function POST(request: Request) {
   // with extra body fields. Parse loosely, then convert to ModelMessages.
   const TransportBodySchema = z.object({
     messages: z.array(z.object({ role: z.string() }).passthrough()).min(1),
-    sessionId: z.string().min(1).max(256).optional(),
+    sessionId: z.string().min(1).max(256).nullish(),
     preferences: CoachPreferencesSchema.optional(),
   });
 
@@ -258,7 +258,7 @@ export async function POST(request: Request) {
     unit: "lbs" as const,
     soundEnabled: true,
   };
-  const sessionId = parsed.data.sessionId;
+  const sessionId = parsed.data.sessionId ?? undefined;
 
   // Convert UIMessages to ModelMessages for history building.
   const uiMessages = parsed.data.messages as unknown as UIMessage[];
