@@ -120,7 +120,11 @@ export function useCoachChat() {
     });
 
     if (jsonlLines.length === 0) return null;
-    return compileSpecStream(jsonlLines.join("\n")) as unknown as Spec;
+    const initial = { root: null, elements: {} } as unknown as Record<
+      string,
+      unknown
+    >;
+    return compileSpecStream(jsonlLines.join("\n"), initial) as unknown as Spec;
   }, [messages]);
 
   useEffect(() => {
