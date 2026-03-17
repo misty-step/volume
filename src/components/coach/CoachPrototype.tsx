@@ -10,11 +10,29 @@ import { CoachChatContext } from "@/lib/coach/coach-chat-context";
 import { cn } from "@/lib/utils";
 import type { UIMessage } from "ai";
 
+/** Extract prose text from a message, stripping JSONL patches and code fences. */
 function getMessageText(message: UIMessage): string {
-  return message.parts
+  const raw = message.parts
     .filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text")
     .map((p) => p.text)
     .join("\n");
+
+  // Strip json-render JSONL patches (RFC 6902 lines) and code fences
+  return raw
+    .split("\n")
+    .filter((line) => {
+      const trimmed = line.trim();
+      if (trimmed === "```spec" || trimmed === "```") return false;
+      if (!trimmed.startsWith("{")) return true;
+      try {
+        const obj = JSON.parse(trimmed);
+        return !(obj.op && obj.path);
+      } catch {
+        return true;
+      }
+    })
+    .join("\n")
+    .trim();
 }
 
 export function CoachPrototype() {

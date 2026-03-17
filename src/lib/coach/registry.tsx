@@ -24,6 +24,8 @@ import {
  */
 export const { registry } = defineRegistry(catalog, {
   components: {
+    Card: ({ children }: any) => <div className="space-y-3">{children}</div>,
+
     Status: ({ props }: any) => (
       <StatusBlock
         tone={props.tone}

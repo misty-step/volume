@@ -210,6 +210,15 @@ export type CoachBlock = z.infer<typeof CoachBlockSchema>;
 
 export const catalog = defineCatalog(schema, {
   components: {
+    Card: {
+      props: z.object({
+        title: z.string().nullable(),
+      }),
+      slots: ["default"],
+      description:
+        "Container card that groups child components. Use as a root element when multiple blocks belong together.",
+    },
+
     Status: {
       props: z.object({
         tone: z.enum(["success", "error", "info"]),
