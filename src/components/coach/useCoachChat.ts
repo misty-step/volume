@@ -91,41 +91,52 @@ export function useCoachChat() {
 
   const isWorking = status === "streaming" || status === "submitted";
 
-  // Extract json-render spec from JSONL patches in the latest assistant
-  // message's text parts. The model generates JSONL inline; we compile it
-  // into a Spec client-side since pipeJsonRender breaks stream closure.
+  // Compile json-render specs from JSONL patches in each assistant message.
+  // Returns a Map<messageId, Spec> so CoachPrototype can render per-message.
+  const specsByMessage = useMemo<Map<string, Spec>>(() => {
+    const map = new Map<string, Spec>();
+    for (const msg of messages) {
+      if (msg.role !== "assistant") continue;
+      const fullText = msg.parts
+        .filter(
+          (p): p is Extract<typeof p, { type: "text" }> => p.type === "text"
+        )
+        .map((p) => p.text)
+        .join("\n");
+
+      const jsonlLines = fullText.split("\n").filter((line) => {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("{")) return false;
+        try {
+          const obj = JSON.parse(trimmed);
+          return obj.op && obj.path;
+        } catch {
+          return false;
+        }
+      });
+
+      if (jsonlLines.length > 0) {
+        const initial = { root: null, elements: {} } as unknown as Record<
+          string,
+          unknown
+        >;
+        map.set(
+          msg.id,
+          compileSpecStream(jsonlLines.join("\n"), initial) as unknown as Spec
+        );
+      }
+    }
+    return map;
+  }, [messages]);
+
+  // Latest assistant spec (for ClientAction processing)
   const spec = useMemo<Spec | null>(() => {
     const lastAssistant = [...messages]
       .reverse()
       .find((m) => m.role === "assistant");
     if (!lastAssistant) return null;
-
-    const textParts = lastAssistant.parts
-      .filter(
-        (p): p is Extract<typeof p, { type: "text" }> => p.type === "text"
-      )
-      .map((p) => p.text);
-    const fullText = textParts.join("\n");
-
-    // Extract JSONL lines that look like RFC 6902 patches
-    const jsonlLines = fullText.split("\n").filter((line) => {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith("{")) return false;
-      try {
-        const obj = JSON.parse(trimmed);
-        return obj.op && obj.path;
-      } catch {
-        return false;
-      }
-    });
-
-    if (jsonlLines.length === 0) return null;
-    const initial = { root: null, elements: {} } as unknown as Record<
-      string,
-      unknown
-    >;
-    return compileSpecStream(jsonlLines.join("\n"), initial) as unknown as Spec;
-  }, [messages]);
+    return specsByMessage.get(lastAssistant.id) ?? null;
+  }, [messages, specsByMessage]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -249,6 +260,7 @@ export function useCoachChat() {
     isWorking,
     messages,
     spec,
+    specsByMessage,
     unit,
     soundEnabled,
     endRef,

@@ -41,6 +41,7 @@ describe("CoachPrototype", () => {
       isWorking: false,
       messages: [makeUIMessage({ id: "m1", role: "assistant", text: "Hi" })],
       spec: null,
+      specsByMessage: new Map(),
       unit: "lbs",
       soundEnabled: false,
       endRef: { current: null },

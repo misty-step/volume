@@ -45,7 +45,7 @@ export function CoachPrototype() {
     setInput,
     isWorking,
     messages,
-    spec,
+    specsByMessage,
     endRef,
     sendPrompt,
     undoAction,
@@ -111,8 +111,7 @@ export function CoachPrototype() {
     });
   }
 
-  // The latest assistant message's spec is rendered via json-render.
-  // Older messages show only their text content.
+  // The latest assistant message gets streaming indicator support.
   const lastAssistantIdx =
     messages.length > 0
       ? messages.reduce((acc, m, i) => (m.role === "assistant" ? i : acc), -1)
@@ -162,11 +161,15 @@ export function CoachPrototype() {
                     : "mr-10"
                 )}
               >
-                {/* json-render spec for the latest assistant message */}
-                {isLatestAssistant && spec ? (
+                {/* json-render spec for each assistant message */}
+                {message.role === "assistant" &&
+                specsByMessage.has(message.id) ? (
                   <CoachChatContext.Provider value={chatCallbacks}>
                     <div className="space-y-3">
-                      <CoachSpecRenderer spec={spec} loading={isWorking} />
+                      <CoachSpecRenderer
+                        spec={specsByMessage.get(message.id)!}
+                        loading={isLatestAssistant && isWorking}
+                      />
                     </div>
                   </CoachChatContext.Provider>
                 ) : null}
@@ -177,7 +180,7 @@ export function CoachPrototype() {
                     {text}
                   </p>
                 ) : text.trim() ? (
-                  <div className={cn(isLatestAssistant && spec && "mt-3")}>
+                  <div className={cn(specsByMessage.has(message.id) && "mt-3")}>
                     <ReactMarkdown
                       components={{
                         p: ({ children }) => (
@@ -221,7 +224,10 @@ export function CoachPrototype() {
                 ) : null}
 
                 {/* Streaming indicator */}
-                {isLatestAssistant && isWorking && !text.trim() && !spec ? (
+                {isLatestAssistant &&
+                isWorking &&
+                !text.trim() &&
+                !specsByMessage.has(message.id) ? (
                   <div className="flex items-center gap-2">
                     <ReloadIcon className="h-4 w-4 animate-spin text-accent" />
                     <p className="text-xs text-muted-foreground">Planning...</p>
