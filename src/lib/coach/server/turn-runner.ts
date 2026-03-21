@@ -1,8 +1,4 @@
-import type {
-  CoachPreferences,
-  CoachStreamEvent,
-  CoachTurnResponse,
-} from "@/lib/coach/schema";
+import type { CoachPreferences, CoachTurnResponse } from "@/lib/coach/schema";
 import { sanitizeError } from "@/lib/coach/sanitize-error";
 import type { ModelMessage } from "ai";
 import type { CoachToolContext } from "@/lib/coach/tools/types";
@@ -24,7 +20,6 @@ type RunCoachTurnParams = {
   preferences: CoachPreferences;
   ctx: CoachToolContext;
   requestSignal: AbortSignal;
-  emitEvent?: (event: CoachStreamEvent) => void;
   timeoutMs?: number;
 };
 
@@ -54,7 +49,6 @@ function buildPlannerResultResponse({
     return buildPlannerPartialFailureResponse({
       modelId,
       errorMessage: plannerResult.errorMessage,
-      blocks: plannerResult.blocks,
       toolsUsed: plannerResult.toolsUsed,
       responseMessages: plannerResult.responseMessages,
     });
@@ -62,7 +56,6 @@ function buildPlannerResultResponse({
 
   return buildCoachTurnResponse({
     assistantText: plannerResult.assistantText,
-    blocks: plannerResult.blocks,
     toolsUsed: plannerResult.toolsUsed,
     model: modelId,
     fallbackUsed: false,
@@ -77,15 +70,8 @@ export async function runCoachTurn({
   preferences,
   ctx,
   requestSignal,
-  emitEvent,
   timeoutMs = COACH_TURN_TIMEOUT_MS,
 }: RunCoachTurnParams): Promise<CoachTurnResponse> {
-  const send = (event: CoachStreamEvent) => emitEvent?.(event);
-  send({
-    type: "start",
-    model: runtime?.modelId ?? "runtime-unavailable",
-  });
-
   if (!runtime) {
     return buildRuntimeUnavailableResponse();
   }
@@ -110,16 +96,11 @@ export async function runCoachTurn({
       conversationSummary,
       preferences,
       ctx,
-      emitEvent,
       signal: turnController.signal,
     });
 
     if (plannerResult.kind === "error") {
       const safeErrorMessage = sanitizeError(plannerResult.errorMessage);
-      send({
-        type: "error",
-        message: safeErrorMessage,
-      });
 
       return buildPlannerResultResponse({
         plannerResult: {

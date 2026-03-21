@@ -1,167 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
-import type { ModelMessage } from "ai";
+import { useChat } from "@ai-sdk/react";
+import { compileSpecStream } from "@json-render/core";
+import type { Spec } from "@json-render/core";
+import { DefaultChatTransport } from "ai";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { useTactileSoundPreference } from "@/hooks/useTactileSoundPreference";
-import { readCoachStreamEvents } from "@/lib/coach/sse-client";
 import { trackEvent, reportError } from "@/lib/analytics";
-import {
-  CoachTurnResponseSchema,
-  DEFAULT_COACH_SUGGESTIONS,
-  MAX_COACH_MESSAGES,
-  type CoachBlock,
-  type CoachTurnResponse,
-} from "@/lib/coach/schema";
-
-type StoredCoachMessage = {
-  _id: string;
-  role: "user" | "assistant" | "tool";
-  content: string;
-  blocks?: string;
-  createdAt: number;
-};
-
-type CoachTimelineBlock = {
-  id: string;
-  block: CoachBlock;
-};
-
-type CoachTimelineMessage = {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
-  blocks?: CoachTimelineBlock[];
-  isStreaming?: boolean;
-};
-
-const createId = (() => {
-  let counter = 0;
-  return (): string => {
-    if (
-      typeof crypto !== "undefined" &&
-      typeof crypto.randomUUID === "function"
-    ) {
-      return crypto.randomUUID();
-    }
-    counter += 1;
-    return `fallback-id-${Date.now()}-${counter}`;
-  };
-})();
-
-function withIds(blocks: CoachBlock[]): CoachTimelineBlock[] {
-  return blocks.map((block) => ({ id: createId(), block }));
-}
 
 function parseAgentActionId(actionId: string): Id<"agentActions"> | null {
   const trimmed = actionId.trim();
   if (!trimmed) return null;
   return trimmed as Id<"agentActions">;
-}
-
-function getMessageText(content: ModelMessage["content"]): string {
-  if (typeof content === "string") return content;
-  if (!Array.isArray(content)) return "";
-
-  return content
-    .filter(
-      (part): part is Extract<(typeof content)[number], { type: "text" }> =>
-        typeof part === "object" && part?.type === "text" && "text" in part
-    )
-    .map((part) => part.text)
-    .join("\n");
-}
-
-function hydrateStoredSession(messages: StoredCoachMessage[]) {
-  const conversation: ModelMessage[] = [];
-  const timeline: CoachTimelineMessage[] = [];
-
-  for (const storedMessage of messages) {
-    let parsed: ModelMessage;
-    try {
-      parsed = JSON.parse(storedMessage.content) as ModelMessage;
-    } catch {
-      continue; // skip malformed messages
-    }
-    conversation.push(parsed);
-
-    if (storedMessage.role === "tool") {
-      continue;
-    }
-
-    let blocks: CoachTimelineBlock[] | undefined;
-    try {
-      blocks = storedMessage.blocks
-        ? withIds(JSON.parse(storedMessage.blocks) as CoachBlock[])
-        : undefined;
-    } catch {
-      // skip malformed blocks, still show the message
-    }
-
-    timeline.push({
-      id: storedMessage._id,
-      role: storedMessage.role,
-      text: getMessageText(parsed.content),
-      blocks,
-    });
-  }
-
-  return {
-    conversation,
-    timeline:
-      timeline.length > 0
-        ? timeline
-        : [
-            {
-              id: createId(),
-              role: "assistant" as const,
-              text: "Agent ready. Ask to log a set, review progress, or update settings.",
-            },
-          ],
-  };
-}
-
-function trackCoachResponse(payload: CoachTurnResponse, startMs: number) {
-  trackEvent("Coach Response Received", {
-    blocks: payload.blocks.length,
-    hadToolCalls: (payload.trace?.toolsUsed?.length ?? 0) > 0,
-    durationMs: Date.now() - startMs,
-  });
-}
-
-function toolProgressText(toolName: string): string {
-  if (toolName === "log_set") return "Logging your set...";
-  if (toolName === "get_today_summary") return "Summarizing today...";
-  if (toolName === "get_exercise_snapshot")
-    return "Loading exercise snapshot...";
-  if (toolName === "get_exercise_trend") return "Computing exercise trend...";
-  if (toolName === "get_focus_suggestions")
-    return "Building today's focus plan...";
-  if (toolName === "set_weight_unit") return "Updating settings...";
-  if (toolName === "set_sound") return "Updating settings...";
-  if (toolName === "get_history_overview") return "Loading workout history...";
-  if (toolName === "get_analytics_overview")
-    return "Computing analytics overview...";
-  if (toolName === "get_exercise_library") return "Loading exercise library...";
-  if (
-    toolName === "rename_exercise" ||
-    toolName === "delete_exercise" ||
-    toolName === "restore_exercise" ||
-    toolName === "update_exercise_muscle_groups"
-  ) {
-    return "Updating exercises...";
-  }
-  if (toolName === "delete_set") return "Deleting set...";
-  if (toolName === "get_settings_overview")
-    return "Loading settings and billing...";
-  if (toolName === "update_preferences") return "Saving preferences...";
-  if (toolName === "get_report_history") return "Loading AI report history...";
-  if (toolName === "show_workspace") return "Rendering workspace blocks...";
-  return "Working...";
 }
 
 export function useCoachChat() {
@@ -174,37 +29,13 @@ export function useCoachChat() {
   const undoAgentActionMutation = useMutation(api.agentActions.undoAgentAction);
 
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [timeline, setTimeline] = useState<CoachTimelineMessage[]>([
-    {
-      id: createId(),
-      role: "assistant",
-      text: "Agent ready. Ask to log a set, review progress, or update settings.",
-    },
-  ]);
-  const [conversation, setConversation] = useState<ModelMessage[]>([]);
   const [input, setInput] = useState("");
-  const [isWorking, setIsWorking] = useState(false);
-  const [lastTrace, setLastTrace] = useState<{
-    model: string;
-    toolsUsed: string[];
-    fallbackUsed: boolean;
-  } | null>(null);
-
-  const endRef = useRef<HTMLDivElement>(null);
   const sessionBootstrapRef = useRef<Promise<string | null> | null>(null);
-  const sessionMessages = useQuery(
-    api.coachSessions.getSessionMessages,
-    sessionId ? { sessionId: sessionId as Id<"coachSessions"> } : "skip"
-  ) as StoredCoachMessage[] | undefined;
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [timeline, isWorking]);
-
   const sessionDateRef = useRef<string | null>(null);
+  const processedActionsRef = useRef(new Set<string>());
+  const endRef = useRef<HTMLDivElement>(null);
 
   async function ensureSessionId(): Promise<string | null> {
-    // Revalidate at day boundary: if the local date changed, force a new session lookup
     const today = new Date().toDateString();
     if (sessionId && sessionDateRef.current === today) {
       return sessionId;
@@ -236,55 +67,178 @@ export function useCoachChat() {
     return await sessionBootstrapRef.current;
   }
 
-  // Bootstrap session on mount — reuses ensureSessionId to avoid duplicate calls
   useEffect(() => {
     void ensureSessionId();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Stable transport instance — must NOT be recreated on every render.
+  // Session/preference data is passed per-request via sendMessage body.
+  const transport = useMemo(
+    () => new DefaultChatTransport({ api: "/api/coach" }),
+    []
+  );
+
+  const { messages, sendMessage, status } = useChat({
+    transport,
+    onError: (error) => {
+      reportError(error instanceof Error ? error : new Error(String(error)), {
+        component: "useCoachChat",
+        operation: "useChat",
+      });
+    },
+  });
+
+  const isWorking = status === "streaming" || status === "submitted";
+
+  // Compile json-render specs from JSONL patches in each assistant message.
+  // Returns a Map<messageId, Spec> so CoachPrototype can render per-message.
+  const specsByMessage = useMemo<Map<string, Spec>>(() => {
+    const map = new Map<string, Spec>();
+    for (const msg of messages) {
+      if (msg.role !== "assistant") continue;
+      const fullText = msg.parts
+        .filter(
+          (p): p is Extract<typeof p, { type: "text" }> => p.type === "text"
+        )
+        .map((p) => p.text)
+        .join("\n");
+
+      const jsonlLines = fullText.split("\n").filter((line) => {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("{")) return false;
+        try {
+          const obj = JSON.parse(trimmed);
+          return obj.op && obj.path;
+        } catch {
+          return false;
+        }
+      });
+
+      if (jsonlLines.length > 0) {
+        const initial = { root: null, elements: {} } as unknown as Record<
+          string,
+          unknown
+        >;
+        map.set(
+          msg.id,
+          compileSpecStream(jsonlLines.join("\n"), initial) as unknown as Spec
+        );
+      }
+    }
+    return map;
+  }, [messages]);
+
+  // Latest assistant spec (for ClientAction processing)
+  const spec = useMemo<Spec | null>(() => {
+    const lastAssistant = [...messages]
+      .reverse()
+      .find((m) => m.role === "assistant");
+    if (!lastAssistant) return null;
+    return specsByMessage.get(lastAssistant.id) ?? null;
+  }, [messages, specsByMessage]);
+
+  const lastAssistantMessageId = useMemo(() => {
+    const lastAssistant = [...messages]
+      .reverse()
+      .find((m) => m.role === "assistant");
+    return lastAssistant?.id ?? null;
+  }, [messages]);
+
   useEffect(() => {
-    if (!sessionMessages || isWorking) {
-      return;
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isWorking]);
+
+  // Process client actions from spec elements (deduplicated by element key).
+  useEffect(() => {
+    if (!spec?.elements) return;
+    for (const [key, element] of Object.entries(spec.elements)) {
+      if (element.type !== "ClientAction") continue;
+      const actionKey = `${lastAssistantMessageId ?? "unknown"}:${key}`;
+      if (processedActionsRef.current.has(actionKey)) continue;
+      processedActionsRef.current.add(actionKey);
+
+      const props = element.props as {
+        action: string;
+        payload: Record<string, unknown>;
+      };
+      if (
+        props.action === "set_weight_unit" &&
+        "unit" in props.payload &&
+        (props.payload.unit === "lbs" || props.payload.unit === "kg")
+      ) {
+        setUnit(props.payload.unit);
+      }
+      if (
+        props.action === "set_sound" &&
+        "enabled" in props.payload &&
+        typeof props.payload.enabled === "boolean"
+      ) {
+        setSoundEnabled(props.payload.enabled);
+      }
+      if (props.action === "open_checkout") {
+        router.push("/pricing");
+      }
+      if (props.action === "open_billing_portal") {
+        void (async () => {
+          try {
+            const response = await fetch("/api/stripe/portal", {
+              method: "POST",
+            });
+            const data = (await response.json()) as {
+              url?: string;
+              error?: string;
+            };
+            if (response.ok && data.url) {
+              window.location.href = data.url;
+            }
+          } catch {
+            // Portal errors are non-critical
+          }
+        })();
+      }
     }
+  }, [lastAssistantMessageId, spec, setUnit, setSoundEnabled, router]);
 
-    // Skip hydration if local conversation is ahead of server data (avoids
-    // briefly overwriting a just-completed turn before the subscription catches up)
-    if (sessionMessages.length < conversation.length) {
-      return;
-    }
+  async function sendPrompt(prompt: string) {
+    const trimmed = prompt.trim();
+    if (!trimmed || isWorking) return;
 
-    const hydrated = hydrateStoredSession(sessionMessages);
-    setConversation(hydrated.conversation);
-    setTimeline(hydrated.timeline);
-    // conversation intentionally excluded — we only want server-data-driven rerenders
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionMessages, isWorking]);
+    const ensuredSessionId = await ensureSessionId();
+    trackEvent("Coach Message Sent", {
+      messageLength: trimmed.length,
+      turnIndex: messages.length,
+    });
 
-  function appendStatusMessage({
-    tone,
-    title,
-    description,
-  }: {
-    tone: "success" | "error" | "info";
-    title: string;
-    description: string;
-  }) {
-    setTimeline((prev) => [
-      ...prev,
+    await sendMessage(
+      { text: trimmed },
       {
-        id: createId(),
-        role: "assistant",
-        text: title,
-        blocks: withIds([
-          {
-            type: "status",
-            tone,
-            title,
-            description,
+        body: {
+          ...(ensuredSessionId ? { sessionId: ensuredSessionId } : {}),
+          preferences: {
+            unit,
+            soundEnabled,
+            timezoneOffsetMinutes: new Date().getTimezoneOffset(),
           },
-        ]),
-      },
-    ]);
+        },
+      }
+    );
+    setInput("");
+  }
+
+  async function undoAction(actionId: string, turnId: string) {
+    void turnId;
+    const parsedActionId = parseAgentActionId(actionId);
+    if (!parsedActionId) return;
+
+    try {
+      await undoAgentActionMutation({ actionId: parsedActionId });
+    } catch (error) {
+      reportError(error instanceof Error ? error : new Error(String(error)), {
+        component: "useCoachChat",
+        operation: "undoAction",
+      });
+    }
   }
 
   async function runClientAction(
@@ -294,376 +248,17 @@ export function useCoachChat() {
       router.push("/pricing");
       return;
     }
-
     try {
       const response = await fetch("/api/stripe/portal", { method: "POST" });
-      const payload = (await response.json()) as {
+      const data = (await response.json()) as {
         url?: string;
         error?: string;
       };
-      if (!response.ok || !payload.url) {
-        const message = payload.error ?? "Could not open billing portal.";
-        appendStatusMessage({
-          tone: "error",
-          title: "Billing portal failed",
-          description: message,
-        });
-        return;
+      if (response.ok && data.url) {
+        window.location.href = data.url;
       }
-      window.location.href = payload.url;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      appendStatusMessage({
-        tone: "error",
-        title: "Billing portal failed",
-        description: message,
-      });
-    }
-  }
-
-  function applyClientActions(blocks: CoachBlock[], seen?: Set<string>) {
-    for (const block of blocks) {
-      if (
-        block.type === "client_action" &&
-        block.action === "set_weight_unit" &&
-        "unit" in block.payload
-      ) {
-        if (block.payload.unit === "lbs" || block.payload.unit === "kg") {
-          setUnit(block.payload.unit);
-        }
-      }
-      if (
-        block.type === "client_action" &&
-        block.action === "set_sound" &&
-        "enabled" in block.payload
-      ) {
-        if (typeof block.payload.enabled === "boolean") {
-          setSoundEnabled(block.payload.enabled);
-        }
-      }
-      if (
-        block.type === "client_action" &&
-        (block.action === "open_checkout" ||
-          block.action === "open_billing_portal")
-      ) {
-        const key = `${block.action}`;
-        if (seen && seen.has(key)) continue;
-        seen?.add(key);
-        void runClientAction(block.action);
-      }
-    }
-  }
-
-  async function sendPrompt(prompt: string) {
-    const trimmed = prompt.trim();
-    if (!trimmed || isWorking) return;
-
-    const seenClientActions = new Set<string>();
-    const timezoneOffsetMinutes = new Date().getTimezoneOffset();
-    const activeSessionId = await ensureSessionId();
-    const assistantId = createId();
-    const userMessage: CoachTimelineMessage = {
-      id: createId(),
-      role: "user",
-      text: trimmed,
-    };
-
-    const nextConversation: ModelMessage[] = [
-      ...conversation,
-      { role: "user" as const, content: trimmed },
-    ];
-
-    setTimeline((prev) => [
-      ...prev,
-      userMessage,
-      {
-        id: assistantId,
-        role: "assistant",
-        text: "",
-        blocks: [],
-        isStreaming: true,
-      },
-    ]);
-    setConversation(nextConversation);
-    setInput("");
-    setIsWorking(true);
-    trackEvent("Coach Message Sent", {
-      messageLength: trimmed.length,
-      turnIndex: conversation.length,
-    });
-
-    const fetchStartMs = Date.now();
-
-    try {
-      const response = await fetch("/api/coach", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "text/event-stream",
-        },
-        body: JSON.stringify({
-          ...(activeSessionId ? { sessionId: activeSessionId } : {}),
-          messages: nextConversation.slice(-MAX_COACH_MESSAGES),
-          preferences: {
-            unit,
-            soundEnabled,
-            timezoneOffsetMinutes,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        let detail = "";
-        try {
-          const data = (await response.json()) as unknown;
-          if (data && typeof data === "object" && "error" in data) {
-            detail = String((data as { error: unknown }).error);
-          }
-        } catch {
-          // ignore parse errors
-        }
-        throw new Error(
-          detail
-            ? `Coach API failed (${response.status}): ${detail}`
-            : `Coach API failed (${response.status})`
-        );
-      }
-
-      const contentType = response.headers.get("content-type") ?? "";
-      if (contentType.includes("text/event-stream")) {
-        if (!response.body) {
-          throw new Error("Missing streaming response body");
-        }
-
-        let streamedError = false;
-        for await (const event of readCoachStreamEvents(response.body)) {
-          if (event.type === "tool_start") {
-            setTimeline((prev) =>
-              prev.map((message) =>
-                message.id === assistantId
-                  ? { ...message, text: toolProgressText(event.toolName) }
-                  : message
-              )
-            );
-          }
-
-          if (event.type === "tool_result") {
-            applyClientActions(event.blocks, seenClientActions);
-            const nextBlocks = withIds(event.blocks);
-            setTimeline((prev) =>
-              prev.map((message) =>
-                message.id === assistantId
-                  ? {
-                      ...message,
-                      blocks: [...(message.blocks ?? []), ...nextBlocks],
-                    }
-                  : message
-              )
-            );
-          }
-
-          if (event.type === "error" && !streamedError) {
-            streamedError = true;
-            trackEvent("Coach Error", {
-              turnIndex: conversation.length,
-              error: event.message,
-              durationMs: Date.now() - fetchStartMs,
-            });
-            setTimeline((prev) =>
-              prev.map((message) =>
-                message.id === assistantId
-                  ? {
-                      ...message,
-                      blocks: [
-                        ...(message.blocks ?? []),
-                        {
-                          id: createId(),
-                          block: {
-                            type: "status",
-                            tone: "error",
-                            title: "Stream error",
-                            description: event.message,
-                          },
-                        },
-                      ],
-                    }
-                  : message
-              )
-            );
-          }
-
-          if (event.type === "final") {
-            const payload = CoachTurnResponseSchema.parse(event.response);
-            const responseMessages = (payload.responseMessages ??
-              []) as ModelMessage[];
-            applyClientActions(payload.blocks, seenClientActions);
-            setLastTrace(payload.trace);
-            setConversation([...nextConversation, ...responseMessages]);
-            setTimeline((prev) =>
-              prev.map((message) =>
-                message.id === assistantId
-                  ? {
-                      ...message,
-                      text: payload.assistantText,
-                      blocks: withIds(payload.blocks),
-                      isStreaming: false,
-                    }
-                  : message
-              )
-            );
-            trackCoachResponse(payload, fetchStartMs);
-            break;
-          }
-        }
-
-        return;
-      }
-
-      const payload = CoachTurnResponseSchema.parse(await response.json());
-      const responseMessages = (payload.responseMessages ??
-        []) as ModelMessage[];
-      applyClientActions(payload.blocks, seenClientActions);
-      setLastTrace(payload.trace);
-      setConversation([...nextConversation, ...responseMessages]);
-      setTimeline((prev) =>
-        prev.map((message) =>
-          message.id === assistantId
-            ? {
-                ...message,
-                text: payload.assistantText,
-                blocks: withIds(payload.blocks),
-                isStreaming: false,
-              }
-            : message
-        )
-      );
-      trackCoachResponse(payload, fetchStartMs);
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      const message = err.message;
-      reportError(err, { component: "useCoachChat", operation: "sendPrompt" });
-      trackEvent("Coach Error", {
-        turnIndex: conversation.length,
-        error: message,
-        durationMs: Date.now() - fetchStartMs,
-      });
-      const errorMessage: ModelMessage = {
-        role: "assistant",
-        content: [{ type: "text", text: "I hit an error." }],
-      };
-      setConversation([...nextConversation, errorMessage]);
-      setTimeline((prev) =>
-        prev.map((entry) =>
-          entry.id === assistantId
-            ? {
-                ...entry,
-                text: "I hit an error while planning this turn.",
-                blocks: withIds([
-                  {
-                    type: "status",
-                    tone: "error",
-                    title: "Planning failed",
-                    description: message,
-                  },
-                  {
-                    type: "suggestions",
-                    prompts: DEFAULT_COACH_SUGGESTIONS,
-                  },
-                ]),
-                isStreaming: false,
-              }
-            : entry
-        )
-      );
-    } finally {
-      setIsWorking(false);
-    }
-  }
-
-  async function undoAction(actionId: string, turnId: string) {
-    // TODO: Use turnId when we add turn-scoped undo and richer client telemetry.
-    void turnId;
-
-    const parsedActionId = parseAgentActionId(actionId);
-    if (!parsedActionId) {
-      setTimeline((prev) => [
-        ...prev,
-        {
-          id: createId(),
-          role: "assistant",
-          text: "Undo failed.",
-          blocks: withIds([
-            {
-              type: "status",
-              tone: "error",
-              title: "Undo failed",
-              description: "Invalid undo reference.",
-            },
-          ]),
-        },
-      ]);
-      return;
-    }
-
-    try {
-      const result = await undoAgentActionMutation({
-        actionId: parsedActionId,
-      });
-
-      if (result.ok) {
-        setTimeline((prev) => [
-          ...prev,
-          {
-            id: createId(),
-            role: "assistant",
-            text: "Undo complete.",
-            blocks: withIds([
-              {
-                type: "status",
-                tone: "success",
-                title: "Action undone",
-                description: "The coach change was reverted successfully.",
-              },
-            ]),
-          },
-        ]);
-        return;
-      }
-
-      setTimeline((prev) => [
-        ...prev,
-        {
-          id: createId(),
-          role: "assistant",
-          text: "Undo couldn't be applied.",
-          blocks: withIds([
-            {
-              type: "status",
-              tone: "error",
-              title: "Undo blocked",
-              description: result.message,
-            },
-          ]),
-        },
-      ]);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      setTimeline((prev) => [
-        ...prev,
-        {
-          id: createId(),
-          role: "assistant",
-          text: "Undo failed.",
-          blocks: withIds([
-            {
-              type: "status",
-              tone: "error",
-              title: "Undo failed",
-              description: message,
-            },
-          ]),
-        },
-      ]);
+    } catch {
+      // Handled by error boundary
     }
   }
 
@@ -671,8 +266,9 @@ export function useCoachChat() {
     input,
     setInput,
     isWorking,
-    lastTrace,
-    timeline,
+    messages,
+    spec,
+    specsByMessage,
     unit,
     soundEnabled,
     endRef,

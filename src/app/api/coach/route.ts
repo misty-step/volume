@@ -1,28 +1,38 @@
 import { NextResponse } from "next/server";
+import { pipeJsonRender } from "@json-render/core";
 import { reportError } from "@/lib/analytics";
 import { ConvexHttpClient } from "convex/browser";
 import { auth } from "@clerk/nextjs/server";
 import { api } from "@/../convex/_generated/api";
-import {
-  CoachTurnRequestSchema,
-  type CoachTurnResponse,
-  type CoachStreamEvent,
-} from "@/lib/coach/schema";
+import { CoachPreferencesSchema, MAX_COACH_MESSAGES } from "@/lib/coach/schema";
 import { getCoachRuntime } from "@/lib/coach/server/runtime";
+import { buildPlannerSystemPrompt } from "@/lib/coach/server/planner";
+import { createCoachTools } from "@/lib/coach/server/coach-tools";
 import {
-  encodeSse,
-  encodeSseComment,
-  SSE_HEADERS,
-  SSE_PADDING_BYTES,
-  wantsEventStream,
-} from "@/lib/coach/server/sse";
-import { runCoachTurn } from "@/lib/coach/server/turn-runner";
-import { generateText, type ModelMessage } from "ai";
+  buildRuntimeUnavailableResponse,
+  normalizeAssistantText,
+} from "@/lib/coach/server/blocks";
+import {
+  streamText,
+  generateText,
+  convertToModelMessages,
+  stepCountIs,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  type ModelMessage,
+  type UIMessage,
+} from "ai";
 import type { Exercise } from "@/types/domain";
 import { hasValidE2ETestSession } from "@/lib/e2e/test-session";
+import { z } from "zod";
 
 const CONTEXT_SUMMARY_TRIGGER_MESSAGES = 40;
 const CONTEXT_RECENT_MESSAGE_WINDOW = 20;
+const MAX_TOOL_ROUNDS = 5;
+const MAX_UI_MESSAGE_PAYLOAD_BYTES = 200_000;
+const MODEL_CALL_TIMEOUT_MS = 30_000;
+const TOOL_LIMIT_FALLBACK_MESSAGE =
+  "I reached the step limit. Ask a follow-up and I'll continue.";
 
 type StoredCoachMessage = {
   _id: string;
@@ -52,32 +62,97 @@ function serializeUserMessage(text: string): string {
   return JSON.stringify({ role: "user", content: text });
 }
 
-function buildSyntheticAssistantMessage(
-  response: CoachTurnResponse
-): ModelMessage | null {
-  if (!response.assistantText.trim() && response.blocks.length === 0) {
-    return null;
+function createModelAbortSignal(signal?: AbortSignal): AbortSignal {
+  const timeoutSignal = AbortSignal.timeout(MODEL_CALL_TIMEOUT_MS);
+  if (!signal) return timeoutSignal;
+  if (typeof AbortSignal.any === "function") {
+    return AbortSignal.any([signal, timeoutSignal]);
   }
 
-  return {
-    role: "assistant",
-    content: response.assistantText.trim()
-      ? [{ type: "text", text: response.assistantText }]
-      : [],
+  const controller = new AbortController();
+
+  const abortFrom = (source: AbortSignal) => {
+    if (controller.signal.aborted) return;
+    controller.abort(source.reason ?? new Error("Coach request aborted"));
   };
+
+  if (signal.aborted) {
+    abortFrom(signal);
+    return controller.signal;
+  }
+
+  if (timeoutSignal.aborted) {
+    abortFrom(timeoutSignal);
+    return controller.signal;
+  }
+
+  signal.addEventListener("abort", () => abortFrom(signal), { once: true });
+  timeoutSignal.addEventListener("abort", () => abortFrom(timeoutSignal), {
+    once: true,
+  });
+
+  return controller.signal;
 }
 
-function getPersistedResponseMessages(
-  response: CoachTurnResponse
-): ModelMessage[] {
-  const messages =
-    (response.responseMessages as ModelMessage[] | undefined) ?? [];
-  if (messages.length > 0) {
-    return messages;
+function shouldAppendToolLimitFallback({
+  text,
+  stepCount,
+  finishReason,
+}: {
+  text: string;
+  stepCount: number;
+  finishReason?: string;
+}) {
+  const normalizedText = normalizeAssistantText(text);
+  return (
+    !normalizedText &&
+    (finishReason === "tool-calls" || stepCount >= MAX_TOOL_ROUNDS)
+  );
+}
+
+function appendToolLimitFallback({
+  responseMessages,
+  text,
+  stepCount,
+  finishReason,
+}: {
+  responseMessages: ModelMessage[];
+  text: string;
+  stepCount: number;
+  finishReason?: string;
+}) {
+  if (
+    !shouldAppendToolLimitFallback({
+      text,
+      stepCount,
+      finishReason,
+    })
+  ) {
+    return responseMessages;
   }
 
-  const syntheticAssistant = buildSyntheticAssistantMessage(response);
-  return syntheticAssistant ? [syntheticAssistant] : [];
+  return [
+    ...responseMessages,
+    {
+      role: "assistant",
+      content: TOOL_LIMIT_FALLBACK_MESSAGE,
+    } satisfies ModelMessage,
+  ];
+}
+
+function createStatusAssistantResponse(message: string, status: number) {
+  const stream = createUIMessageStream({
+    execute: ({ writer }) => {
+      const textId = crypto.randomUUID();
+      writer.write({ type: "start" });
+      writer.write({ type: "text-start", id: textId });
+      writer.write({ type: "text-delta", id: textId, delta: message });
+      writer.write({ type: "text-end", id: textId });
+      writer.write({ type: "finish" });
+    },
+  });
+
+  return createUIMessageStreamResponse({ status, stream });
 }
 
 function buildSummaryPrompt({
@@ -131,8 +206,11 @@ async function buildCoachHistory({
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     reportError(err, { route: "coach", operation: "fetch_session_history" });
+    // Session read failed — reject rather than falling back to untrusted
+    // client-supplied history which could let a crafted transcript influence
+    // the model. The only safe fallback is an empty history.
     return {
-      history: fallbackHistory,
+      history: [latestUserMessage],
       conversationSummary: undefined as string | undefined,
     };
   }
@@ -142,7 +220,6 @@ async function buildCoachHistory({
   );
   let conversationSummary = contextState.summary ?? undefined;
 
-  // Always apply the recent message window — never send unbounded history to the LLM
   let recentMessages = unsummarizedMessages.slice(
     -CONTEXT_RECENT_MESSAGE_WINDOW
   );
@@ -186,7 +263,6 @@ async function buildCoachHistory({
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
         reportError(err, { route: "coach", operation: "context_summary" });
-        // Fall back to unsummarized recent window
         recentMessages = unsummarizedMessages.slice(
           -CONTEXT_RECENT_MESSAGE_WINDOW
         );
@@ -210,13 +286,13 @@ async function persistCoachTurn({
   sessionId,
   latestUserText,
   turnId,
-  response,
+  responseMessages,
 }: {
   convex: ConvexHttpClient;
   sessionId?: string;
   latestUserText: string;
   turnId: string;
-  response: CoachTurnResponse;
+  responseMessages: ModelMessage[];
 }) {
   if (!sessionId) {
     return;
@@ -229,24 +305,11 @@ async function persistCoachTurn({
     turnId,
   });
 
-  const persistedResponseMessages = getPersistedResponseMessages(response);
-  const firstAssistantIndex = persistedResponseMessages.findIndex(
-    (m) => m.role === "assistant"
-  );
-
-  // Persist response messages sequentially to preserve ordering via server timestamps
-  for (let index = 0; index < persistedResponseMessages.length; index++) {
-    const message = persistedResponseMessages[index]!;
-    const blocks =
-      index === firstAssistantIndex && response.blocks.length > 0
-        ? JSON.stringify(response.blocks)
-        : undefined;
-
+  for (const message of responseMessages) {
     await convex.mutation(api.coachSessions.addMessage, {
       sessionId: sessionId as never,
       role: message.role === "tool" ? "tool" : "assistant",
       content: JSON.stringify(message),
-      blocks,
       turnId,
     });
   }
@@ -278,7 +341,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const parsed = CoachTurnRequestSchema.safeParse(body);
+  // The AI SDK DefaultChatTransport sends UIMessages ({ id, role, parts })
+  // with extra body fields. Parse loosely, then convert to ModelMessages.
+  const TransportBodySchema = z.object({
+    messages: z.array(z.object({ role: z.string() }).passthrough()).min(1),
+    sessionId: z.string().min(1).max(256).nullish(),
+    preferences: CoachPreferencesSchema.optional(),
+  });
+
+  const parsed = TransportBodySchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid request body" },
@@ -286,9 +357,39 @@ export async function POST(request: Request) {
     );
   }
 
-  const fallbackHistory = parsed.data.messages.filter(
-    (message) => message.role !== "system"
-  );
+  if (parsed.data.messages.length > MAX_COACH_MESSAGES) {
+    return NextResponse.json({ error: "Too many messages" }, { status: 400 });
+  }
+
+  const payloadBytes = new TextEncoder().encode(
+    JSON.stringify(parsed.data.messages)
+  ).length;
+  if (payloadBytes > MAX_UI_MESSAGE_PAYLOAD_BYTES) {
+    return NextResponse.json(
+      { error: "Request payload too large" },
+      { status: 413 }
+    );
+  }
+
+  const preferences = parsed.data.preferences ?? {
+    unit: "lbs" as const,
+    soundEnabled: true,
+  };
+  const sessionId = parsed.data.sessionId ?? undefined;
+
+  // Convert UIMessages to ModelMessages for history building.
+  const uiMessages = parsed.data.messages as unknown as UIMessage[];
+  let fallbackHistory: ModelMessage[];
+  try {
+    fallbackHistory = (await convertToModelMessages(uiMessages)).filter(
+      (m) => m.role !== "system"
+    );
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid message format" },
+      { status: 400 }
+    );
+  }
 
   const latestUserMsg = [...fallbackHistory]
     .reverse()
@@ -301,9 +402,17 @@ export async function POST(request: Request) {
     );
   }
 
-  // User messages always have string content from our client.
   const latestUserText =
-    typeof latestUserMsg.content === "string" ? latestUserMsg.content : "";
+    typeof latestUserMsg.content === "string"
+      ? latestUserMsg.content
+      : Array.isArray(latestUserMsg.content)
+        ? latestUserMsg.content
+            .filter(
+              (p): p is { type: "text"; text: string } => p.type === "text"
+            )
+            .map((p) => p.text)
+            .join("\n")
+        : "";
 
   const convex = new ConvexHttpClient(convexUrl);
   convex.setAuth(token);
@@ -355,38 +464,40 @@ export async function POST(request: Request) {
   const turnId = crypto.randomUUID();
 
   const runtime = getCoachRuntime();
+  if (!runtime) {
+    return createStatusAssistantResponse(
+      buildRuntimeUnavailableResponse().assistantText,
+      503
+    );
+  }
 
-  const resolveExerciseName = runtime
-    ? async (
-        name: string,
-        candidates: Exercise[]
-      ): Promise<Exercise | null> => {
-        const safeName = name.replace(/[\r\n\t]/g, " ").slice(0, 200);
-        const list = candidates
-          .map((e) => `"${e.name.replace(/[\r\n\t]/g, " ")}"`)
-          .join(", ");
-        const { text } = await generateText({
-          model: runtime.classificationModel,
-          messages: [
-            {
-              role: "user",
-              content: `User wants: "${safeName}"\nExisting exercises: ${list}\nReply with ONLY the exact exercise name if ONE clearly matches (same movement, different spelling/abbreviation is fine). Reply "none" if no match or if multiple exercises match equally well (ambiguous).`,
-            },
-          ],
-        });
-        const picked = text.trim().replace(/^["']|["']$/g, "");
-        if (picked.toLowerCase() === "none") return null;
-        return candidates.find((e) => e.name === picked) ?? null;
-      }
-    : undefined;
+  const resolveExerciseName = async (
+    name: string,
+    candidates: Exercise[]
+  ): Promise<Exercise | null> => {
+    const safeName = name.replace(/[\r\n\t]/g, " ").slice(0, 200);
+    const list = candidates
+      .map((e) => `"${e.name.replace(/[\r\n\t]/g, " ")}"`)
+      .join(", ");
+    const { text } = await generateText({
+      model: runtime.classificationModel,
+      messages: [
+        {
+          role: "user",
+          content: `User wants: "${safeName}"\nExisting exercises: ${list}\nReply with ONLY the exact exercise name if ONE clearly matches (same movement, different spelling/abbreviation is fine). Reply "none" if no match or if multiple exercises match equally well (ambiguous).`,
+        },
+      ],
+      abortSignal: createModelAbortSignal(request.signal),
+    });
+    const picked = text.trim().replace(/^["']|["']$/g, "");
+    if (picked.toLowerCase() === "none") return null;
+    return candidates.find((e) => e.name === picked) ?? null;
+  };
 
   const context = {
     convex,
-    defaultUnit: parsed.data.preferences.unit,
-    timezoneOffsetMinutes:
-      // If the client didn't provide a timezone offset, default to UTC instead of
-      // the server's timezone (which would be wrong for most users).
-      parsed.data.preferences.timezoneOffsetMinutes ?? 0,
+    defaultUnit: preferences.unit,
+    timezoneOffsetMinutes: preferences.timezoneOffsetMinutes ?? 0,
     turnId,
     userInput: latestUserText,
     resolveExerciseName,
@@ -399,106 +510,85 @@ export async function POST(request: Request) {
   const { history, conversationSummary } = await buildCoachHistory({
     convex,
     runtime,
-    sessionId: parsed.data.sessionId,
+    sessionId,
     fallbackHistory,
     latestUserMessage,
   });
 
-  const streamRequested = wantsEventStream(request);
-
-  if (streamRequested) {
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream<Uint8Array>({
-      async start(controller) {
-        let closed = false;
-        const send = (event: CoachStreamEvent) => {
-          if (closed) return false;
-          try {
-            controller.enqueue(encoder.encode(encodeSse(event)));
-            if (event.type === "start") {
-              controller.enqueue(
-                encoder.encode(encodeSseComment(" ".repeat(SSE_PADDING_BYTES)))
-              );
-            }
-            return true;
-          } catch {
-            closed = true;
-            return false;
-          }
-        };
-
-        const close = () => {
-          if (closed) return;
-          closed = true;
-          try {
-            controller.close();
-          } catch {
-            // ignore close races
-          }
-        };
-
-        try {
-          const response = await runCoachTurn({
-            runtime,
-            history,
-            conversationSummary,
-            preferences: parsed.data.preferences,
-            ctx: context,
-            requestSignal: request.signal,
-            emitEvent: (event) => {
-              if (!send(event) || request.signal.aborted) {
-                close();
-              }
-            },
-          });
-
-          send({ type: "final", response });
-          try {
-            await persistCoachTurn({
-              convex,
-              sessionId: parsed.data.sessionId,
-              latestUserText,
-              turnId,
-              response,
-            });
-          } catch (error) {
-            const err =
-              error instanceof Error ? error : new Error(String(error));
-            reportError(err, {
-              route: "coach",
-              operation: "persist_turn_sse",
-            });
-          }
-        } finally {
-          close();
-        }
-      },
-    });
-
-    return new Response(stream, { headers: SSE_HEADERS });
-  }
-
-  const response = await runCoachTurn({
-    runtime,
-    history,
+  const systemPrompt = buildPlannerSystemPrompt({
+    preferences,
     conversationSummary,
-    preferences: parsed.data.preferences,
-    ctx: context,
-    requestSignal: request.signal,
   });
 
-  try {
-    await persistCoachTurn({
-      convex,
-      sessionId: parsed.data.sessionId,
-      latestUserText,
-      turnId,
-      response,
-    });
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error));
-    reportError(err, { route: "coach", operation: "persist_turn_json" });
-  }
+  const tools = createCoachTools(context);
 
-  return NextResponse.json(response);
+  const result = streamText({
+    model: runtime.model,
+    system: systemPrompt,
+    messages: history,
+    tools,
+    stopWhen: stepCountIs(MAX_TOOL_ROUNDS),
+    abortSignal: createModelAbortSignal(request.signal),
+  });
+
+  void result.response.then(async (response) => {
+    try {
+      const [text, steps, finishReason] = await Promise.all([
+        result.text,
+        result.steps,
+        result.finishReason,
+      ]);
+      await persistCoachTurn({
+        convex,
+        sessionId,
+        latestUserText,
+        turnId,
+        responseMessages: appendToolLimitFallback({
+          responseMessages: response.messages as ModelMessage[],
+          text,
+          stepCount: steps.length,
+          finishReason,
+        }),
+      });
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      reportError(err, { route: "coach", operation: "persist_turn" });
+    }
+  });
+
+  const stream = createUIMessageStream({
+    execute: async ({ writer }) => {
+      writer.merge(
+        pipeJsonRender(result.toUIMessageStream({ sendFinish: false }))
+      );
+      await result.response;
+
+      const [text, steps, finishReason] = await Promise.all([
+        result.text,
+        result.steps,
+        result.finishReason,
+      ]);
+
+      if (
+        shouldAppendToolLimitFallback({
+          text,
+          stepCount: steps.length,
+          finishReason,
+        })
+      ) {
+        const textId = crypto.randomUUID();
+        writer.write({ type: "text-start", id: textId });
+        writer.write({
+          type: "text-delta",
+          id: textId,
+          delta: TOOL_LIMIT_FALLBACK_MESSAGE,
+        });
+        writer.write({ type: "text-end", id: textId });
+      }
+
+      writer.write({ type: "finish", finishReason });
+    },
+  });
+
+  return createUIMessageStreamResponse({ stream });
 }

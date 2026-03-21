@@ -41,32 +41,28 @@ describe("normalizeAssistantText — <think> stripping", () => {
 });
 
 describe("coach blocks helpers", () => {
-  it("builds a minimal response when assistant text or blocks are empty", () => {
+  it("builds a response with trimmed assistant text", () => {
     const response = buildCoachTurnResponse({
       assistantText: "   ",
-      blocks: [],
       toolsUsed: [],
       model: "test",
       fallbackUsed: false,
     });
 
     expect(response.assistantText).toBe("");
-    expect(response.blocks[0]?.type).toBe("suggestions");
+    expect(response.trace.toolsUsed).toEqual([]);
   });
 
-  it("preserves assistant text and blocks when provided", () => {
+  it("preserves assistant text when provided", () => {
     const response = buildCoachTurnResponse({
       assistantText: "Hi.",
-      blocks: [
-        { type: "status", tone: "info", title: "ok", description: "desc" },
-      ],
       toolsUsed: ["test"],
       model: "test",
       fallbackUsed: false,
     });
 
     expect(response.assistantText).toBe("Hi.");
-    expect(response.blocks[0]).toMatchObject({ type: "status" });
+    expect(response.trace.toolsUsed).toEqual(["test"]);
   });
 
   it("passes responseMessages through to response", () => {
@@ -75,9 +71,6 @@ describe("coach blocks helpers", () => {
     ];
     const response = buildCoachTurnResponse({
       assistantText: "Hi.",
-      blocks: [
-        { type: "status", tone: "info", title: "ok", description: "desc" },
-      ],
       toolsUsed: ["test"],
       model: "test",
       fallbackUsed: false,
@@ -89,7 +82,6 @@ describe("coach blocks helpers", () => {
   it("creates error UI blocks for tool failures", () => {
     const blocks = toolErrorBlocks("nope");
     expect(blocks[0]).toMatchObject({ type: "status", tone: "error" });
-    expect(blocks[1]).toMatchObject({ type: "suggestions" });
   });
 
   it("builds explicit runtime-unavailable response without fallback", () => {
@@ -101,49 +93,29 @@ describe("coach blocks helpers", () => {
     expect(response.trace.fallbackUsed).toBe(false);
     expect(response.trace.toolsUsed).toEqual([]);
     expect(response.responseMessages).toEqual([]);
-    expect(response.blocks[0]).toMatchObject({
-      type: "status",
-      tone: "error",
-      title: "Coach is unavailable",
-    });
   });
 
-  it("builds planner-failed response with standardized trace and error blocks", () => {
+  it("builds planner-failed response with standardized trace", () => {
     const response = buildPlannerFailedResponse({
       modelId: "mock-model-id",
       errorMessage: "planner exploded",
     });
 
-    expect(response.assistantText).toBe(
+    expect(response.assistantText).toContain(
       "I hit an error while planning this turn."
     );
     expect(response.trace.model).toBe("mock-model-id (planner_failed)");
     expect(response.trace.fallbackUsed).toBe(false);
     expect(response.trace.toolsUsed).toEqual([]);
-    expect(response.blocks[0]).toMatchObject({
-      type: "status",
-      tone: "error",
-      title: "Tool execution failed",
-    });
   });
 
-  it("preserves assistant text even when an undo block is present", () => {
+  it("preserves assistant text in response", () => {
     const response = buildCoachTurnResponse({
       assistantText: "Great work!",
-      blocks: [
-        {
-          type: "undo",
-          actionId: "a1",
-          turnId: "t1",
-          title: "Undo this log",
-          description: "Reverts this set.",
-        },
-      ],
       toolsUsed: ["log_set"],
       model: "test",
       fallbackUsed: false,
     });
     expect(response.assistantText).toBe("Great work!");
-    expect(response.blocks[0]).toMatchObject({ type: "undo" });
   });
 });

@@ -1,71 +1,50 @@
 import { tool } from "ai";
-import type { CoachBlock } from "@/lib/coach/schema";
 import {
   coachToolDefinitions,
   type CoachToolDefinition,
 } from "@/lib/coach/tools/registry";
 import type { CoachToolContext, ToolResult } from "@/lib/coach/tools/types";
+import { sanitizeError } from "@/lib/coach/sanitize-error";
 
 export type ToolOutput = Record<string, unknown>;
-type ToolBlocksHandler = (toolName: string, blocks: CoachBlock[]) => void;
-type CreateCoachToolsOptions = { onBlocks?: ToolBlocksHandler };
 
-function wrap(
-  toolName: string,
-  result: ToolResult,
-  onBlocks?: ToolBlocksHandler
-): ToolOutput {
-  onBlocks?.(toolName, result.blocks);
-  const blockSummary = result.blocks
-    .filter((b) => b.type !== "suggestions")
-    .map((b) => ({
-      type: b.type,
-      ...("title" in b && b.title ? { title: b.title } : {}),
-    }));
+/**
+ * Wrap a tool result into the output the model sees.
+ *
+ * Includes the full block specifications in `_uiBlocks` so the model can
+ * convert them to json-render JSONL patches using the catalog vocabulary.
+ */
+function wrap(result: ToolResult): ToolOutput {
   return {
     ...result.outputForModel,
-    ...(blockSummary.length > 0 ? { _blocks: blockSummary } : {}),
+    ...(result.blocks.length > 0 ? { _uiBlocks: result.blocks } : {}),
   };
 }
 
-function toolError(
-  toolName: string,
-  message: string,
-  onBlocks?: ToolBlocksHandler
-): ToolOutput {
-  onBlocks?.(toolName, [
-    {
-      type: "status",
-      tone: "error",
-      title: "Tool failed",
-      description: message,
-    } satisfies CoachBlock,
-  ]);
-  return { error: message };
+function toolError(message: string): ToolOutput {
+  const safe = sanitizeError(message);
+  return {
+    error: safe,
+    _uiBlocks: [
+      {
+        type: "status",
+        tone: "error",
+        title: "Tool failed",
+        description: safe,
+      },
+    ],
+  };
 }
 
-export function createCoachTools(
-  ctx: CoachToolContext,
-  options: CreateCoachToolsOptions = {}
-) {
-  const { onBlocks } = options;
-
+export function createCoachTools(ctx: CoachToolContext) {
   async function runTool(
     definition: CoachToolDefinition,
     rawArgs: unknown
   ): Promise<ToolOutput> {
     try {
-      return wrap(
-        definition.name,
-        await definition.run(rawArgs, ctx),
-        onBlocks
-      );
+      return wrap(await definition.run(rawArgs, ctx));
     } catch (e) {
-      return toolError(
-        definition.name,
-        e instanceof Error ? e.message : "Unexpected error",
-        onBlocks
-      );
+      return toolError(e instanceof Error ? e.message : "Unexpected error");
     }
   }
 

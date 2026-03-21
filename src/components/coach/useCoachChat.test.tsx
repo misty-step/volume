@@ -31,22 +31,41 @@ vi.mock("@/lib/analytics", () => ({
   reportError: vi.fn(),
 }));
 
-const readCoachStreamEventsMock = vi.fn();
-vi.mock("@/lib/coach/sse-client", () => ({
-  readCoachStreamEvents: (...args: unknown[]) =>
-    readCoachStreamEventsMock(...args),
+const mockSendMessage = vi.fn();
+const mockMessages: Array<{
+  id: string;
+  role: string;
+  parts: Array<{ type: string; text?: string }>;
+}> = [];
+
+vi.mock("@ai-sdk/react", () => ({
+  useChat: vi.fn(() => ({
+    messages: mockMessages,
+    status: "ready",
+    error: undefined,
+    sendMessage: mockSendMessage,
+  })),
 }));
+
+/** Build JSONL patches for a single json-render element. */
+function makeJsonl(
+  rootKey: string,
+  type: string,
+  props: Record<string, unknown>
+): string {
+  return [
+    `{"op":"add","path":"/root","value":"${rootKey}"}`,
+    `{"op":"add","path":"/elements/${rootKey}","value":{"type":"${type}","props":${JSON.stringify(props)},"children":[]}}`,
+  ].join("\n");
+}
 
 describe("useCoachChat", () => {
   const getOrCreateTodaySessionMock = vi.fn();
   const undoAgentActionMock = vi.fn();
-  const useQueryState = {
-    sessionMessages: [] as Array<Record<string, unknown>>,
-  };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    useQueryState.sessionMessages = [];
+    mockMessages.length = 0;
 
     getOrCreateTodaySessionMock.mockResolvedValue({
       session: { _id: "session_123", status: "active" },
@@ -62,123 +81,96 @@ describe("useCoachChat", () => {
       return undoAgentActionMock;
     });
 
-    vi.mocked(convexReact.useQuery).mockImplementation((_fn, args) => {
-      if (args === "skip") return undefined;
-      if (args && typeof args === "object" && "sessionId" in args) {
-        return useQueryState.sessionMessages;
-      }
-      return undefined;
-    });
-
-    readCoachStreamEventsMock.mockImplementation(async function* () {
-      yield {
-        type: "final",
-        response: {
-          assistantText: "Fresh answer.",
-          blocks: [],
-          responseMessages: [
-            {
-              role: "assistant",
-              content: [{ type: "text", text: "Fresh answer." }],
-            },
-          ],
-          trace: {
-            toolsUsed: [],
-            model: "mock-model",
-            fallbackUsed: false,
-          },
-        },
-      };
-    });
-
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      headers: new Headers({ "content-type": "text/event-stream" }),
-      body: {},
-    }) as unknown as typeof fetch;
+    vi.mocked(convexReact.useQuery).mockReturnValue(undefined);
   });
 
-  it("bootstraps today's session and hydrates the timeline from stored messages", async () => {
-    useQueryState.sessionMessages = [
-      {
-        _id: "msg_1",
-        role: "user",
-        content: JSON.stringify({ role: "user", content: "previous question" }),
-        createdAt: 1,
-      },
-      {
-        _id: "msg_2",
-        role: "assistant",
-        content: JSON.stringify({
-          role: "assistant",
-          content: [{ type: "text", text: "previous answer" }],
-        }),
-        blocks: JSON.stringify([
-          { type: "status", tone: "success", title: "Loaded" },
-        ]),
-        createdAt: 2,
-      },
-      {
-        _id: "msg_3",
-        role: "tool",
-        content: JSON.stringify({
-          role: "tool",
-          content: [{ type: "tool-result", toolName: "log_set", output: {} }],
-        }),
-        createdAt: 3,
-      },
-    ];
-
-    const { result } = renderHook(() => useCoachChat());
+  it("bootstraps today's session on mount", async () => {
+    renderHook(() => useCoachChat());
 
     await waitFor(() => {
       expect(getOrCreateTodaySessionMock).toHaveBeenCalledWith({
         timezoneOffsetMinutes: expect.any(Number),
       });
-      expect(result.current.timeline).toHaveLength(2);
     });
-
-    expect(result.current.timeline[0]).toMatchObject({
-      role: "user",
-      text: "previous question",
-    });
-    expect(result.current.timeline[1]).toMatchObject({
-      role: "assistant",
-      text: "previous answer",
-    });
-    expect(result.current.timeline[1]?.blocks).toHaveLength(1);
   });
 
-  it("includes the persisted sessionId when sending a prompt", async () => {
+  it("sends a prompt via useChat sendMessage", async () => {
     const { result } = renderHook(() => useCoachChat());
 
     await waitFor(() => {
       expect(getOrCreateTodaySessionMock).toHaveBeenCalled();
-      expect(vi.mocked(convexReact.useQuery)).toHaveBeenCalledWith(
-        expect.anything(),
-        { sessionId: "session_123" }
-      );
     });
 
     await act(async () => {
       await result.current.sendPrompt("log 10 pushups");
     });
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      "/api/coach",
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      { text: "log 10 pushups" },
       expect.objectContaining({
-        method: "POST",
-        body: expect.any(String),
+        body: expect.objectContaining({
+          sessionId: "session_123",
+          preferences: expect.objectContaining({
+            unit: "lbs",
+            soundEnabled: true,
+            timezoneOffsetMinutes: expect.any(Number),
+          }),
+        }),
       })
     );
+  });
 
-    const [, requestInit] = vi.mocked(global.fetch).mock.calls[0]!;
-    const body = JSON.parse(String(requestInit?.body));
+  it("applies set_weight_unit ClientAction from spec in text parts", async () => {
+    const jsonl = makeJsonl("ca1", "ClientAction", {
+      action: "set_weight_unit",
+      payload: { unit: "kg" },
+    });
+    mockMessages.push({
+      id: "msg1",
+      role: "assistant",
+      parts: [{ type: "text", text: jsonl }],
+    });
 
-    expect(body.sessionId).toBe("session_123");
-    expect(body.messages.at(-1)).toEqual({
-      role: "user",
-      content: "log 10 pushups",
+    renderHook(() => useCoachChat());
+
+    await waitFor(() => {
+      expect(mockSetUnit).toHaveBeenCalledWith("kg");
+    });
+  });
+
+  it("applies set_sound ClientAction from spec in text parts", async () => {
+    const jsonl = makeJsonl("ca1", "ClientAction", {
+      action: "set_sound",
+      payload: { enabled: false },
+    });
+    mockMessages.push({
+      id: "msg1",
+      role: "assistant",
+      parts: [{ type: "text", text: jsonl }],
+    });
+
+    renderHook(() => useCoachChat());
+
+    await waitFor(() => {
+      expect(mockSetSoundEnabled).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it("navigates to pricing for open_checkout ClientAction", async () => {
+    const jsonl = makeJsonl("ca1", "ClientAction", {
+      action: "open_checkout",
+      payload: { mode: "checkout" },
+    });
+    mockMessages.push({
+      id: "msg1",
+      role: "assistant",
+      parts: [{ type: "text", text: jsonl }],
+    });
+
+    renderHook(() => useCoachChat());
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/pricing");
     });
   });
 });

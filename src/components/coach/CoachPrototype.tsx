@@ -1,43 +1,38 @@
 "use client";
 
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { PaperPlaneIcon, ReloadIcon } from "@radix-ui/react-icons";
-import { CoachBlockRenderer } from "@/components/coach/CoachBlockRenderer";
-import { LogConfirmationBlock } from "@/components/ui/coach-block";
+import { CoachSpecRenderer } from "@/components/coach/CoachBlockRenderer";
 import { useCoachChat } from "@/components/coach/useCoachChat";
-import type { CoachBlock } from "@/lib/coach/schema";
+import { CoachChatContext } from "@/lib/coach/coach-chat-context";
 import { cn } from "@/lib/utils";
+import type { UIMessage } from "ai";
 
-type TimelineBlock = { id: string; block: CoachBlock };
-type MergedEntry =
-  | { kind: "block"; entry: TimelineBlock }
-  | { kind: "log_confirmation"; status: TimelineBlock; undo: TimelineBlock };
+/** Extract prose text from a message, stripping JSONL patches and code fences. */
+function getMessageText(message: UIMessage): string {
+  const raw = message.parts
+    .filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text")
+    .map((p) => p.text)
+    .join("\n");
 
-function mergeBlocks(blocks: TimelineBlock[]): MergedEntry[] {
-  const merged: MergedEntry[] = [];
-  let i = 0;
-  while (i < blocks.length) {
-    const current = blocks[i];
-    const next = blocks[i + 1];
-    if (
-      current &&
-      next &&
-      current.block.type === "status" &&
-      current.block.tone === "success" &&
-      next.block.type === "undo"
-    ) {
-      merged.push({ kind: "log_confirmation", status: current, undo: next });
-      i += 2;
-    } else if (current) {
-      merged.push({ kind: "block", entry: current });
-      i += 1;
-    } else {
-      i += 1;
-    }
-  }
-  return merged;
+  // Strip json-render JSONL patches (RFC 6902 lines) and code fences
+  return raw
+    .split("\n")
+    .filter((line) => {
+      const trimmed = line.trim();
+      if (trimmed === "```spec" || trimmed === "```") return false;
+      if (!trimmed.startsWith("{")) return true;
+      try {
+        const obj = JSON.parse(trimmed);
+        return !(obj.op && obj.path);
+      } catch {
+        return true;
+      }
+    })
+    .join("\n")
+    .trim();
 }
 
 export function CoachPrototype() {
@@ -49,12 +44,18 @@ export function CoachPrototype() {
     input,
     setInput,
     isWorking,
-    timeline,
+    messages,
+    specsByMessage,
     endRef,
     sendPrompt,
     undoAction,
     runClientAction,
   } = useCoachChat();
+
+  const chatCallbacks = useMemo(
+    () => ({ sendPrompt, undoAction, runClientAction }),
+    [sendPrompt, undoAction, runClientAction]
+  );
 
   // Refocus input whenever the agent finishes working.
   const prevWorking = useRef(isWorking);
@@ -110,6 +111,12 @@ export function CoachPrototype() {
     });
   }
 
+  // The latest assistant message gets streaming indicator support.
+  const lastAssistantIdx =
+    messages.length > 0
+      ? messages.reduce((acc, m, i) => (m.role === "assistant" ? i : acc), -1)
+      : -1;
+
   return (
     <main className="relative mx-auto flex w-full max-w-4xl flex-1 min-h-0 flex-col px-3 pt-3 pb-2 md:px-4 md:pb-6">
       <p className="mb-2 px-1 text-xs text-muted-foreground">
@@ -121,10 +128,20 @@ export function CoachPrototype() {
         data-testid="coach-timeline"
         className="flex-1 min-h-0 space-y-2 overflow-y-auto pb-4 pr-1"
       >
-        {timeline.map((message) => {
-          const hasText = message.text.trim().length > 0;
-          const hasBlocks = (message.blocks?.length ?? 0) > 0;
-          const merged = message.blocks ? mergeBlocks(message.blocks) : [];
+        {messages.length === 0 && !isWorking && (
+          <article className="flex justify-start">
+            <div className="max-w-[92%] rounded-xl px-3 py-3 rounded-[--radius] border border-border-subtle bg-card mr-10">
+              <p className="text-sm leading-relaxed text-foreground">
+                Agent ready. Ask to log a set, review progress, or update
+                settings.
+              </p>
+            </div>
+          </article>
+        )}
+
+        {messages.map((message, idx) => {
+          const text = getMessageText(message);
+          const isLatestAssistant = idx === lastAssistantIdx;
 
           return (
             <article
@@ -144,59 +161,26 @@ export function CoachPrototype() {
                     : "mr-10"
                 )}
               >
-                {message.isStreaming && !hasText && !hasBlocks ? (
-                  <div className="flex items-center gap-2">
-                    <ReloadIcon className="h-4 w-4 animate-spin text-accent" />
-                    <p className="text-xs text-muted-foreground">Planning...</p>
-                  </div>
+                {/* json-render spec for each assistant message */}
+                {message.role === "assistant" &&
+                specsByMessage.has(message.id) ? (
+                  <CoachChatContext.Provider value={chatCallbacks}>
+                    <div className="space-y-3">
+                      <CoachSpecRenderer
+                        spec={specsByMessage.get(message.id)!}
+                        loading={isLatestAssistant && isWorking}
+                      />
+                    </div>
+                  </CoachChatContext.Provider>
                 ) : null}
-                {hasBlocks ? (
-                  <div className="space-y-3">
-                    {merged.map((entry) => {
-                      if (entry.kind === "log_confirmation") {
-                        const statusBlock = entry.status.block;
-                        const undoBlock = entry.undo.block;
-                        if (
-                          statusBlock.type !== "status" ||
-                          undoBlock.type !== "undo"
-                        )
-                          return null;
-                        return (
-                          <LogConfirmationBlock
-                            key={entry.status.id}
-                            title={statusBlock.title}
-                            actionId={undoBlock.actionId}
-                            turnId={undoBlock.turnId}
-                            onUndo={(actionId, turnId) => {
-                              void undoAction(actionId, turnId);
-                            }}
-                          />
-                        );
-                      }
-                      return (
-                        <CoachBlockRenderer
-                          key={entry.entry.id}
-                          block={entry.entry.block}
-                          onPrompt={(prompt) => {
-                            void sendPrompt(prompt);
-                          }}
-                          onUndo={(actionId, turnId) => {
-                            void undoAction(actionId, turnId);
-                          }}
-                          onClientAction={(action) => {
-                            void runClientAction(action);
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                ) : null}
-                {hasText && message.role === "user" ? (
+
+                {/* Text content */}
+                {text.trim() && message.role === "user" ? (
                   <p className="text-sm whitespace-pre-wrap text-foreground">
-                    {message.text}
+                    {text}
                   </p>
-                ) : hasText ? (
-                  <div className={cn(hasBlocks && "mt-3")}>
+                ) : text.trim() ? (
+                  <div className={cn(specsByMessage.has(message.id) && "mt-3")}>
                     <ReactMarkdown
                       components={{
                         p: ({ children }) => (
@@ -234,8 +218,19 @@ export function CoachPrototype() {
                         ),
                       }}
                     >
-                      {message.text}
+                      {text}
                     </ReactMarkdown>
+                  </div>
+                ) : null}
+
+                {/* Streaming indicator */}
+                {isLatestAssistant &&
+                isWorking &&
+                !text.trim() &&
+                !specsByMessage.has(message.id) ? (
+                  <div className="flex items-center gap-2">
+                    <ReloadIcon className="h-4 w-4 animate-spin text-accent" />
+                    <p className="text-xs text-muted-foreground">Planning...</p>
                   </div>
                 ) : null}
               </div>
