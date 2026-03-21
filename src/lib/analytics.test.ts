@@ -7,6 +7,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as Sentry from "@sentry/nextjs";
+import * as Canary from "@canary-obs/sdk";
 import {
   setUserContext,
   clearUserContext,
@@ -18,6 +19,11 @@ import {
 vi.mock("@sentry/nextjs", () => ({
   setUser: vi.fn(),
   captureException: vi.fn(),
+}));
+
+vi.mock("@canary-obs/sdk", () => ({
+  initCanary: vi.fn(),
+  captureException: vi.fn(() => Promise.resolve(null)),
 }));
 
 describe("analytics - server-side safety guards", () => {
@@ -157,6 +163,7 @@ describe("analytics - server-side safety guards", () => {
 
 describe("reportError", () => {
   const originalEnv = process.env;
+  const originalWindow = global.window;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -166,10 +173,12 @@ describe("reportError", () => {
       NEXT_PUBLIC_SENTRY_DSN: "https://test@sentry.io/123",
       NODE_ENV: "production",
     };
+    global.window = originalWindow;
   });
 
   afterEach(() => {
     process.env = originalEnv;
+    global.window = originalWindow;
   });
 
   it("should call Sentry.captureException with error", () => {
@@ -240,6 +249,49 @@ describe("reportError", () => {
     reportError(error);
 
     expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  it("should guard Canary capture when Canary is disabled", () => {
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_SENTRY_DSN: "https://test@sentry.io/123",
+      CANARY_ENDPOINT: undefined,
+      CANARY_API_KEY: undefined,
+      NEXT_PUBLIC_CANARY_ENDPOINT: undefined,
+      NEXT_PUBLIC_CANARY_API_KEY: undefined,
+      NODE_ENV: "production",
+    };
+
+    const error = new Error("Test error");
+    reportError(error);
+
+    expect(Canary.captureException).not.toHaveBeenCalled();
+    expect(Canary.initCanary).not.toHaveBeenCalled();
+  });
+
+  it("should initialize Canary in the browser before capturing", () => {
+    global.window = {} as Window & typeof globalThis;
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_SENTRY_DSN: "https://test@sentry.io/123",
+      NEXT_PUBLIC_CANARY_ENDPOINT: "https://canary.example",
+      NEXT_PUBLIC_CANARY_API_KEY: "public-key",
+      NODE_ENV: "production",
+    };
+
+    const error = new Error("Test error");
+    reportError(error, { boundary: "app/error.tsx" });
+
+    expect(Canary.initCanary).toHaveBeenCalledWith({
+      endpoint: "https://canary.example",
+      apiKey: "public-key",
+      service: "volume",
+      environment: "production",
+      scrubPii: true,
+    });
+    expect(Canary.captureException).toHaveBeenCalledWith(error, {
+      context: { boundary: "app/error.tsx" },
+    });
   });
 });
 
