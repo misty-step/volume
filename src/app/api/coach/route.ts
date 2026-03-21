@@ -136,7 +136,7 @@ function appendToolLimitFallback({
     {
       role: "assistant",
       content: TOOL_LIMIT_FALLBACK_MESSAGE,
-    },
+    } satisfies ModelMessage,
   ];
 }
 
