@@ -1,18 +1,24 @@
 import { NextResponse } from "next/server";
+import { pipeJsonRender } from "@json-render/core";
 import { reportError } from "@/lib/analytics";
 import { ConvexHttpClient } from "convex/browser";
 import { auth } from "@clerk/nextjs/server";
 import { api } from "@/../convex/_generated/api";
-import { CoachPreferencesSchema } from "@/lib/coach/schema";
+import { CoachPreferencesSchema, MAX_COACH_MESSAGES } from "@/lib/coach/schema";
 import { getCoachRuntime } from "@/lib/coach/server/runtime";
 import { buildPlannerSystemPrompt } from "@/lib/coach/server/planner";
 import { createCoachTools } from "@/lib/coach/server/coach-tools";
-import { buildRuntimeUnavailableResponse } from "@/lib/coach/server/blocks";
+import {
+  buildRuntimeUnavailableResponse,
+  normalizeAssistantText,
+} from "@/lib/coach/server/blocks";
 import {
   streamText,
   generateText,
   convertToModelMessages,
   stepCountIs,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
   type ModelMessage,
   type UIMessage,
 } from "ai";
@@ -23,6 +29,10 @@ import { z } from "zod";
 const CONTEXT_SUMMARY_TRIGGER_MESSAGES = 40;
 const CONTEXT_RECENT_MESSAGE_WINDOW = 20;
 const MAX_TOOL_ROUNDS = 5;
+const MAX_UI_MESSAGE_PAYLOAD_BYTES = 200_000;
+const MODEL_CALL_TIMEOUT_MS = 30_000;
+const TOOL_LIMIT_FALLBACK_MESSAGE =
+  "I reached the step limit. Ask a follow-up and I'll continue.";
 
 type StoredCoachMessage = {
   _id: string;
@@ -50,6 +60,99 @@ function deserializeStoredMessage(content: string): ModelMessage | null {
 
 function serializeUserMessage(text: string): string {
   return JSON.stringify({ role: "user", content: text });
+}
+
+function createModelAbortSignal(signal?: AbortSignal): AbortSignal {
+  const timeoutSignal = AbortSignal.timeout(MODEL_CALL_TIMEOUT_MS);
+  if (!signal) return timeoutSignal;
+  if (typeof AbortSignal.any === "function") {
+    return AbortSignal.any([signal, timeoutSignal]);
+  }
+
+  const controller = new AbortController();
+
+  const abortFrom = (source: AbortSignal) => {
+    if (controller.signal.aborted) return;
+    controller.abort(source.reason ?? new Error("Coach request aborted"));
+  };
+
+  if (signal.aborted) {
+    abortFrom(signal);
+    return controller.signal;
+  }
+
+  if (timeoutSignal.aborted) {
+    abortFrom(timeoutSignal);
+    return controller.signal;
+  }
+
+  signal.addEventListener("abort", () => abortFrom(signal), { once: true });
+  timeoutSignal.addEventListener("abort", () => abortFrom(timeoutSignal), {
+    once: true,
+  });
+
+  return controller.signal;
+}
+
+function shouldAppendToolLimitFallback({
+  text,
+  stepCount,
+  finishReason,
+}: {
+  text: string;
+  stepCount: number;
+  finishReason?: string;
+}) {
+  const normalizedText = normalizeAssistantText(text);
+  return (
+    !normalizedText &&
+    (finishReason === "tool-calls" || stepCount >= MAX_TOOL_ROUNDS)
+  );
+}
+
+function appendToolLimitFallback({
+  responseMessages,
+  text,
+  stepCount,
+  finishReason,
+}: {
+  responseMessages: ModelMessage[];
+  text: string;
+  stepCount: number;
+  finishReason?: string;
+}) {
+  if (
+    !shouldAppendToolLimitFallback({
+      text,
+      stepCount,
+      finishReason,
+    })
+  ) {
+    return responseMessages;
+  }
+
+  return [
+    ...responseMessages,
+    {
+      role: "assistant",
+      content: TOOL_LIMIT_FALLBACK_MESSAGE,
+    },
+  ];
+}
+
+function createStatusAssistantResponse(message: string, status: number) {
+  const stream = createUIMessageStream({
+    execute: ({ writer }) => {
+      const textId = crypto.randomUUID();
+      writer.write({ type: "start" });
+      writer.write({ type: "text-start", id: textId });
+      writer.write({ type: "text-delta", id: textId, delta: message });
+      writer.write({ type: "text-end", id: textId });
+      writer.write({ type: "finish" });
+    },
+  });
+
+  return createUIMessageStreamResponse({ status, stream });
 }
 
 function buildSummaryPrompt({
@@ -254,6 +357,20 @@ export async function POST(request: Request) {
     );
   }
 
+  if (parsed.data.messages.length > MAX_COACH_MESSAGES) {
+    return NextResponse.json({ error: "Too many messages" }, { status: 400 });
+  }
+
+  const payloadBytes = new TextEncoder().encode(
+    JSON.stringify(parsed.data.messages)
+  ).length;
+  if (payloadBytes > MAX_UI_MESSAGE_PAYLOAD_BYTES) {
+    return NextResponse.json(
+      { error: "Request payload too large" },
+      { status: 413 }
+    );
+  }
+
   const preferences = parsed.data.preferences ?? {
     unit: "lbs" as const,
     soundEnabled: true,
@@ -348,7 +465,10 @@ export async function POST(request: Request) {
 
   const runtime = getCoachRuntime();
   if (!runtime) {
-    return NextResponse.json(buildRuntimeUnavailableResponse());
+    return createStatusAssistantResponse(
+      buildRuntimeUnavailableResponse().assistantText,
+      503
+    );
   }
 
   const resolveExerciseName = async (
@@ -367,7 +487,7 @@ export async function POST(request: Request) {
           content: `User wants: "${safeName}"\nExisting exercises: ${list}\nReply with ONLY the exact exercise name if ONE clearly matches (same movement, different spelling/abbreviation is fine). Reply "none" if no match or if multiple exercises match equally well (ambiguous).`,
         },
       ],
-      abortSignal: request.signal,
+      abortSignal: createModelAbortSignal(request.signal),
     });
     const picked = text.trim().replace(/^["']|["']$/g, "");
     if (picked.toLowerCase() === "none") return null;
@@ -408,20 +528,27 @@ export async function POST(request: Request) {
     messages: history,
     tools,
     stopWhen: stepCountIs(MAX_TOOL_ROUNDS),
-    abortSignal: request.signal,
+    abortSignal: createModelAbortSignal(request.signal),
   });
 
-  // Persist the turn after the stream completes (fire-and-forget).
-  // Using result.response instead of onFinish avoids potential stream
-  // closure timing issues with the SSE transport.
   void result.response.then(async (response) => {
     try {
+      const [text, steps, finishReason] = await Promise.all([
+        result.text,
+        result.steps,
+        result.finishReason,
+      ]);
       await persistCoachTurn({
         convex,
         sessionId,
         latestUserText,
         turnId,
-        responseMessages: response.messages as ModelMessage[],
+        responseMessages: appendToolLimitFallback({
+          responseMessages: response.messages as ModelMessage[],
+          text,
+          stepCount: steps.length,
+          finishReason,
+        }),
       });
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
@@ -429,5 +556,39 @@ export async function POST(request: Request) {
     }
   });
 
-  return result.toUIMessageStreamResponse();
+  const stream = createUIMessageStream({
+    execute: async ({ writer }) => {
+      writer.merge(
+        pipeJsonRender(result.toUIMessageStream({ sendFinish: false }))
+      );
+      await result.response;
+
+      const [text, steps, finishReason] = await Promise.all([
+        result.text,
+        result.steps,
+        result.finishReason,
+      ]);
+
+      if (
+        shouldAppendToolLimitFallback({
+          text,
+          stepCount: steps.length,
+          finishReason,
+        })
+      ) {
+        const textId = crypto.randomUUID();
+        writer.write({ type: "text-start", id: textId });
+        writer.write({
+          type: "text-delta",
+          id: textId,
+          delta: TOOL_LIMIT_FALLBACK_MESSAGE,
+        });
+        writer.write({ type: "text-end", id: textId });
+      }
+
+      writer.write({ type: "finish", finishReason });
+    },
+  });
+
+  return createUIMessageStreamResponse({ stream });
 }

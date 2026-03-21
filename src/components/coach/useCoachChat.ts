@@ -138,6 +138,13 @@ export function useCoachChat() {
     return specsByMessage.get(lastAssistant.id) ?? null;
   }, [messages, specsByMessage]);
 
+  const lastAssistantMessageId = useMemo(() => {
+    const lastAssistant = [...messages]
+      .reverse()
+      .find((m) => m.role === "assistant");
+    return lastAssistant?.id ?? null;
+  }, [messages]);
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isWorking]);
@@ -147,8 +154,9 @@ export function useCoachChat() {
     if (!spec?.elements) return;
     for (const [key, element] of Object.entries(spec.elements)) {
       if (element.type !== "ClientAction") continue;
-      if (processedActionsRef.current.has(key)) continue;
-      processedActionsRef.current.add(key);
+      const actionKey = `${lastAssistantMessageId ?? "unknown"}:${key}`;
+      if (processedActionsRef.current.has(actionKey)) continue;
+      processedActionsRef.current.add(actionKey);
 
       const props = element.props as {
         action: string;
@@ -190,13 +198,13 @@ export function useCoachChat() {
         })();
       }
     }
-  }, [spec, setUnit, setSoundEnabled, router]);
+  }, [lastAssistantMessageId, spec, setUnit, setSoundEnabled, router]);
 
   async function sendPrompt(prompt: string) {
     const trimmed = prompt.trim();
     if (!trimmed || isWorking) return;
 
-    await ensureSessionId();
+    const ensuredSessionId = await ensureSessionId();
     trackEvent("Coach Message Sent", {
       messageLength: trimmed.length,
       turnIndex: messages.length,
@@ -206,7 +214,7 @@ export function useCoachChat() {
       { text: trimmed },
       {
         body: {
-          sessionId,
+          ...(ensuredSessionId ? { sessionId: ensuredSessionId } : {}),
           preferences: {
             unit,
             soundEnabled,

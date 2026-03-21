@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { describe, expect, it } from "vitest";
 import { catalog, COACH_BLOCK_TYPES } from "./catalog";
 
@@ -39,20 +41,6 @@ describe("coach catalog", () => {
     return { type, props, children: [] };
   }
 
-  it("validates a spec with a Status component", () => {
-    const result = catalog.validate({
-      root: "s1",
-      elements: {
-        s1: leaf("Status", {
-          tone: "success",
-          title: "Logged set",
-          description: null,
-        }),
-      },
-    });
-    expect(result.success).toBe(true);
-  });
-
   it("rejects a spec with an unknown component type", () => {
     const result = catalog.validate({
       root: "s1",
@@ -63,42 +51,110 @@ describe("coach catalog", () => {
     expect(result.success).toBe(false);
   });
 
-  it("validates a spec with Metrics component", () => {
-    const result = catalog.validate({
-      root: "m1",
-      elements: {
-        m1: leaf("Metrics", {
-          title: "Today's workout",
-          metrics: [{ label: "Sets", value: "5" }],
-        }),
+  it.each([
+    [
+      "Status",
+      {
+        tone: "success",
+        title: "Logged set",
+        description: null,
       },
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("validates a spec with Undo component", () => {
-    const result = catalog.validate({
-      root: "u1",
-      elements: {
-        u1: leaf("Undo", {
-          actionId: "action_123",
-          turnId: "turn_456",
-          title: "Undo this log",
-          description: null,
-        }),
+    ],
+    [
+      "Metrics",
+      {
+        title: "Today's workout",
+        metrics: [{ label: "Sets", value: "5" }],
       },
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("validates a spec with ClientAction component", () => {
+    ],
+    [
+      "Trend",
+      {
+        title: "Pushup trend",
+        subtitle: "Last 4 weeks",
+        points: [
+          { label: "Week 1", value: 10 },
+          { label: "Week 2", value: 12 },
+        ],
+        metric: "reps",
+        total: "22",
+      },
+    ],
+    [
+      "Table",
+      {
+        title: "Recent sets",
+        rows: [{ label: "Pushups", value: "10 reps", meta: null }],
+      },
+    ],
+    [
+      "EntityList",
+      {
+        title: "Exercises",
+        items: [{ title: "Pushups", prompt: "show pushups" }],
+      },
+    ],
+    [
+      "DetailPanel",
+      {
+        title: "Pushups",
+        fields: [{ label: "Volume", value: "30 reps" }],
+        prompts: ["show trend for pushups"],
+      },
+    ],
+    [
+      "Suggestions",
+      {
+        prompts: ["show today's summary", "what should I work on today?"],
+      },
+    ],
+    [
+      "BillingPanel",
+      {
+        status: "trialing",
+        title: "Trial active",
+        subtitle: "7 days left",
+        ctaLabel: "Upgrade",
+        ctaAction: "open_checkout",
+      },
+    ],
+    [
+      "QuickLogForm",
+      {
+        title: "Log a set",
+        exerciseName: "Pushups",
+        defaultUnit: "lbs",
+      },
+    ],
+    [
+      "Confirmation",
+      {
+        title: "Delete set?",
+        description: "This action cannot be undone.",
+        confirmPrompt: "delete that set",
+      },
+    ],
+    [
+      "ClientAction",
+      {
+        action: "set_weight_unit",
+        payload: { unit: "kg" },
+      },
+    ],
+    [
+      "Undo",
+      {
+        actionId: "action_123",
+        turnId: "turn_456",
+        title: "Undo this log",
+        description: null,
+      },
+    ],
+  ] as const)("validates a spec with %s component", (type, props) => {
     const result = catalog.validate({
-      root: "ca1",
+      root: "root",
       elements: {
-        ca1: leaf("ClientAction", {
-          action: "set_weight_unit",
-          payload: { unit: "kg" },
-        }),
+        root: leaf(type, props),
       },
     });
     expect(result.success).toBe(true);

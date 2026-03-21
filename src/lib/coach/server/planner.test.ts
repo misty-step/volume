@@ -131,17 +131,21 @@ describe("buildEndOfTurnSuggestions", () => {
   it("returns prompt strings for log_set", async () => {
     const { buildEndOfTurnSuggestions } = await import("./planner");
     const result = buildEndOfTurnSuggestions(["log_set"]);
-    expect(result).not.toBeNull();
-    expect(Array.isArray(result)).toBe(true);
-    expect(result!.length).toBeGreaterThan(0);
-    expect(typeof result![0]).toBe("string");
+    expect(result).toEqual([
+      "show today's summary",
+      "what should I work on today?",
+      "show trend for pushups",
+    ]);
   });
 
   it("returns prompt strings for get_exercise_snapshot", async () => {
     const { buildEndOfTurnSuggestions } = await import("./planner");
     const result = buildEndOfTurnSuggestions(["get_exercise_snapshot"]);
-    expect(result).not.toBeNull();
-    expect(Array.isArray(result)).toBe(true);
+    expect(result).toEqual([
+      "10 pushups",
+      "show today's summary",
+      "show analytics overview",
+    ]);
   });
 
   it("returns null when no tools ran", async () => {
@@ -153,8 +157,10 @@ describe("buildEndOfTurnSuggestions", () => {
   it("returns fallback suggestions for unknown tools", async () => {
     const { buildEndOfTurnSuggestions } = await import("./planner");
     const result = buildEndOfTurnSuggestions(["some_future_tool"]);
-    expect(result).not.toBeNull();
-    expect(Array.isArray(result)).toBe(true);
+    expect(result).toEqual([
+      "show today's summary",
+      "what should I work on today?",
+    ]);
   });
 });
 

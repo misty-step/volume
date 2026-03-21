@@ -114,9 +114,14 @@ export const { registry } = defineRegistry(catalog, {
             ctaLabel: props.ctaLabel ?? undefined,
             ctaAction: props.ctaAction ?? undefined,
           }}
-          onClientAction={(action: string) =>
-            runClientAction(action as "open_checkout" | "open_billing_portal")
-          }
+          onClientAction={(action: string) => {
+            if (
+              action === "open_checkout" ||
+              action === "open_billing_portal"
+            ) {
+              runClientAction(action);
+            }
+          }}
         />
       );
     },

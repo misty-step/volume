@@ -109,9 +109,11 @@ describe("useCoachChat", () => {
       { text: "log 10 pushups" },
       expect.objectContaining({
         body: expect.objectContaining({
+          sessionId: "session_123",
           preferences: expect.objectContaining({
             unit: "lbs",
             soundEnabled: true,
+            timezoneOffsetMinutes: expect.any(Number),
           }),
         }),
       })
