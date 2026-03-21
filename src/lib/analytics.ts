@@ -1,5 +1,8 @@
 import * as Sentry from "@sentry/nextjs";
-import { captureException as canaryCapture } from "@canary-obs/sdk";
+import {
+  captureException as canaryCapture,
+  initCanary,
+} from "@canary-obs/sdk";
 import { sanitizeEmail } from "./sanitize";
 import { shouldEnableSentry } from "./sentry";
 import type posthogJs from "posthog-js";
@@ -245,6 +248,42 @@ function isSentryEnabled(): boolean {
   return shouldEnableSentry(dsn);
 }
 
+function isCanaryEnabled(): boolean {
+  if (typeof window === "undefined") {
+    return Boolean(process.env.CANARY_ENDPOINT && process.env.CANARY_API_KEY);
+  }
+
+  return Boolean(
+    process.env.NEXT_PUBLIC_CANARY_ENDPOINT &&
+      process.env.NEXT_PUBLIC_CANARY_API_KEY
+  );
+}
+
+let canaryBrowserInitialized = false;
+
+function ensureCanaryBrowserInit(): void {
+  if (typeof window === "undefined" || canaryBrowserInitialized) {
+    return;
+  }
+
+  const endpoint = process.env.NEXT_PUBLIC_CANARY_ENDPOINT;
+  const apiKey = process.env.NEXT_PUBLIC_CANARY_API_KEY;
+
+  if (!endpoint || !apiKey) {
+    return;
+  }
+
+  initCanary({
+    endpoint,
+    apiKey,
+    service: "volume",
+    environment: process.env.NODE_ENV ?? "production",
+    scrubPii: true,
+  });
+
+  canaryBrowserInitialized = true;
+}
+
 /**
  * Current user context enriching all analytics events.
  *
@@ -466,5 +505,20 @@ export function reportError(
     }
   }
 
-  canaryCapture(error, { context: sanitizedContext }).catch(() => {});
+  if (isCanaryEnabled()) {
+    try {
+      ensureCanaryBrowserInit();
+      void canaryCapture(error, { context: sanitizedContext }).catch(
+        (canaryError) => {
+          if (process.env.NODE_ENV === "development") {
+            console.warn("Canary reportError failed:", canaryError);
+          }
+        }
+      );
+    } catch (canaryError) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("Canary reportError failed:", canaryError);
+      }
+    }
+  }
 }
