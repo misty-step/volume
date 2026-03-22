@@ -88,6 +88,33 @@ describe("userMemories", () => {
     ]);
   });
 
+  test("rememberExplicitMemory returns created false for normalized duplicates", async () => {
+    const existingMemoryId = await seedMemory({
+      category: "injury",
+      content: "Left shoulder pain. Avoid heavy overhead pressing.",
+      source: "explicit_user",
+      createdAt: 1,
+    });
+
+    const result = await t
+      .withIdentity({ subject: userSubject, name: "Memory User" })
+      .mutation(api.userMemories.rememberExplicitMemory, {
+        category: "injury",
+        content: "  Left   shoulder pain.\nAvoid heavy overhead pressing.  ",
+      });
+
+    expect(result).toEqual({
+      created: false,
+      memoryId: existingMemoryId,
+    });
+
+    const activeMemories = await t
+      .withIdentity({ subject: userSubject, name: "Memory User" })
+      .query(api.userMemories.listActive, {});
+
+    expect(activeMemories).toHaveLength(1);
+  });
+
   test("applyMemoryPipelineResult stores extracted memories and forgets by id", async () => {
     const existingMemoryId = await seedMemory({
       category: "injury",
