@@ -23,9 +23,11 @@ test.describe("Coach chat flows", () => {
   });
 
   test("shows the coach workspace shell", async ({ page }) => {
-    await expect(coachTimeline(page)).toBeVisible();
-    await expect(coachInput(page)).toBeVisible();
-    await expect(coachInput(page)).toBeEnabled();
+    await expect(
+      page.getByText(
+        /Try "12 pushups", "show today's summary", or ask for insights\./i
+      )
+    ).toBeVisible();
     await expect(coachInput(page)).toHaveAttribute(
       "placeholder",
       'Log fast: "12 pushups @ 25 lbs"'

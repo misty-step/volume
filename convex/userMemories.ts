@@ -79,7 +79,7 @@ function contentMatchesQuery(memoryContent: string, queryContent: string) {
     return true;
   }
 
-  const queryTokens = normalizedQuery.split(" ").filter(Boolean);
+  const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
   return queryTokens.length > 0
     ? queryTokens.every((token) => normalizedMemory.includes(token))
     : false;
@@ -320,6 +320,8 @@ export const applyMemoryPipelineResult = mutation({
 
     const overflow = activeObservations.length - MAX_ACTIVE_OBSERVATIONS;
     if (overflow > 0) {
+      // Active memories are loaded oldest-first, so trimming from the front
+      // drops stale observations and preserves the newest summaries.
       await Promise.all(
         activeObservations.slice(0, overflow).map((memory: UserMemoryDoc) =>
           ctx.db.patch(memory._id, {

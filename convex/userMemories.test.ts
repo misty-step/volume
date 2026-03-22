@@ -162,6 +162,72 @@ describe("userMemories", () => {
     );
   });
 
+  test("applyMemoryPipelineResult preserves existing observations when no keep list is provided", async () => {
+    await seedMemory({
+      category: "other",
+      content: "Existing observation 1",
+      source: "observer",
+      createdAt: 1,
+    });
+    await seedMemory({
+      category: "other",
+      content: "Existing observation 2",
+      source: "observer",
+      createdAt: 2,
+    });
+
+    await t
+      .withIdentity({ subject: userSubject, name: "Memory User" })
+      .mutation(api.userMemories.applyMemoryPipelineResult, {
+        operations: [],
+        observation: "Latest observation summary",
+      });
+
+    const activeMemories = await t
+      .withIdentity({ subject: userSubject, name: "Memory User" })
+      .query(api.userMemories.listActive, {});
+
+    const activeObservations = activeMemories
+      .filter((memory) => memory.source === "observer")
+      .map((memory) => memory.content);
+
+    expect(activeObservations).toEqual([
+      "Existing observation 1",
+      "Existing observation 2",
+      "Latest observation summary",
+    ]);
+  });
+
+  test("applyMemoryPipelineResult trims the oldest observations when the active list overflows", async () => {
+    for (let i = 0; i < 31; i += 1) {
+      await seedMemory({
+        category: "other",
+        content: `Observation ${i}`,
+        source: "observer",
+        createdAt: i,
+      });
+    }
+
+    await t
+      .withIdentity({ subject: userSubject, name: "Memory User" })
+      .mutation(api.userMemories.applyMemoryPipelineResult, {
+        operations: [],
+        observation: "Observation 31",
+      });
+
+    const activeObservations = (
+      await t
+        .withIdentity({ subject: userSubject, name: "Memory User" })
+        .query(api.userMemories.listActive, {})
+    )
+      .filter((memory) => memory.source === "observer")
+      .map((memory) => memory.content);
+
+    expect(activeObservations).toHaveLength(30);
+    expect(activeObservations).toEqual(
+      Array.from({ length: 30 }, (_, index) => `Observation ${index + 2}`)
+    );
+  });
   test("listActive rejects cross-user access", async () => {
     await seedMemory();
 
