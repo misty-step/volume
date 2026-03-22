@@ -37,6 +37,7 @@ import type * as sets from "../sets.js";
 import type * as stripe from "../stripe.js";
 import type * as subscriptions from "../subscriptions.js";
 import type * as test_resetUserData from "../test/resetUserData.js";
+import type * as userMemories from "../userMemories.js";
 import type * as users from "../users.js";
 
 import type {
@@ -75,6 +76,7 @@ declare const fullApi: ApiFromModules<{
   stripe: typeof stripe;
   subscriptions: typeof subscriptions;
   "test/resetUserData": typeof test_resetUserData;
+  userMemories: typeof userMemories;
   users: typeof users;
 }>;
 

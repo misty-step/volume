@@ -15,6 +15,7 @@ import { runGetInsightsTool } from "@/lib/coach/tools/tool-get-insights";
 import { runHistoryOverviewTool } from "@/lib/coach/tools/tool-history-overview";
 import { runLogSetsTool } from "@/lib/coach/tools/tool-log-sets";
 import { runLogSetTool } from "@/lib/coach/tools/tool-log-set";
+import { runManageMemoriesTool } from "@/lib/coach/tools/tool-manage-memories";
 import {
   runDeleteExerciseTool,
   runManageExerciseTool,
@@ -53,6 +54,7 @@ import {
   LogSetArgsSchema,
   LogSetsArgsSchema,
   ManageExerciseArgsSchema,
+  ManageMemoriesArgsSchema,
   MergeExerciseArgsSchema,
   ModifySetArgsSchema,
   QueryExerciseArgsSchema,
@@ -139,6 +141,12 @@ export const coachToolDefinitions = [
     "Get profile preferences, subscription status, and billing actions.",
     EmptyArgsSchema,
     async (_rawArgs, ctx) => runSettingsOverviewTool(ctx)
+  ),
+  defineTool(
+    "manage_memories",
+    "Remember or forget durable user context such as injuries, goals, and preferences.",
+    ManageMemoriesArgsSchema,
+    (rawArgs, ctx) => runManageMemoriesTool(rawArgs, ctx)
   ),
   defineTool(
     "get_exercise_library",

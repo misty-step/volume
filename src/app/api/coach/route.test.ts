@@ -1,7 +1,19 @@
 // @vitest-environment node
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { api } from "@/../convex/_generated/api";
 import { E2E_SESSION_COOKIE_NAME } from "@/lib/e2e/test-session";
+
+const afterMock = vi.fn((callback: () => void | Promise<void>) => {
+  void callback();
+});
+vi.mock("next/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return {
+    ...actual,
+    after: (callback: () => void | Promise<void>) => afterMock(callback),
+  };
+});
 
 const authMock = vi.fn();
 vi.mock("@clerk/nextjs/server", () => ({
@@ -35,6 +47,18 @@ vi.mock("@/lib/coach/server/planner", async (importOriginal) => {
       plannerMocks.buildEndOfTurnSuggestionsMock(...args),
   };
 });
+
+const extractMemoryOperationsMock = vi.fn();
+const summarizeObservationMock = vi.fn();
+const selectObservationIdsToKeepMock = vi.fn();
+vi.mock("@/lib/coach/server/memory-pipeline", () => ({
+  extractMemoryOperations: (...args: unknown[]) =>
+    extractMemoryOperationsMock(...args),
+  summarizeObservation: (...args: unknown[]) =>
+    summarizeObservationMock(...args),
+  selectObservationIdsToKeep: (...args: unknown[]) =>
+    selectObservationIdsToKeepMock(...args),
+}));
 
 const generateTextMock = vi.fn();
 const streamTextMock = vi.fn();
@@ -128,6 +152,22 @@ function validBodyWithSession(sessionId: string) {
 }
 
 const ORIGINAL_ENV = { ...process.env };
+
+async function waitForAssertion(assertion: () => void, timeoutMs = 1000) {
+  const deadline = Date.now() + timeoutMs;
+
+  while (true) {
+    try {
+      assertion();
+      return;
+    } catch (error) {
+      if (Date.now() >= deadline) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  }
+}
 
 function createStreamTextResult(options?: {
   text?: string;
@@ -249,6 +289,10 @@ describe("POST /api/coach", () => {
     generateTextMock.mockReset();
     streamTextMock.mockReset();
     pipeJsonRenderMock.mockClear();
+    extractMemoryOperationsMock.mockReset();
+    summarizeObservationMock.mockReset();
+    selectObservationIdsToKeepMock.mockReset();
+    afterMock.mockClear();
     ConvexHttpClientMock.mockReset();
     analyticsMocks.reportErrorMock.mockReset();
   });
@@ -655,5 +699,303 @@ describe("POST /api/coach", () => {
     );
 
     expect(persistedCalls).toEqual([]);
+  });
+
+  it("passes stored memories into planner turn execution", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    convex.query.mockResolvedValueOnce({
+      memories: [
+        {
+          category: "injury",
+          content: "Left shoulder impingement. Avoid heavy overhead pressing.",
+          source: "fact_extractor",
+          createdAt: 1,
+        },
+        {
+          category: "goal",
+          content: "Training for a half marathon in June.",
+          source: "explicit_user",
+          createdAt: 2,
+        },
+      ],
+      observations: [
+        "The user is prioritizing consistency while protecting the shoulder.",
+      ],
+    });
+    ConvexHttpClientMock.mockReturnValue(convex);
+    getCoachRuntimeMock.mockReturnValue({
+      model: "test-model",
+      classificationModel: "test-classifier",
+    });
+    streamTextMock.mockReturnValue(createStreamTextResult({ text: "hello" }));
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: validBody(),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(plannerMocks.runPlannerTurnMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        memories: [
+          {
+            category: "injury",
+            content: "Left shoulder impingement. Avoid heavy overhead pressing.",
+            source: "fact_extractor",
+            createdAt: 1,
+          },
+          {
+            category: "goal",
+            content: "Training for a half marathon in June.",
+            source: "explicit_user",
+            createdAt: 2,
+          },
+        ],
+        observations: [
+          "The user is prioritizing consistency while protecting the shoulder.",
+        ],
+      })
+    );
+    await response.text();
+  });
+
+  it("processes post-turn memory operations after the streamed response completes", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    convex.query
+      .mockResolvedValueOnce({ memories: [], observations: [] })
+      .mockResolvedValueOnce([
+        {
+          _id: "memory_1",
+          category: "injury",
+          content: "Old shoulder note",
+          source: "fact_extractor",
+          createdAt: 1,
+        },
+        {
+          _id: "observation_1",
+          category: "other",
+          content: "Recent observation",
+          source: "observer",
+          createdAt: 2,
+        },
+      ]);
+    ConvexHttpClientMock.mockReturnValue(convex);
+    getCoachRuntimeMock.mockReturnValue({
+      model: "test-model",
+      classificationModel: "test-classifier",
+    });
+    plannerMocks.runPlannerTurnMock.mockResolvedValue(
+      createPlannerResult({
+        responseMessages: [
+          { role: "assistant", content: "I'll keep that in mind." },
+        ],
+      })
+    );
+    streamTextMock.mockReturnValue(
+      createStreamTextResult({
+        text: "I'll keep that in mind.",
+      })
+    );
+    extractMemoryOperationsMock.mockResolvedValue([
+      {
+        kind: "remember",
+        category: "injury",
+        content: "Avoid heavy overhead pressing.",
+        source: "fact_extractor",
+        existingMemoryId: "memory_1",
+      },
+      {
+        kind: "forget",
+        memoryId: "memory_1",
+      },
+    ]);
+    summarizeObservationMock.mockResolvedValue(
+      "User wants safer upper-body alternatives."
+    );
+    selectObservationIdsToKeepMock.mockResolvedValue(["observation_1"]);
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: validBody(),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    await response.text();
+
+    await waitForAssertion(() => {
+      expect(extractMemoryOperationsMock).toHaveBeenCalledWith({
+        model: "test-classifier",
+        transcript: [
+          {
+            role: "user",
+            content: "show today's summary",
+          },
+          {
+            role: "assistant",
+            content: "I'll keep that in mind.",
+          },
+        ],
+        existingMemories: [
+          {
+            _id: "memory_1",
+            category: "injury",
+            content: "Old shoulder note",
+            source: "fact_extractor",
+            createdAt: 1,
+          },
+        ],
+      });
+      expect(summarizeObservationMock).toHaveBeenCalledWith({
+        model: "test-classifier",
+        transcript: [
+          {
+            role: "user",
+            content: "show today's summary",
+          },
+          {
+            role: "assistant",
+            content: "I'll keep that in mind.",
+          },
+        ],
+      });
+      expect(selectObservationIdsToKeepMock).toHaveBeenCalledWith({
+        model: "test-classifier",
+        observations: [
+          {
+            _id: "observation_1",
+            category: "other",
+            content: "Recent observation",
+            source: "observer",
+            createdAt: 2,
+          },
+        ],
+      });
+      expect(convex.mutation).toHaveBeenCalledWith(
+        api.userMemories.applyMemoryPipelineResult,
+        {
+          operations: [
+            {
+              kind: "remember",
+              category: "injury",
+              content: "Avoid heavy overhead pressing.",
+              source: "fact_extractor",
+              existingMemoryId: "memory_1",
+            },
+            {
+              kind: "forget",
+              memoryId: "memory_1",
+            },
+          ],
+          observation: "User wants safer upper-body alternatives.",
+          keepObservationIds: ["observation_1"],
+        }
+      );
+    });
+  });
+
+  it("skips implicit extraction when an explicit forget tool already ran", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    convex.query
+      .mockResolvedValueOnce({ memories: [], observations: [] })
+      .mockResolvedValueOnce([]);
+    ConvexHttpClientMock.mockReturnValue(convex);
+    getCoachRuntimeMock.mockReturnValue({
+      model: "test-model",
+      classificationModel: "test-classifier",
+    });
+    plannerMocks.runPlannerTurnMock.mockResolvedValue(
+      createPlannerResult({
+        responseMessages: [
+          {
+            role: "assistant",
+            content: [
+              {
+                type: "tool-call",
+                toolCallId: "tool_1",
+                toolName: "manage_memories",
+                input: {
+                  action: "forget",
+                  content: "Old shoulder note",
+                },
+              },
+            ],
+          },
+          {
+            role: "tool",
+            content: [
+              {
+                type: "tool-result",
+                toolCallId: "tool_1",
+                toolName: "manage_memories",
+                output: {
+                  status: "ok",
+                  action: "forget",
+                  deleted_count: 1,
+                  content: "Old shoulder note",
+                },
+              },
+            ],
+          },
+          {
+            role: "assistant",
+            content: "I won't use that going forward.",
+          },
+        ],
+      })
+    );
+    streamTextMock.mockReturnValue(
+      createStreamTextResult({
+        text: "I won't use that going forward.",
+      })
+    );
+    summarizeObservationMock.mockResolvedValue(null);
+    selectObservationIdsToKeepMock.mockResolvedValue(null);
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: validBody(),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    await response.text();
+
+    await waitForAssertion(() => {
+      expect(extractMemoryOperationsMock).not.toHaveBeenCalled();
+      expect(
+        convex.mutation.mock.calls.some(
+          ([fn]) => fn === api.userMemories.applyMemoryPipelineResult
+        )
+      ).toBe(false);
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { pipeJsonRender } from "@json-render/core";
 import { reportError } from "@/lib/analytics";
 import { ConvexHttpClient } from "convex/browser";
@@ -15,6 +15,12 @@ import {
   buildEndOfTurnSuggestions,
   runPlannerTurn,
 } from "@/lib/coach/server/planner";
+import {
+  extractMemoryOperations,
+  selectObservationIdsToKeep,
+  summarizeObservation,
+  type MemoryTranscriptMessage,
+} from "@/lib/coach/server/memory-pipeline";
 import { buildRuntimeUnavailableResponse } from "@/lib/coach/server/blocks";
 import { sanitizeError } from "@/lib/coach/sanitize-error";
 import {
@@ -28,6 +34,11 @@ import {
 import type { Exercise } from "@/types/domain";
 import { hasValidE2ETestSession } from "@/lib/e2e/test-session";
 import { z } from "zod";
+import {
+  isObservationMemory,
+  type ActiveCoachMemory,
+  type PromptCoachMemory,
+} from "@/lib/coach/memory";
 
 const CONTEXT_SUMMARY_TRIGGER_MESSAGES = 40;
 const CONTEXT_RECENT_MESSAGE_WINDOW = 20;
@@ -256,6 +267,180 @@ async function persistCoachTurn({
   }
 }
 
+function modelMessageToTranscriptMessage(
+  message: ModelMessage
+): MemoryTranscriptMessage {
+  const role =
+    message.role === "system"
+      ? "assistant"
+      : message.role === "tool"
+        ? "tool"
+        : message.role;
+
+  if (typeof message.content === "string") {
+    return {
+      role,
+      content: message.content,
+    };
+  }
+
+  if (Array.isArray(message.content)) {
+    return {
+      role,
+      content: message.content
+        .map((part) => {
+          if ("text" in part && typeof part.text === "string") {
+            return part.text;
+          }
+          return JSON.stringify(part);
+        })
+        .join("\n"),
+    };
+  }
+
+  return {
+    role,
+    content: JSON.stringify(message.content),
+  };
+}
+
+function hasExplicitManageMemoriesForget(
+  responseMessages: ModelMessage[]
+): boolean {
+  return responseMessages.some((message) => {
+    if (!Array.isArray(message.content)) {
+      return false;
+    }
+
+    return message.content.some((part) => {
+      if (
+        typeof part !== "object" ||
+        part === null ||
+        !("type" in part) ||
+        !("toolName" in part)
+      ) {
+        return false;
+      }
+
+      if (
+        part.type !== "tool-result" ||
+        part.toolName !== "manage_memories" ||
+        !("output" in part) ||
+        typeof part.output !== "object" ||
+        part.output === null
+      ) {
+        return false;
+      }
+
+      return "action" in part.output && part.output.action === "forget";
+    });
+  });
+}
+
+async function loadPromptMemory(convex: ConvexHttpClient) {
+  try {
+    return (await convex.query(api.userMemories.listForPrompt, {})) as {
+      memories: PromptCoachMemory[];
+      observations: string[];
+    };
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    reportError(err, { route: "coach", operation: "load_prompt_memory" });
+    return {
+      memories: [] as PromptCoachMemory[],
+      observations: [] as string[],
+    };
+  }
+}
+
+async function processCoachMemory({
+  convex,
+  runtime,
+  history,
+  responseMessages,
+}: {
+  convex: ConvexHttpClient;
+  runtime: ReturnType<typeof getCoachRuntime>;
+  history: ModelMessage[];
+  responseMessages: ModelMessage[];
+}) {
+  if (!runtime) {
+    return;
+  }
+
+  try {
+    const activeMemories = (await convex.query(
+      api.userMemories.listActive,
+      {}
+    )) as ActiveCoachMemory[];
+    const transcript = [...history, ...responseMessages].map(
+      modelMessageToTranscriptMessage
+    );
+    const explicitForgetRan = hasExplicitManageMemoriesForget(responseMessages);
+    const operations = explicitForgetRan
+      ? []
+      : await extractMemoryOperations({
+          model: runtime.classificationModel,
+          transcript,
+          existingMemories: activeMemories.filter(
+            (memory) => !isObservationMemory(memory)
+          ),
+        });
+    const observation = await summarizeObservation({
+      model: runtime.classificationModel,
+      transcript,
+    });
+    const keepObservationIds =
+      observation ||
+      activeMemories.filter((memory) => isObservationMemory(memory)).length > 30
+        ? await selectObservationIdsToKeep({
+            model: runtime.classificationModel,
+            observations: activeMemories.filter((memory) =>
+              isObservationMemory(memory)
+            ),
+          })
+        : null;
+
+    if (
+      operations.length === 0 &&
+      !observation &&
+      (!keepObservationIds || keepObservationIds.length === 0)
+    ) {
+      return;
+    }
+
+    const mutationOperations = operations.map((operation) => {
+      if (operation.kind === "forget") {
+        return {
+          kind: "forget" as const,
+          memoryId: operation.memoryId as never,
+        };
+      }
+
+      return {
+        kind: "remember" as const,
+        category: operation.category,
+        content: operation.content,
+        source: operation.source,
+        existingMemoryId: operation.existingMemoryId as never,
+      };
+    });
+
+    await convex.mutation(api.userMemories.applyMemoryPipelineResult, {
+      operations: mutationOperations,
+      ...(observation ? { observation } : {}),
+      ...(keepObservationIds
+        ? {
+            keepObservationIds: keepObservationIds.map((id) => id as never),
+          }
+        : {}),
+    });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    reportError(err, { route: "coach", operation: "process_memory" });
+  }
+}
+
 export async function POST(request: Request) {
   const { userId, getToken } = await auth();
   if (!userId) {
@@ -448,19 +633,24 @@ export async function POST(request: Request) {
     role: "user",
     content: latestUserText,
   };
-  const { history, conversationSummary } = await buildCoachHistory({
-    convex,
-    runtime,
-    sessionId,
-    fallbackHistory,
-    latestUserMessage,
-  });
+  const [{ history, conversationSummary }, promptMemory] = await Promise.all([
+    buildCoachHistory({
+      convex,
+      runtime,
+      sessionId,
+      fallbackHistory,
+      latestUserMessage,
+    }),
+    loadPromptMemory(convex),
+  ]);
 
   const plannerResult = await runPlannerTurn({
     runtime,
     history,
     conversationSummary,
     preferences,
+    memories: promptMemory.memories,
+    observations: promptMemory.observations,
     ctx: context,
     signal: createModelAbortSignal(request.signal),
   });
@@ -502,24 +692,34 @@ export async function POST(request: Request) {
     },
   });
 
+  after(async () => {
+    try {
+      await presentation.finishReason;
+      await persistCoachTurn({
+        convex,
+        sessionId,
+        latestUserText,
+        turnId,
+        responseMessages: plannerResult.responseMessages as ModelMessage[],
+      });
+      await processCoachMemory({
+        convex,
+        runtime,
+        history,
+        responseMessages: plannerResult.responseMessages as ModelMessage[],
+      });
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      reportError(err, { route: "coach", operation: "persist_turn" });
+    }
+  });
+
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       writer.merge(
         pipeJsonRender(presentation.toUIMessageStream({ sendFinish: false }))
       );
       const finishReason = await presentation.finishReason;
-      try {
-        await persistCoachTurn({
-          convex,
-          sessionId,
-          latestUserText,
-          turnId,
-          responseMessages: plannerResult.responseMessages as ModelMessage[],
-        });
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        reportError(err, { route: "coach", operation: "persist_turn" });
-      }
       writer.write({ type: "finish", finishReason });
     },
   });
