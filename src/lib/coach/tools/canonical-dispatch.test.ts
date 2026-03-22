@@ -6,16 +6,26 @@ const mockRunLogSetTool = vi.fn();
 const mockRunBulkLogTool = vi.fn();
 const mockRunTodaySummaryTool = vi.fn();
 const mockRunExerciseTrendTool = vi.fn();
+const mockRunAnalyticsOverviewTool = vi.fn();
 const mockRunDeleteSetTool = vi.fn();
+const mockRunEditSetTool = vi.fn();
 const mockRunSetSoundTool = vi.fn();
+const mockRunSetWeightUnitTool = vi.fn();
+const mockRunUpdatePreferencesTool = vi.fn();
 const mockRunFocusSuggestionsTool = vi.fn();
 const mockResolveExercise = vi.fn();
+const mockListExercises = vi.fn();
+const mockFindExercise = vi.fn();
 const mockMutation = vi.fn();
 
 vi.mock("@/../convex/_generated/api", () => ({
   api: {
     exercises: {
       updateExercise: "exercises.updateExercise",
+      deleteExercise: "exercises.deleteExercise",
+      restoreExercise: "exercises.restoreExercise",
+      mergeExercise: "exercises.mergeExercise",
+      updateMuscleGroups: "exercises.updateMuscleGroups",
     },
   },
 }));
@@ -38,11 +48,18 @@ vi.mock("./tool-exercise-report", () => ({
     mockRunExerciseTrendTool(...args),
 }));
 
+vi.mock("./tool-analytics-overview", () => ({
+  runAnalyticsOverviewTool: (...args: unknown[]) =>
+    mockRunAnalyticsOverviewTool(...args),
+}));
+
 vi.mock("./data", async () => {
   const actual = await vi.importActual<typeof import("./data")>("./data");
   return {
     ...actual,
     resolveExercise: (...args: unknown[]) => mockResolveExercise(...args),
+    listExercises: (...args: unknown[]) => mockListExercises(...args),
+    findExercise: (...args: unknown[]) => mockFindExercise(...args),
   };
 });
 
@@ -50,8 +67,22 @@ vi.mock("./tool-delete-set", () => ({
   runDeleteSetTool: (...args: unknown[]) => mockRunDeleteSetTool(...args),
 }));
 
+vi.mock("./tool-edit-set", () => ({
+  runEditSetTool: (...args: unknown[]) => mockRunEditSetTool(...args),
+}));
+
 vi.mock("./tool-set-sound", () => ({
   runSetSoundTool: (...args: unknown[]) => mockRunSetSoundTool(...args),
+}));
+
+vi.mock("./tool-set-weight-unit", () => ({
+  runSetWeightUnitTool: (...args: unknown[]) =>
+    mockRunSetWeightUnitTool(...args),
+}));
+
+vi.mock("./tool-update-preferences", () => ({
+  runUpdatePreferencesTool: (...args: unknown[]) =>
+    mockRunUpdatePreferencesTool(...args),
 }));
 
 vi.mock("./tool-focus-suggestions", () => ({
@@ -78,8 +109,12 @@ describe("canonical tool dispatch", () => {
     mockRunBulkLogTool.mockReset().mockResolvedValue(OK_RESULT);
     mockRunTodaySummaryTool.mockReset().mockResolvedValue(OK_RESULT);
     mockRunExerciseTrendTool.mockReset().mockResolvedValue(OK_RESULT);
+    mockRunAnalyticsOverviewTool.mockReset().mockResolvedValue(OK_RESULT);
     mockRunDeleteSetTool.mockReset().mockResolvedValue(OK_RESULT);
+    mockRunEditSetTool.mockReset().mockResolvedValue(OK_RESULT);
     mockRunSetSoundTool.mockReset().mockResolvedValue(OK_RESULT);
+    mockRunSetWeightUnitTool.mockReset().mockResolvedValue(OK_RESULT);
+    mockRunUpdatePreferencesTool.mockReset().mockResolvedValue(OK_RESULT);
     mockRunFocusSuggestionsTool.mockReset().mockResolvedValue(OK_RESULT);
     mockResolveExercise.mockReset().mockResolvedValue({
       exercise: {
@@ -91,6 +126,34 @@ describe("canonical tool dispatch", () => {
       exercises: [],
       closeMatches: [],
     });
+    mockListExercises.mockReset().mockResolvedValue([
+      {
+        _id: "exercise_1",
+        name: "Bench Press",
+        userId: "user_1",
+        createdAt: Date.now(),
+      },
+      {
+        _id: "exercise_2",
+        name: "Flat Bench",
+        userId: "user_1",
+        createdAt: Date.now(),
+      },
+    ]);
+    mockFindExercise
+      .mockReset()
+      .mockResolvedValueOnce({
+        _id: "exercise_1",
+        name: "Bench Press",
+        userId: "user_1",
+        createdAt: Date.now(),
+      })
+      .mockResolvedValueOnce({
+        _id: "exercise_2",
+        name: "Flat Bench",
+        userId: "user_1",
+        createdAt: Date.now(),
+      });
     mockMutation.mockReset().mockResolvedValue(undefined);
   });
 
@@ -150,6 +213,91 @@ describe("canonical tool dispatch", () => {
     });
   });
 
+  it("routes manage_exercise delete calls to the archive mutation", async () => {
+    const { runManageExerciseTool } = await import("./tool-manage-exercise");
+
+    await runManageExerciseTool(
+      {
+        action: "delete",
+        exercise_name: "Bench Press",
+      },
+      TEST_CTX as any
+    );
+
+    expect(mockMutation).toHaveBeenCalledWith("exercises.deleteExercise", {
+      id: "exercise_1",
+    });
+  });
+
+  it("routes manage_exercise restore calls to the restore mutation", async () => {
+    const { runManageExerciseTool } = await import("./tool-manage-exercise");
+
+    mockResolveExercise.mockResolvedValueOnce({
+      exercise: {
+        _id: "exercise_1",
+        name: "Bench Press",
+        userId: "user_1",
+        createdAt: Date.now(),
+        deletedAt: Date.now(),
+      },
+      exercises: [],
+      closeMatches: [],
+    });
+
+    await runManageExerciseTool(
+      {
+        action: "restore",
+        exercise_name: "Bench Press",
+      },
+      TEST_CTX as any
+    );
+
+    expect(mockMutation).toHaveBeenCalledWith("exercises.restoreExercise", {
+      id: "exercise_1",
+    });
+  });
+
+  it("routes manage_exercise merge calls to the merge mutation", async () => {
+    const { runManageExerciseTool } = await import("./tool-manage-exercise");
+
+    mockMutation.mockResolvedValueOnce({
+      mergedCount: 3,
+      keptExercise: "Flat Bench",
+    });
+
+    await runManageExerciseTool(
+      {
+        action: "merge",
+        source_exercise: "Bench Press",
+        target_exercise: "Flat Bench",
+      },
+      TEST_CTX as any
+    );
+
+    expect(mockMutation).toHaveBeenCalledWith("exercises.mergeExercise", {
+      fromId: "exercise_1",
+      toId: "exercise_2",
+    });
+  });
+
+  it("routes manage_exercise update_muscle_groups calls to the muscle group mutation", async () => {
+    const { runManageExerciseTool } = await import("./tool-manage-exercise");
+
+    await runManageExerciseTool(
+      {
+        action: "update_muscle_groups",
+        exercise_name: "Bench Press",
+        muscle_groups: ["chest", "triceps", "chest"],
+      },
+      TEST_CTX as any
+    );
+
+    expect(mockMutation).toHaveBeenCalledWith("exercises.updateMuscleGroups", {
+      id: "exercise_1",
+      muscleGroups: ["Chest", "Triceps"],
+    });
+  });
+
   it("routes modify_set delete calls to runDeleteSetTool", async () => {
     const { runModifySetTool } = await import("./tool-modify-set");
 
@@ -160,6 +308,32 @@ describe("canonical tool dispatch", () => {
 
     expect(mockRunDeleteSetTool).toHaveBeenCalledWith(
       { set_id: "set_123", exercise_name: undefined },
+      TEST_CTX
+    );
+  });
+
+  it("routes modify_set edit calls to runEditSetTool", async () => {
+    const { runModifySetTool } = await import("./tool-modify-set");
+
+    await runModifySetTool(
+      {
+        action: "edit",
+        set_id: "set_123",
+        reps: 8,
+        weight: 185,
+        unit: "lbs",
+      },
+      TEST_CTX as any
+    );
+
+    expect(mockRunEditSetTool).toHaveBeenCalledWith(
+      {
+        set_id: "set_123",
+        reps: 8,
+        duration_seconds: undefined,
+        weight: 185,
+        unit: "lbs",
+      },
       TEST_CTX
     );
   });
@@ -175,11 +349,53 @@ describe("canonical tool dispatch", () => {
     expect(mockRunSetSoundTool).toHaveBeenCalledWith({ enabled: false });
   });
 
+  it("routes update_settings weight_unit calls to runSetWeightUnitTool", async () => {
+    const { runUpdateSettingsTool } = await import("./tool-update-settings");
+
+    await runUpdateSettingsTool(
+      { action: "weight_unit", unit: "kg" },
+      TEST_CTX as any
+    );
+
+    expect(mockRunSetWeightUnitTool).toHaveBeenCalledWith({ unit: "kg" });
+  });
+
+  it("routes update_settings preferences calls to runUpdatePreferencesTool", async () => {
+    const { runUpdateSettingsTool } = await import("./tool-update-settings");
+
+    await runUpdateSettingsTool(
+      {
+        action: "preferences",
+        goals: ["get_stronger"],
+        custom_goal: "Bench 225",
+      },
+      TEST_CTX as any
+    );
+
+    expect(mockRunUpdatePreferencesTool).toHaveBeenCalledWith(
+      {
+        goals: ["get_stronger"],
+        custom_goal: "Bench 225",
+        training_split: undefined,
+        coach_notes: undefined,
+      },
+      TEST_CTX
+    );
+  });
+
   it("routes get_insights focus calls to runFocusSuggestionsTool", async () => {
     const { runGetInsightsTool } = await import("./tool-get-insights");
 
     await runGetInsightsTool({ action: "focus_suggestions" }, TEST_CTX as any);
 
     expect(mockRunFocusSuggestionsTool).toHaveBeenCalledWith(TEST_CTX);
+  });
+
+  it("routes get_insights analytics calls to runAnalyticsOverviewTool", async () => {
+    const { runGetInsightsTool } = await import("./tool-get-insights");
+
+    await runGetInsightsTool({ action: "analytics_overview" }, TEST_CTX as any);
+
+    expect(mockRunAnalyticsOverviewTool).toHaveBeenCalledWith(TEST_CTX);
   });
 });

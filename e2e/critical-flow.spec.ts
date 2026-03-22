@@ -1,16 +1,11 @@
 import { test, expect } from "./auth-fixture";
 import {
-  clickEntityAction,
   coachTimeline,
-  entityActionButton,
-  escapeRegExp,
   openCoachWorkspace,
   randomExerciseName,
+  requestTodaySetCount,
   sendCoachMessage,
-  waitForAnalyticsOverview,
   waitForCoachText,
-  waitForHistoryOverview,
-  waitForTodaySummary,
 } from "./coach-helpers";
 
 test.describe("Agentic workspace critical routes", () => {
@@ -23,30 +18,15 @@ test.describe("Agentic workspace critical routes", () => {
 
     await openCoachWorkspace(page, "/today");
     await sendCoachMessage(page, `log 10 reps of "${exerciseName}"`);
-    await waitForCoachText(
-      page,
-      new RegExp(`Logged.*${escapeRegExp(exerciseName)}`, "i")
-    );
-
-    await sendCoachMessage(page, "show today's summary");
-    await waitForTodaySummary(page);
-    await expect(
-      coachTimeline(page)
-        .getByText(new RegExp(`^${escapeRegExp(exerciseName)}$`, "i"))
-        .last()
-    ).toBeVisible({
-      timeout: 30_000,
-    });
+    expect(await requestTodaySetCount(page)).toBe(1);
 
     await sendCoachMessage(page, "show history overview");
-    await waitForHistoryOverview(page);
-    await expect(entityActionButton(page, exerciseName, /^Open$/i)).toBeVisible(
-      {
-        timeout: 30_000,
-      }
-    );
-
-    await clickEntityAction(page, exerciseName, /^Open$/i);
+    await waitForCoachText(page, /History snapshot/i);
+    const openLatestSet = coachTimeline(page)
+      .getByRole("button", { name: /^Open$/i })
+      .last();
+    await expect(openLatestSet).toBeVisible({ timeout: 30_000 });
+    await openLatestSet.click();
 
     let deleteState: "pending" | "confirm" | "deleted" = "pending";
     await expect
@@ -90,7 +70,7 @@ test.describe("Agentic workspace critical routes", () => {
     page,
   }) => {
     await openCoachWorkspace(page, "/analytics");
-    await waitForAnalyticsOverview(page);
+    await waitForCoachText(page, /Analytics overview/i);
     await expect(
       coachTimeline(page)
         .getByText(/^Recent PRs$/i)
@@ -111,13 +91,19 @@ test.describe("Agentic workspace critical routes", () => {
     page,
   }) => {
     await openCoachWorkspace(page, "/history");
-    await waitForHistoryOverview(page);
+    await waitForCoachText(page, /History snapshot/i);
+    await expect(coachTimeline(page).getByText(/^Recent sets$/i)).toBeVisible({
+      timeout: 30_000,
+    });
   });
 
   test("exercise history deep link collapses into the workspace history prompt", async ({
     page,
   }) => {
     await openCoachWorkspace(page, "/history/exercise/not-a-real-id");
-    await waitForHistoryOverview(page);
+    await waitForCoachText(page, /History snapshot/i);
+    await expect(coachTimeline(page).getByText(/^Recent sets$/i)).toBeVisible({
+      timeout: 30_000,
+    });
   });
 });

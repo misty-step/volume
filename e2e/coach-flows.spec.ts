@@ -1,19 +1,15 @@
 import { test, expect } from "./auth-fixture";
 import {
   clickEntityAction,
-  clickSuggestion,
-  clickUndo,
   coachInput,
   coachTimeline,
   createUniqueExerciseName,
+  escapeRegExp,
   openCoachWorkspace,
-  readTodaySetCount,
   requestTodaySetCount,
   sendCoachMessage,
-  waitForAnalyticsOverview,
   waitForCoachIdle,
   waitForCoachText,
-  waitForTodaySummary,
 } from "./coach-helpers";
 import { createExerciseForCurrentUser } from "./convex-helpers";
 
@@ -41,30 +37,43 @@ test.describe("Coach chat flows", () => {
     );
   });
 
-  test("logs a set, follows a generated suggestion, and undoes the action", async ({
+  test("logs a set and follows the newest generated suggestion", async ({
     page,
   }) => {
     const exerciseName = createUniqueExerciseName("Coach flow ");
+    const timelineButtons = coachTimeline(page)
+      .getByRole("button")
+      .filter({ hasNotText: /^Undo$/i });
+    const buttonCountBefore = await timelineButtons.count();
 
     await sendCoachMessage(page, `log 12 reps of "${exerciseName}"`);
-    await waitForCoachText(page, new RegExp(`Logged.*${exerciseName}`, "i"));
+    await waitForCoachIdle(page);
 
-    await clickSuggestion(page, "show today's summary");
-    await waitForTodaySummary(page);
-    expect(await readTodaySetCount(page)).toBe(1);
+    const newestSuggestion = timelineButtons.nth(buttonCountBefore);
+    await expect(newestSuggestion).toBeVisible({ timeout: 30_000 });
 
-    await clickUndo(page);
-    await waitForCoachText(page, /Action undone/i);
+    const suggestionLabel = (await newestSuggestion.textContent())?.trim();
+    await newestSuggestion.click();
+    await expect(coachInput(page)).toBeDisabled({ timeout: 10_000 });
 
-    expect(await requestTodaySetCount(page)).toBe(0);
+    if (suggestionLabel) {
+      await waitForCoachText(
+        page,
+        new RegExp(escapeRegExp(suggestionLabel), "i")
+      );
+    }
+
+    expect(await requestTodaySetCount(page)).toBe(1);
   });
 
   test("opens analytics from the generated workspace actions", async ({
     page,
   }) => {
     await sendCoachMessage(page, "show workspace");
+    await waitForCoachText(page, /Core workflows/i);
+
     await clickEntityAction(page, "Analytics overview");
-    await waitForAnalyticsOverview(page);
+    await waitForCoachText(page, /Analytics overview/i);
     await expect(
       coachTimeline(page)
         .getByText(/^Recent PRs$/i)

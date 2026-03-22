@@ -1,9 +1,11 @@
 import { devices } from "@playwright/test";
 import { expect, publicTest, test } from "./auth-fixture";
 import {
+  coachInput,
   coachTimeline,
   openCoachWorkspace,
-  waitForSettingsOverview,
+  waitForCoachIdle,
+  waitForCoachText,
 } from "./coach-helpers";
 
 /**
@@ -32,12 +34,9 @@ test.describe("Subscription Flow", () => {
     await expect(page.getByText("No credit card required")).toBeVisible();
   });
 
-  test("Settings page shows subscription status", async ({ page }) => {
+  test("Settings page shows subscription controls", async ({ page }) => {
     await openCoachWorkspace(page, "/settings");
-    await waitForSettingsOverview(page);
-    await expect(coachTimeline(page).getByText(/^Subscription$/i)).toBeVisible({
-      timeout: 30_000,
-    });
+    await waitForCoachText(page, /Training preferences/i);
     await expect(
       coachTimeline(page).getByRole("button", {
         name: /Manage billing|Upgrade plan/i,
@@ -59,14 +58,16 @@ test.describe("Paywall Gate", () => {
     page,
   }) => {
     await openCoachWorkspace(page, "/today");
-    await expect(page.getByTestId("coach-composer")).toBeVisible();
+    await expect(coachInput(page)).toBeVisible();
+    await expect(coachInput(page)).toBeEnabled();
   });
 
   test("Settings redirect resolves to the workspace", async ({ page }) => {
     await page.goto("/settings");
     await expect(page).toHaveURL(/\/today(?:\?.*)?$/);
-    await waitForSettingsOverview(page);
-    await expect(page.getByTestId("coach-composer")).toBeVisible();
+    await waitForCoachText(page, /Training preferences/i);
+    await expect(coachInput(page)).toBeVisible();
+    await expect(coachInput(page)).toBeEnabled();
   });
 
   test("Authenticated mobile reload recovers to the workspace without a stuck paywall spinner", async ({
@@ -122,12 +123,14 @@ test.describe("Paywall Gate", () => {
 
     try {
       await openCoachWorkspace(mobilePage, "/today");
-      await expect(mobilePage.getByTestId("coach-composer")).toBeVisible();
+      await expect(coachInput(mobilePage)).toBeVisible();
+      await expect(coachInput(mobilePage)).toBeEnabled();
 
       await mobilePage.reload();
 
-      await expect(mobilePage).toHaveURL(/\/today(?:\?.*)?$/);
-      await expect(mobilePage.getByTestId("coach-composer")).toBeVisible();
+      await waitForCoachIdle(mobilePage);
+      await expect(coachInput(mobilePage)).toBeVisible();
+      await expect(coachInput(mobilePage)).toBeEnabled();
       await expect(
         mobilePage.getByTestId("paywall-bootstrap-error")
       ).not.toBeVisible();

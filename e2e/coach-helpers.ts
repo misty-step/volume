@@ -92,7 +92,7 @@ export async function openCoachWorkspace(
   await expect(page).toHaveURL(/\/today(?:\?.*)?$/);
   await expect(coachTimeline(page)).toBeVisible();
   await expect(coachInput(page)).toBeVisible();
-  await expect(coachInput(page)).toBeEnabled();
+  await waitForCoachIdle(page);
 }
 
 export async function waitForCoachIdle(page: Page): Promise<void> {
