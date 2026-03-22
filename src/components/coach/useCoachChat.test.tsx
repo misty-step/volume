@@ -1,4 +1,4 @@
-import { renderHook, waitFor, act } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as convexReact from "convex/react";
 import { useCoachChat } from "./useCoachChat";
@@ -23,7 +23,6 @@ vi.mock("@/hooks/useTactileSoundPreference", () => ({
 
 vi.mock("convex/react", () => ({
   useMutation: vi.fn(),
-  useQuery: vi.fn(),
 }));
 
 vi.mock("@/lib/analytics", () => ({
@@ -47,18 +46,6 @@ vi.mock("@ai-sdk/react", () => ({
   })),
 }));
 
-/** Build JSONL patches for a single json-render element. */
-function makeJsonl(
-  rootKey: string,
-  type: string,
-  props: Record<string, unknown>
-): string {
-  return [
-    `{"op":"add","path":"/root","value":"${rootKey}"}`,
-    `{"op":"add","path":"/elements/${rootKey}","value":{"type":"${type}","props":${JSON.stringify(props)},"children":[]}}`,
-  ].join("\n");
-}
-
 describe("useCoachChat", () => {
   const getOrCreateTodaySessionMock = vi.fn();
   const undoAgentActionMock = vi.fn();
@@ -80,8 +67,6 @@ describe("useCoachChat", () => {
       }
       return undoAgentActionMock;
     });
-
-    vi.mocked(convexReact.useQuery).mockReturnValue(undefined);
   });
 
   it("bootstraps today's session on mount", async () => {
@@ -120,57 +105,101 @@ describe("useCoachChat", () => {
     );
   });
 
-  it("applies set_weight_unit ClientAction from spec in text parts", async () => {
-    const jsonl = makeJsonl("ca1", "ClientAction", {
-      action: "set_weight_unit",
-      payload: { unit: "kg" },
-    });
-    mockMessages.push({
-      id: "msg1",
-      role: "assistant",
-      parts: [{ type: "text", text: jsonl }],
-    });
-
-    renderHook(() => useCoachChat());
+  it("submits follow-up prompts through the typed submit_prompt action", async () => {
+    const { result } = renderHook(() => useCoachChat());
 
     await waitFor(() => {
-      expect(mockSetUnit).toHaveBeenCalledWith("kg");
+      expect(getOrCreateTodaySessionMock).toHaveBeenCalled();
+    });
+
+    await act(async () => {
+      await result.current.jsonRenderHandlers.submit_prompt?.({
+        prompt: "show today's summary",
+      });
+    });
+
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      { text: "show today's summary" },
+      expect.any(Object)
+    );
+  });
+
+  it("prefills the composer without sending when prefill_prompt runs", async () => {
+    const { result } = renderHook(() => useCoachChat());
+
+    await act(async () => {
+      await result.current.jsonRenderHandlers.prefill_prompt?.({
+        prompt: "show analytics overview",
+      });
+    });
+
+    expect(result.current.input).toBe("show analytics overview");
+    expect(mockSendMessage).not.toHaveBeenCalled();
+  });
+
+  it("applies typed preference actions for unit and sound", async () => {
+    const { result } = renderHook(() => useCoachChat());
+
+    await act(async () => {
+      await result.current.jsonRenderHandlers.set_preference?.({
+        key: "unit",
+        value: "kg",
+      });
+      await result.current.jsonRenderHandlers.set_preference?.({
+        key: "sound_enabled",
+        value: false,
+      });
+    });
+
+    expect(mockSetUnit).toHaveBeenCalledWith("kg");
+    expect(mockSetSoundEnabled).toHaveBeenCalledWith(false);
+  });
+
+  it("builds a structured quick log prompt from quick_log_submit", async () => {
+    const { result } = renderHook(() => useCoachChat());
+
+    await waitFor(() => {
+      expect(getOrCreateTodaySessionMock).toHaveBeenCalled();
+    });
+
+    await act(async () => {
+      await result.current.jsonRenderHandlers.quick_log_submit?.({
+        exerciseName: "Push-ups",
+        reps: "12",
+        durationSeconds: null,
+        weight: "45",
+        unit: "kg",
+      });
+    });
+
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      { text: "12 Push-ups @ 45 kg" },
+      expect.any(Object)
+    );
+  });
+
+  it("routes undo_agent_action through the undo mutation", async () => {
+    const { result } = renderHook(() => useCoachChat());
+
+    await act(async () => {
+      await result.current.jsonRenderHandlers.undo_agent_action?.({
+        actionId: "action_123",
+        turnId: "turn_456",
+      });
+    });
+
+    expect(undoAgentActionMock).toHaveBeenCalledWith({
+      actionId: "action_123",
     });
   });
 
-  it("applies set_sound ClientAction from spec in text parts", async () => {
-    const jsonl = makeJsonl("ca1", "ClientAction", {
-      action: "set_sound",
-      payload: { enabled: false },
-    });
-    mockMessages.push({
-      id: "msg1",
-      role: "assistant",
-      parts: [{ type: "text", text: jsonl }],
+  it("navigates to pricing for open_checkout", async () => {
+    const { result } = renderHook(() => useCoachChat());
+
+    await act(async () => {
+      await result.current.jsonRenderHandlers.open_checkout?.({});
     });
 
-    renderHook(() => useCoachChat());
-
-    await waitFor(() => {
-      expect(mockSetSoundEnabled).toHaveBeenCalledWith(false);
-    });
-  });
-
-  it("navigates to pricing for open_checkout ClientAction", async () => {
-    const jsonl = makeJsonl("ca1", "ClientAction", {
-      action: "open_checkout",
-      payload: { mode: "checkout" },
-    });
-    mockMessages.push({
-      id: "msg1",
-      role: "assistant",
-      parts: [{ type: "text", text: jsonl }],
-    });
-
-    renderHook(() => useCoachChat());
-
-    await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/pricing");
-    });
+    expect(mockPush).toHaveBeenCalledWith("/pricing");
   });
 });

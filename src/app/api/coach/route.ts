@@ -5,18 +5,17 @@ import { ConvexHttpClient } from "convex/browser";
 import { auth } from "@clerk/nextjs/server";
 import { api } from "@/../convex/_generated/api";
 import { CoachPreferencesSchema, MAX_COACH_MESSAGES } from "@/lib/coach/schema";
+import { streamCoachPresentation } from "@/lib/coach/presentation/compose";
 import { getCoachRuntime } from "@/lib/coach/server/runtime";
-import { buildPlannerSystemPrompt } from "@/lib/coach/server/planner";
-import { createCoachTools } from "@/lib/coach/server/coach-tools";
 import {
-  buildRuntimeUnavailableResponse,
-  normalizeAssistantText,
-} from "@/lib/coach/server/blocks";
+  buildEndOfTurnSuggestions,
+  runPlannerTurn,
+} from "@/lib/coach/server/planner";
+import { buildRuntimeUnavailableResponse } from "@/lib/coach/server/blocks";
+import { sanitizeError } from "@/lib/coach/sanitize-error";
 import {
-  streamText,
   generateText,
   convertToModelMessages,
-  stepCountIs,
   createUIMessageStream,
   createUIMessageStreamResponse,
   type ModelMessage,
@@ -28,11 +27,8 @@ import { z } from "zod";
 
 const CONTEXT_SUMMARY_TRIGGER_MESSAGES = 40;
 const CONTEXT_RECENT_MESSAGE_WINDOW = 20;
-const MAX_TOOL_ROUNDS = 5;
 const MAX_UI_MESSAGE_PAYLOAD_BYTES = 200_000;
 const MODEL_CALL_TIMEOUT_MS = 30_000;
-const TOOL_LIMIT_FALLBACK_MESSAGE =
-  "I reached the step limit. Ask a follow-up and I'll continue.";
 
 type StoredCoachMessage = {
   _id: string;
@@ -92,52 +88,6 @@ function createModelAbortSignal(signal?: AbortSignal): AbortSignal {
   });
 
   return controller.signal;
-}
-
-function shouldAppendToolLimitFallback({
-  text,
-  stepCount,
-  finishReason,
-}: {
-  text: string;
-  stepCount: number;
-  finishReason?: string;
-}) {
-  const normalizedText = normalizeAssistantText(text);
-  return (
-    !normalizedText &&
-    (finishReason === "tool-calls" || stepCount >= MAX_TOOL_ROUNDS)
-  );
-}
-
-function appendToolLimitFallback({
-  responseMessages,
-  text,
-  stepCount,
-  finishReason,
-}: {
-  responseMessages: ModelMessage[];
-  text: string;
-  stepCount: number;
-  finishReason?: string;
-}) {
-  if (
-    !shouldAppendToolLimitFallback({
-      text,
-      stepCount,
-      finishReason,
-    })
-  ) {
-    return responseMessages;
-  }
-
-  return [
-    ...responseMessages,
-    {
-      role: "assistant",
-      content: TOOL_LIMIT_FALLBACK_MESSAGE,
-    } satisfies ModelMessage,
-  ];
 }
 
 function createStatusAssistantResponse(message: string, status: number) {
@@ -515,77 +465,61 @@ export async function POST(request: Request) {
     latestUserMessage,
   });
 
-  const systemPrompt = buildPlannerSystemPrompt({
-    preferences,
+  const plannerResult = await runPlannerTurn({
+    runtime,
+    history,
     conversationSummary,
+    preferences,
+    ctx: context,
+    signal: createModelAbortSignal(request.signal),
   });
 
-  const tools = createCoachTools(context);
+  if (plannerResult.kind === "error" && plannerResult.toolsUsed.length === 0) {
+    return createStatusAssistantResponse(
+      `I hit an error while planning this turn. ${sanitizeError(plannerResult.errorMessage)}`,
+      500
+    );
+  }
 
-  const result = streamText({
-    model: runtime.model,
-    system: systemPrompt,
-    messages: history,
-    tools,
-    stopWhen: stepCountIs(MAX_TOOL_ROUNDS),
-    abortSignal: createModelAbortSignal(request.signal),
+  void persistCoachTurn({
+    convex,
+    sessionId,
+    latestUserText,
+    turnId,
+    responseMessages: plannerResult.responseMessages as ModelMessage[],
+  }).catch((error) => {
+    const err = error instanceof Error ? error : new Error(String(error));
+    reportError(err, { route: "coach", operation: "persist_turn" });
   });
 
-  void result.response.then(async (response) => {
-    try {
-      const [text, steps, finishReason] = await Promise.all([
-        result.text,
-        result.steps,
-        result.finishReason,
-      ]);
-      await persistCoachTurn({
-        convex,
-        sessionId,
-        latestUserText,
-        turnId,
-        responseMessages: appendToolLimitFallback({
-          responseMessages: response.messages as ModelMessage[],
-          text,
-          stepCount: steps.length,
-          finishReason,
-        }),
-      });
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      reportError(err, { route: "coach", operation: "persist_turn" });
-    }
+  const presentation = streamCoachPresentation({
+    runtime,
+    signal: createModelAbortSignal(request.signal),
+    context: {
+      latestUserText,
+      conversationSummary,
+      preferences,
+      planner: {
+        kind: plannerResult.kind,
+        assistantText: plannerResult.assistantText,
+        toolsUsed: plannerResult.toolsUsed,
+        errorMessage:
+          plannerResult.kind === "error"
+            ? sanitizeError(plannerResult.errorMessage)
+            : undefined,
+        hitToolLimit: plannerResult.hitToolLimit,
+        toolResults: plannerResult.toolResults,
+      },
+      followUpPrompts: buildEndOfTurnSuggestions(plannerResult.toolsUsed) ?? [],
+    },
   });
 
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       writer.merge(
-        pipeJsonRender(result.toUIMessageStream({ sendFinish: false }))
+        pipeJsonRender(presentation.toUIMessageStream({ sendFinish: false }))
       );
-      await result.response;
-
-      const [text, steps, finishReason] = await Promise.all([
-        result.text,
-        result.steps,
-        result.finishReason,
-      ]);
-
-      if (
-        shouldAppendToolLimitFallback({
-          text,
-          stepCount: steps.length,
-          finishReason,
-        })
-      ) {
-        const textId = crypto.randomUUID();
-        writer.write({ type: "text-start", id: textId });
-        writer.write({
-          type: "text-delta",
-          id: textId,
-          delta: TOOL_LIMIT_FALLBACK_MESSAGE,
-        });
-        writer.write({ type: "text-end", id: textId });
-      }
-
+      const finishReason = await presentation.finishReason;
       writer.write({ type: "finish", finishReason });
     },
   });

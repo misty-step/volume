@@ -336,7 +336,9 @@ describe("POST /api/coach", () => {
       model: "test-model",
       classificationModel: "test-classifier",
     });
-    streamTextMock.mockReturnValue(createStreamTextResult({ text: "hello" }));
+    streamTextMock
+      .mockReturnValueOnce(createStreamTextResult({ text: "planner hello" }))
+      .mockReturnValueOnce(createStreamTextResult({ text: "hello" }));
 
     const { POST } = await import("./route");
     const response = await POST(
@@ -348,7 +350,7 @@ describe("POST /api/coach", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(streamTextMock).toHaveBeenCalled();
+    expect(streamTextMock).toHaveBeenCalledTimes(2);
     expect(pipeJsonRenderMock).toHaveBeenCalled();
     const body = await response.text();
     expect(body).toContain("hello");

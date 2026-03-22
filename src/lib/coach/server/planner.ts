@@ -5,10 +5,10 @@ import {
   type ModelMessage,
   type ToolModelMessage,
 } from "ai";
-import { COACH_AGENT_SYSTEM_PROMPT } from "@/lib/coach/agent-prompt";
-import { catalog } from "@/lib/coach/catalog";
+import { COACH_ORCHESTRATOR_SYSTEM_PROMPT } from "./orchestrator-prompt";
 import { normalizeAssistantText } from "./blocks";
 import { createCoachTools } from "./coach-tools";
+import type { ToolExecutionRecord } from "@/lib/coach/presentation/types";
 import type { CoachToolContext } from "@/lib/coach/tools/types";
 import type { CoachRuntime } from "./runtime";
 
@@ -21,6 +21,7 @@ export type PlannerRunResult =
       toolsUsed: string[];
       hitToolLimit: boolean;
       responseMessages: ResponseMessage[];
+      toolResults: ToolExecutionRecord[];
     }
   | {
       kind: "error";
@@ -29,22 +30,11 @@ export type PlannerRunResult =
       errorMessage: string;
       hitToolLimit: boolean;
       responseMessages: ResponseMessage[];
+      toolResults: ToolExecutionRecord[];
     };
 
 const MAX_TOOL_ROUNDS = 5;
 const MODEL_CALL_TIMEOUT_MS = 30_000;
-
-/** Custom catalog rules that guide the model's JSONL generation. */
-const CATALOG_CUSTOM_RULES = [
-  "When a tool returns `_uiBlocks`, convert each block to the matching json-render component. " +
-    "Map the block `type` to the catalog component name: status→Status, metrics→Metrics, " +
-    "trend→Trend, table→Table, suggestions→Suggestions, entity_list→EntityList, " +
-    "detail_panel→DetailPanel, billing_panel→BillingPanel, quick_log_form→QuickLogForm, " +
-    "confirmation→Confirmation, client_action→ClientAction, undo→Undo.",
-  "Preserve ALL data values exactly (IDs, numbers, strings). Never invent or modify actionId, turnId, or payload values.",
-  "After all tools complete, append a Suggestions component with relevant follow-up prompts.",
-  "ClientAction components are invisible side-effects — always emit them when present in _uiBlocks.",
-];
 
 export function buildPlannerSystemPrompt({
   preferences,
@@ -63,18 +53,11 @@ export function buildPlannerSystemPrompt({
       ? `\n\nConversation summary:\n${conversationSummary.trim()}`
       : "";
 
-  const catalogPrompt = catalog.prompt({
-    mode: "inline",
-    customRules: CATALOG_CUSTOM_RULES,
-  });
-
-  return `${COACH_AGENT_SYSTEM_PROMPT}
+  return `${COACH_ORCHESTRATOR_SYSTEM_PROMPT}
 
 User local prefs:
 - default weight unit: ${promptUnit}
-- tactile sounds: ${promptSound}${summarySection}
-
-${catalogPrompt}`;
+- tactile sounds: ${promptSound}${summarySection}`;
 }
 
 /**
@@ -234,6 +217,7 @@ export async function runPlannerTurn({
   signal?: AbortSignal;
 }): Promise<PlannerRunResult> {
   const toolsUsed: string[] = [];
+  const toolResults: ToolExecutionRecord[] = [];
 
   if (signal?.aborted) {
     return {
@@ -243,6 +227,7 @@ export async function runPlannerTurn({
       errorMessage: formatAbortMessage(signal.reason),
       hitToolLimit: false,
       responseMessages: [],
+      toolResults,
     };
   }
 
@@ -252,7 +237,11 @@ export async function runPlannerTurn({
     conversationSummary,
   });
 
-  const tools = createCoachTools(ctx);
+  const tools = createCoachTools(ctx, {
+    onToolResult: (record) => {
+      toolResults.push(record);
+    },
+  });
 
   try {
     const modelAbortSignal = createModelAbortSignal(signal);
@@ -297,6 +286,7 @@ export async function runPlannerTurn({
       toolsUsed,
       hitToolLimit,
       responseMessages: response.messages,
+      toolResults,
     };
   } catch (error) {
     const message =
@@ -308,6 +298,7 @@ export async function runPlannerTurn({
       errorMessage: message,
       hitToolLimit: false,
       responseMessages: [],
+      toolResults,
     };
   }
 }

@@ -4,28 +4,46 @@ import {
   type CoachToolDefinition,
 } from "@/lib/coach/tools/registry";
 import type { CoachToolContext, ToolResult } from "@/lib/coach/tools/types";
+import type { ToolExecutionRecord } from "@/lib/coach/presentation/types";
 import { sanitizeError } from "@/lib/coach/sanitize-error";
 
 export type ToolOutput = Record<string, unknown>;
+type CreateCoachToolsOptions = {
+  onToolResult?: (record: ToolExecutionRecord) => void;
+};
 
 /**
  * Wrap a tool result into the output the model sees.
  *
- * Includes the full block specifications in `_uiBlocks` so the model can
- * convert them to json-render JSONL patches using the catalog vocabulary.
+ * The planner sees only semantic tool data. Presentation is composed later.
  */
 function wrap(result: ToolResult): ToolOutput {
+  return { ...result.outputForModel };
+}
+
+function toExecutionRecord({
+  toolName,
+  input,
+  result,
+}: {
+  toolName: string;
+  input: unknown;
+  result: ToolResult;
+}): ToolExecutionRecord {
   return {
-    ...result.outputForModel,
-    ...(result.blocks.length > 0 ? { _uiBlocks: result.blocks } : {}),
+    toolName,
+    input,
+    summary: result.summary,
+    outputForModel: result.outputForModel,
+    legacyBlocks: result.blocks,
   };
 }
 
-function toolError(message: string): ToolOutput {
+function toolErrorResult(message: string): ToolResult {
   const safe = sanitizeError(message);
   return {
-    error: safe,
-    _uiBlocks: [
+    summary: safe,
+    blocks: [
       {
         type: "status",
         tone: "error",
@@ -33,19 +51,37 @@ function toolError(message: string): ToolOutput {
         description: safe,
       },
     ],
+    outputForModel: {
+      status: "error",
+      error: safe,
+    },
   };
 }
 
-export function createCoachTools(ctx: CoachToolContext) {
+export function createCoachTools(
+  ctx: CoachToolContext,
+  options: CreateCoachToolsOptions = {}
+) {
   async function runTool(
     definition: CoachToolDefinition,
     rawArgs: unknown
   ): Promise<ToolOutput> {
+    let result: ToolResult;
     try {
-      return wrap(await definition.run(rawArgs, ctx));
+      result = await definition.run(rawArgs, ctx);
     } catch (e) {
-      return toolError(e instanceof Error ? e.message : "Unexpected error");
+      result = toolErrorResult(
+        e instanceof Error ? e.message : "Unexpected error"
+      );
     }
+    options.onToolResult?.(
+      toExecutionRecord({
+        toolName: definition.name,
+        input: rawArgs,
+        result,
+      })
+    );
+    return wrap(result);
   }
 
   return Object.fromEntries(

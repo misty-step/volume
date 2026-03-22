@@ -59,8 +59,9 @@ describe("createCoachTools", () => {
     mockRunSetSoundTool.mockReset();
   });
 
-  it("includes _uiBlocks in tool output when blocks are present", async () => {
+  it("returns semantic tool output and captures execution records", async () => {
     const { createCoachTools } = await import("./coach-tools");
+    const onToolResult = vi.fn();
     const toolBlocks: CoachBlock[] = [
       {
         type: "status",
@@ -76,17 +77,24 @@ describe("createCoachTools", () => {
       outputForModel: { status: "ok" },
     });
 
-    const tools = createCoachTools(TEST_CTX);
+    const tools = createCoachTools(TEST_CTX, { onToolResult });
     const output = await (tools.log_set as any).execute({
       exercise_name: "Push-ups",
       reps: 10,
     });
 
-    expect(output).toMatchObject({ status: "ok" });
-    expect(output._uiBlocks).toEqual(toolBlocks);
+    expect(output).toEqual({ status: "ok" });
+    expect(onToolResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toolName: "log_set",
+        summary: "logged",
+        outputForModel: { status: "ok" },
+        legacyBlocks: toolBlocks,
+      })
+    );
   });
 
-  it("includes _uiBlocks error block and error output when a runner throws", async () => {
+  it("returns semantic error output when a runner throws", async () => {
     const { createCoachTools } = await import("./coach-tools");
     mockRunLogSetTool.mockRejectedValue(new Error("boom"));
 
@@ -96,20 +104,13 @@ describe("createCoachTools", () => {
       reps: 10,
     });
 
-    expect(output.error).toBe("boom");
-    expect(output._uiBlocks).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          type: "status",
-          tone: "error",
-          title: "Tool failed",
-          description: "boom",
-        }),
-      ])
-    );
+    expect(output).toEqual({
+      status: "error",
+      error: "boom",
+    });
   });
 
-  it("supports tools with empty input schemas and includes _uiBlocks", async () => {
+  it("supports tools with empty input schemas", async () => {
     const { createCoachTools } = await import("./coach-tools");
     const toolBlocks: CoachBlock[] = [
       {
@@ -130,10 +131,9 @@ describe("createCoachTools", () => {
 
     expect(mockRunTodaySummaryTool).toHaveBeenCalledWith(TEST_CTX);
     expect(output).toMatchObject({ total_sets: 5 });
-    expect(output._uiBlocks).toEqual(toolBlocks);
   });
 
-  it("omits _uiBlocks when blocks array is empty", async () => {
+  it("omits legacy UI details from planner tool output", async () => {
     const { createCoachTools } = await import("./coach-tools");
 
     mockRunSetWeightUnitTool.mockReturnValue({
@@ -147,7 +147,6 @@ describe("createCoachTools", () => {
 
     expect(mockRunSetWeightUnitTool).toHaveBeenCalledWith({ unit: "kg" });
     expect(output).toEqual({ status: "ok", unit: "kg" });
-    expect(output._uiBlocks).toBeUndefined();
   });
 
   it("routes set_sound through the no-context tool runner", async () => {
