@@ -592,6 +592,51 @@ describe("CoachSpecRenderer", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("shows a user-facing error when quick log submission fails", async () => {
+    const handlers = {
+      submit_prompt: vi.fn(),
+      prefill_prompt: vi.fn(),
+      undo_agent_action: vi.fn(),
+      set_preference: vi.fn(),
+      open_checkout: vi.fn(),
+      open_billing_portal: vi.fn(),
+      quick_log_submit: vi
+        .fn()
+        .mockRejectedValue(new Error("network request failed")),
+    };
+
+    const spec: Spec = {
+      root: "scene",
+      elements: {
+        scene: {
+          type: "Scene",
+          props: { title: "Coach", subtitle: null },
+          children: ["quick"],
+        },
+        quick: {
+          type: "QuickLogComposer",
+          props: {
+            title: "Quick log",
+            exerciseName: "Push-ups",
+            reps: "12",
+            weight: "45",
+            unit: "kg",
+          },
+        },
+      },
+    };
+
+    render(<CoachSpecRenderer spec={spec} handlers={handlers} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Log set" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("I couldn't log that set. Try again.")
+      ).toBeInTheDocument();
+    });
+  });
+
   it("renders legacy component types through the compatibility registry", async () => {
     const handlers = {
       submit_prompt: vi.fn(),

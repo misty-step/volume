@@ -78,11 +78,25 @@ describe("runSettingsOverviewTool", () => {
     expect(billing.ctaAction).toBe("open_billing_portal");
     expect(billing.ctaLabel).toBe("Manage billing");
     expect(billing.periodEnd).toBeTypeOf("string");
-    expect(result.outputForModel).toEqual({
+    expect(result.outputForModel).toMatchObject({
       status: "ok",
-      subscription_status: "active",
-      has_access: true,
-      stripe_customer: true,
+      surface: "settings_overview",
+      preferences_title: "Training preferences",
+      preferences_fields: expect.arrayContaining([
+        {
+          label: "Goals",
+          value: "Build muscle, Get stronger",
+          emphasis: true,
+        },
+      ]),
+      subscription: {
+        title: "Subscription",
+        status: "active",
+        has_access: true,
+        stripe_customer: true,
+        cta_label: "Manage billing",
+        cta_action: "open_billing_portal",
+      },
       goals: ["build_muscle", "get_stronger"],
     });
   });
@@ -108,11 +122,18 @@ describe("runSettingsOverviewTool", () => {
     expect(billing.ctaAction).toBe("open_checkout");
     expect(billing.ctaLabel).toBe("Upgrade plan");
     expect(billing.periodEnd).toBeUndefined();
-    expect(result.outputForModel).toEqual({
+    expect(result.outputForModel).toMatchObject({
       status: "ok",
-      subscription_status: "expired",
-      has_access: false,
-      stripe_customer: false,
+      surface: "settings_overview",
+      preferences_title: "Training preferences",
+      subscription: {
+        title: "Subscription",
+        status: "expired",
+        has_access: false,
+        stripe_customer: false,
+        cta_label: "Upgrade plan",
+        cta_action: "open_checkout",
+      },
       goals: [],
     });
   });

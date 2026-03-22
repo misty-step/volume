@@ -296,7 +296,7 @@ export function DailySnapshotScene({
   topExercises: ExerciseRow[];
 }) {
   return (
-    <div className="space-y-3">
+    <div data-testid="coach-scene-daily-snapshot" className="space-y-3">
       <MetricsBlock
         title={title}
         metrics={[
@@ -348,7 +348,7 @@ export function AnalyticsOverviewScene({
   focusSuggestions: Array<{ title: string; priority: string; reason: string }>;
 }) {
   return (
-    <div className="space-y-3">
+    <div data-testid="coach-scene-analytics-overview" className="space-y-3">
       <MetricsBlock
         title="Analytics overview"
         metrics={[
@@ -408,7 +408,7 @@ export function ExerciseInsightScene({
   recentRows?: TableRow[];
 }) {
   return (
-    <div className="space-y-3">
+    <div data-testid="coach-scene-exercise-insight" className="space-y-3">
       <TrendSummary exerciseName={exerciseName} takeaway={takeaway} />
       <MetricsBlock
         title={`${exerciseName} snapshot`}
@@ -441,9 +441,9 @@ export function HistoryTimelineScene({
   }>;
 }) {
   return (
-    <div className="space-y-3">
-      {sessions.map((session) => (
-        <Card key={session.dateLabel} className="space-y-3">
+    <div data-testid="coach-scene-history-timeline" className="space-y-3">
+      {sessions.map((session, index) => (
+        <Card key={`${session.dateLabel}-${index}`} className="space-y-3">
           <header className="space-y-1">
             <div className="flex items-center gap-2">
               <ClockIcon className="h-4 w-4 text-accent" />
@@ -537,7 +537,7 @@ export function SettingsScene({
   fields: Array<{ label: string; value: string; emphasis?: boolean }>;
 }) {
   return (
-    <Card className="space-y-3">
+    <Card data-testid="coach-scene-settings" className="space-y-3">
       <header className="space-y-1">
         <Title>{title}</Title>
         {description ? <Muted>{description}</Muted> : null}
@@ -582,7 +582,7 @@ export function BillingStateScene({
   onCta?: () => void;
 }) {
   return (
-    <Card className="space-y-3">
+    <Card data-testid="coach-scene-billing-state" className="space-y-3">
       <header className="space-y-1">
         <Title>{title}</Title>
         {subtitle ? <Muted>{subtitle}</Muted> : null}
@@ -811,17 +811,21 @@ export function QuickLogComposerScene({
     }
 
     setError(null);
-    await handlers.quick_log_submit?.({
-      exerciseName: trimmedExercise,
-      reps: trimmedReps || null,
-      durationSeconds: trimmedDuration || null,
-      weight: trimmedWeight || null,
-      unit: unitValue,
-    });
+    try {
+      await handlers.quick_log_submit?.({
+        exerciseName: trimmedExercise,
+        reps: trimmedReps || null,
+        durationSeconds: trimmedDuration || null,
+        weight: trimmedWeight || null,
+        unit: unitValue,
+      });
+    } catch {
+      setError("I couldn't log that set. Try again.");
+    }
   }
 
   return (
-    <Card className="space-y-3">
+    <Card data-testid="coach-scene-quick-log" className="space-y-3">
       <header className="space-y-1">
         <Title>{title}</Title>
         <Muted>

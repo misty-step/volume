@@ -8,6 +8,7 @@ const PRESENTATION_CUSTOM_RULES = [
   "When you emit UI, use Scene as the root container.",
   "Prefer deep domain surfaces such as DailySnapshot, AnalyticsOverview, ExerciseInsight, HistoryTimeline, SettingsScene, BillingState, LogOutcome, ClarifyPanel, ConfirmationPanel, and QuickLogComposer over hand-assembling many small widgets.",
   "Preserve all values exactly. Never invent numbers, IDs, prompts, or payloads.",
+  "When tool outputs include stable section titles, field labels, action labels, or surface metadata, reuse them instead of renaming them.",
   "If legacy_blocks are present in tool results, treat them as hints about useful structure, not as mandatory output.",
   "Use ActionTray with ActionChip children for concise follow-up prompts or branch actions.",
   "Render QuickLogComposer when structured logging is safer or faster than freeform chat.",

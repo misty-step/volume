@@ -47,6 +47,8 @@ describe("runTodaySummaryTool", () => {
     });
     const result = await runTodaySummaryTool(mockCtx);
     expect(result.outputForModel.status).toBe("ok");
+    expect(result.outputForModel.surface).toBe("today_empty");
+    expect(result.outputForModel.title).toBe("No sets logged today");
     expect(result.outputForModel.total_sets).toBe(0);
   });
 
@@ -116,9 +118,26 @@ describe("runTodaySummaryTool", () => {
     });
     const result = await runTodaySummaryTool(mockCtx);
     expect(result.outputForModel.status).toBe("ok");
+    expect(result.outputForModel.surface).toBe("today_summary");
+    expect(result.outputForModel.title).toBe("Today's totals");
     expect(result.outputForModel.total_sets).toBe(5);
     expect(result.outputForModel.total_reps).toBe(50);
+    expect(result.outputForModel.total_duration_seconds).toBe(120);
     expect(result.outputForModel.exercise_count).toBe(2);
+    expect(result.outputForModel.top_exercises).toEqual([
+      {
+        exercise_name: "Bench",
+        sets: 3,
+        reps: 30,
+        duration_seconds: null,
+      },
+      {
+        exercise_name: "Plank",
+        sets: 2,
+        reps: null,
+        duration_seconds: 120,
+      },
+    ]);
   });
 
   it("exercise_count uses exerciseCount, not truncated topExercises.length", async () => {

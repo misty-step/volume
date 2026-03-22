@@ -3,7 +3,7 @@ import { expect, publicTest, test } from "./auth-fixture";
 import {
   coachTimeline,
   openCoachWorkspace,
-  waitForCoachText,
+  waitForSettingsOverview,
 } from "./coach-helpers";
 
 /**
@@ -34,7 +34,7 @@ test.describe("Subscription Flow", () => {
 
   test("Settings page shows subscription status", async ({ page }) => {
     await openCoachWorkspace(page, "/settings");
-    await waitForCoachText(page, /Training preferences/i);
+    await waitForSettingsOverview(page);
     await expect(coachTimeline(page).getByText(/^Subscription$/i)).toBeVisible({
       timeout: 30_000,
     });
@@ -59,14 +59,14 @@ test.describe("Paywall Gate", () => {
     page,
   }) => {
     await openCoachWorkspace(page, "/today");
-    await expect(page.getByText(/Agent ready\./i)).toBeVisible();
+    await expect(page.getByTestId("coach-composer")).toBeVisible();
   });
 
   test("Settings redirect resolves to the workspace", async ({ page }) => {
     await page.goto("/settings");
     await expect(page).toHaveURL(/\/today(?:\?.*)?$/);
-    await waitForCoachText(page, /Training preferences/i);
-    await expect(page.getByText(/Agent ready\./i)).toBeVisible();
+    await waitForSettingsOverview(page);
+    await expect(page.getByTestId("coach-composer")).toBeVisible();
   });
 
   test("Authenticated mobile reload recovers to the workspace without a stuck paywall spinner", async ({
@@ -122,12 +122,12 @@ test.describe("Paywall Gate", () => {
 
     try {
       await openCoachWorkspace(mobilePage, "/today");
-      await expect(mobilePage.getByText(/Agent ready\./i)).toBeVisible();
+      await expect(mobilePage.getByTestId("coach-composer")).toBeVisible();
 
       await mobilePage.reload();
 
-      await waitForCoachText(mobilePage, /Agent ready\./i);
-      await expect(mobilePage.getByText(/Agent ready\./i)).toBeVisible();
+      await expect(mobilePage).toHaveURL(/\/today(?:\?.*)?$/);
+      await expect(mobilePage.getByTestId("coach-composer")).toBeVisible();
       await expect(
         mobilePage.getByTestId("paywall-bootstrap-error")
       ).not.toBeVisible();

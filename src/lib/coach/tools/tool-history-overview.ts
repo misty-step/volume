@@ -29,6 +29,22 @@ export async function runHistoryOverviewTool(
 
   const totalReps = sets.reduce((sum, set) => sum + (set.reps ?? 0), 0);
   const totalDuration = sets.reduce((sum, set) => sum + (set.duration ?? 0), 0);
+  const recentSets = sets.map((set) => {
+    const exercise = exerciseMap.get(set.exerciseId);
+    const when = formatWithOffset(
+      set.performedAt,
+      ctx.timezoneOffsetMinutes ?? 0
+    );
+    const summary = describeSetSummary(set, ctx.defaultUnit);
+
+    return {
+      set_id: String(set._id),
+      exercise_name: exercise?.name ?? "Unknown exercise",
+      summary,
+      performed_at_label: when,
+      prompt: `delete set ${String(set._id)}`,
+    };
+  });
 
   return {
     summary: `Loaded ${sets.length} recent sets.`,
@@ -55,28 +71,25 @@ export async function runHistoryOverviewTool(
         type: "entity_list",
         title: "Recent sets",
         emptyLabel: "No history yet. Log your first set.",
-        items: sets.map((set) => {
-          const exercise = exerciseMap.get(set.exerciseId);
-          const when = formatWithOffset(
-            set.performedAt,
-            ctx.timezoneOffsetMinutes ?? 0
-          );
-          return {
-            id: String(set._id),
-            title: exercise?.name ?? "Unknown exercise",
-            subtitle: `${describeSetSummary(set, ctx.defaultUnit)} • ${when}`,
-            meta: `set_id=${String(set._id)}`,
-            prompt: `delete set ${String(set._id)}`,
-          };
-        }),
+        items: recentSets.map((set) => ({
+          id: set.set_id,
+          title: set.exercise_name,
+          subtitle: `${set.summary} • ${set.performed_at_label}`,
+          meta: `set_id=${set.set_id}`,
+          prompt: set.prompt,
+        })),
       },
     ],
     outputForModel: {
       status: "ok",
+      surface: "history_overview",
+      snapshot_title: "History snapshot",
+      recent_sets_title: "Recent sets",
       shown_sets: sets.length,
       total_reps: totalReps,
       total_duration_seconds: totalDuration,
       set_ids: sets.map((set) => String(set._id)),
+      recent_sets: recentSets,
     },
   };
 }

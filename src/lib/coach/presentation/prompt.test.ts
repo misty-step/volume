@@ -17,6 +17,7 @@ describe("coach presentation prompt", () => {
     expect(prompt).toContain("tactile sounds: disabled");
     expect(prompt).toContain("Conversation summary:");
     expect(prompt).toContain("ActionTray");
+    expect(prompt).toContain("reuse them instead of renaming them");
   });
 
   it("serializes planner output for the presentation composer", () => {

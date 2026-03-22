@@ -481,17 +481,6 @@ export async function POST(request: Request) {
     );
   }
 
-  void persistCoachTurn({
-    convex,
-    sessionId,
-    latestUserText,
-    turnId,
-    responseMessages: plannerResult.responseMessages as ModelMessage[],
-  }).catch((error) => {
-    const err = error instanceof Error ? error : new Error(String(error));
-    reportError(err, { route: "coach", operation: "persist_turn" });
-  });
-
   const presentation = streamCoachPresentation({
     runtime,
     signal: createModelAbortSignal(request.signal),
@@ -520,6 +509,18 @@ export async function POST(request: Request) {
         pipeJsonRender(presentation.toUIMessageStream({ sendFinish: false }))
       );
       const finishReason = await presentation.finishReason;
+      try {
+        await persistCoachTurn({
+          convex,
+          sessionId,
+          latestUserText,
+          turnId,
+          responseMessages: plannerResult.responseMessages as ModelMessage[],
+        });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        reportError(err, { route: "coach", operation: "persist_turn" });
+      }
       writer.write({ type: "finish", finishReason });
     },
   });

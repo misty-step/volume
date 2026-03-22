@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { E2E_SESSION_COOKIE_NAME } from "@/lib/e2e/test-session";
 
 const authMock = vi.fn();
@@ -13,9 +13,20 @@ vi.mock("@/lib/coach/server/runtime", () => ({
   getCoachRuntime: () => getCoachRuntimeMock(),
 }));
 
+const plannerMocks = vi.hoisted(() => ({
+  runPlannerTurnMock: vi.fn(),
+  buildEndOfTurnSuggestionsMock: vi.fn(),
+}));
+
 vi.mock("@/lib/coach/server/planner", async (importOriginal) => {
   const actual = await importOriginal();
-  return { ...actual };
+  return {
+    ...actual,
+    runPlannerTurn: (...args: unknown[]) =>
+      plannerMocks.runPlannerTurnMock(...args),
+    buildEndOfTurnSuggestions: (...args: unknown[]) =>
+      plannerMocks.buildEndOfTurnSuggestionsMock(...args),
+  };
 });
 
 const generateTextMock = vi.fn();
@@ -82,6 +93,25 @@ function validBody() {
         parts: [{ type: "text", text: "show today's summary" }],
       },
     ],
+    sessionId: undefined,
+    preferences: {
+      unit: "lbs",
+      soundEnabled: true,
+      timezoneOffsetMinutes: 0,
+    },
+  });
+}
+
+function validBodyWithSession(sessionId: string) {
+  return JSON.stringify({
+    messages: [
+      {
+        id: "msg_1",
+        role: "user",
+        parts: [{ type: "text", text: "show today's summary" }],
+      },
+    ],
+    sessionId,
     preferences: {
       unit: "lbs",
       soundEnabled: true,
@@ -129,12 +159,86 @@ function createStreamTextResult(options?: {
   };
 }
 
+function createFailingStreamTextResult(
+  error = new Error("Presentation failed")
+) {
+  const finishReason = {
+    then: (_resolve: unknown, reject?: (reason: unknown) => void) =>
+      reject?.(error),
+  } as Promise<never>;
+
+  return {
+    text: Promise.resolve("partial"),
+    steps: Promise.resolve([]),
+    finishReason,
+    response: Promise.resolve({
+      messages: [{ role: "assistant", content: "partial" }],
+    }),
+    consumeStream: vi.fn(async () => undefined),
+    toUIMessageStream: vi.fn(
+      ({ sendFinish = true }: { sendFinish?: boolean } = {}) =>
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue({ type: "start" });
+            controller.enqueue({ type: "text-start", id: "text_1" });
+            controller.enqueue({
+              type: "text-delta",
+              id: "text_1",
+              delta: "partial",
+            });
+            controller.enqueue({ type: "text-end", id: "text_1" });
+            if (sendFinish) {
+              controller.enqueue({ type: "finish", finishReason: "stop" });
+            }
+            controller.close();
+          },
+        })
+    ),
+  };
+}
+
+function createPlannerResult(
+  overrides: Partial<{
+    kind: "ok" | "error";
+    assistantText: string;
+    toolsUsed: string[];
+    errorMessage?: string;
+    hitToolLimit: boolean;
+    toolResults: Array<Record<string, unknown>>;
+    responseMessages: Array<Record<string, unknown>>;
+  }> = {}
+) {
+  return {
+    kind: "ok" as const,
+    assistantText: "Here is today's summary.",
+    toolsUsed: ["get_today_summary"],
+    errorMessage: undefined,
+    hitToolLimit: false,
+    toolResults: [],
+    responseMessages: [
+      { role: "assistant", content: "Here is today's summary." },
+    ],
+    ...overrides,
+  };
+}
+
 describe("POST /api/coach", () => {
+  beforeEach(() => {
+    plannerMocks.runPlannerTurnMock.mockReset();
+    plannerMocks.buildEndOfTurnSuggestionsMock.mockReset();
+    plannerMocks.runPlannerTurnMock.mockResolvedValue(createPlannerResult());
+    plannerMocks.buildEndOfTurnSuggestionsMock.mockReturnValue([
+      "show today's summary",
+    ]);
+  });
+
   afterEach(() => {
     process.env = { ...ORIGINAL_ENV };
     vi.resetModules();
     authMock.mockReset();
     getCoachRuntimeMock.mockReset();
+    plannerMocks.runPlannerTurnMock.mockReset();
+    plannerMocks.buildEndOfTurnSuggestionsMock.mockReset();
     generateTextMock.mockReset();
     streamTextMock.mockReset();
     pipeJsonRenderMock.mockClear();
@@ -336,9 +440,15 @@ describe("POST /api/coach", () => {
       model: "test-model",
       classificationModel: "test-classifier",
     });
-    streamTextMock
-      .mockReturnValueOnce(createStreamTextResult({ text: "planner hello" }))
-      .mockReturnValueOnce(createStreamTextResult({ text: "hello" }));
+    plannerMocks.runPlannerTurnMock.mockResolvedValue(
+      createPlannerResult({
+        assistantText: "planner hello",
+        responseMessages: [{ role: "assistant", content: "planner hello" }],
+      })
+    );
+    streamTextMock.mockReturnValueOnce(
+      createStreamTextResult({ text: "hello" })
+    );
 
     const { POST } = await import("./route");
     const response = await POST(
@@ -350,9 +460,141 @@ describe("POST /api/coach", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(streamTextMock).toHaveBeenCalledTimes(2);
+    expect(streamTextMock).toHaveBeenCalledTimes(1);
     expect(pipeJsonRenderMock).toHaveBeenCalled();
     const body = await response.text();
     expect(body).toContain("hello");
+  });
+
+  it("passes partial planner results to presentation when planner returns an error after tools", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    ConvexHttpClientMock.mockReturnValue(convex);
+    getCoachRuntimeMock.mockReturnValue({
+      model: "test-model",
+      classificationModel: "test-classifier",
+    });
+    plannerMocks.runPlannerTurnMock.mockResolvedValue(
+      createPlannerResult({
+        kind: "error",
+        assistantText:
+          "I found your recent history, but one follow-up step failed.",
+        errorMessage: "secondary lookup failed",
+        toolsUsed: ["get_history_overview"],
+        toolResults: [
+          {
+            toolName: "get_history_overview",
+            input: {},
+            summary: "Loaded 3 recent sets.",
+            outputForModel: {
+              status: "ok",
+              surface: "history_overview",
+              shown_sets: 3,
+              recent_sets: [
+                {
+                  set_id: "set_1",
+                  exercise_name: "Push-ups",
+                  summary: "12 reps",
+                },
+              ],
+            },
+            legacyBlocks: [
+              { type: "detail_panel", title: "History snapshot", fields: [] },
+              { type: "entity_list", title: "Recent sets", items: [] },
+            ],
+          },
+        ],
+        responseMessages: [
+          {
+            role: "assistant",
+            content:
+              "I found your recent history, but one follow-up step failed.",
+          },
+        ],
+      })
+    );
+    streamTextMock.mockReturnValueOnce(
+      createStreamTextResult({ text: "Here is what I could recover." })
+    );
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: validBody(),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    await response.text();
+
+    const presentationRequest = streamTextMock.mock.calls[0]?.[0] as {
+      messages: Array<{ content: string }>;
+    };
+
+    expect(presentationRequest.messages[0]?.content).toContain(
+      '"planner_kind": "error"'
+    );
+    expect(presentationRequest.messages[0]?.content).toContain(
+      '"tool_name": "get_history_overview"'
+    );
+    expect(presentationRequest.messages[0]?.content).toContain(
+      '"shown_sets": 3'
+    );
+    expect(presentationRequest.messages[0]?.content).toContain(
+      '"History snapshot"'
+    );
+  });
+
+  it("does not persist planner messages when presentation fails", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    ConvexHttpClientMock.mockReturnValue(convex);
+    getCoachRuntimeMock.mockReturnValue({
+      model: "test-model",
+      classificationModel: "test-classifier",
+    });
+    plannerMocks.runPlannerTurnMock.mockResolvedValue(
+      createPlannerResult({
+        assistantText: "planner hello",
+        responseMessages: [{ role: "assistant", content: "planner hello" }],
+      })
+    );
+    streamTextMock.mockReturnValueOnce(createFailingStreamTextResult());
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: validBodyWithSession("session_123"),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain('"type":"error"');
+    expect(body).toContain("Presentation failed");
+
+    const persistedCalls = convex.mutation.mock.calls.filter(([, args]) =>
+      Boolean(
+        args &&
+        typeof args === "object" &&
+        "turnId" in (args as Record<string, unknown>)
+      )
+    );
+
+    expect(persistedCalls).toEqual([]);
   });
 });
