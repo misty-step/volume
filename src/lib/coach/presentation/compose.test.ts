@@ -82,4 +82,41 @@ describe("streamCoachPresentation", () => {
     };
     expect(call.abortSignal.aborted).toBe(true);
   });
+
+  it("falls back when AbortSignal.any is unavailable and mirrors later aborts", async () => {
+    const { streamCoachPresentation } = await import("./compose");
+    const anyDescriptor = Object.getOwnPropertyDescriptor(AbortSignal, "any");
+
+    Object.defineProperty(AbortSignal, "any", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    });
+
+    try {
+      const controller = new AbortController();
+
+      streamCoachPresentation({
+        runtime: { model: { id: "mock-model" } } as any,
+        context,
+        signal: controller.signal,
+      });
+
+      const call = streamTextMock.mock.calls[0][0] as {
+        abortSignal: AbortSignal;
+      };
+
+      expect(call.abortSignal.aborted).toBe(false);
+
+      controller.abort(new Error("stop later"));
+
+      expect(call.abortSignal.aborted).toBe(true);
+    } finally {
+      if (anyDescriptor) {
+        Object.defineProperty(AbortSignal, "any", anyDescriptor);
+      } else {
+        delete (AbortSignal as typeof AbortSignal & { any?: unknown }).any;
+      }
+    }
+  });
 });

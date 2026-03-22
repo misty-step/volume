@@ -381,6 +381,217 @@ describe("CoachSpecRenderer", () => {
     });
   });
 
+  it("renders nullable presentation props without forcing optional UI", () => {
+    const handlers = {
+      submit_prompt: vi.fn(),
+      prefill_prompt: vi.fn(),
+      undo_agent_action: vi.fn(),
+      set_preference: vi.fn(),
+      open_checkout: vi.fn(),
+      open_billing_portal: vi.fn(),
+      quick_log_submit: vi.fn(),
+    };
+
+    const spec: Spec = {
+      root: "scene",
+      elements: {
+        scene: {
+          type: "Scene",
+          props: { title: "Minimal coach", subtitle: null },
+          children: [
+            "choice",
+            "daily",
+            "analytics",
+            "insight",
+            "history",
+            "library",
+            "settings",
+            "billing",
+            "logOutcome",
+            "clarify",
+            "confirm",
+            "pref",
+            "quick",
+          ],
+        },
+        choice: {
+          type: "ChoiceCard",
+          props: {
+            title: "Push-ups",
+            description: null,
+            meta: null,
+            tags: null,
+          },
+        },
+        daily: {
+          type: "DailySnapshot",
+          props: {
+            title: "Today",
+            subtitle: null,
+            totalSets: 1,
+            totalReps: 10,
+            totalDurationSeconds: 0,
+            exerciseCount: 1,
+            topExercises: [
+              {
+                name: "Push-ups",
+                sets: 1,
+                reps: null,
+                durationSeconds: null,
+              },
+            ],
+          },
+        },
+        analytics: {
+          type: "AnalyticsOverview",
+          props: {
+            currentStreak: 1,
+            longestStreak: 1,
+            workoutDays: 1,
+            recentVolume: 10,
+            recentPrs: [
+              {
+                exerciseName: "Push-ups",
+                prLabel: "10 reps",
+                detail: null,
+              },
+            ],
+            overload: [
+              {
+                exerciseName: "Push-ups",
+                trend: "Steady",
+                note: null,
+              },
+            ],
+            focusSuggestions: [
+              {
+                title: "Keep going",
+                priority: "medium",
+                reason: "Consistency matters more than complexity.",
+              },
+            ],
+          },
+        },
+        insight: {
+          type: "ExerciseInsight",
+          props: {
+            exerciseName: "Push-ups",
+            takeaway: null,
+            summaryMetrics: [{ label: "Sets", value: "1" }],
+            trend: null,
+            recentRows: null,
+          },
+        },
+        history: {
+          type: "HistoryTimeline",
+          props: {
+            sessions: [
+              {
+                dateLabel: "Today",
+                summary: null,
+                rows: [{ label: "Push-ups", value: "10 reps", meta: null }],
+              },
+            ],
+          },
+        },
+        library: {
+          type: "LibraryScene",
+          props: {
+            title: "Library",
+            description: null,
+            items: [
+              {
+                name: "Push-ups",
+                status: "active",
+                muscleGroups: null,
+                lastLogged: null,
+                note: null,
+              },
+            ],
+          },
+        },
+        settings: {
+          type: "SettingsScene",
+          props: {
+            title: "Settings",
+            description: null,
+            fields: [{ label: "Unit", value: "lbs", emphasis: null }],
+          },
+        },
+        billing: {
+          type: "BillingState",
+          props: {
+            status: "active",
+            title: "Membership",
+            subtitle: null,
+            trialDaysRemaining: null,
+            periodEnd: null,
+            ctaLabel: null,
+          },
+        },
+        logOutcome: {
+          type: "LogOutcome",
+          props: {
+            tone: "info",
+            title: "Saved",
+            description: null,
+            detailRows: null,
+            undoActionId: null,
+            undoTurnId: null,
+            undoTitle: null,
+            undoDescription: null,
+          },
+        },
+        clarify: {
+          type: "ClarifyPanel",
+          props: {
+            title: "Need detail",
+            description: null,
+          },
+          children: [],
+        },
+        confirm: {
+          type: "ConfirmationPanel",
+          props: {
+            title: "Proceed?",
+            description: "Keep it simple.",
+            confirmLabel: null,
+            cancelLabel: null,
+          },
+        },
+        pref: {
+          type: "PreferenceCard",
+          props: {
+            title: "Weight unit",
+            description: null,
+            valueLabel: "LBS",
+          },
+        },
+        quick: {
+          type: "QuickLogComposer",
+          props: {
+            title: "Quick log",
+            exerciseName: null,
+            reps: null,
+            durationSeconds: null,
+            weight: null,
+            unit: null,
+            helperText: null,
+          },
+        },
+      },
+    };
+
+    render(<CoachSpecRenderer spec={spec} handlers={handlers} />);
+
+    expect(screen.getByText("Minimal coach")).toBeInTheDocument();
+    expect(screen.getByText("Push-ups snapshot")).toBeInTheDocument();
+    expect(screen.getByText("Membership")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Undo" })
+    ).not.toBeInTheDocument();
+  });
+
   it("renders legacy component types through the compatibility registry", async () => {
     const handlers = {
       submit_prompt: vi.fn(),
@@ -555,6 +766,57 @@ describe("CoachSpecRenderer", () => {
     expect(handlers.undo_agent_action).toHaveBeenCalledWith({
       actionId: "action_987",
       turnId: "turn_654",
+    });
+  });
+
+  it("dispatches the remaining legacy client action variants", async () => {
+    const handlers = {
+      set_preference: vi.fn(),
+      open_checkout: vi.fn(),
+      open_billing_portal: vi.fn(),
+    };
+
+    const spec: Spec = {
+      root: "card",
+      elements: {
+        card: {
+          type: "Card",
+          props: { title: "Legacy actions" },
+          children: ["sound", "checkout", "billing"],
+        },
+        sound: {
+          type: "ClientAction",
+          props: {
+            action: "set_sound",
+            payload: { enabled: false },
+          },
+        },
+        checkout: {
+          type: "ClientAction",
+          props: {
+            action: "open_checkout",
+            payload: {},
+          },
+        },
+        billing: {
+          type: "ClientAction",
+          props: {
+            action: "open_billing_portal",
+            payload: {},
+          },
+        },
+      },
+    };
+
+    render(<CoachSpecRenderer spec={spec} handlers={handlers} />);
+
+    await waitFor(() => {
+      expect(handlers.set_preference).toHaveBeenCalledWith({
+        key: "sound_enabled",
+        value: false,
+      });
+      expect(handlers.open_checkout).toHaveBeenCalledWith({});
+      expect(handlers.open_billing_portal).toHaveBeenCalledWith({});
     });
   });
 });
