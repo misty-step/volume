@@ -12,7 +12,20 @@ describe("coach agent prompt", () => {
 
   it("instructs brief confirmation after log_set", () => {
     expect(COACH_AGENT_SYSTEM_PROMPT).toContain(
-      "After log_set: respond with one brief confirmation"
+      "After log_sets: respond with one brief confirmation"
+    );
+  });
+
+  it("routes model choices through canonical tool families", () => {
+    expect(COACH_AGENT_SYSTEM_PROMPT).toContain("query_workouts");
+    expect(COACH_AGENT_SYSTEM_PROMPT).toContain("query_exercise");
+    expect(COACH_AGENT_SYSTEM_PROMPT).toContain("manage_exercise");
+    expect(COACH_AGENT_SYSTEM_PROMPT).toContain("log_sets");
+  });
+
+  it("requires 2-3 contextual follow-up suggestions after tool calls", () => {
+    expect(COACH_AGENT_SYSTEM_PROMPT).toContain(
+      "include 2-3 contextual follow-up suggestions"
     );
   });
 

@@ -55,7 +55,7 @@ Expected:
 - Composer transitions disabled -> enabled when input exists.
 - Submit action succeeds (no uncaught page error).
 - Coach response is not fallback/unavailable.
-- `trace.toolsUsed` includes `get_today_summary`.
+- `trace.toolsUsed` includes `query_workouts` for the today-summary intent.
 - `assistantText` is non-empty.
 
 ## Platform Health
