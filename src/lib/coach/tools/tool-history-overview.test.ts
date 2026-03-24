@@ -81,10 +81,36 @@ describe("runHistoryOverviewTool", () => {
     expect(entityList.items[2].subtitle).toContain("8 reps @ 100 kg");
     expect(result.outputForModel).toEqual({
       status: "ok",
+      surface: "history_overview",
+      snapshot_title: "History snapshot",
+      recent_sets_title: "Recent sets",
       shown_sets: 3,
       total_reps: 20,
       total_duration_seconds: 125,
       set_ids: ["set1", "set2", "set3"],
+      recent_sets: [
+        {
+          set_id: "set1",
+          exercise_name: "Plank",
+          summary: "2:05",
+          performed_at_label: expect.any(String),
+          prompt: "delete set set1",
+        },
+        {
+          set_id: "set2",
+          exercise_name: "Push Ups",
+          summary: "12 reps",
+          performed_at_label: expect.any(String),
+          prompt: "delete set set2",
+        },
+        {
+          set_id: "set3",
+          exercise_name: "Unknown exercise",
+          summary: "8 reps @ 100 kg",
+          performed_at_label: expect.any(String),
+          prompt: "delete set set3",
+        },
+      ],
     });
   });
 

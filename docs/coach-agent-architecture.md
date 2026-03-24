@@ -1,114 +1,97 @@
 # Coach Agent Architecture
 
-Date: 2026-02-24
-Status: Implemented (AI SDK 6 streamText migration complete)
+Date: 2026-03-22  
+Status: Implemented
 
 ## Core Contract
 
-1. Model decides what to do.
-2. Tools decide how it is done.
-3. UI schema decides how it is rendered.
+1. The planner model decides what work to do.
+2. Deterministic tools fetch or mutate domain state.
+3. A separate presentation composer decides whether the answer should be text, a compact scene, an analytic scene, or a workflow scene.
+4. The client renders structured specs through a registry and executes typed actions locally.
 
-This keeps the system agentic without becoming fragile.
+This keeps tool execution deterministic while restoring genuinely generative UI.
 
 ## Runtime Flow
 
-1. Client sends conversation history + local preferences to `POST /api/coach`.
-2. Server planner (`streamText` via AI SDK 6 + OpenRouter provider) runs tool-calling loop using the canonical policy in `src/lib/openrouter/policy.ts`.
-3. Deterministic tool handlers execute against Convex.
-4. Tool outputs are converted into typed UI blocks.
-5. If runtime/planning fails, the route returns explicit structured failure blocks instead of semantic fallback parsing.
-6. Client renders blocks and applies any declared local actions.
+1. Client sends conversation history and local preferences to `POST /api/coach`.
+2. Server planner runs the tool loop and returns natural-language assistant text plus semantic tool execution records.
+3. Tools return domain outputs for the model and may also attach legacy block hints for transition purposes.
+4. Presentation composer receives:
+   - latest user request
+   - planner assistant text
+   - tools used
+   - semantic tool outputs
+   - follow-up prompts
+   - user preferences
+5. Presentation composer emits either:
+   - plain text only, or
+   - inline `json-render` scene specs plus text
+6. Route streams the presentation result through `pipeJsonRender(...)`.
+7. Client consumes structured parts with `useJsonRenderMessage(message.parts)` and renders them with the presentation registry.
+8. Interactive surfaces dispatch typed actions such as `submit_prompt`, `prefill_prompt`, `undo_agent_action`, `set_preference`, `open_checkout`, and `quick_log_submit`.
 
-## API Contract (Prototype)
+## Presentation Model
 
-Request (`POST /api/coach`)
+The presentation catalog is intentionally deep.
 
-- Body
-  - `messages`: AI SDK `ModelMessage[]`
-    - route strips inbound `system` messages before planner execution
-    - max 30 messages
-    - max 4000 chars per message
-    - max 50k chars total
-  - `preferences`
-    - `unit`: `"lbs" | "kg"`
-    - `soundEnabled`: `boolean`
-    - `timezoneOffsetMinutes?`: number (JS `Date#getTimezoneOffset()` convention)
-- Auth: Clerk session; server uses Convex token template `convex`
-- Rate limiting: per-user fixed-window (`coach:turn`, default 10/min) via Convex `rateLimits` table
+- Layout surfaces: `Scene`, `ActionTray`
+- Compact actions: `ActionChip`, `ChoiceCard`, `PreferenceCard`
+- Domain scenes: `DailySnapshot`, `AnalyticsOverview`, `ExerciseInsight`, `HistoryTimeline`, `LibraryScene`, `SettingsScene`, `BillingState`, `LogOutcome`
+- Workflow scenes: `ClarifyPanel`, `ConfirmationPanel`, `QuickLogComposer`
 
-Response (JSON mode)
+The model should choose the smallest effective surface:
 
-- `assistantText`: string
-- `blocks`: typed UI blocks (`status`, `metrics`, `trend`, `table`, `suggestions`, `client_action`)
-- `trace`: `{ toolsUsed: string[], model: string, fallbackUsed: boolean }`
+- Text only for acknowledgements, short clarifications, and conversational replies
+- Analytic scenes for trends, summaries, comparisons, and scan-heavy answers
+- Workflow scenes when structured input or confirmation reduces user error
 
-## Streaming
-
-`POST /api/coach` supports SSE when the request `Accept` header includes `text/event-stream`.
-
-Events:
-
-- `start` (model selected)
-- `tool_start` (tool began)
-- `tool_result` (append typed blocks; may repeat per tool as blocks are produced)
-- `final` (canonical full response: assistant text + blocks + trace)
-- `error` (planner failed; final still follows with partial failure response)
-
-Each SSE frame is:
-
-```text
-event: <event-type>
-data: <json>
-```
-
-Where `data` is a `CoachStreamEvent` JSON object (see `src/lib/coach/schema.ts`).
-
-## Modules
+## Module Boundaries
 
 - `src/app/api/coach/route.ts`
-  - HTTP entry point (auth, request parsing, rate limit, tool-context assembly,
-    streaming vs JSON response).
-- `src/lib/openrouter/policy.ts`
-  - canonical OpenRouter gateway contract: model portfolio, routing policy, headers, timeout, and env variable names
-- `src/lib/coach/server/*`
-  - planner loop (`planner.ts`), shared turn runner (`turn-runner.ts`), AI SDK tool factory (`coach-tools.ts`), runtime provider, SSE utilities, response builders.
+  - transport, auth, rate limiting, persistence, planner/composer orchestration
+- `src/lib/coach/server/planner.ts`
+  - planner-only tool loop; no UI generation
+- `src/lib/coach/server/coach-tools.ts`
+  - AI SDK tool definitions and semantic tool execution capture
+- `src/lib/coach/server/orchestrator-prompt.ts`
+  - planner system prompt
+- `src/lib/coach/presentation/*`
+  - presentation context, catalog, prompt, composer, and registry
 - `src/lib/coach/tools/*`
-  - deterministic tool handlers and Convex access helpers; consumed by `createCoachTools`.
-- `src/lib/coach/schema.ts`
-  - request/response + UI block contracts.
-- `src/lib/coach/sse-client.ts`
-  - client-side SSE parsing.
+  - deterministic domain tools
 - `src/components/coach/CoachPrototype.tsx`
-  - thin chat client and typed block renderer.
+  - chat shell using structured message parts
 - `src/components/coach/useCoachChat.ts`
-  - chat state + streaming orchestration.
+  - chat state and typed local action handlers
+- `src/components/coach/CoachSceneBlocks.tsx`
+  - deep scene implementations
 - `src/components/coach/CoachBlockRenderer.tsx`
-  - typed UI block rendering.
+  - `json-render` host
 
-## Tool Surface
+## Architectural Invariants
 
-- `log_set`
-- `get_today_summary`
-- `get_exercise_snapshot`
-- `get_exercise_trend`
-- `get_focus_suggestions`
-- `set_weight_unit` (client action)
-- `set_sound` (client action)
+- Planner never emits UI specs.
+- Tools never return final UI as the primary contract.
+- Client never scrapes UI specs from assistant text.
+- Interactive scenes use typed actions, not prompt strings hidden in React context.
+- The catalog surface is job-shaped, not a bag of shallow widgets.
+
+## Transitional Compatibility
+
+The client registry still knows how to render legacy spec component types so persisted older turns do not go blank during rollout. New turns should be generated from the presentation catalog, not the legacy block vocabulary.
 
 ## Failure Behavior
 
-- If no model runtime is configured, the route returns `runtime-unavailable` with explicit error/suggestions blocks.
-- If `COACH_AGENT_MODEL` is unset or blank, coach runtime falls back to the canonical default model instead of treating whitespace as a separate policy.
-- If planning fails before any tool runs, the route returns `planner_failed`.
-- If planning fails after tools already ran, the route returns `planner_failed_partial` and preserves the partial blocks.
-- No deterministic semantic fallback/parser path remains in the coach route.
+- If runtime is unavailable, route returns a transport-level error response.
+- If planning fails before useful work is done, route returns planner failure.
+- If planning fails after tools ran, partial planner output is preserved and the failure is surfaced cleanly.
+- Presentation stays read-only: it does not call tools or fetch missing data.
 
 ## Next Hardening Steps
 
-1. Keep `src/lib/coach/tools/registry.ts` as the single source of truth for tool names, schemas, descriptions, and runner wiring.
-2. Add structured eval dataset for common prompts.
-3. Persist server conversation IDs for stronger long-turn memory.
-4. Add safety/approval layer for destructive actions before expanding tool set.
-5. Move route-owned exercise resolution/context assembly behind a server context
-   factory so `route.ts` is transport-only.
+1. Replace legacy block hints in tool outputs with resource-shaped semantic payloads.
+2. Add eval coverage for scene selection quality, not just tool routing.
+3. Persist presentation decisions separately from planner messages for analysis.
+4. Expand typed action coverage for destructive management flows.
+5. Remove the remaining legacy block/component compatibility layer after old sessions age out.

@@ -4,8 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
-import { compileSpecStream } from "@json-render/core";
-import type { Spec } from "@json-render/core";
 import { DefaultChatTransport } from "ai";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
@@ -13,10 +11,53 @@ import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { useTactileSoundPreference } from "@/hooks/useTactileSoundPreference";
 import { trackEvent, reportError } from "@/lib/analytics";
 
+type JsonRenderActionHandler = (
+  params: Record<string, unknown>
+) => Promise<unknown> | unknown;
+
 function parseAgentActionId(actionId: string): Id<"agentActions"> | null {
   const trimmed = actionId.trim();
   if (!trimmed) return null;
   return trimmed as Id<"agentActions">;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function asOptionalTrimmedString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function buildQuickLogPrompt(params: unknown): string | null {
+  const record = asRecord(params);
+  const exerciseName = asOptionalTrimmedString(record?.exerciseName);
+  const reps = asOptionalTrimmedString(record?.reps);
+  const durationSeconds = asOptionalTrimmedString(record?.durationSeconds);
+  const weight = asOptionalTrimmedString(record?.weight);
+  const unit = record?.unit === "kg" ? "kg" : "lbs";
+
+  if (!exerciseName) return null;
+  if (!reps && !durationSeconds) return null;
+  if (reps && durationSeconds) return null;
+  if (reps && !/^\d+$/.test(reps)) return null;
+  if (durationSeconds && !/^\d+$/.test(durationSeconds)) return null;
+  if (weight && !/^\d+(\.\d+)?$/.test(weight)) return null;
+
+  const corePrompt = durationSeconds
+    ? `${durationSeconds} sec ${exerciseName}`
+    : `${reps} ${exerciseName}`;
+
+  return weight ? `${corePrompt} @ ${weight} ${unit}` : corePrompt;
 }
 
 export function useCoachChat() {
@@ -32,7 +73,6 @@ export function useCoachChat() {
   const [input, setInput] = useState("");
   const sessionBootstrapRef = useRef<Promise<string | null> | null>(null);
   const sessionDateRef = useRef<string | null>(null);
-  const processedActionsRef = useRef(new Set<string>());
   const endRef = useRef<HTMLDivElement>(null);
 
   async function ensureSessionId(): Promise<string | null> {
@@ -72,8 +112,6 @@ export function useCoachChat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Stable transport instance — must NOT be recreated on every render.
-  // Session/preference data is passed per-request via sendMessage body.
   const transport = useMemo(
     () => new DefaultChatTransport({ api: "/api/coach" }),
     []
@@ -91,114 +129,9 @@ export function useCoachChat() {
 
   const isWorking = status === "streaming" || status === "submitted";
 
-  // Compile json-render specs from JSONL patches in each assistant message.
-  // Returns a Map<messageId, Spec> so CoachPrototype can render per-message.
-  const specsByMessage = useMemo<Map<string, Spec>>(() => {
-    const map = new Map<string, Spec>();
-    for (const msg of messages) {
-      if (msg.role !== "assistant") continue;
-      const fullText = msg.parts
-        .filter(
-          (p): p is Extract<typeof p, { type: "text" }> => p.type === "text"
-        )
-        .map((p) => p.text)
-        .join("\n");
-
-      const jsonlLines = fullText.split("\n").filter((line) => {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith("{")) return false;
-        try {
-          const obj = JSON.parse(trimmed);
-          return obj.op && obj.path;
-        } catch {
-          return false;
-        }
-      });
-
-      if (jsonlLines.length > 0) {
-        const initial = { root: null, elements: {} } as unknown as Record<
-          string,
-          unknown
-        >;
-        map.set(
-          msg.id,
-          compileSpecStream(jsonlLines.join("\n"), initial) as unknown as Spec
-        );
-      }
-    }
-    return map;
-  }, [messages]);
-
-  // Latest assistant spec (for ClientAction processing)
-  const spec = useMemo<Spec | null>(() => {
-    const lastAssistant = [...messages]
-      .reverse()
-      .find((m) => m.role === "assistant");
-    if (!lastAssistant) return null;
-    return specsByMessage.get(lastAssistant.id) ?? null;
-  }, [messages, specsByMessage]);
-
-  const lastAssistantMessageId = useMemo(() => {
-    const lastAssistant = [...messages]
-      .reverse()
-      .find((m) => m.role === "assistant");
-    return lastAssistant?.id ?? null;
-  }, [messages]);
-
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isWorking]);
-
-  // Process client actions from spec elements (deduplicated by element key).
-  useEffect(() => {
-    if (!spec?.elements) return;
-    for (const [key, element] of Object.entries(spec.elements)) {
-      if (element.type !== "ClientAction") continue;
-      const actionKey = `${lastAssistantMessageId ?? "unknown"}:${key}`;
-      if (processedActionsRef.current.has(actionKey)) continue;
-      processedActionsRef.current.add(actionKey);
-
-      const props = element.props as {
-        action: string;
-        payload: Record<string, unknown>;
-      };
-      if (
-        props.action === "set_weight_unit" &&
-        "unit" in props.payload &&
-        (props.payload.unit === "lbs" || props.payload.unit === "kg")
-      ) {
-        setUnit(props.payload.unit);
-      }
-      if (
-        props.action === "set_sound" &&
-        "enabled" in props.payload &&
-        typeof props.payload.enabled === "boolean"
-      ) {
-        setSoundEnabled(props.payload.enabled);
-      }
-      if (props.action === "open_checkout") {
-        router.push("/pricing");
-      }
-      if (props.action === "open_billing_portal") {
-        void (async () => {
-          try {
-            const response = await fetch("/api/stripe/portal", {
-              method: "POST",
-            });
-            const data = (await response.json()) as {
-              url?: string;
-              error?: string;
-            };
-            if (response.ok && data.url) {
-              window.location.href = data.url;
-            }
-          } catch {
-            // Portal errors are non-critical
-          }
-        })();
-      }
-    }
-  }, [lastAssistantMessageId, spec, setUnit, setSoundEnabled, router]);
 
   async function sendPrompt(prompt: string) {
     const trimmed = prompt.trim();
@@ -248,6 +181,7 @@ export function useCoachChat() {
       router.push("/pricing");
       return;
     }
+
     try {
       const response = await fetch("/api/stripe/portal", { method: "POST" });
       const data = (await response.json()) as {
@@ -262,18 +196,115 @@ export function useCoachChat() {
     }
   }
 
+  const jsonRenderHandlers: Record<string, JsonRenderActionHandler> = {
+    submit_prompt: async (params) => {
+      const prompt = asOptionalTrimmedString(asRecord(params)?.prompt);
+      if (prompt) {
+        await sendPrompt(prompt);
+      }
+    },
+    prefill_prompt: (params) => {
+      const prompt = asOptionalTrimmedString(asRecord(params)?.prompt);
+      if (prompt) {
+        setInput(prompt);
+      }
+    },
+    undo_agent_action: async (params) => {
+      const record = asRecord(params);
+      const actionId = record?.actionId;
+      const turnId = record?.turnId;
+      if (typeof actionId === "string" && typeof turnId === "string") {
+        await undoAction(actionId, turnId);
+      }
+    },
+    set_preference: async (params) => {
+      const record = asRecord(params);
+      if (record?.key === "unit") {
+        if (record.value === "lbs" || record.value === "kg") {
+          setUnit(record.value);
+        }
+        return;
+      }
+
+      if (
+        record?.key === "sound_enabled" &&
+        typeof record.value === "boolean"
+      ) {
+        setSoundEnabled(record.value);
+      }
+    },
+    quick_log_submit: async (params) => {
+      const prompt = buildQuickLogPrompt(params);
+      if (prompt) {
+        await sendPrompt(prompt);
+      }
+    },
+    send_prompt: async (params) => {
+      const prompt = asOptionalTrimmedString(asRecord(params)?.prompt);
+      if (prompt) {
+        await sendPrompt(prompt);
+      }
+    },
+    coach_send_prompt: async (params) => {
+      const prompt = asOptionalTrimmedString(asRecord(params)?.prompt);
+      if (prompt) {
+        await sendPrompt(prompt);
+      }
+    },
+    undo_action: async (params) => {
+      const record = asRecord(params);
+      const actionId = record?.actionId;
+      const turnId = record?.turnId;
+      if (typeof actionId === "string" && typeof turnId === "string") {
+        await undoAction(actionId, turnId);
+      }
+    },
+    coach_undo_action: async (params) => {
+      const record = asRecord(params);
+      const actionId = record?.actionId;
+      const turnId = record?.turnId;
+      if (typeof actionId === "string" && typeof turnId === "string") {
+        await undoAction(actionId, turnId);
+      }
+    },
+    set_weight_unit: async (params) => {
+      const record = asRecord(params);
+      if (record?.unit === "lbs" || record?.unit === "kg") {
+        setUnit(record.unit);
+      }
+    },
+    set_sound: async (params) => {
+      const record = asRecord(params);
+      if (typeof record?.enabled === "boolean") {
+        setSoundEnabled(record.enabled);
+      }
+    },
+    open_checkout: async () => {
+      await runClientAction("open_checkout");
+    },
+    open_billing_portal: async () => {
+      await runClientAction("open_billing_portal");
+    },
+    run_client_action: async (params) => {
+      const record = asRecord(params);
+      const action = record?.action;
+      if (action === "open_checkout" || action === "open_billing_portal") {
+        await runClientAction(action);
+      }
+    },
+  };
+
   return {
     input,
     setInput,
     isWorking,
     messages,
-    spec,
-    specsByMessage,
     unit,
     soundEnabled,
     endRef,
     sendPrompt,
     undoAction,
     runClientAction,
+    jsonRenderHandlers,
   };
 }

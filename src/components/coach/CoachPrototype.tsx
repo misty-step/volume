@@ -1,38 +1,102 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type FormEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import { useJsonRenderMessage } from "@json-render/react";
 import { PaperPlaneIcon, ReloadIcon } from "@radix-ui/react-icons";
 import { CoachSpecRenderer } from "@/components/coach/CoachBlockRenderer";
 import { useCoachChat } from "@/components/coach/useCoachChat";
-import { CoachChatContext } from "@/lib/coach/coach-chat-context";
 import { cn } from "@/lib/utils";
 import type { UIMessage } from "ai";
 
-/** Extract prose text from a message, stripping JSONL patches and code fences. */
-function getMessageText(message: UIMessage): string {
-  const raw = message.parts
+function getUserMessageText(message: UIMessage): string {
+  return message.parts
     .filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text")
     .map((p) => p.text)
-    .join("\n");
-
-  // Strip json-render JSONL patches (RFC 6902 lines) and code fences
-  return raw
-    .split("\n")
-    .filter((line) => {
-      const trimmed = line.trim();
-      if (trimmed === "```spec" || trimmed === "```") return false;
-      if (!trimmed.startsWith("{")) return true;
-      try {
-        const obj = JSON.parse(trimmed);
-        return !(obj.op && obj.path);
-      } catch {
-        return true;
-      }
-    })
     .join("\n")
     .trim();
+}
+
+const markdownComponents = {
+  p: ({ children }: { children?: ReactNode }) => (
+    <p className="text-sm leading-relaxed text-foreground [&:not(:last-child)]:mb-2">
+      {children}
+    </p>
+  ),
+  ul: ({ children }: { children?: ReactNode }) => (
+    <ul className="list-disc list-outside pl-4 space-y-1 mb-2">{children}</ul>
+  ),
+  ol: ({ children }: { children?: ReactNode }) => (
+    <ol className="list-decimal list-outside pl-4 space-y-1 mb-2">
+      {children}
+    </ol>
+  ),
+  li: ({ children }: { children?: ReactNode }) => (
+    <li className="text-sm leading-relaxed">{children}</li>
+  ),
+  strong: ({ children }: { children?: ReactNode }) => (
+    <strong className="font-semibold">{children}</strong>
+  ),
+  em: ({ children }: { children?: ReactNode }) => (
+    <em className="italic text-muted-foreground">{children}</em>
+  ),
+  code: ({ children }: { children?: ReactNode }) => (
+    <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">
+      {children}
+    </code>
+  ),
+};
+
+function AssistantMessageBody({
+  message,
+  loading,
+  handlers,
+}: {
+  message: UIMessage;
+  loading: boolean;
+  handlers: Record<
+    string,
+    (params: Record<string, unknown>) => Promise<unknown> | unknown
+  >;
+}) {
+  const { spec, text, hasSpec } = useJsonRenderMessage(message.parts);
+  const trimmedText = text.trim();
+
+  return (
+    <>
+      {hasSpec && spec ? (
+        <div className="space-y-3">
+          <CoachSpecRenderer
+            spec={spec}
+            loading={loading}
+            handlers={handlers}
+          />
+        </div>
+      ) : null}
+
+      {trimmedText ? (
+        <div className={cn(hasSpec && "mt-3")}>
+          <ReactMarkdown components={markdownComponents}>
+            {trimmedText}
+          </ReactMarkdown>
+        </div>
+      ) : null}
+
+      {loading && !trimmedText && !hasSpec ? (
+        <div className="flex items-center gap-2">
+          <ReloadIcon className="h-4 w-4 animate-spin text-accent" />
+          <p className="text-xs text-muted-foreground">Planning...</p>
+        </div>
+      ) : null}
+    </>
+  );
 }
 
 export function CoachPrototype() {
@@ -45,17 +109,10 @@ export function CoachPrototype() {
     setInput,
     isWorking,
     messages,
-    specsByMessage,
     endRef,
     sendPrompt,
-    undoAction,
-    runClientAction,
+    jsonRenderHandlers,
   } = useCoachChat();
-
-  const chatCallbacks = useMemo(
-    () => ({ sendPrompt, undoAction, runClientAction }),
-    [sendPrompt, undoAction, runClientAction]
-  );
 
   // Refocus input whenever the agent finishes working.
   const prevWorking = useRef(isWorking);
@@ -140,7 +197,6 @@ export function CoachPrototype() {
         )}
 
         {messages.map((message, idx) => {
-          const text = getMessageText(message);
           const isLatestAssistant = idx === lastAssistantIdx;
 
           return (
@@ -161,77 +217,17 @@ export function CoachPrototype() {
                     : "mr-10"
                 )}
               >
-                {/* json-render spec for each assistant message */}
-                {message.role === "assistant" &&
-                specsByMessage.has(message.id) ? (
-                  <CoachChatContext.Provider value={chatCallbacks}>
-                    <div className="space-y-3">
-                      <CoachSpecRenderer
-                        spec={specsByMessage.get(message.id)!}
-                        loading={isLatestAssistant && isWorking}
-                      />
-                    </div>
-                  </CoachChatContext.Provider>
-                ) : null}
-
-                {/* Text content */}
-                {text.trim() && message.role === "user" ? (
+                {message.role === "user" ? (
                   <p className="text-sm whitespace-pre-wrap text-foreground">
-                    {text}
+                    {getUserMessageText(message)}
                   </p>
-                ) : text.trim() ? (
-                  <div className={cn(specsByMessage.has(message.id) && "mt-3")}>
-                    <ReactMarkdown
-                      components={{
-                        p: ({ children }) => (
-                          <p className="text-sm leading-relaxed text-foreground [&:not(:last-child)]:mb-2">
-                            {children}
-                          </p>
-                        ),
-                        ul: ({ children }) => (
-                          <ul className="list-disc list-outside pl-4 space-y-1 mb-2">
-                            {children}
-                          </ul>
-                        ),
-                        ol: ({ children }) => (
-                          <ol className="list-decimal list-outside pl-4 space-y-1 mb-2">
-                            {children}
-                          </ol>
-                        ),
-                        li: ({ children }) => (
-                          <li className="text-sm leading-relaxed">
-                            {children}
-                          </li>
-                        ),
-                        strong: ({ children }) => (
-                          <strong className="font-semibold">{children}</strong>
-                        ),
-                        em: ({ children }) => (
-                          <em className="italic text-muted-foreground">
-                            {children}
-                          </em>
-                        ),
-                        code: ({ children }) => (
-                          <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">
-                            {children}
-                          </code>
-                        ),
-                      }}
-                    >
-                      {text}
-                    </ReactMarkdown>
-                  </div>
                 ) : null}
-
-                {/* Streaming indicator */}
-                {isLatestAssistant &&
-                isWorking &&
-                !text.trim() &&
-                !specsByMessage.has(message.id) ? (
-                  <div className="flex items-center gap-2">
-                    <ReloadIcon className="h-4 w-4 animate-spin text-accent" />
-                    <p className="text-xs text-muted-foreground">Planning...</p>
-                  </div>
+                {message.role === "assistant" ? (
+                  <AssistantMessageBody
+                    message={message}
+                    loading={isLatestAssistant && isWorking}
+                    handlers={jsonRenderHandlers}
+                  />
                 ) : null}
               </div>
             </article>

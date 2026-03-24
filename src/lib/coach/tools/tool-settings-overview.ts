@@ -57,6 +57,35 @@ export async function runSettingsOverviewTool(
   const ctaLabel = billing?.stripeCustomerId
     ? "Manage billing"
     : "Upgrade plan";
+  const preferencesFields = [
+    {
+      label: "Goals",
+      value: formatGoals(user?.preferences?.goals),
+      emphasis: true,
+    },
+    {
+      label: "Custom goal",
+      value: user?.preferences?.customGoal || "Not set",
+    },
+    {
+      label: "Training split",
+      value: user?.preferences?.trainingSplit || "Not set",
+    },
+    {
+      label: "Coach notes",
+      value: user?.preferences?.coachNotes || "Not set",
+    },
+  ];
+  const periodEnd =
+    formatPeriod(
+      subscription?.subscriptionPeriodEnd ??
+        billing?.subscriptionPeriodEnd ??
+        null
+    ) ?? undefined;
+  const subscriptionTitle = "Subscription";
+  const subscriptionSubtitle = subscription?.hasAccess
+    ? "Your account currently has access."
+    : "Upgrade to keep full access.";
 
   return {
     summary: "Prepared settings overview.",
@@ -64,49 +93,39 @@ export async function runSettingsOverviewTool(
       {
         type: "detail_panel",
         title: "Training preferences",
-        fields: [
-          {
-            label: "Goals",
-            value: formatGoals(user?.preferences?.goals),
-            emphasis: true,
-          },
-          {
-            label: "Custom goal",
-            value: user?.preferences?.customGoal || "Not set",
-          },
-          {
-            label: "Training split",
-            value: user?.preferences?.trainingSplit || "Not set",
-          },
-          {
-            label: "Coach notes",
-            value: user?.preferences?.coachNotes || "Not set",
-          },
-        ],
+        fields: preferencesFields,
       },
       {
         type: "billing_panel",
         status: subscription?.status ?? "expired",
-        title: "Subscription",
-        subtitle: subscription?.hasAccess
-          ? "Your account currently has access."
-          : "Upgrade to keep full access.",
+        title: subscriptionTitle,
+        subtitle: subscriptionSubtitle,
         trialDaysRemaining: subscription?.trialDaysRemaining ?? undefined,
-        periodEnd:
-          formatPeriod(
-            subscription?.subscriptionPeriodEnd ??
-              billing?.subscriptionPeriodEnd ??
-              null
-          ) ?? undefined,
+        periodEnd,
         ctaLabel,
         ctaAction,
       },
     ],
     outputForModel: {
       status: "ok",
-      subscription_status: subscription?.status ?? "expired",
-      has_access: subscription?.hasAccess ?? false,
-      stripe_customer: Boolean(billing?.stripeCustomerId),
+      surface: "settings_overview",
+      preferences_title: "Training preferences",
+      preferences_fields: preferencesFields.map((field) => ({
+        label: field.label,
+        value: field.value,
+        emphasis: Boolean(field.emphasis),
+      })),
+      subscription: {
+        title: subscriptionTitle,
+        subtitle: subscriptionSubtitle,
+        status: subscription?.status ?? "expired",
+        has_access: subscription?.hasAccess ?? false,
+        stripe_customer: Boolean(billing?.stripeCustomerId),
+        trial_days_remaining: subscription?.trialDaysRemaining ?? 0,
+        period_end: periodEnd ?? null,
+        cta_label: ctaLabel,
+        cta_action: ctaAction,
+      },
       goals: user?.preferences?.goals ?? [],
     },
   };

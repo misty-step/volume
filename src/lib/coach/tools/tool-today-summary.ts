@@ -47,6 +47,36 @@ function buildTodaySummaryBlocks(summary: TodayTotalsSummary): CoachBlock[] {
   ];
 }
 
+function buildTodaySummaryOutput(summary: TodayTotalsSummary) {
+  if (summary.totalSets === 0) {
+    return {
+      status: "ok",
+      surface: "today_empty",
+      title: "No sets logged today",
+      description: "Log one now and I will generate your daily focus.",
+      ...toTodayTotalsOutput(summary),
+      total_duration_seconds: summary.totalDurationSeconds,
+      top_exercises: [],
+    };
+  }
+
+  return {
+    status: "ok",
+    surface: "today_summary",
+    title: "Today's totals",
+    top_exercises_title: "Top exercises today",
+    ...toTodayTotalsOutput(summary),
+    total_duration_seconds: summary.totalDurationSeconds,
+    top_exercises: summary.topExercises.map((entry) => ({
+      exercise_name: entry.exerciseName,
+      sets: entry.sets,
+      reps: entry.reps > 0 ? entry.reps : null,
+      duration_seconds:
+        entry.durationSeconds > 0 ? entry.durationSeconds : null,
+    })),
+  };
+}
+
 export async function runTodaySummaryTool(
   ctx: CoachToolContext
 ): Promise<ToolResult> {
@@ -56,9 +86,6 @@ export async function runTodaySummaryTool(
   return {
     summary: "Prepared today's summary.",
     blocks,
-    outputForModel: {
-      status: "ok",
-      ...toTodayTotalsOutput(summary),
-    },
+    outputForModel: buildTodaySummaryOutput(summary),
   };
 }

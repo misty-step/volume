@@ -10,8 +10,10 @@ import {
   readTodaySetCount,
   requestTodaySetCount,
   sendCoachMessage,
+  waitForAnalyticsOverview,
   waitForCoachIdle,
   waitForCoachText,
+  waitForTodaySummary,
 } from "./coach-helpers";
 import { createExerciseForCurrentUser } from "./convex-helpers";
 
@@ -48,7 +50,7 @@ test.describe("Coach chat flows", () => {
     await waitForCoachText(page, new RegExp(`Logged.*${exerciseName}`, "i"));
 
     await clickSuggestion(page, "show today's summary");
-    await waitForCoachText(page, /Today's totals/i);
+    await waitForTodaySummary(page);
     expect(await readTodaySetCount(page)).toBe(1);
 
     await clickUndo(page);
@@ -61,10 +63,8 @@ test.describe("Coach chat flows", () => {
     page,
   }) => {
     await sendCoachMessage(page, "show workspace");
-    await waitForCoachText(page, /Core workflows/i);
-
     await clickEntityAction(page, "Analytics overview");
-    await waitForCoachText(page, /Analytics overview/i);
+    await waitForAnalyticsOverview(page);
     await expect(
       coachTimeline(page)
         .getByText(/^Recent PRs$/i)

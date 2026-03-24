@@ -2,9 +2,8 @@ import { test, expect, publicTest } from "./auth-fixture";
 import {
   coachComposer,
   coachInput,
-  coachTimeline,
   openCoachWorkspace,
-  waitForCoachText,
+  waitForHistoryOverview,
 } from "./coach-helpers";
 
 /**
@@ -60,10 +59,7 @@ test.describe("404 and Navigation Errors", () => {
     page,
   }) => {
     await openCoachWorkspace(page, "/history/exercise/invalid-id-12345");
-    await waitForCoachText(page, /History snapshot/i);
-    await expect(coachTimeline(page).getByText(/^Recent sets$/i)).toBeVisible({
-      timeout: 30_000,
-    });
+    await waitForHistoryOverview(page);
   });
 });
 

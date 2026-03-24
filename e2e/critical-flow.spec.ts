@@ -7,7 +7,10 @@ import {
   openCoachWorkspace,
   randomExerciseName,
   sendCoachMessage,
+  waitForAnalyticsOverview,
   waitForCoachText,
+  waitForHistoryOverview,
+  waitForTodaySummary,
 } from "./coach-helpers";
 
 test.describe("Agentic workspace critical routes", () => {
@@ -26,7 +29,7 @@ test.describe("Agentic workspace critical routes", () => {
     );
 
     await sendCoachMessage(page, "show today's summary");
-    await waitForCoachText(page, /Today's totals/i);
+    await waitForTodaySummary(page);
     await expect(
       coachTimeline(page)
         .getByText(new RegExp(`^${escapeRegExp(exerciseName)}$`, "i"))
@@ -36,7 +39,7 @@ test.describe("Agentic workspace critical routes", () => {
     });
 
     await sendCoachMessage(page, "show history overview");
-    await waitForCoachText(page, /History snapshot/i);
+    await waitForHistoryOverview(page);
     await expect(entityActionButton(page, exerciseName, /^Open$/i)).toBeVisible(
       {
         timeout: 30_000,
@@ -87,7 +90,7 @@ test.describe("Agentic workspace critical routes", () => {
     page,
   }) => {
     await openCoachWorkspace(page, "/analytics");
-    await waitForCoachText(page, /Analytics overview/i);
+    await waitForAnalyticsOverview(page);
     await expect(
       coachTimeline(page)
         .getByText(/^Recent PRs$/i)
@@ -108,19 +111,13 @@ test.describe("Agentic workspace critical routes", () => {
     page,
   }) => {
     await openCoachWorkspace(page, "/history");
-    await waitForCoachText(page, /History snapshot/i);
-    await expect(coachTimeline(page).getByText(/^Recent sets$/i)).toBeVisible({
-      timeout: 30_000,
-    });
+    await waitForHistoryOverview(page);
   });
 
   test("exercise history deep link collapses into the workspace history prompt", async ({
     page,
   }) => {
     await openCoachWorkspace(page, "/history/exercise/not-a-real-id");
-    await waitForCoachText(page, /History snapshot/i);
-    await expect(coachTimeline(page).getByText(/^Recent sets$/i)).toBeVisible({
-      timeout: 30_000,
-    });
+    await waitForHistoryOverview(page);
   });
 });

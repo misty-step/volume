@@ -32,6 +32,10 @@ export function coachComposer(page: Page): Locator {
   return page.getByTestId("coach-composer").or(page.locator("main"));
 }
 
+export function coachScene(page: Page, testId: string): Locator {
+  return coachTimeline(page).getByTestId(testId);
+}
+
 export function coachInput(page: Page): Locator {
   return page
     .getByRole("textbox", { name: /log fast/i })
@@ -64,13 +68,13 @@ function parseMetricValue(blockText: string, label: string): string {
   return lines[labelIndex + 1] ?? "";
 }
 
-async function readMetricValueFromLatestBlock(
-  page: Page,
-  title: string | RegExp,
-  label: string
-): Promise<string> {
-  const text = await latestBlockForTitle(page, title).innerText();
-  return parseMetricValue(text, label);
+async function latestTodaySummaryBlock(page: Page): Promise<Locator> {
+  const dailySnapshot = coachScene(page, "coach-scene-daily-snapshot");
+  if ((await dailySnapshot.count()) > 0) {
+    return dailySnapshot.last();
+  }
+
+  return latestBlockForTitle(page, /^Today's totals$/i);
 }
 
 export function randomExerciseName(prefix: string): string {
@@ -86,7 +90,7 @@ export async function openCoachWorkspace(
 ): Promise<void> {
   await ensureAuthenticated(page, entryPath);
   await expect(page).toHaveURL(/\/today(?:\?.*)?$/);
-  await expect(page.getByText(/Agent ready\./i)).toBeVisible();
+  await expect(coachTimeline(page)).toBeVisible();
   await expect(coachInput(page)).toBeVisible();
   await expect(coachInput(page)).toBeEnabled();
 }
@@ -121,6 +125,81 @@ export async function waitForCoachText(
   await expect(locator.last()).toBeVisible({ timeout: 30_000 });
 }
 
+export async function waitForCoachScene(
+  page: Page,
+  testId: string
+): Promise<void> {
+  await waitForCoachIdle(page);
+  await expect(coachScene(page, testId).last()).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
+export async function waitForTodaySummary(page: Page): Promise<void> {
+  await waitForCoachIdle(page);
+  const dailySnapshot = coachScene(page, "coach-scene-daily-snapshot");
+  const totalsTitle = coachTimeline(page).getByText(/^Today's totals$/i);
+  const emptyTitle = coachTimeline(page).getByText(/^No sets logged today$/i);
+
+  await expect
+    .poll(
+      async () =>
+        (await dailySnapshot.count()) > 0 ||
+        (await totalsTitle.count()) > 0 ||
+        (await emptyTitle.count()) > 0,
+      { timeout: 30_000 }
+    )
+    .toBe(true);
+}
+
+export async function waitForAnalyticsOverview(page: Page): Promise<void> {
+  await waitForCoachIdle(page);
+  const scene = coachScene(page, "coach-scene-analytics-overview");
+  const title = coachTimeline(page).getByText(/^Analytics overview$/i);
+
+  await expect
+    .poll(async () => (await scene.count()) > 0 || (await title.count()) > 0, {
+      timeout: 30_000,
+    })
+    .toBe(true);
+}
+
+export async function waitForHistoryOverview(page: Page): Promise<void> {
+  await waitForCoachIdle(page);
+  const scene = coachScene(page, "coach-scene-history-timeline");
+  const snapshot = coachTimeline(page).getByText(/^History snapshot$/i);
+  const recentSets = coachTimeline(page).getByText(/^Recent sets$/i);
+
+  await expect
+    .poll(
+      async () =>
+        (await scene.count()) > 0 ||
+        (await snapshot.count()) > 0 ||
+        (await recentSets.count()) > 0,
+      { timeout: 30_000 }
+    )
+    .toBe(true);
+}
+
+export async function waitForSettingsOverview(page: Page): Promise<void> {
+  await waitForCoachIdle(page);
+  const scene = coachScene(page, "coach-scene-settings");
+  const title = coachTimeline(page).getByText(/^Training preferences$/i);
+  const billingButton = coachTimeline(page).getByRole("button", {
+    name: /Manage billing|Upgrade plan/i,
+  });
+
+  await expect
+    .poll(
+      async () =>
+        (await scene.count()) > 0 ||
+        (await title.count()) > 0 ||
+        (await billingButton.count()) > 0,
+      { timeout: 30_000 }
+    )
+    .toBe(true);
+}
+
 export function entityActionButton(
   page: Page,
   itemTitle: string,
@@ -143,8 +222,10 @@ export function entityActionButton(
 }
 
 export async function requestTodaySetCount(page: Page): Promise<number> {
+  const dailySnapshot = coachScene(page, "coach-scene-daily-snapshot");
   const totalsTitle = coachTimeline(page).getByText(/^Today's totals$/i);
   const emptyTitle = coachTimeline(page).getByText(/^No sets logged today$/i);
+  const dailyBefore = await dailySnapshot.count();
   const totalsBefore = await totalsTitle.count();
   const emptyBefore = await emptyTitle.count();
 
@@ -152,13 +233,17 @@ export async function requestTodaySetCount(page: Page): Promise<number> {
   await expect
     .poll(
       async () =>
+        (await dailySnapshot.count()) > dailyBefore ||
         (await totalsTitle.count()) > totalsBefore ||
         (await emptyTitle.count()) > emptyBefore,
       { timeout: 30_000 }
     )
     .toBe(true);
 
-  if ((await totalsTitle.count()) > totalsBefore) {
+  if (
+    (await dailySnapshot.count()) > dailyBefore ||
+    (await totalsTitle.count()) > totalsBefore
+  ) {
     return await readTodaySetCount(page);
   }
 
@@ -166,10 +251,8 @@ export async function requestTodaySetCount(page: Page): Promise<number> {
 }
 
 export async function readTodaySetCount(page: Page): Promise<number> {
-  return Number.parseInt(
-    await readMetricValueFromLatestBlock(page, /^Today's totals$/i, "Sets"),
-    10
-  );
+  const block = await latestTodaySummaryBlock(page);
+  return Number.parseInt(parseMetricValue(await block.innerText(), "Sets"), 10);
 }
 
 export function createUniqueExerciseName(prefix: string): string {

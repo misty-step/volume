@@ -188,6 +188,8 @@ describe("buildPlannerSystemPrompt", () => {
     expect(prompt).not.toContain("Conversation summary:");
     expect(prompt).toContain("default weight unit: kg");
     expect(prompt).toContain("tactile sounds: disabled");
+    expect(prompt).toContain("Do not emit json-render specs");
+    expect(prompt).not.toContain("_uiBlocks");
   });
 });
 
@@ -232,6 +234,13 @@ describe("runPlannerTurn", () => {
     // responseMessages captures the full tool interaction for multi-turn context
     expect(Array.isArray(result.responseMessages)).toBe(true);
     expect(result.responseMessages.length).toBeGreaterThan(0);
+    expect(result.toolResults).toEqual([
+      expect.objectContaining({
+        toolName: "log_set",
+        summary: "logged",
+        outputForModel: { status: "ok" },
+      }),
+    ]);
   });
 
   it("tracks toolsUsed without emitting SSE events", async () => {
@@ -333,6 +342,7 @@ describe("runPlannerTurn", () => {
     expect(result.errorMessage).toContain("Planner aborted");
     expect(result.errorMessage).toContain("test_abort");
     expect(result.responseMessages).toEqual([]);
+    expect(result.toolResults).toEqual([]);
   });
 
   it("records tool name in toolsUsed when a tool throws", async () => {
