@@ -151,8 +151,8 @@ describe("buildPlannerSystemPrompt", () => {
     expect(prompt).not.toContain("Conversation summary:");
     expect(prompt).toContain("default weight unit: kg");
     expect(prompt).toContain("tactile sounds: disabled");
-    expect(prompt).toContain("Do not emit json-render specs");
-    expect(prompt).not.toContain("_uiBlocks");
+    expect(prompt).toContain("You are a UI generator that outputs JSON");
+    expect(prompt).toContain("When a tool returns `_uiBlocks`");
   });
 
   it("requires 2-3 contextual suggestions after tool calls", async () => {
@@ -191,7 +191,8 @@ describe("runPlannerTurn", () => {
       if (callCount === 1) {
         return {
           stream: toolCallStream("log_sets", {
-            sets: [{ exercise_name: "Push-ups", reps: 10 }],
+            action: "log_set",
+            set: { exercise_name: "Push-ups", reps: 10 },
           }),
           rawCall: {},
         };
@@ -210,7 +211,7 @@ describe("runPlannerTurn", () => {
     expect(result.responseMessages.length).toBeGreaterThan(0);
     expect(result.toolResults).toEqual([
       expect.objectContaining({
-        toolName: "log_set",
+        toolName: "log_sets",
         summary: "logged",
         outputForModel: { status: "ok" },
       }),

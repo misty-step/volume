@@ -114,7 +114,7 @@ describe("createCoachTools", () => {
     expect(output).toEqual({ status: "ok" });
     expect(onToolResult).toHaveBeenCalledWith(
       expect.objectContaining({
-        toolName: "log_set",
+        toolName: "log_sets",
         summary: "logged",
         outputForModel: { status: "ok" },
         legacyBlocks: toolBlocks,

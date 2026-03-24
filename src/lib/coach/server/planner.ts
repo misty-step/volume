@@ -78,6 +78,81 @@ User local prefs:
 ${catalogPrompt}`;
 }
 
+/**
+ * Build a single end-of-turn suggestions block based on which tools ran.
+ * Returns null if no suggestions are warranted (e.g., no tools ran and the
+ * model just chatted).
+ */
+export function buildEndOfTurnSuggestions(
+  toolsUsed: string[]
+): string[] | null {
+  const set = new Set(toolsUsed);
+
+  if (set.has("log_sets")) {
+    return [
+      "show today's summary",
+      "what should I work on today?",
+      "show trend for pushups",
+    ];
+  }
+
+  if (set.has("query_exercise")) {
+    return ["10 pushups", "show today's summary", "show analytics overview"];
+  }
+
+  if (set.has("query_workouts")) {
+    return [
+      "what should I work on today?",
+      "show trend for pushups",
+      "show analytics overview",
+    ];
+  }
+
+  if (set.has("get_insights")) {
+    return ["show today's summary", "show trend for pushups", "10 pushups"];
+  }
+
+  if (set.has("modify_set")) {
+    return ["show history overview", "show today's summary"];
+  }
+
+  if (set.has("manage_exercise") || set.has("get_exercise_library")) {
+    return [
+      "show exercise library",
+      "show today's summary",
+      "show history overview",
+    ];
+  }
+
+  if (set.has("get_report_history")) {
+    return [
+      "show today's summary",
+      "show history overview",
+      "show exercise library",
+    ];
+  }
+
+  if (set.has("update_settings")) {
+    return [
+      "show today's summary",
+      "what should I work on today?",
+      "show analytics overview",
+    ];
+  }
+
+  if (set.has("show_workspace")) {
+    return [
+      "show today's summary",
+      "10 pushups",
+      "what should I work on today?",
+    ];
+  }
+
+  if (toolsUsed.length === 0) return null;
+
+  return ["show today's summary", "what should I work on today?"];
+}
+
 function formatAbortMessage(reason: unknown): string {
   if (typeof reason === "string" && reason.trim()) {
     return `Planner aborted: ${reason}`;
