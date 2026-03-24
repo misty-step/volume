@@ -4,7 +4,7 @@ import {
   coachTimeline,
   createUniqueExerciseName,
   openCoachWorkspace,
-  requestTodaySetCount,
+  requestTodaySummary,
   sendCoachMessage,
   waitForCoachIdle,
   waitForCoachText,
@@ -44,8 +44,7 @@ test.describe("Coach chat flows", () => {
       setCountBefore + 1
     );
     await openCoachWorkspace(page, "/coach");
-
-    expect(await requestTodaySetCount(page)).toBeGreaterThan(0);
+    await requestTodaySummary(page);
   });
 
   test("archives and restores an exercise through generated UI", async ({

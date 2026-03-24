@@ -4,6 +4,7 @@ import { api } from "./_generated/api";
 import schema from "./schema";
 import type { TestConvex } from "convex-test";
 import type { Id } from "./_generated/dataModel";
+import { MAX_ACTIVE_FACT_MEMORIES } from "@/lib/coach/memory";
 
 declare global {
   interface ImportMeta {
@@ -115,6 +116,36 @@ describe("userMemories", () => {
     expect(activeMemories).toHaveLength(1);
   });
 
+  test("rememberExplicitMemory trims the oldest fact memory once storage exceeds the cap", async () => {
+    for (let i = 0; i < MAX_ACTIVE_FACT_MEMORIES; i += 1) {
+      await seedMemory({
+        category: "goal",
+        content: `Goal memory ${i}`,
+        source: "explicit_user",
+        createdAt: i,
+      });
+    }
+
+    await t
+      .withIdentity({ subject: userSubject, name: "Memory User" })
+      .mutation(api.userMemories.rememberExplicitMemory, {
+        category: "goal",
+        content: "Newest goal memory",
+      });
+
+    const activeFacts = (
+      await t
+        .withIdentity({ subject: userSubject, name: "Memory User" })
+        .query(api.userMemories.listActive, {})
+    )
+      .filter((memory) => memory.source !== "observer")
+      .map((memory) => memory.content);
+
+    expect(activeFacts).toHaveLength(MAX_ACTIVE_FACT_MEMORIES);
+    expect(activeFacts).not.toContain("Goal memory 0");
+    expect(activeFacts.at(-1)).toBe("Newest goal memory");
+  });
+
   test("applyMemoryPipelineResult stores extracted memories and forgets by id", async () => {
     const existingMemoryId = await seedMemory({
       category: "injury",
@@ -149,6 +180,42 @@ describe("userMemories", () => {
       "Avoid heavy overhead pressing"
     );
     expect(activeMemories[0]?._id).not.toBe(existingMemoryId);
+  });
+
+  test("applyMemoryPipelineResult trims the oldest fact memory after new remembers", async () => {
+    for (let i = 0; i < MAX_ACTIVE_FACT_MEMORIES; i += 1) {
+      await seedMemory({
+        category: "goal",
+        content: `Goal memory ${i}`,
+        source: "fact_extractor",
+        createdAt: i,
+      });
+    }
+
+    await t
+      .withIdentity({ subject: userSubject, name: "Memory User" })
+      .mutation(api.userMemories.applyMemoryPipelineResult, {
+        operations: [
+          {
+            kind: "remember",
+            category: "goal",
+            content: "Newest goal memory",
+            source: "fact_extractor",
+          },
+        ],
+      });
+
+    const activeFacts = (
+      await t
+        .withIdentity({ subject: userSubject, name: "Memory User" })
+        .query(api.userMemories.listActive, {})
+    )
+      .filter((memory) => memory.source !== "observer")
+      .map((memory) => memory.content);
+
+    expect(activeFacts).toHaveLength(MAX_ACTIVE_FACT_MEMORIES);
+    expect(activeFacts).not.toContain("Goal memory 0");
+    expect(activeFacts.at(-1)).toBe("Newest goal memory");
   });
 
   test("applyMemoryPipelineResult keeps observations under 30", async () => {
@@ -187,6 +254,41 @@ describe("userMemories", () => {
     expect(activeObservations.at(-1)?.content).toBe(
       "Latest observation summary"
     );
+  });
+
+  test("applyMemoryPipelineResult enforces the observation cap even when keep ids overflow", async () => {
+    const keepIds: Id<"userMemories">[] = [];
+
+    for (let i = 0; i < 30; i += 1) {
+      keepIds.push(
+        await seedMemory({
+          category: "other",
+          content: `Observation ${i}`,
+          source: "observer",
+          createdAt: i,
+        })
+      );
+    }
+
+    await t
+      .withIdentity({ subject: userSubject, name: "Memory User" })
+      .mutation(api.userMemories.applyMemoryPipelineResult, {
+        operations: [],
+        observation: "Latest observation summary",
+        keepObservationIds: keepIds,
+      });
+
+    const activeObservations = (
+      await t
+        .withIdentity({ subject: userSubject, name: "Memory User" })
+        .query(api.userMemories.listActive, {})
+    )
+      .filter((memory) => memory.source === "observer")
+      .map((memory) => memory.content);
+
+    expect(activeObservations).toHaveLength(30);
+    expect(activeObservations).not.toContain("Observation 0");
+    expect(activeObservations.at(-1)).toBe("Latest observation summary");
   });
 
   test("applyMemoryPipelineResult preserves existing observations when no keep list is provided", async () => {
@@ -254,6 +356,54 @@ describe("userMemories", () => {
     expect(activeObservations).toEqual(
       Array.from({ length: 30 }, (_, index) => `Observation ${index + 2}`)
     );
+  });
+  test("forgetMemoryByContent deletes partial and exact matches only for the current user", async () => {
+    await seedMemory({
+      category: "injury",
+      content: "Left shoulder impingement. Avoid heavy overhead pressing.",
+      source: "explicit_user",
+      createdAt: 1,
+    });
+    await seedMemory({
+      category: "goal",
+      content: "Training for a half marathon in June.",
+      source: "explicit_user",
+      createdAt: 2,
+    });
+    await seedMemory({
+      userId: otherUserSubject,
+      category: "injury",
+      content: "Left shoulder impingement. Avoid heavy overhead pressing.",
+      source: "explicit_user",
+      createdAt: 3,
+    });
+
+    const result = await t
+      .withIdentity({ subject: userSubject, name: "Memory User" })
+      .mutation(api.userMemories.forgetMemoryByContent, {
+        content: "shoulder overhead",
+      });
+
+    expect(result).toEqual({ deletedCount: 1 });
+
+    const userMemories = await t
+      .withIdentity({ subject: userSubject, name: "Memory User" })
+      .query(api.userMemories.listActive, {});
+    expect(userMemories.map((memory) => memory.content)).toEqual([
+      "Training for a half marathon in June.",
+    ]);
+
+    const miss = await t
+      .withIdentity({ subject: userSubject, name: "Memory User" })
+      .mutation(api.userMemories.forgetMemoryByContent, {
+        content: "nonexistent memory",
+      });
+    expect(miss).toEqual({ deletedCount: 0 });
+
+    const otherUserMemories = await t
+      .withIdentity({ subject: otherUserSubject, name: "Other User" })
+      .query(api.userMemories.listActive, {});
+    expect(otherUserMemories).toHaveLength(1);
   });
   test("listActive rejects cross-user access", async () => {
     await seedMemory();

@@ -89,6 +89,40 @@ function uniqueIds(ids: string[] | undefined) {
   return ids ? Array.from(new Set(ids)) : [];
 }
 
+async function trimFactMemories(
+  ctx: MutationCtx,
+  activeMemories: UserMemoryDoc[],
+  now: number
+) {
+  const activeFacts = activeMemories.filter(
+    (memory: UserMemoryDoc) => !isObservationMemory(memory)
+  );
+  const overflow = activeFacts.length - MAX_ACTIVE_FACT_MEMORIES;
+  if (overflow <= 0) {
+    return;
+  }
+
+  const memoriesToTrim = activeFacts.slice(0, overflow);
+  const trimmedIds = new Set(
+    memoriesToTrim.map((memory) => String(memory._id))
+  );
+
+  await Promise.all(
+    memoriesToTrim.map((memory: UserMemoryDoc) =>
+      ctx.db.patch(memory._id, {
+        deletedAt: now,
+      })
+    )
+  );
+
+  for (let index = activeMemories.length - 1; index >= 0; index -= 1) {
+    const memory = activeMemories[index];
+    if (memory && trimmedIds.has(String(memory._id))) {
+      activeMemories.splice(index, 1);
+    }
+  }
+}
+
 export const listActive = query({
   args: {},
   handler: async (ctx) => {
@@ -134,6 +168,7 @@ export const rememberExplicitMemory = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await requireAuth(ctx);
+    const now = Date.now();
     const content = normalizeMemoryContent(args.content);
     if (!content) {
       throw new Error("Memory content is required");
@@ -147,7 +182,7 @@ export const rememberExplicitMemory = mutation({
       (memory: UserMemoryDoc) =>
         !isObservationMemory(memory) &&
         memory.category === args.category &&
-        normalizeMemoryContent(memory.content) === content
+        normalizeForMatch(memory.content) === normalizeForMatch(content)
     );
 
     if (existingMemory) {
@@ -159,8 +194,18 @@ export const rememberExplicitMemory = mutation({
       category: args.category,
       content,
       source: "explicit_user",
-      createdAt: Date.now(),
+      createdAt: now,
     });
+    activeMemories.push({
+      _id: memoryId,
+      _creationTime: now,
+      userId: identity.subject,
+      category: args.category,
+      content,
+      source: "explicit_user",
+      createdAt: now,
+    });
+    await trimFactMemories(ctx, activeMemories, now);
 
     return { created: true, memoryId };
   },
@@ -257,7 +302,7 @@ export const applyMemoryPipelineResult = mutation({
         (memory: UserMemoryDoc) =>
           !isObservationMemory(memory) &&
           memory.category === operation.category &&
-          normalizeMemoryContent(memory.content) === content
+          normalizeForMatch(memory.content) === normalizeForMatch(content)
       );
 
       if (!duplicate) {
@@ -280,6 +325,8 @@ export const applyMemoryPipelineResult = mutation({
       }
     }
 
+    await trimFactMemories(ctx, activeMemories, now);
+
     let insertedObservationId: Id<"userMemories"> | null = null;
     const observationContent = normalizeMemoryContent(args.observation ?? "");
     if (observationContent) {
@@ -297,12 +344,20 @@ export const applyMemoryPipelineResult = mutation({
       (memory: UserMemoryDoc) => isObservationMemory(memory)
     );
 
-    const keepSet = new Set(uniqueIds(args.keepObservationIds?.map(String)));
-    if (insertedObservationId) {
-      keepSet.add(insertedObservationId);
-    }
-
-    if (keepSet.size > 0) {
+    if (args.keepObservationIds !== undefined) {
+      const keepSet = new Set(uniqueIds(args.keepObservationIds.map(String)));
+      if (insertedObservationId) {
+        keepSet.add(String(insertedObservationId));
+      }
+      const keptObservations = activeObservations.filter((memory) =>
+        keepSet.has(String(memory._id))
+      );
+      const keepOverflow = keptObservations.length - MAX_ACTIVE_OBSERVATIONS;
+      if (keepOverflow > 0) {
+        for (const memory of keptObservations.slice(0, keepOverflow)) {
+          keepSet.delete(String(memory._id));
+        }
+      }
       await Promise.all(
         activeObservations
           .filter((memory: UserMemoryDoc) => !keepSet.has(String(memory._id)))

@@ -268,9 +268,13 @@ describe("buildEndOfTurnSuggestions", () => {
     });
 
     expect(prompt).toContain("What I Know About You");
+    expect(prompt).toContain("Stored memory guardrail:");
     expect(prompt).toContain("Left shoulder impingement");
     expect(prompt).toContain("Training for a half marathon");
     expect(prompt).toContain("Recent Long-Term Observations");
+    expect(prompt).toContain(
+      '"Left shoulder impingement. Avoid heavy overhead pressing."'
+    );
   });
 });
 
