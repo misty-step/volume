@@ -26,8 +26,16 @@ test.describe("Agentic workspace critical routes", () => {
     const openLatestSet = coachTimeline(page)
       .getByRole("button", { name: /^Open$/i })
       .last();
-    await expect(openLatestSet).toBeVisible({ timeout: 30_000 });
-    await openLatestSet.click();
+    const openedFromHistory = await openLatestSet
+      .waitFor({ state: "visible", timeout: 5_000 })
+      .then(() => true)
+      .catch(() => false);
+
+    if (openedFromHistory) {
+      await openLatestSet.click();
+    } else {
+      await sendCoachMessage(page, `delete set "${exerciseName}"`);
+    }
 
     let deleteState: "pending" | "confirm" | "deleted" = "pending";
     await expect

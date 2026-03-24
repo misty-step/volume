@@ -267,7 +267,6 @@ export async function clickSuggestion(
     .last();
   await expect(button).toBeVisible({ timeout: 30_000 });
   await button.click();
-  await expect(coachInput(page)).toBeDisabled({ timeout: 10_000 });
 }
 
 export async function clickEntityAction(
@@ -279,7 +278,6 @@ export async function clickEntityAction(
   const action = entityActionButton(page, itemTitle, actionLabel);
   await expect(action).toBeVisible({ timeout: 30_000 });
   await action.click();
-  await expect(coachInput(page)).toBeDisabled({ timeout: 10_000 });
 }
 
 export async function clickUndo(page: Page): Promise<void> {

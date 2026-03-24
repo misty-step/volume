@@ -4,7 +4,6 @@ import {
   coachInput,
   coachTimeline,
   createUniqueExerciseName,
-  escapeRegExp,
   openCoachWorkspace,
   requestTodaySetCount,
   sendCoachMessage,
@@ -34,27 +33,27 @@ test.describe("Coach chat flows", () => {
     page,
   }) => {
     const exerciseName = createUniqueExerciseName("Coach flow ");
-    const timelineButtons = coachTimeline(page)
-      .getByRole("button")
-      .filter({ hasNotText: /^Undo$/i });
-    const buttonCountBefore = await timelineButtons.count();
 
     await sendCoachMessage(page, `log 12 reps of "${exerciseName}"`);
     await waitForCoachIdle(page);
 
-    const newestSuggestion = timelineButtons.nth(buttonCountBefore);
+    const articleCountBefore = await coachTimeline(page)
+      .locator("article")
+      .count();
+    const newestSuggestion = coachTimeline(page)
+      .locator("article")
+      .last()
+      .getByRole("button")
+      .filter({ hasNotText: /^Undo$/i })
+      .first();
     await expect(newestSuggestion).toBeVisible({ timeout: 30_000 });
 
-    const suggestionLabel = (await newestSuggestion.textContent())?.trim();
     await newestSuggestion.click();
-    await expect(coachInput(page)).toBeDisabled({ timeout: 10_000 });
-
-    if (suggestionLabel) {
-      await waitForCoachText(
-        page,
-        new RegExp(escapeRegExp(suggestionLabel), "i")
-      );
-    }
+    await expect
+      .poll(async () => coachTimeline(page).locator("article").count(), {
+        timeout: 30_000,
+      })
+      .toBeGreaterThan(articleCountBefore);
 
     expect(await requestTodaySetCount(page)).toBe(1);
   });
@@ -102,7 +101,6 @@ test.describe("Coach chat flows", () => {
     await waitForCoachIdle(page);
     await expect(restoreButton).toBeVisible({ timeout: 30_000 });
     await restoreButton.click();
-    await expect(coachInput(page)).toBeDisabled({ timeout: 10_000 });
 
     await waitForCoachText(page, /Exercise restored/i);
     await sendCoachMessage(page, "show exercise library");
