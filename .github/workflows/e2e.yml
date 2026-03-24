@@ -140,7 +140,7 @@ jobs:
   flows:
     name: Flows
     needs: [preflight, coach]
-    if: ${{ !cancelled() && needs.preflight.result == 'success' && needs.preflight.outputs.should_run_e2e == 'true' && needs.coach.result == 'success' }}
+    if: ${{ !cancelled() && needs.preflight.result == 'success' && needs.preflight.outputs.should_run_e2e == 'true' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 8
     steps:
