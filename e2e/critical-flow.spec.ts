@@ -4,8 +4,9 @@ import {
   openCoachWorkspace,
   randomExerciseName,
   sendCoachMessage,
-  waitForHistoryOverview,
+  waitForAnalyticsOverview,
   waitForCoachText,
+  waitForHistoryOverview,
 } from "./coach-helpers";
 import {
   countSetsForCurrentUser,
@@ -74,7 +75,7 @@ test.describe("Agentic workspace critical routes", () => {
     page,
   }) => {
     await openCoachWorkspace(page, "/analytics");
-    await waitForCoachText(page, /Analytics overview/i);
+    await waitForAnalyticsOverview(page);
     await expect(
       coachTimeline(page)
         .getByText(/^Recent PRs$/i)
@@ -95,19 +96,13 @@ test.describe("Agentic workspace critical routes", () => {
     page,
   }) => {
     await openCoachWorkspace(page, "/history");
-    await waitForCoachText(page, /History snapshot/i);
-    await expect(coachTimeline(page).getByText(/^Recent sets$/i)).toBeVisible({
-      timeout: 30_000,
-    });
+    await waitForHistoryOverview(page);
   });
 
   test("exercise history deep link collapses into the workspace history prompt", async ({
     page,
   }) => {
     await openCoachWorkspace(page, "/history/exercise/not-a-real-id");
-    await waitForCoachText(page, /History snapshot/i);
-    await expect(coachTimeline(page).getByText(/^Recent sets$/i)).toBeVisible({
-      timeout: 30_000,
-    });
+    await waitForHistoryOverview(page);
   });
 });
