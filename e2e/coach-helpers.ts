@@ -37,9 +37,7 @@ export function coachScene(page: Page, testId: string): Locator {
 }
 
 export function coachInput(page: Page): Locator {
-  return page
-    .getByRole("textbox", { name: /log fast/i })
-    .or(page.getByPlaceholder(/log fast:/i));
+  return coachComposer(page).getByPlaceholder(/log fast:/i);
 }
 
 export function escapeRegExp(value: string): string {
