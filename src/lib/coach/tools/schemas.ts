@@ -3,6 +3,23 @@ import { z } from "zod";
 const ISO_LOCAL_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 import { GOAL_TYPES } from "@/lib/goals";
 
+function hasExactlyOneMetricField(data: {
+  reps?: number;
+  duration_seconds?: number;
+}) {
+  return (
+    (data.reps !== undefined && data.duration_seconds === undefined) ||
+    (data.reps === undefined && data.duration_seconds !== undefined)
+  );
+}
+
+function hasAtMostOneMetricField(data: {
+  reps?: number;
+  duration_seconds?: number;
+}) {
+  return !(data.reps !== undefined && data.duration_seconds !== undefined);
+}
+
 export const LogSetArgsSchema = z
   .object({
     exercise_name: z.string().trim().min(1).max(80),
@@ -11,15 +28,10 @@ export const LogSetArgsSchema = z
     weight: z.number().min(0).max(5000).optional(),
     unit: z.enum(["lbs", "kg"]).optional(),
   })
-  .refine(
-    (data) =>
-      (data.reps !== undefined && data.duration_seconds === undefined) ||
-      (data.reps === undefined && data.duration_seconds !== undefined),
-    {
-      message: "Provide exactly one of reps or duration_seconds.",
-      path: ["reps"],
-    }
-  );
+  .refine(hasExactlyOneMetricField, {
+    message: "Provide exactly one of reps or duration_seconds.",
+    path: ["reps"],
+  });
 
 export const ExerciseReportArgsSchema = z.object({
   exercise_name: z.string().trim().min(1).max(80),
@@ -93,13 +105,18 @@ export const ReportHistoryArgsSchema = z.object({
   limit: z.number().int().min(1).max(30).optional(),
 });
 
-export const EditSetArgsSchema = z.object({
-  set_id: z.string().min(1),
-  reps: z.number().int().min(1).max(1000).optional(),
-  duration_seconds: z.number().int().min(1).max(86_400).optional(),
-  weight: z.number().min(0).max(5000).optional(),
-  unit: z.enum(["lbs", "kg"]).optional(),
-});
+export const EditSetArgsSchema = z
+  .object({
+    set_id: z.string().min(1),
+    reps: z.number().int().min(1).max(1000).optional(),
+    duration_seconds: z.number().int().min(1).max(86_400).optional(),
+    weight: z.number().min(0).max(5000).optional(),
+    unit: z.enum(["lbs", "kg"]).optional(),
+  })
+  .refine(hasAtMostOneMetricField, {
+    message: "Provide at most one of reps or duration_seconds.",
+    path: ["reps"],
+  });
 
 export const BulkLogItemSchema = z
   .object({
@@ -109,21 +126,42 @@ export const BulkLogItemSchema = z
     weight: z.number().min(0).max(5000).optional(),
     unit: z.enum(["lbs", "kg"]).optional(),
   })
-  .refine(
-    (data) =>
-      (data.reps !== undefined && data.duration_seconds === undefined) ||
-      (data.reps === undefined && data.duration_seconds !== undefined),
-    {
-      message: "Provide exactly one of reps or duration_seconds.",
-      path: ["reps"],
-    }
-  );
+  .refine(hasExactlyOneMetricField, {
+    message: "Provide exactly one of reps or duration_seconds.",
+    path: ["reps"],
+  });
 
 export const BulkLogArgsSchema = z.object({
   sets: z.array(BulkLogItemSchema).min(1).max(20),
 });
 
-export const LogSetsArgsSchema = BulkLogArgsSchema;
+const CanonicalSingleLogArgsSchema = z.object({
+  action: z.literal("log_set"),
+  set: BulkLogItemSchema,
+});
+
+const CanonicalBulkLogArgsSchema = z.object({
+  action: z.literal("bulk_log"),
+  sets: z.array(BulkLogItemSchema).min(1).max(20),
+});
+
+const LegacyLogSetsArgsSchema = BulkLogArgsSchema.transform((args) =>
+  args.sets.length === 1
+    ? {
+        action: "log_set" as const,
+        set: args.sets[0],
+      }
+    : {
+        action: "bulk_log" as const,
+        sets: args.sets,
+      }
+);
+
+export const LogSetsArgsSchema = z.union([
+  CanonicalSingleLogArgsSchema,
+  CanonicalBulkLogArgsSchema,
+  LegacyLogSetsArgsSchema,
+]);
 
 export const ExerciseHistoryArgsSchema = z.object({
   exercise_name: z.string().trim().min(1).max(80),
@@ -223,14 +261,19 @@ export const ManageExerciseArgsSchema = z.discriminatedUnion("action", [
 ]);
 
 export const ModifySetArgsSchema = z.discriminatedUnion("action", [
-  z.object({
-    action: z.literal("edit"),
-    set_id: z.string().min(1),
-    reps: z.number().int().min(1).max(1000).optional(),
-    duration_seconds: z.number().int().min(1).max(86_400).optional(),
-    weight: z.number().min(0).max(5000).optional(),
-    unit: z.enum(["lbs", "kg"]).optional(),
-  }),
+  z
+    .object({
+      action: z.literal("edit"),
+      set_id: z.string().min(1),
+      reps: z.number().int().min(1).max(1000).optional(),
+      duration_seconds: z.number().int().min(1).max(86_400).optional(),
+      weight: z.number().min(0).max(5000).optional(),
+      unit: z.enum(["lbs", "kg"]).optional(),
+    })
+    .refine(hasAtMostOneMetricField, {
+      message: "Provide at most one of reps or duration_seconds.",
+      path: ["reps"],
+    }),
   z
     .object({
       action: z.literal("delete"),

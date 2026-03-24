@@ -234,7 +234,8 @@ describe("runPlannerTurn", () => {
       if (callCount === 1) {
         return {
           stream: toolCallStream("log_sets", {
-            sets: [{ exercise_name: "Push-ups", reps: 12 }],
+            action: "log_set",
+            set: { exercise_name: "Push-ups", reps: 12 },
           }),
           rawCall: {},
         };

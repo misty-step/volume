@@ -9,9 +9,10 @@ export async function runLogSetsTool(
 ): Promise<ToolResult> {
   const args = LogSetsArgsSchema.parse(rawArgs);
 
-  if (args.sets.length === 1) {
-    return runLogSetTool(args.sets[0], ctx);
+  switch (args.action) {
+    case "log_set":
+      return runLogSetTool(args.set, ctx);
+    case "bulk_log":
+      return runBulkLogTool({ sets: args.sets }, ctx);
   }
-
-  return runBulkLogTool(args, ctx);
 }

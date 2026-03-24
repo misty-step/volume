@@ -128,7 +128,8 @@ describe("createCoachTools", () => {
 
     const tools = createCoachTools(TEST_CTX);
     const output = await (tools.log_sets as any).execute({
-      sets: [{ exercise_name: "Push-ups", reps: 10 }],
+      action: "log_set",
+      set: { exercise_name: "Push-ups", reps: 10 },
     });
 
     expect(output).toEqual({

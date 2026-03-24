@@ -157,7 +157,43 @@ describe("canonical tool dispatch", () => {
     mockMutation.mockReset().mockResolvedValue(undefined);
   });
 
-  it("routes single-item log_sets calls to runLogSetTool", async () => {
+  it("routes canonical log_set calls to runLogSetTool", async () => {
+    const { runLogSetsTool } = await import("./tool-log-sets");
+
+    await runLogSetsTool(
+      {
+        action: "log_set",
+        set: { exercise_name: "Push-ups", reps: 12 },
+      },
+      TEST_CTX as any
+    );
+
+    expect(mockRunLogSetTool).toHaveBeenCalledWith(
+      { exercise_name: "Push-ups", reps: 12 },
+      TEST_CTX
+    );
+    expect(mockRunBulkLogTool).not.toHaveBeenCalled();
+  });
+
+  it("routes canonical bulk_log calls to runBulkLogTool even for one item", async () => {
+    const { runLogSetsTool } = await import("./tool-log-sets");
+
+    await runLogSetsTool(
+      {
+        action: "bulk_log",
+        sets: [{ exercise_name: "Push-ups", reps: 12 }],
+      },
+      TEST_CTX as any
+    );
+
+    expect(mockRunBulkLogTool).toHaveBeenCalledWith(
+      { sets: [{ exercise_name: "Push-ups", reps: 12 }] },
+      TEST_CTX
+    );
+    expect(mockRunLogSetTool).not.toHaveBeenCalled();
+  });
+
+  it("keeps legacy single-item sets arrays mapped to runLogSetTool", async () => {
     const { runLogSetsTool } = await import("./tool-log-sets");
 
     await runLogSetsTool(

@@ -17,7 +17,7 @@ Tool routing:
 - Exercise trend / "show trend for X" / "how's my X going" → query_exercise with action "trend".
 - Exercise snapshot / stats / "how much X" → query_exercise with action "snapshot".
 - Exercise history / recent sets for one movement → query_exercise with action "history".
-- Logging / "10 pushups" / "3x5 bench" → log_sets with a single-item sets array. Multiple exercises or sets → log_sets with multiple items.
+- Logging / "10 pushups" / "3x5 bench" → log_sets with action "log_set" and a single set object. Multiple exercises or sets → log_sets with action "bulk_log" and a sets array.
 - Analytics / streaks / PRs → get_insights with action "analytics_overview".
 - Recommendations / "what should I work on" → get_insights with action "focus_suggestions".
 - Exercise management (rename, delete, restore, merge, muscle groups) → manage_exercise with the matching action.
