@@ -32,7 +32,7 @@ jobs:
       - name: Detect bot PRs that cannot access E2E secrets
         id: validate
         run: |
-          if [ "${{ github.actor }}" = "dependabot[bot]" ] || [ "${{ github.event.pull_request.user.login }}" = "app/dependabot" ]; then
+          if [ "${{ github.actor }}" = "dependabot[bot]" ] || [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ] || [ "${{ github.event.pull_request.user.login }}" = "app/dependabot" ]; then
             echo "should_run_e2e=false" >> "$GITHUB_OUTPUT"
             echo "::notice title=Skipping E2E lanes::Dependabot pull requests cannot access repository secrets, so Playwright lanes are skipped."
             exit 0
