@@ -750,7 +750,8 @@ describe("POST /api/coach", () => {
         memories: [
           {
             category: "injury",
-            content: "Left shoulder impingement. Avoid heavy overhead pressing.",
+            content:
+              "Left shoulder impingement. Avoid heavy overhead pressing.",
             source: "fact_extractor",
             createdAt: 1,
           },
@@ -991,6 +992,7 @@ describe("POST /api/coach", () => {
 
     await waitForAssertion(() => {
       expect(extractMemoryOperationsMock).not.toHaveBeenCalled();
+      expect(summarizeObservationMock).not.toHaveBeenCalled();
       expect(
         convex.mutation.mock.calls.some(
           ([fn]) => fn === api.userMemories.applyMemoryPipelineResult

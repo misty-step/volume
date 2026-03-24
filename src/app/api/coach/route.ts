@@ -386,10 +386,12 @@ async function processCoachMemory({
             (memory) => !isObservationMemory(memory)
           ),
         });
-    const observation = await summarizeObservation({
-      model: runtime.classificationModel,
-      transcript,
-    });
+    const observation = explicitForgetRan
+      ? null
+      : await summarizeObservation({
+          model: runtime.classificationModel,
+          transcript,
+        });
     const keepObservationIds =
       observation ||
       activeMemories.filter((memory) => isObservationMemory(memory)).length > 30

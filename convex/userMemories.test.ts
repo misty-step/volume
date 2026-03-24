@@ -365,17 +365,23 @@ describe("userMemories", () => {
       createdAt: 1,
     });
     await seedMemory({
+      category: "injury",
+      content: "Right shoulder still needs lighter overhead pressing days.",
+      source: "explicit_user",
+      createdAt: 2,
+    });
+    await seedMemory({
       category: "goal",
       content: "Training for a half marathon in June.",
       source: "explicit_user",
-      createdAt: 2,
+      createdAt: 3,
     });
     await seedMemory({
       userId: otherUserSubject,
       category: "injury",
       content: "Left shoulder impingement. Avoid heavy overhead pressing.",
       source: "explicit_user",
-      createdAt: 3,
+      createdAt: 4,
     });
 
     const result = await t
@@ -384,7 +390,7 @@ describe("userMemories", () => {
         content: "shoulder overhead",
       });
 
-    expect(result).toEqual({ deletedCount: 1 });
+    expect(result).toEqual({ deletedCount: 2 });
 
     const userMemories = await t
       .withIdentity({ subject: userSubject, name: "Memory User" })
@@ -392,6 +398,13 @@ describe("userMemories", () => {
     expect(userMemories.map((memory) => memory.content)).toEqual([
       "Training for a half marathon in June.",
     ]);
+
+    const exactMatch = await t
+      .withIdentity({ subject: userSubject, name: "Memory User" })
+      .mutation(api.userMemories.forgetMemoryByContent, {
+        content: "Training for a half marathon in June.",
+      });
+    expect(exactMatch).toEqual({ deletedCount: 1 });
 
     const miss = await t
       .withIdentity({ subject: userSubject, name: "Memory User" })
@@ -404,6 +417,13 @@ describe("userMemories", () => {
       .withIdentity({ subject: otherUserSubject, name: "Other User" })
       .query(api.userMemories.listActive, {});
     expect(otherUserMemories).toHaveLength(1);
+  });
+  test("forgetMemoryByContent rejects unauthenticated callers", async () => {
+    await expect(
+      t.mutation(api.userMemories.forgetMemoryByContent, {
+        content: "shoulder overhead",
+      })
+    ).rejects.toThrow("Not authenticated");
   });
   test("listActive rejects cross-user access", async () => {
     await seedMemory();
