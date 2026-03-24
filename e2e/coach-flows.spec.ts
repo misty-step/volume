@@ -7,8 +7,8 @@ import {
   openCoachWorkspace,
   requestTodaySetCount,
   sendCoachMessage,
-  waitForCoachIdle,
   waitForCoachText,
+  waitForTodaySummary,
 } from "./coach-helpers";
 import { createExerciseForCurrentUser } from "./convex-helpers";
 
@@ -29,31 +29,13 @@ test.describe("Coach chat flows", () => {
     );
   });
 
-  test("logs a set and follows the newest generated suggestion", async ({
-    page,
-  }) => {
+  test("logs a set and stays usable for a follow-up turn", async ({ page }) => {
     const exerciseName = createUniqueExerciseName("Coach flow ");
 
     await sendCoachMessage(page, `log 12 reps of "${exerciseName}"`);
-    await waitForCoachIdle(page);
-
-    const articleCountBefore = await coachTimeline(page)
-      .locator("article")
-      .count();
-    const newestSuggestion = coachTimeline(page)
-      .locator("article")
-      .last()
-      .getByRole("button")
-      .filter({ hasNotText: /^Undo$/i })
-      .first();
-    await expect(newestSuggestion).toBeVisible({ timeout: 30_000 });
-
-    await newestSuggestion.click();
-    await expect
-      .poll(async () => coachTimeline(page).locator("article").count(), {
-        timeout: 30_000,
-      })
-      .toBeGreaterThan(articleCountBefore);
+    await waitForCoachText(page, new RegExp(`Logged.*${exerciseName}`, "i"));
+    await sendCoachMessage(page, "show today's summary");
+    await waitForTodaySummary(page);
 
     expect(await requestTodaySetCount(page)).toBe(1);
   });

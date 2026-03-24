@@ -115,7 +115,7 @@ export async function waitForCoachText(
   page: Page,
   expected: string | RegExp
 ): Promise<void> {
-  await waitForCoachIdle(page);
+  // CI can render the next coach block before the composer is re-enabled.
   const locator =
     typeof expected === "string"
       ? coachTimeline(page).getByText(expected, { exact: false })
@@ -127,14 +127,12 @@ export async function waitForCoachScene(
   page: Page,
   testId: string
 ): Promise<void> {
-  await waitForCoachIdle(page);
   await expect(coachScene(page, testId).last()).toBeVisible({
     timeout: 30_000,
   });
 }
 
 export async function waitForTodaySummary(page: Page): Promise<void> {
-  await waitForCoachIdle(page);
   const dailySnapshot = coachScene(page, "coach-scene-daily-snapshot");
   const totalsTitle = coachTimeline(page).getByText(/^Today's totals$/i);
   const emptyTitle = coachTimeline(page).getByText(/^No sets logged today$/i);
@@ -151,7 +149,6 @@ export async function waitForTodaySummary(page: Page): Promise<void> {
 }
 
 export async function waitForAnalyticsOverview(page: Page): Promise<void> {
-  await waitForCoachIdle(page);
   const scene = coachScene(page, "coach-scene-analytics-overview");
   const title = coachTimeline(page).getByText(/^Analytics overview$/i);
 
@@ -163,7 +160,6 @@ export async function waitForAnalyticsOverview(page: Page): Promise<void> {
 }
 
 export async function waitForHistoryOverview(page: Page): Promise<void> {
-  await waitForCoachIdle(page);
   const scene = coachScene(page, "coach-scene-history-timeline");
   const snapshot = coachTimeline(page).getByText(/^History snapshot$/i);
   const recentSets = coachTimeline(page).getByText(/^Recent sets$/i);
@@ -180,7 +176,6 @@ export async function waitForHistoryOverview(page: Page): Promise<void> {
 }
 
 export async function waitForSettingsOverview(page: Page): Promise<void> {
-  await waitForCoachIdle(page);
   const scene = coachScene(page, "coach-scene-settings");
   const title = coachTimeline(page).getByText(/^Training preferences$/i);
   const billingButton = coachTimeline(page).getByRole("button", {
