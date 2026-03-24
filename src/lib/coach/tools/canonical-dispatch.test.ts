@@ -170,7 +170,8 @@ describe("canonical tool dispatch", () => {
 
     expect(mockRunLogSetTool).toHaveBeenCalledWith(
       { exercise_name: "Push-ups", reps: 12 },
-      TEST_CTX
+      TEST_CTX,
+      undefined
     );
     expect(mockRunBulkLogTool).not.toHaveBeenCalled();
   });
@@ -203,7 +204,8 @@ describe("canonical tool dispatch", () => {
 
     expect(mockRunLogSetTool).toHaveBeenCalledWith(
       { exercise_name: "Push-ups", reps: 12 },
-      TEST_CTX
+      TEST_CTX,
+      undefined
     );
     expect(mockRunBulkLogTool).not.toHaveBeenCalled();
   });

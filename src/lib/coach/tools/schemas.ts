@@ -1,7 +1,7 @@
 import { z } from "zod";
+import { GOAL_TYPES } from "@/lib/goals";
 
 const ISO_LOCAL_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-import { GOAL_TYPES } from "@/lib/goals";
 
 function hasExactlyOneMetricField(data: {
   reps?: number;
@@ -18,6 +18,16 @@ function hasAtMostOneMetricField(data: {
   duration_seconds?: number;
 }) {
   return !(data.reps !== undefined && data.duration_seconds !== undefined);
+}
+
+function mergeExercisesMustDiffer(data: {
+  source_exercise: string;
+  target_exercise: string;
+}) {
+  return (
+    data.source_exercise.trim().toLowerCase() !==
+    data.target_exercise.trim().toLowerCase()
+  );
 }
 
 export const LogSetArgsSchema = z
@@ -73,12 +83,9 @@ export const MergeExerciseArgsSchema = z
       .max(80)
       .describe("Exercise name to merge into (will be kept)"),
   })
-  .refine(
-    (data) =>
-      data.source_exercise.trim().toLowerCase() !==
-      data.target_exercise.trim().toLowerCase(),
-    { message: "Source and target exercises must be different." }
-  );
+  .refine(mergeExercisesMustDiffer, {
+    message: "Source and target exercises must be different.",
+  });
 
 export const UpdateMuscleGroupsArgsSchema = z.object({
   exercise_name: z.string().trim().min(1).max(80),
@@ -247,12 +254,9 @@ export const ManageExerciseArgsSchema = z.discriminatedUnion("action", [
       source_exercise: z.string().trim().min(1).max(80),
       target_exercise: z.string().trim().min(1).max(80),
     })
-    .refine(
-      (data) =>
-        data.source_exercise.trim().toLowerCase() !==
-        data.target_exercise.trim().toLowerCase(),
-      { message: "Source and target exercises must be different." }
-    ),
+    .refine(mergeExercisesMustDiffer, {
+      message: "Source and target exercises must be different.",
+    }),
   z.object({
     action: z.literal("update_muscle_groups"),
     exercise_name: z.string().trim().min(1).max(80),

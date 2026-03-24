@@ -26,5 +26,11 @@ export async function runQueryWorkoutsTool(
       );
     case "history_overview":
       return runHistoryOverviewTool({ limit: args.limit }, ctx);
+    default: {
+      const _exhaustive: never = args;
+      throw new Error(
+        `Unhandled query_workouts action: ${String(_exhaustive)}`
+      );
+    }
   }
 }

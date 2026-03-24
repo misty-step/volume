@@ -35,7 +35,21 @@ describe("coach agent prompt", () => {
     );
   });
 
-  it("allows empty string responses", () => {
-    expect(COACH_AGENT_SYSTEM_PROMPT).toContain("respond with an empty string");
+  it("requires minimal follow-up text instead of empty responses", () => {
+    expect(COACH_AGENT_SYSTEM_PROMPT).not.toContain(
+      "respond with an empty string"
+    );
+    expect(COACH_AGENT_SYSTEM_PROMPT).toContain(
+      "still include the Suggestions block after tool calls"
+    );
+  });
+
+  it("routes billing questions through the overview tool", () => {
+    expect(COACH_AGENT_SYSTEM_PROMPT).toContain(
+      "Profile / subscription / billing overview → get_settings_overview."
+    );
+    expect(COACH_AGENT_SYSTEM_PROMPT).toContain(
+      'Preference changes only → update_settings with action "weight_unit", "sound", or "preferences".'
+    );
   });
 });

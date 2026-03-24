@@ -80,6 +80,7 @@ vi.mock("./tool-edit-set", () => ({
 
 import { executeCoachTool } from "./execute";
 import { runEditSetTool } from "./tool-edit-set";
+import { runLogSetTool } from "./tool-log-set";
 import { runSetSoundTool } from "./tool-set-sound";
 import type { CoachToolContext } from "./types";
 
@@ -147,6 +148,24 @@ describe("executeCoachTool", () => {
       mockCtx
     );
     expect(result.outputForModel.set_id).toBe("set_123");
+  });
+
+  it("forwards execution options through canonical log_sets dispatch", async () => {
+    await executeCoachTool(
+      "log_sets",
+      {
+        action: "log_set",
+        set: { exercise_name: "Push-ups", reps: 12 },
+      },
+      mockCtx,
+      { skipTotals: true }
+    );
+
+    expect(runLogSetTool).toHaveBeenCalledWith(
+      { exercise_name: "Push-ups", reps: 12 },
+      mockCtx,
+      { skipTotals: true }
+    );
   });
 
   it("returns an error result for invalid tool arguments", async () => {

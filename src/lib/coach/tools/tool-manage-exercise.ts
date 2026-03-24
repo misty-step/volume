@@ -50,6 +50,12 @@ export async function runManageExerciseTool(
         },
         ctx
       );
+    default: {
+      const _exhaustive: never = args;
+      throw new Error(
+        `Unhandled manage_exercise action: ${String(_exhaustive)}`
+      );
+    }
   }
 }
 

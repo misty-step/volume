@@ -1,9 +1,45 @@
 import { z, type ZodTypeAny } from "zod";
+import { runAnalyticsOverviewTool } from "@/lib/coach/tools/tool-analytics-overview";
+import { runBulkLogTool } from "@/lib/coach/tools/tool-bulk-log";
+import { runDateRangeSetsTool } from "@/lib/coach/tools/tool-date-range-sets";
+import { runDeleteSetTool } from "@/lib/coach/tools/tool-delete-set";
+import { runEditSetTool } from "@/lib/coach/tools/tool-edit-set";
+import { runExerciseHistoryTool } from "@/lib/coach/tools/tool-exercise-history";
+import { runExerciseLibraryTool } from "@/lib/coach/tools/tool-exercise-library";
+import {
+  runExerciseSnapshotTool,
+  runExerciseTrendTool,
+} from "@/lib/coach/tools/tool-exercise-report";
+import { runFocusSuggestionsTool } from "@/lib/coach/tools/tool-focus-suggestions";
+import { runGetInsightsTool } from "@/lib/coach/tools/tool-get-insights";
+import { runHistoryOverviewTool } from "@/lib/coach/tools/tool-history-overview";
+import { runLogSetsTool } from "@/lib/coach/tools/tool-log-sets";
+import { runLogSetTool } from "@/lib/coach/tools/tool-log-set";
+import {
+  runDeleteExerciseTool,
+  runManageExerciseTool,
+  runMergeExerciseTool,
+  runRenameExerciseTool,
+  runRestoreExerciseTool,
+  runUpdateExerciseMuscleGroupsTool,
+} from "@/lib/coach/tools/tool-manage-exercise";
+import { runModifySetTool } from "@/lib/coach/tools/tool-modify-set";
+import { runQueryExerciseTool } from "@/lib/coach/tools/tool-query-exercise";
+import { runQueryWorkoutsTool } from "@/lib/coach/tools/tool-query-workouts";
+import { runReportHistoryTool } from "@/lib/coach/tools/tool-report-history";
+import { runSetSoundTool } from "@/lib/coach/tools/tool-set-sound";
+import { runSetWeightUnitTool } from "@/lib/coach/tools/tool-set-weight-unit";
+import { runSettingsOverviewTool } from "@/lib/coach/tools/tool-settings-overview";
+import { runTodaySummaryTool } from "@/lib/coach/tools/tool-today-summary";
+import { runUpdatePreferencesTool } from "@/lib/coach/tools/tool-update-preferences";
+import { runUpdateSettingsTool } from "@/lib/coach/tools/tool-update-settings";
+import { runWorkoutSessionTool } from "@/lib/coach/tools/tool-workout-session";
+import { runWorkspaceTool } from "@/lib/coach/tools/tool-workspace";
 import type {
   CoachToolContext,
   CoachToolExecutionOptions,
   ToolResult,
-} from "./types";
+} from "@/lib/coach/tools/types";
 import {
   BulkLogArgsSchema,
   DateRangeSetsArgsSchema,
@@ -29,43 +65,7 @@ import {
   UpdatePreferencesArgsSchema,
   UpdateSettingsArgsSchema,
   WorkoutSessionArgsSchema,
-} from "./schemas";
-import { runAnalyticsOverviewTool } from "./tool-analytics-overview";
-import { runBulkLogTool } from "./tool-bulk-log";
-import { runDateRangeSetsTool } from "./tool-date-range-sets";
-import { runDeleteSetTool } from "./tool-delete-set";
-import { runEditSetTool } from "./tool-edit-set";
-import { runExerciseHistoryTool } from "./tool-exercise-history";
-import { runExerciseLibraryTool } from "./tool-exercise-library";
-import {
-  runExerciseSnapshotTool,
-  runExerciseTrendTool,
-} from "./tool-exercise-report";
-import { runFocusSuggestionsTool } from "./tool-focus-suggestions";
-import { runGetInsightsTool } from "./tool-get-insights";
-import { runHistoryOverviewTool } from "./tool-history-overview";
-import { runLogSetsTool } from "./tool-log-sets";
-import { runLogSetTool } from "./tool-log-set";
-import {
-  runDeleteExerciseTool,
-  runManageExerciseTool,
-  runMergeExerciseTool,
-  runRenameExerciseTool,
-  runRestoreExerciseTool,
-  runUpdateExerciseMuscleGroupsTool,
-} from "./tool-manage-exercise";
-import { runModifySetTool } from "./tool-modify-set";
-import { runQueryExerciseTool } from "./tool-query-exercise";
-import { runQueryWorkoutsTool } from "./tool-query-workouts";
-import { runReportHistoryTool } from "./tool-report-history";
-import { runSetSoundTool } from "./tool-set-sound";
-import { runSetWeightUnitTool } from "./tool-set-weight-unit";
-import { runSettingsOverviewTool } from "./tool-settings-overview";
-import { runTodaySummaryTool } from "./tool-today-summary";
-import { runUpdatePreferencesTool } from "./tool-update-preferences";
-import { runUpdateSettingsTool } from "./tool-update-settings";
-import { runWorkoutSessionTool } from "./tool-workout-session";
-import { runWorkspaceTool } from "./tool-workspace";
+} from "@/lib/coach/tools/schemas";
 
 type CoachToolRunner = (
   rawArgs: unknown,
@@ -94,9 +94,9 @@ function defineTool(
 export const coachToolDefinitions = [
   defineTool(
     "log_sets",
-    "Log one or more workout sets. Use a single-item sets array for one set and a multi-item array when the user reports multiple sets or exercises.",
+    "Log one or more workout sets. Use action=log_set with a single set object for one set, or action=bulk_log with a sets array when the user reports multiple sets or exercises.",
     LogSetsArgsSchema,
-    (rawArgs, ctx) => runLogSetsTool(rawArgs, ctx)
+    (rawArgs, ctx, options) => runLogSetsTool(rawArgs, ctx, options)
   ),
   defineTool(
     "query_workouts",

@@ -29,5 +29,9 @@ export async function runModifySetTool(
         },
         ctx
       );
+    default: {
+      const _exhaustive: never = args;
+      throw new Error(`Unhandled modify_set action: ${String(_exhaustive)}`);
+    }
   }
 }

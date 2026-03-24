@@ -28,5 +28,11 @@ export async function runQueryExerciseTool(
         },
         ctx
       );
+    default: {
+      const _exhaustive: never = args;
+      throw new Error(
+        `Unhandled query_exercise action: ${String(_exhaustive)}`
+      );
+    }
   }
 }
