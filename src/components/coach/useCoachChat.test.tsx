@@ -43,7 +43,7 @@ const mockMessages: Array<{
 
 vi.mock("@ai-sdk/react", () => ({
   useChat: vi.fn(() => ({
-    messages: mockMessages,
+    messages: [...mockMessages],
     status: "ready",
     error: undefined,
     sendMessage: mockSendMessage,

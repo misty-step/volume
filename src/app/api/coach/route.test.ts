@@ -1000,4 +1000,87 @@ describe("POST /api/coach", () => {
       ).toBe(false);
     });
   });
+
+  it("continues memory processing when session persistence fails", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    convex.query
+      .mockResolvedValueOnce({ memories: [], observations: [] })
+      .mockResolvedValueOnce([]);
+    convex.mutation.mockImplementation(async (fn, args) => {
+      if (args && typeof args === "object" && Object.keys(args).length === 0) {
+        return {
+          ok: true,
+          limit: 10,
+          remaining: 9,
+          resetAt: Date.now() + 60_000,
+        };
+      }
+
+      if (fn === api.coachSessions.addMessage) {
+        throw new Error("session write failed");
+      }
+
+      return null;
+    });
+    ConvexHttpClientMock.mockReturnValue(convex);
+    getCoachRuntimeMock.mockReturnValue({
+      model: "test-model",
+      classificationModel: "test-classifier",
+    });
+    plannerMocks.runPlannerTurnMock.mockResolvedValue(
+      createPlannerResult({
+        responseMessages: [
+          { role: "assistant", content: "I'll keep that in mind." },
+        ],
+      })
+    );
+    streamTextMock.mockReturnValue(
+      createStreamTextResult({ text: "I'll keep that in mind." })
+    );
+    extractMemoryOperationsMock.mockResolvedValue([
+      {
+        kind: "remember",
+        category: "injury",
+        content: "Avoid heavy overhead pressing.",
+        source: "fact_extractor",
+      },
+    ]);
+    summarizeObservationMock.mockResolvedValue(null);
+    selectObservationIdsToKeepMock.mockResolvedValue(null);
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: validBodyWithSession("session_123"),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    await response.text();
+
+    await waitForAssertion(() => {
+      expect(convex.mutation).toHaveBeenCalledWith(
+        api.userMemories.applyMemoryPipelineResult,
+        {
+          operations: [
+            {
+              kind: "remember",
+              category: "injury",
+              content: "Avoid heavy overhead pressing.",
+              source: "fact_extractor",
+              existingMemoryId: undefined,
+            },
+          ],
+        }
+      );
+    });
+  });
 });

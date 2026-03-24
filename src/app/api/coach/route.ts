@@ -697,6 +697,13 @@ export async function POST(request: Request) {
   after(async () => {
     try {
       await presentation.finishReason;
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      reportError(err, { route: "coach", operation: "presentation_finish" });
+      return;
+    }
+
+    try {
       await persistCoachTurn({
         convex,
         sessionId,
@@ -704,16 +711,17 @@ export async function POST(request: Request) {
         turnId,
         responseMessages: plannerResult.responseMessages as ModelMessage[],
       });
-      await processCoachMemory({
-        convex,
-        runtime,
-        history,
-        responseMessages: plannerResult.responseMessages as ModelMessage[],
-      });
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       reportError(err, { route: "coach", operation: "persist_turn" });
     }
+
+    await processCoachMemory({
+      convex,
+      runtime,
+      history,
+      responseMessages: plannerResult.responseMessages as ModelMessage[],
+    });
   });
 
   const stream = createUIMessageStream({

@@ -11,6 +11,7 @@ import {
   isObservationMemory,
   MAX_ACTIVE_FACT_MEMORIES,
   MAX_ACTIVE_OBSERVATIONS,
+  MAX_MEMORY_CONTENT_LENGTH,
   MEMORY_CATEGORIES,
   MEMORY_SOURCES,
   normalizeMemoryContent,
@@ -274,7 +275,10 @@ export const applyMemoryPipelineResult = mutation({
         continue;
       }
 
-      const content = normalizeMemoryContent(operation.content);
+      const content = normalizeMemoryContent(operation.content).slice(
+        0,
+        MAX_MEMORY_CONTENT_LENGTH
+      );
       if (!content) {
         continue;
       }
@@ -328,7 +332,9 @@ export const applyMemoryPipelineResult = mutation({
     await trimFactMemories(ctx, activeMemories, now);
 
     let insertedObservationId: Id<"userMemories"> | null = null;
-    const observationContent = normalizeMemoryContent(args.observation ?? "");
+    const observationContent = normalizeMemoryContent(
+      args.observation ?? ""
+    ).slice(0, MAX_MEMORY_CONTENT_LENGTH);
     if (observationContent) {
       insertedObservationId = await ctx.db.insert("userMemories", {
         userId,
