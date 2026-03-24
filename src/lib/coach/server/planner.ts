@@ -84,11 +84,13 @@ ${catalogPrompt}`;
  * model just chatted).
  */
 export function buildEndOfTurnSuggestions(
-  toolsUsed: string[]
+  toolNamesUsed: string[]
 ): string[] | null {
-  const set = new Set(toolsUsed);
+  // Planner trace stores registered tool names, not per-tool action literals.
+  // For example, a `log_sets` tool call may carry `action: "log_set"` args.
+  const usedToolNames = new Set(toolNamesUsed);
 
-  if (set.has("log_sets")) {
+  if (usedToolNames.has("log_sets")) {
     return [
       "show today's summary",
       "what should I work on today?",
@@ -96,11 +98,11 @@ export function buildEndOfTurnSuggestions(
     ];
   }
 
-  if (set.has("query_exercise")) {
+  if (usedToolNames.has("query_exercise")) {
     return ["10 pushups", "show today's summary", "show analytics overview"];
   }
 
-  if (set.has("query_workouts")) {
+  if (usedToolNames.has("query_workouts")) {
     return [
       "what should I work on today?",
       "show trend for pushups",
@@ -108,15 +110,18 @@ export function buildEndOfTurnSuggestions(
     ];
   }
 
-  if (set.has("get_insights")) {
+  if (usedToolNames.has("get_insights")) {
     return ["show today's summary", "show trend for pushups", "10 pushups"];
   }
 
-  if (set.has("modify_set")) {
+  if (usedToolNames.has("modify_set")) {
     return ["show history overview", "show today's summary"];
   }
 
-  if (set.has("manage_exercise") || set.has("get_exercise_library")) {
+  if (
+    usedToolNames.has("manage_exercise") ||
+    usedToolNames.has("get_exercise_library")
+  ) {
     return [
       "show exercise library",
       "show today's summary",
@@ -124,7 +129,7 @@ export function buildEndOfTurnSuggestions(
     ];
   }
 
-  if (set.has("get_report_history")) {
+  if (usedToolNames.has("get_report_history")) {
     return [
       "show today's summary",
       "show history overview",
@@ -132,7 +137,7 @@ export function buildEndOfTurnSuggestions(
     ];
   }
 
-  if (set.has("update_settings")) {
+  if (usedToolNames.has("update_settings")) {
     return [
       "show today's summary",
       "what should I work on today?",
@@ -140,7 +145,7 @@ export function buildEndOfTurnSuggestions(
     ];
   }
 
-  if (set.has("show_workspace")) {
+  if (usedToolNames.has("show_workspace")) {
     return [
       "show today's summary",
       "10 pushups",
@@ -148,7 +153,7 @@ export function buildEndOfTurnSuggestions(
     ];
   }
 
-  if (toolsUsed.length === 0) return null;
+  if (toolNamesUsed.length === 0) return null;
 
   return ["show today's summary", "what should I work on today?"];
 }

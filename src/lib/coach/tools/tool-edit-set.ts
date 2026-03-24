@@ -31,28 +31,6 @@ export async function runEditSetTool(
     };
   }
 
-  const hasChanges =
-    args.reps !== undefined ||
-    args.weight !== undefined ||
-    args.unit !== undefined ||
-    args.duration_seconds !== undefined;
-
-  if (!hasChanges) {
-    return {
-      summary: "No fields to update.",
-      blocks: [
-        {
-          type: "status",
-          tone: "info",
-          title: "Nothing to update",
-          description:
-            "Provide at least one of: reps, weight, unit, duration_seconds.",
-        },
-      ],
-      outputForModel: { status: "error", error: "no_fields_provided" },
-    };
-  }
-
   const setUnit =
     set.unit === "lbs" || set.unit === "kg" ? set.unit : undefined;
   const resolvedUnit =

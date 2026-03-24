@@ -20,6 +20,20 @@ function hasAtMostOneMetricField(data: {
   return !(data.reps !== undefined && data.duration_seconds !== undefined);
 }
 
+function hasAtLeastOneEditField(data: {
+  reps?: number;
+  duration_seconds?: number;
+  weight?: number;
+  unit?: "lbs" | "kg";
+}) {
+  return (
+    data.reps !== undefined ||
+    data.duration_seconds !== undefined ||
+    data.weight !== undefined ||
+    data.unit !== undefined
+  );
+}
+
 function mergeExercisesMustDiffer(data: {
   source_exercise: string;
   target_exercise: string;
@@ -122,6 +136,10 @@ export const EditSetArgsSchema = z
   })
   .refine(hasAtMostOneMetricField, {
     message: "Provide at most one of reps or duration_seconds.",
+    path: ["reps"],
+  })
+  .refine(hasAtLeastOneEditField, {
+    message: "Provide at least one of reps, duration_seconds, weight, or unit.",
     path: ["reps"],
   });
 
@@ -276,6 +294,11 @@ export const ModifySetArgsSchema = z.discriminatedUnion("action", [
     })
     .refine(hasAtMostOneMetricField, {
       message: "Provide at most one of reps or duration_seconds.",
+      path: ["reps"],
+    })
+    .refine(hasAtLeastOneEditField, {
+      message:
+        "Provide at least one of reps, duration_seconds, weight, or unit.",
       path: ["reps"],
     }),
   z
