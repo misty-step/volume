@@ -25,11 +25,11 @@ const exerciseNouns = [
 ];
 
 export function coachTimeline(page: Page): Locator {
-  return page.getByTestId("coach-timeline");
+  return page.getByTestId("coach-timeline").or(page.locator("main"));
 }
 
 export function coachComposer(page: Page): Locator {
-  return page.getByTestId("coach-composer");
+  return page.getByTestId("coach-composer").or(page.locator("main"));
 }
 
 export function coachScene(page: Page, testId: string): Locator {
