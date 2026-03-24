@@ -2,6 +2,8 @@ import { generateText, type LanguageModel } from "ai";
 import { z } from "zod";
 import {
   MAX_ACTIVE_OBSERVATIONS,
+  MAX_MEMORY_CONTENT_LENGTH,
+  MAX_MEMORY_ID_LENGTH,
   OBSERVATION_TRIGGER_MESSAGES,
   normalizeMemoryContent,
   type ActiveCoachMemory,
@@ -21,24 +23,28 @@ const memoryOperationsSchema = z.object({
           "body_composition",
           "other",
         ]),
-        content: z.string().min(1),
+        content: z.string().min(1).max(MAX_MEMORY_CONTENT_LENGTH),
         source: z.enum(["fact_extractor", "explicit_user"]),
-        existingMemoryId: z.string().min(1).optional(),
+        existingMemoryId: z
+          .string()
+          .min(1)
+          .max(MAX_MEMORY_ID_LENGTH)
+          .optional(),
       }),
       z.object({
         kind: z.literal("forget"),
-        memoryId: z.string().min(1),
+        memoryId: z.string().min(1).max(MAX_MEMORY_ID_LENGTH),
       }),
     ])
   ),
 });
 
 const observationSummarySchema = z.object({
-  summary: z.string().min(1),
+  summary: z.string().min(1).max(MAX_MEMORY_CONTENT_LENGTH),
 });
 
 const keepObservationIdsSchema = z.object({
-  keepIds: z.array(z.string().min(1)),
+  keepIds: z.array(z.string().min(1).max(MAX_MEMORY_ID_LENGTH)),
 });
 
 export type MemoryTranscriptMessage = {
@@ -46,10 +52,12 @@ export type MemoryTranscriptMessage = {
   content: string;
 };
 
+function serializePromptRecord(value: unknown) {
+  return JSON.stringify(value);
+}
+
 function stringifyTranscript(transcript: MemoryTranscriptMessage[]) {
-  return transcript
-    .map((message) => `${message.role.toUpperCase()}: ${message.content}`)
-    .join("\n");
+  return transcript.map((message) => serializePromptRecord(message)).join("\n");
 }
 
 function stringifyExistingMemories(memories: ActiveCoachMemory[]) {
@@ -58,9 +66,13 @@ function stringifyExistingMemories(memories: ActiveCoachMemory[]) {
   }
 
   return memories
-    .map(
-      (memory) =>
-        `- id=${memory._id} category=${memory.category} source=${memory.source} content=${memory.content}`
+    .map((memory) =>
+      serializePromptRecord({
+        id: memory._id,
+        category: memory.category,
+        source: memory.source,
+        content: memory.content,
+      })
     )
     .join("\n");
 }
@@ -184,9 +196,12 @@ export async function selectObservationIdsToKeep({
       {
         role: "user",
         content: observations
-          .map(
-            (observation) =>
-              `- id=${observation._id} createdAt=${observation.createdAt} content=${observation.content}`
+          .map((observation) =>
+            serializePromptRecord({
+              id: observation._id,
+              createdAt: observation.createdAt,
+              content: observation.content,
+            })
           )
           .join("\n"),
       },

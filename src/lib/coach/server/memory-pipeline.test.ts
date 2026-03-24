@@ -54,6 +54,19 @@ describe("memory-pipeline", () => {
         source: "fact_extractor",
       },
     ]);
+
+    expect(generateTextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: expect.arrayContaining([
+          expect.objectContaining({
+            role: "user",
+            content: expect.stringContaining(
+              '{"role":"user","content":"My left shoulder has been bothering me."}'
+            ),
+          }),
+        ]),
+      })
+    );
   });
 
   it("maps a forget request to an existing memory id", async () => {
@@ -144,5 +157,63 @@ describe("memory-pipeline", () => {
 
     expect(result).toHaveLength(29);
     expect(result?.[0]).toBe("memory_2");
+
+    expect(generateTextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: expect.arrayContaining([
+          expect.objectContaining({
+            role: "user",
+            content: expect.stringContaining(
+              '{"id":"memory_1","createdAt":1,"content":"Observation 1"}'
+            ),
+          }),
+        ]),
+      })
+    );
+  });
+
+  it("rejects overlong extracted memory text", async () => {
+    generateTextMock.mockResolvedValue({
+      text: JSON.stringify({
+        operations: [
+          {
+            kind: "remember",
+            category: "goal",
+            content: "x".repeat(281),
+            source: "fact_extractor",
+          },
+        ],
+      }),
+    });
+
+    const { extractMemoryOperations } = await import("./memory-pipeline");
+
+    await expect(
+      extractMemoryOperations({
+        model: TEST_MODEL,
+        transcript: [{ role: "user", content: "Remember this goal." }],
+        existingMemories: [],
+      })
+    ).rejects.toThrow();
+  });
+
+  it("rejects overlong observation summaries", async () => {
+    generateTextMock.mockResolvedValue({
+      text: JSON.stringify({
+        summary: "x".repeat(281),
+      }),
+    });
+
+    const { summarizeObservation } = await import("./memory-pipeline");
+
+    await expect(
+      summarizeObservation({
+        model: TEST_MODEL,
+        transcript: Array.from({ length: 20 }, (_, index) => ({
+          role: index % 2 === 0 ? "user" : "assistant",
+          content: `message-${index}`,
+        })),
+      })
+    ).rejects.toThrow();
   });
 });

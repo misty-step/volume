@@ -291,6 +291,43 @@ describe("userMemories", () => {
     expect(activeObservations.at(-1)).toBe("Latest observation summary");
   });
 
+  test("applyMemoryPipelineResult ignores incomplete keep ids and falls back to overflow trimming", async () => {
+    const keepIds: Id<"userMemories">[] = [];
+
+    for (let i = 0; i < 30; i += 1) {
+      const id = await seedMemory({
+        category: "other",
+        content: `Observation ${i}`,
+        source: "observer",
+        createdAt: i,
+      });
+
+      if (i < 5) {
+        keepIds.push(id);
+      }
+    }
+
+    await t
+      .withIdentity({ subject: userSubject, name: "Memory User" })
+      .mutation(api.userMemories.applyMemoryPipelineResult, {
+        operations: [],
+        observation: "Latest observation summary",
+        keepObservationIds: keepIds,
+      });
+
+    const activeObservations = (
+      await t
+        .withIdentity({ subject: userSubject, name: "Memory User" })
+        .query(api.userMemories.listActive, {})
+    )
+      .filter((memory) => memory.source === "observer")
+      .map((memory) => memory.content);
+
+    expect(activeObservations).toHaveLength(30);
+    expect(activeObservations).not.toContain("Observation 0");
+    expect(activeObservations.at(-1)).toBe("Latest observation summary");
+  });
+
   test("applyMemoryPipelineResult preserves existing observations when no keep list is provided", async () => {
     await seedMemory({
       category: "other",

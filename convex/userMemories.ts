@@ -352,25 +352,31 @@ export const applyMemoryPipelineResult = mutation({
       const keptObservations = activeObservations.filter((memory) =>
         keepSet.has(String(memory._id))
       );
-      const keepOverflow = keptObservations.length - MAX_ACTIVE_OBSERVATIONS;
-      if (keepOverflow > 0) {
-        for (const memory of keptObservations.slice(0, keepOverflow)) {
-          keepSet.delete(String(memory._id));
-        }
-      }
-      await Promise.all(
-        activeObservations
-          .filter((memory: UserMemoryDoc) => !keepSet.has(String(memory._id)))
-          .map((memory: UserMemoryDoc) =>
-            ctx.db.patch(memory._id, {
-              deletedAt: now,
-            })
-          )
+      const minKeepCount = Math.min(
+        MAX_ACTIVE_OBSERVATIONS,
+        activeObservations.length
       );
-      return {
-        appliedOperations: args.operations.length,
-        observationStored: Boolean(insertedObservationId),
-      };
+      if (keptObservations.length >= minKeepCount) {
+        const keepOverflow = keptObservations.length - MAX_ACTIVE_OBSERVATIONS;
+        if (keepOverflow > 0) {
+          for (const memory of keptObservations.slice(0, keepOverflow)) {
+            keepSet.delete(String(memory._id));
+          }
+        }
+        await Promise.all(
+          activeObservations
+            .filter((memory: UserMemoryDoc) => !keepSet.has(String(memory._id)))
+            .map((memory: UserMemoryDoc) =>
+              ctx.db.patch(memory._id, {
+                deletedAt: now,
+              })
+            )
+        );
+        return {
+          appliedOperations: args.operations.length,
+          observationStored: Boolean(insertedObservationId),
+        };
+      }
     }
 
     const overflow = activeObservations.length - MAX_ACTIVE_OBSERVATIONS;

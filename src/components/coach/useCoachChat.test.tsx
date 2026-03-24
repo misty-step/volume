@@ -212,4 +212,20 @@ describe("useCoachChat", () => {
 
     expect(mockPush).toHaveBeenCalledWith("/pricing");
   });
+
+  it("reports billing portal failures for open_billing_portal", async () => {
+    const { result } = renderHook(() => useCoachChat());
+
+    await act(async () => {
+      await result.current.jsonRenderHandlers.open_billing_portal?.({});
+    });
+
+    expect(analyticsMocks.mockReportError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        component: "useCoachChat",
+        operation: "openBillingPortal",
+      })
+    );
+  });
 });

@@ -1,6 +1,9 @@
 import { z } from "zod";
-import { MEMORY_CATEGORIES } from "@/lib/coach/memory";
 import { GOAL_TYPES } from "@/lib/goals";
+import {
+  MAX_MEMORY_CONTENT_LENGTH,
+  MEMORY_CATEGORIES,
+} from "@/lib/coach/memory";
 
 const ISO_LOCAL_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -128,7 +131,7 @@ export const ManageMemoriesArgsSchema = z
   .object({
     action: z.enum(["remember", "forget"]),
     category: z.enum(MEMORY_CATEGORIES).optional(),
-    content: z.string().trim().min(1).max(280),
+    content: z.string().trim().min(1).max(MAX_MEMORY_CONTENT_LENGTH),
   })
   .superRefine((data, ctx) => {
     if (data.action === "remember" && !data.category) {
