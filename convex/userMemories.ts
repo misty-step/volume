@@ -358,11 +358,7 @@ export const applyMemoryPipelineResult = mutation({
       const keptObservations = activeObservations.filter((memory) =>
         keepSet.has(String(memory._id))
       );
-      const minKeepCount = Math.min(
-        MAX_ACTIVE_OBSERVATIONS,
-        activeObservations.length
-      );
-      if (keptObservations.length >= minKeepCount) {
+      if (keepSet.size > 0) {
         const keepOverflow = keptObservations.length - MAX_ACTIVE_OBSERVATIONS;
         if (keepOverflow > 0) {
           for (const memory of keptObservations.slice(0, keepOverflow)) {

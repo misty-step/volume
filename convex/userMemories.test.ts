@@ -291,7 +291,7 @@ describe("userMemories", () => {
     expect(activeObservations.at(-1)).toBe("Latest observation summary");
   });
 
-  test("applyMemoryPipelineResult ignores incomplete keep ids and falls back to overflow trimming", async () => {
+  test("applyMemoryPipelineResult honors selective keep ids below the cap", async () => {
     const keepIds: Id<"userMemories">[] = [];
 
     for (let i = 0; i < 30; i += 1) {
@@ -323,9 +323,14 @@ describe("userMemories", () => {
       .filter((memory) => memory.source === "observer")
       .map((memory) => memory.content);
 
-    expect(activeObservations).toHaveLength(30);
-    expect(activeObservations).not.toContain("Observation 0");
-    expect(activeObservations.at(-1)).toBe("Latest observation summary");
+    expect(activeObservations).toEqual([
+      "Observation 0",
+      "Observation 1",
+      "Observation 2",
+      "Observation 3",
+      "Observation 4",
+      "Latest observation summary",
+    ]);
   });
 
   test("applyMemoryPipelineResult preserves existing observations when no keep list is provided", async () => {
