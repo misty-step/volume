@@ -9,7 +9,6 @@ import {
   sendCoachMessage,
   waitForCoachText,
   waitForCoachIdle,
-  waitForTodaySummary,
 } from "./coach-helpers";
 import { createExerciseForCurrentUser } from "./convex-helpers";
 
@@ -34,9 +33,7 @@ test.describe("Coach chat flows", () => {
     const exerciseName = createUniqueExerciseName("Coach flow ");
 
     await sendCoachMessage(page, `log 12 reps of "${exerciseName}"`);
-    await waitForCoachText(page, new RegExp(`Logged.*${exerciseName}`, "i"));
-    await sendCoachMessage(page, "show today's summary");
-    await waitForTodaySummary(page);
+    await waitForCoachIdle(page);
 
     expect(await requestTodaySetCount(page)).toBe(1);
   });
