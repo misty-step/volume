@@ -8,6 +8,7 @@ import {
   requestTodaySetCount,
   sendCoachMessage,
   waitForCoachText,
+  waitForCoachIdle,
   waitForTodaySummary,
 } from "./coach-helpers";
 import { createExerciseForCurrentUser } from "./convex-helpers";
