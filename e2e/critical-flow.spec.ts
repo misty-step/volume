@@ -7,6 +7,11 @@ import {
   waitForHistoryOverview,
   waitForCoachText,
 } from "./coach-helpers";
+import {
+  countSetsForCurrentUser,
+  createExerciseForCurrentUser,
+  waitForSetCountIncrease,
+} from "./convex-helpers";
 
 test.describe("Agentic workspace critical routes", () => {
   test.describe.configure({ mode: "serial" });
@@ -17,9 +22,13 @@ test.describe("Agentic workspace critical routes", () => {
     const exerciseName = randomExerciseName("critical flow");
 
     await openCoachWorkspace(page, "/today");
+    await createExerciseForCurrentUser(page, exerciseName);
+    const setCountBefore = await countSetsForCurrentUser(page);
     await sendCoachMessage(page, `log 10 reps of "${exerciseName}"`);
-    await waitForCoachText(page, new RegExp(exerciseName, "i"));
-    await page.goto("/history");
+    expect(await waitForSetCountIncrease(page, setCountBefore)).toBe(
+      setCountBefore + 1
+    );
+    await openCoachWorkspace(page, "/history");
     await waitForHistoryOverview(page);
     await sendCoachMessage(page, `delete set "${exerciseName}"`);
 

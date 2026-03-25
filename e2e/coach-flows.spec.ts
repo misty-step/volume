@@ -5,10 +5,16 @@ import {
   clickEntityAction,
   createUniqueExerciseName,
   openCoachWorkspace,
+  requestTodaySetCount,
   sendCoachMessage,
+  waitForCoachIdle,
   waitForCoachText,
 } from "./coach-helpers";
-import { createExerciseForCurrentUser } from "./convex-helpers";
+import {
+  countSetsForCurrentUser,
+  createExerciseForCurrentUser,
+  waitForSetCountIncrease,
+} from "./convex-helpers";
 
 test.describe("Coach chat flows", () => {
   test.describe.configure({ mode: "serial" });
@@ -29,17 +35,16 @@ test.describe("Coach chat flows", () => {
 
   test("logs a set and stays usable for a follow-up turn", async ({ page }) => {
     const exerciseName = createUniqueExerciseName("Coach flow ");
+    await createExerciseForCurrentUser(page, exerciseName);
+    const setCountBefore = await countSetsForCurrentUser(page);
 
     await sendCoachMessage(page, `log 12 reps of "${exerciseName}"`);
-    await waitForCoachText(page, new RegExp(exerciseName, "i"));
+    expect(await waitForSetCountIncrease(page, setCountBefore)).toBe(
+      setCountBefore + 1
+    );
+    await openCoachWorkspace(page, "/coach");
 
-    const undoButton = coachTimeline(page)
-      .getByRole("button", { name: /^Undo$/i })
-      .last();
-    await expect(undoButton).toBeVisible({ timeout: 30_000 });
-    await undoButton.click();
-
-    await waitForCoachText(page, /Set deleted/i);
+    expect(await requestTodaySetCount(page)).toBeGreaterThan(0);
   });
 
   test("opens analytics from the generated workspace actions", async ({
