@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.0](https://github.com/misty-step/volume/compare/v1.17.0...v1.18.0) (2026-03-24)
+
+
+### Features
+
+* Canary SDK dual-write alongside Sentry ([#440](https://github.com/misty-step/volume/issues/440)) ([5927d8a](https://github.com/misty-step/volume/commit/5927d8a09601c6ce5c68de4be2ed9c239d5960ec))
+* **coach:** restore agentic generative ui ([#444](https://github.com/misty-step/volume/issues/444)) ([12fe24c](https://github.com/misty-step/volume/commit/12fe24cc7d468c56cc622346a56827d63590c741))
+* migrate generative UI to json-render catalog ([#439](https://github.com/misty-step/volume/issues/439)) ([f6df5ad](https://github.com/misty-step/volume/commit/f6df5ad8eb1dd1b30025850e2c81bccb6ca4e315))
+
 ## [1.17.0](https://github.com/misty-step/volume/compare/v1.16.0...v1.17.0) (2026-03-15)
 
 
