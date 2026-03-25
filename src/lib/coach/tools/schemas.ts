@@ -99,6 +99,7 @@ export const MergeExerciseArgsSchema = z
   })
   .refine(mergeExercisesMustDiffer, {
     message: "Source and target exercises must be different.",
+    path: ["source_exercise"],
   });
 
 export const UpdateMuscleGroupsArgsSchema = z.object({
@@ -274,6 +275,7 @@ export const ManageExerciseArgsSchema = z.discriminatedUnion("action", [
     })
     .refine(mergeExercisesMustDiffer, {
       message: "Source and target exercises must be different.",
+      path: ["source_exercise"],
     }),
   z.object({
     action: z.literal("update_muscle_groups"),
