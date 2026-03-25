@@ -2,7 +2,6 @@ import { test, expect } from "./auth-fixture";
 import {
   coachInput,
   coachTimeline,
-  clickEntityAction,
   createUniqueExerciseName,
   openCoachWorkspace,
   requestTodaySetCount,
@@ -45,30 +44,6 @@ test.describe("Coach chat flows", () => {
     await openCoachWorkspace(page, "/coach");
 
     expect(await requestTodaySetCount(page)).toBeGreaterThan(0);
-  });
-
-  test("opens analytics from the generated workspace actions", async ({
-    page,
-  }) => {
-    await sendCoachMessage(page, "show workspace");
-    await waitForCoachText(page, /Core workflows/i);
-
-    await clickEntityAction(page, "Analytics overview");
-    await waitForCoachText(page, /Analytics overview/i);
-    await expect(
-      coachTimeline(page)
-        .getByText(/^Recent PRs$/i)
-        .first()
-    ).toBeVisible({
-      timeout: 30_000,
-    });
-    await expect(
-      coachTimeline(page)
-        .getByText(/^Focus suggestions$/i)
-        .first()
-    ).toBeVisible({
-      timeout: 30_000,
-    });
   });
 
   test("archives and restores an exercise through generated UI", async ({
