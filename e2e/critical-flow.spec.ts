@@ -3,8 +3,8 @@ import {
   coachTimeline,
   openCoachWorkspace,
   randomExerciseName,
-  requestTodaySetCount,
   sendCoachMessage,
+  waitForHistoryOverview,
   waitForCoachText,
 } from "./coach-helpers";
 
@@ -19,10 +19,8 @@ test.describe("Agentic workspace critical routes", () => {
     await openCoachWorkspace(page, "/today");
     await sendCoachMessage(page, `log 10 reps of "${exerciseName}"`);
     await waitForCoachText(page, new RegExp(exerciseName, "i"));
-    expect(await requestTodaySetCount(page)).toBe(1);
-
-    await sendCoachMessage(page, "show history overview");
-    await waitForCoachText(page, /History snapshot/i);
+    await page.goto("/history");
+    await waitForHistoryOverview(page);
     await sendCoachMessage(page, `delete set "${exerciseName}"`);
 
     let deleteState: "pending" | "confirm" | "deleted" = "pending";

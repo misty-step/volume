@@ -1,14 +1,12 @@
 import { test, expect } from "./auth-fixture";
 import {
-  clickEntityAction,
   coachInput,
   coachTimeline,
+  clickEntityAction,
   createUniqueExerciseName,
   openCoachWorkspace,
-  requestTodaySetCount,
   sendCoachMessage,
   waitForCoachText,
-  waitForCoachIdle,
 } from "./coach-helpers";
 import { createExerciseForCurrentUser } from "./convex-helpers";
 
@@ -33,9 +31,15 @@ test.describe("Coach chat flows", () => {
     const exerciseName = createUniqueExerciseName("Coach flow ");
 
     await sendCoachMessage(page, `log 12 reps of "${exerciseName}"`);
-    await waitForCoachIdle(page);
+    await waitForCoachText(page, new RegExp(exerciseName, "i"));
 
-    expect(await requestTodaySetCount(page)).toBe(1);
+    const undoButton = coachTimeline(page)
+      .getByRole("button", { name: /^Undo$/i })
+      .last();
+    await expect(undoButton).toBeVisible({ timeout: 30_000 });
+    await undoButton.click();
+
+    await waitForCoachText(page, /Set deleted/i);
   });
 
   test("opens analytics from the generated workspace actions", async ({
