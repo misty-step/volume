@@ -44,7 +44,34 @@ test.describe("Coach chat flows", () => {
       setCountBefore + 1
     );
     await openCoachWorkspace(page, "/coach");
+<<<<<<< HEAD
     await requestTodaySummary(page);
+=======
+
+    expect(await requestTodaySetCount(page)).toBeGreaterThan(0);
+  });
+
+  test("opens analytics from the generated workspace actions", async ({
+    page,
+  }) => {
+    await sendCoachMessage(page, "show workspace");
+    await clickEntityAction(page, "Analytics overview");
+    await waitForAnalyticsOverview(page);
+    await expect(
+      coachTimeline(page)
+        .getByText(/^Recent PRs$/i)
+        .first()
+    ).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(
+      coachTimeline(page)
+        .getByText(/^Focus suggestions$/i)
+        .first()
+    ).toBeVisible({
+      timeout: 30_000,
+    });
+>>>>>>> 548419b (fix(e2e): decouple coach state checks)
   });
 
   test("archives and restores an exercise through generated UI", async ({
