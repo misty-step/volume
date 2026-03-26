@@ -12,6 +12,7 @@ import ReactMarkdown from "react-markdown";
 import { useJsonRenderMessage } from "@json-render/react";
 import { PaperPlaneIcon, ReloadIcon } from "@radix-ui/react-icons";
 import { CoachSpecRenderer } from "@/components/coach/CoachBlockRenderer";
+import { ExerciseTicker } from "@/components/coach/ExerciseTicker";
 import { useCoachChat } from "@/components/coach/useCoachChat";
 import { cn } from "@/lib/utils";
 import type { UIMessage } from "ai";
@@ -175,15 +176,16 @@ export function CoachPrototype() {
       : -1;
 
   return (
-    <main className="relative mx-auto flex w-full max-w-4xl flex-1 min-h-0 flex-col px-3 pt-3 pb-2 md:px-4 md:pb-6">
-      <p className="mb-2 px-1 text-xs text-muted-foreground">
+    <main className="relative mx-auto flex w-full max-w-4xl flex-1 min-h-0 flex-col pb-2 md:pb-6">
+      <ExerciseTicker />
+      <p className="mb-2 px-4 pt-3 text-xs text-muted-foreground md:px-4">
         Try &quot;12 pushups&quot;, &quot;show today&apos;s summary&quot;, or
         ask for insights.
       </p>
 
       <section
         data-testid="coach-timeline"
-        className="flex-1 min-h-0 space-y-2 overflow-y-auto pb-4 pr-1"
+        className="flex-1 min-h-0 space-y-2 overflow-y-auto px-3 pb-4 pr-1 md:px-4"
       >
         {messages.length === 0 && !isWorking && (
           <article className="flex justify-start">
@@ -239,7 +241,7 @@ export function CoachPrototype() {
       <form
         onSubmit={handleSubmit}
         data-testid="coach-composer"
-        className="border-t border-border-subtle bg-card p-[8px] pb-[calc(8px+env(safe-area-inset-bottom,0px))] sticky bottom-0"
+        className="mx-3 border-t border-border-subtle bg-card p-[8px] pb-[calc(8px+env(safe-area-inset-bottom,0px))] sticky bottom-0 md:mx-4"
         style={{ bottom: `${keyboardOffset}px` }}
       >
         <div className="flex items-center gap-2">
