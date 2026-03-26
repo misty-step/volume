@@ -450,6 +450,9 @@ export const getTodayExerciseSummary = query({
         totalSets: number;
         totalReps: number;
         totalWeight: number;
+        totalDuration: number;
+        maxWeight: number;
+        unit: string | null;
       }
     >();
     for (const set of sets) {
@@ -459,10 +462,18 @@ export const getTodayExerciseSummary = query({
         totalSets: 0,
         totalReps: 0,
         totalWeight: 0,
+        totalDuration: 0,
+        maxWeight: 0,
+        unit: null,
       };
       agg.totalSets += 1;
       agg.totalReps += set.reps ?? 0;
       if (set.weight) agg.totalWeight += set.weight * (set.reps ?? 1);
+      if (set.duration) agg.totalDuration += set.duration;
+      if (set.weight && set.weight > agg.maxWeight) {
+        agg.maxWeight = set.weight;
+        agg.unit = set.unit ?? null;
+      }
       byExercise.set(key, agg);
     }
 
@@ -478,6 +489,9 @@ export const getTodayExerciseSummary = query({
         totalSets: agg.totalSets,
         totalReps: agg.totalReps,
         totalWeight: agg.totalWeight,
+        totalDuration: agg.totalDuration,
+        maxWeight: agg.maxWeight,
+        unit: agg.unit,
       });
     }
 
