@@ -419,3 +419,68 @@ export const editSet = mutation({
     await ctx.db.patch(args.id, patch);
   },
 });
+
+// Aggregated exercise summaries for today (used by exercise ticker)
+export const getTodayExerciseSummary = query({
+  args: {
+    dayStartMs: v.number(),
+    dayEndMs: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const sets = await ctx.db
+      .query("sets")
+      .withIndex("by_user_performed", (q) =>
+        q
+          .eq("userId", identity.subject)
+          .gte("performedAt", args.dayStartMs)
+          .lte("performedAt", args.dayEndMs)
+      )
+      .collect();
+
+    if (sets.length === 0) return [];
+
+    // Group by exercise
+    const byExercise = new Map<
+      string,
+      {
+        exerciseId: (typeof sets)[0]["exerciseId"];
+        totalSets: number;
+        totalReps: number;
+        totalWeight: number;
+      }
+    >();
+    for (const set of sets) {
+      const key = set.exerciseId;
+      const agg = byExercise.get(key) ?? {
+        exerciseId: key,
+        totalSets: 0,
+        totalReps: 0,
+        totalWeight: 0,
+      };
+      agg.totalSets += 1;
+      agg.totalReps += set.reps ?? 0;
+      if (set.weight) agg.totalWeight += set.weight * (set.reps ?? 1);
+      byExercise.set(key, agg);
+    }
+
+    // Resolve exercise names
+    const results = [];
+    for (const agg of byExercise.values()) {
+      const exercise = await ctx.db.get(agg.exerciseId);
+      if (!exercise) continue;
+      results.push({
+        exerciseId: agg.exerciseId,
+        name: exercise.name,
+        muscleGroups: exercise.muscleGroups ?? [],
+        totalSets: agg.totalSets,
+        totalReps: agg.totalReps,
+        totalWeight: agg.totalWeight,
+      });
+    }
+
+    return results;
+  },
+});
