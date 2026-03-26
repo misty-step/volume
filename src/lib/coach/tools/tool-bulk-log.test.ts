@@ -98,7 +98,9 @@ describe("runBulkLogTool", () => {
     expect(result.outputForModel.today_totals).toEqual({
       total_sets: 0,
       total_reps: 0,
+      total_duration_seconds: 0,
       exercise_count: 0,
+      top_exercises: [],
     });
     expect((result.blocks[0] as any).title).toBe("All sets logged");
   });

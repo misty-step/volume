@@ -128,11 +128,19 @@ export function exerciseNotFoundResult(
   };
 }
 
-/** Snake-case model-output shape for today's totals. */
+/** Snake-case model-output shape for today's totals — single source of truth. */
 export function toTodayTotalsOutput(totals: TodayTotalsSummary) {
   return {
     total_sets: totals.totalSets,
     total_reps: totals.totalReps,
+    total_duration_seconds: totals.totalDurationSeconds,
     exercise_count: totals.exerciseCount,
+    top_exercises: totals.topExercises.map((entry) => ({
+      exercise_name: entry.exerciseName,
+      sets: entry.sets,
+      reps: entry.reps > 0 ? entry.reps : null,
+      duration_seconds:
+        entry.durationSeconds > 0 ? entry.durationSeconds : null,
+    })),
   };
 }

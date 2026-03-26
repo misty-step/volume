@@ -50,6 +50,8 @@ describe("runTodaySummaryTool", () => {
     expect(result.outputForModel.surface).toBe("today_empty");
     expect(result.outputForModel.title).toBe("No sets logged today");
     expect(result.outputForModel.total_sets).toBe(0);
+    expect(result.outputForModel.total_duration_seconds).toBe(0);
+    expect(result.outputForModel.top_exercises).toEqual([]);
   });
 
   it("non-empty sets -> first block is metrics", async () => {

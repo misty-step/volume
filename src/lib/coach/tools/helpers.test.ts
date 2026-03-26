@@ -5,6 +5,7 @@ import {
   formatSecondsShort,
   normalizeLookup,
   titleCase,
+  toTodayTotalsOutput,
   uniquePrompts,
 } from "./helpers";
 
@@ -48,6 +49,84 @@ describe("helpers", () => {
         "c",
         "d",
       ]);
+    });
+  });
+
+  describe("toTodayTotalsOutput", () => {
+    it("serializes all fields to snake_case", () => {
+      const output = toTodayTotalsOutput({
+        totalSets: 5,
+        totalReps: 50,
+        totalDurationSeconds: 120,
+        exerciseCount: 2,
+        topExercises: [
+          {
+            exerciseId: "ex1",
+            exerciseName: "Bench",
+            sets: 3,
+            reps: 30,
+            durationSeconds: 0,
+          },
+          {
+            exerciseId: "ex2",
+            exerciseName: "Plank",
+            sets: 2,
+            reps: 0,
+            durationSeconds: 120,
+          },
+        ],
+      });
+
+      expect(output).toEqual({
+        total_sets: 5,
+        total_reps: 50,
+        total_duration_seconds: 120,
+        exercise_count: 2,
+        top_exercises: [
+          { exercise_name: "Bench", sets: 3, reps: 30, duration_seconds: null },
+          {
+            exercise_name: "Plank",
+            sets: 2,
+            reps: null,
+            duration_seconds: 120,
+          },
+        ],
+      });
+    });
+
+    it("returns empty top_exercises for zero-set day", () => {
+      const output = toTodayTotalsOutput({
+        totalSets: 0,
+        totalReps: 0,
+        totalDurationSeconds: 0,
+        exerciseCount: 0,
+        topExercises: [],
+      });
+
+      expect(output.total_sets).toBe(0);
+      expect(output.total_duration_seconds).toBe(0);
+      expect(output.top_exercises).toEqual([]);
+    });
+
+    it("nullifies zero reps and zero duration in top_exercises", () => {
+      const output = toTodayTotalsOutput({
+        totalSets: 1,
+        totalReps: 0,
+        totalDurationSeconds: 0,
+        exerciseCount: 1,
+        topExercises: [
+          {
+            exerciseId: "ex1",
+            exerciseName: "Test",
+            sets: 1,
+            reps: 0,
+            durationSeconds: 0,
+          },
+        ],
+      });
+
+      expect(output.top_exercises[0]?.reps).toBeNull();
+      expect(output.top_exercises[0]?.duration_seconds).toBeNull();
     });
   });
 

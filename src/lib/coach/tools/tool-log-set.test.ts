@@ -61,7 +61,16 @@ describe("runLogSetTool", () => {
     expect(result.outputForModel.today_totals).toEqual({
       total_sets: 3,
       total_reps: 30,
+      total_duration_seconds: 0,
       exercise_count: 1,
+      top_exercises: [
+        {
+          exercise_name: "Push-ups",
+          sets: 3,
+          reps: 30,
+          duration_seconds: null,
+        },
+      ],
     });
   });
 
@@ -97,7 +106,16 @@ describe("runLogSetTool", () => {
     expect(result.outputForModel.today_totals).toEqual({
       total_sets: 5,
       total_reps: 50,
+      total_duration_seconds: 0,
       exercise_count: 1,
+      top_exercises: [
+        {
+          exercise_name: "Bench Press",
+          sets: 5,
+          reps: 50,
+          duration_seconds: null,
+        },
+      ],
     });
   });
 
