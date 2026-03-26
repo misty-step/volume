@@ -27,16 +27,11 @@ function muscleIcon(groups: string[]): string {
   }
 }
 
-function formatAggregate(item: {
-  totalSets: number;
-  totalReps: number;
-  totalWeight: number;
-}): string {
-  const parts: string[] = [`${item.totalSets}s`];
-  if (item.totalReps > 0) parts.push(`${item.totalReps}r`);
-  if (item.totalWeight > 0)
-    parts.push(`${Math.round(item.totalWeight).toLocaleString()} vol`);
-  return parts.join(" · ");
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}sec`;
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return secs > 0 ? `${mins}m${secs}s` : `${mins}min`;
 }
 
 function getDayBounds(): { dayStartMs: number; dayEndMs: number } {
@@ -45,6 +40,49 @@ function getDayBounds(): { dayStartMs: number; dayEndMs: number } {
   const end = new Date(start);
   end.setDate(end.getDate() + 1);
   return { dayStartMs: start.getTime(), dayEndMs: end.getTime() - 1 };
+}
+
+type SummaryItem = {
+  name: string;
+  muscleGroups: string[];
+  totalSets: number;
+  totalReps: number;
+  totalWeight: number;
+  totalDuration: number;
+  maxWeight: number;
+  unit: string | null;
+};
+
+function ExerciseChip({
+  item,
+  even,
+}: {
+  item: SummaryItem;
+  even: boolean;
+}) {
+  const stats: string[] = [`${item.totalSets} sets`];
+  if (item.totalReps > 0) stats.push(`${item.totalReps} reps`);
+  if (item.maxWeight > 0)
+    stats.push(`${item.maxWeight}${item.unit ?? "lbs"}`);
+  if (item.totalWeight > 0)
+    stats.push(`${Math.round(item.totalWeight).toLocaleString()} vol`);
+  if (item.totalDuration > 0) stats.push(formatDuration(item.totalDuration));
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap px-4 py-1.5 ${
+        even ? "bg-muted/40" : ""
+      }`}
+    >
+      <span className="text-sm">{muscleIcon(item.muscleGroups)}</span>
+      <span className="text-xs font-semibold text-foreground">
+        {item.name}
+      </span>
+      <span className="text-[11px] tabular-nums text-muted-foreground">
+        {stats.join(" · ")}
+      </span>
+    </span>
+  );
 }
 
 export function ExerciseTicker() {
@@ -56,46 +94,30 @@ export function ExerciseTicker() {
 
   if (!summary || summary.length === 0) return null;
 
-  const items = summary;
+  const items = summary as SummaryItem[];
 
   // ~8s per exercise so speed feels consistent regardless of item count
   const durationSeconds = Math.max(12, items.length * 8);
 
-  const renderItem = (
-    item: (typeof items)[number],
-    idx: number,
-    keyPrefix: string
-  ) => (
-    <span
-      key={`${keyPrefix}-${idx}`}
-      className="inline-flex items-center gap-1.5 whitespace-nowrap px-3"
-    >
-      <span className="text-sm">{muscleIcon(item.muscleGroups)}</span>
-      <span className="text-xs font-semibold text-foreground">{item.name}</span>
-      <span className="text-[11px] tabular-nums text-muted-foreground">
-        {formatAggregate(item)}
-      </span>
-      <span className="ml-3 text-muted-foreground/40 select-none" aria-hidden>
-        ▸
-      </span>
-    </span>
-  );
-
   return (
     <div
-      className="relative w-full overflow-hidden border-b border-border-subtle bg-card/60 backdrop-blur-sm"
+      className="sticky top-0 z-30 w-full overflow-hidden border-b border-border-subtle bg-card/60 backdrop-blur-sm"
       aria-label="Today's exercise summary"
       role="marquee"
     >
       <div
-        className="ticker-track flex w-max items-center py-1.5"
+        className="ticker-track flex w-max items-center"
         style={{ animationDuration: `${durationSeconds}s` }}
       >
         <div className="flex shrink-0 items-center">
-          {items.map((item, idx) => renderItem(item, idx, "a"))}
+          {items.map((item, idx) => (
+            <ExerciseChip key={`a-${idx}`} item={item} even={idx % 2 === 0} />
+          ))}
         </div>
         <div className="flex shrink-0 items-center" aria-hidden>
-          {items.map((item, idx) => renderItem(item, idx, "b"))}
+          {items.map((item, idx) => (
+            <ExerciseChip key={`b-${idx}`} item={item} even={idx % 2 === 0} />
+          ))}
         </div>
       </div>
     </div>
