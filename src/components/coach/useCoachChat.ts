@@ -71,6 +71,7 @@ export function useCoachChat() {
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
+  const [isSending, setIsSending] = useState(false);
   const sessionBootstrapRef = useRef<Promise<string | null> | null>(null);
   const sessionDateRef = useRef<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -127,7 +128,8 @@ export function useCoachChat() {
     },
   });
 
-  const isWorking = status === "streaming" || status === "submitted";
+  const isWorking =
+    isSending || status === "streaming" || status === "submitted";
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -137,26 +139,32 @@ export function useCoachChat() {
     const trimmed = prompt.trim();
     if (!trimmed || isWorking) return;
 
-    const ensuredSessionId = await ensureSessionId();
-    trackEvent("Coach Message Sent", {
-      messageLength: trimmed.length,
-      turnIndex: messages.length,
-    });
-
-    await sendMessage(
-      { text: trimmed },
-      {
-        body: {
-          ...(ensuredSessionId ? { sessionId: ensuredSessionId } : {}),
-          preferences: {
-            unit,
-            soundEnabled,
-            timezoneOffsetMinutes: new Date().getTimezoneOffset(),
-          },
-        },
-      }
-    );
+    setIsSending(true);
     setInput("");
+
+    try {
+      const ensuredSessionId = await ensureSessionId();
+      trackEvent("Coach Message Sent", {
+        messageLength: trimmed.length,
+        turnIndex: messages.length,
+      });
+
+      await sendMessage(
+        { text: trimmed },
+        {
+          body: {
+            ...(ensuredSessionId ? { sessionId: ensuredSessionId } : {}),
+            preferences: {
+              unit,
+              soundEnabled,
+              timezoneOffsetMinutes: new Date().getTimezoneOffset(),
+            },
+          },
+        }
+      );
+    } finally {
+      setIsSending(false);
+    }
   }
 
   async function undoAction(actionId: string, turnId: string) {
