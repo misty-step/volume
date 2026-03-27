@@ -118,7 +118,7 @@ export function useCoachChat() {
     []
   );
 
-  const { messages, sendMessage, status } = useChat({
+  const { messages, sendMessage, status, error } = useChat({
     transport,
     onError: (error) => {
       reportError(error instanceof Error ? error : new Error(String(error)), {
@@ -307,6 +307,7 @@ export function useCoachChat() {
     setInput,
     isWorking,
     messages,
+    error,
     unit,
     soundEnabled,
     endRef,

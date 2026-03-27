@@ -110,6 +110,7 @@ export function CoachPrototype() {
     setInput,
     isWorking,
     messages,
+    error,
     endRef,
     sendPrompt,
     jsonRenderHandlers,
@@ -176,7 +177,7 @@ export function CoachPrototype() {
       : -1;
 
   return (
-    <main className="relative mx-auto flex w-full max-w-4xl flex-1 min-h-0 flex-col pb-2 md:pb-6">
+    <main className="relative mx-auto flex w-full max-w-4xl h-[calc(100dvh-52px)] flex-col pb-2 md:pb-6">
       <section
         data-testid="coach-timeline"
         className="flex-1 min-h-0 space-y-2 overflow-y-auto px-3 pb-4 pr-1 md:px-4"
@@ -236,6 +237,15 @@ export function CoachPrototype() {
             </article>
           );
         })}
+        {error && !isWorking ? (
+          <article className="flex justify-start">
+            <div className="max-w-[92%] rounded-xl px-3 py-3 rounded-[--radius] border border-destructive/50 bg-destructive/10 mr-10">
+              <p className="text-sm text-destructive">
+                Something went wrong. Please try again.
+              </p>
+            </div>
+          </article>
+        ) : null}
         <div ref={endRef} />
       </section>
 
