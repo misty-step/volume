@@ -177,16 +177,17 @@ export function CoachPrototype() {
 
   return (
     <main className="relative mx-auto flex w-full max-w-4xl flex-1 min-h-0 flex-col pb-2 md:pb-6">
-      <ExerciseTicker />
-      <p className="mb-2 px-4 pt-3 text-xs text-muted-foreground md:px-4">
-        Try &quot;12 pushups&quot;, &quot;show today&apos;s summary&quot;, or
-        ask for insights.
-      </p>
-
       <section
         data-testid="coach-timeline"
         className="flex-1 min-h-0 space-y-2 overflow-y-auto px-3 pb-4 pr-1 md:px-4"
       >
+        <div className="sticky top-0 z-30 -mx-3 md:-mx-4">
+          <ExerciseTicker />
+        </div>
+        <p className="px-1 text-xs text-muted-foreground md:px-1">
+          Try &quot;12 pushups&quot;, &quot;show today&apos;s summary&quot;, or
+          ask for insights.
+        </p>
         {messages.length === 0 && !isWorking && (
           <article className="flex justify-start">
             <div className="max-w-[92%] rounded-xl px-3 py-3 rounded-[--radius] border border-border-subtle bg-card mr-10">
