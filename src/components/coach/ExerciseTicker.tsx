@@ -117,7 +117,7 @@ export function ExerciseTicker() {
   // Empty state
   if (summary !== undefined && items.length === 0) {
     return (
-      <div className="w-full border-b border-border-subtle bg-card/60 px-4 py-2.5 backdrop-blur-sm">
+      <div className="sticky top-0 z-30 w-full border-b border-border-subtle bg-card/60 px-4 py-2.5 backdrop-blur-sm">
         <p className="text-center text-xs text-muted-foreground">
           No exercises logged today. Start your session below.
         </p>
@@ -128,7 +128,7 @@ export function ExerciseTicker() {
   // Loading state
   if (summary === undefined) {
     return (
-      <div className="w-full border-b border-border-subtle bg-card/60 px-4 py-2 backdrop-blur-sm">
+      <div className="sticky top-0 z-30 w-full border-b border-border-subtle bg-card/60 px-4 py-2 backdrop-blur-sm">
         <div className="mx-auto flex max-w-md justify-center gap-2">
           <div className="h-6 w-28 animate-pulse rounded-full bg-muted" />
           <div className="h-6 w-36 animate-pulse rounded-full bg-muted" />
@@ -142,7 +142,7 @@ export function ExerciseTicker() {
     return (
       <div
         ref={containerRef}
-        className="w-full overflow-hidden border-b border-border-subtle bg-card/60 px-3 py-2 backdrop-blur-sm"
+        className="sticky top-0 z-30 w-full overflow-hidden border-b border-border-subtle bg-card/60 px-3 py-2 backdrop-blur-sm"
         aria-label="Today's exercise summary"
       >
         <div
