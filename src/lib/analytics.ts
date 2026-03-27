@@ -1,8 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
-import {
-  captureException as canaryCapture,
-  initCanary,
-} from "@canary-obs/sdk";
+import { captureCanaryException, isCanaryEnabled } from "./canary";
 import { sanitizeEmail } from "./sanitize";
 import { shouldEnableSentry } from "./sentry";
 import type posthogJs from "posthog-js";
@@ -248,42 +245,6 @@ function isSentryEnabled(): boolean {
   return shouldEnableSentry(dsn);
 }
 
-function isCanaryEnabled(): boolean {
-  if (typeof window === "undefined") {
-    return Boolean(process.env.CANARY_ENDPOINT && process.env.CANARY_API_KEY);
-  }
-
-  return Boolean(
-    process.env.NEXT_PUBLIC_CANARY_ENDPOINT &&
-      process.env.NEXT_PUBLIC_CANARY_API_KEY
-  );
-}
-
-let canaryBrowserInitialized = false;
-
-function ensureCanaryBrowserInit(): void {
-  if (typeof window === "undefined" || canaryBrowserInitialized) {
-    return;
-  }
-
-  const endpoint = process.env.NEXT_PUBLIC_CANARY_ENDPOINT;
-  const apiKey = process.env.NEXT_PUBLIC_CANARY_API_KEY;
-
-  if (!endpoint || !apiKey) {
-    return;
-  }
-
-  initCanary({
-    endpoint,
-    apiKey,
-    service: "volume",
-    environment: process.env.NODE_ENV ?? "production",
-    scrubPii: true,
-  });
-
-  canaryBrowserInitialized = true;
-}
-
 /**
  * Current user context enriching all analytics events.
  *
@@ -489,36 +450,24 @@ export function reportError(
   error: Error,
   context?: Record<string, unknown>
 ): void {
-  const sanitizedContext = context
-    ? sanitizeEventProperties(context)
-    : undefined;
+  try {
+    const sanitizedContext = context
+      ? sanitizeEventProperties(context)
+      : undefined;
 
-  if (isSentryEnabled()) {
-    try {
+    if (isSentryEnabled()) {
       Sentry.captureException(error, {
         extra: sanitizedContext,
       });
-    } catch (sentryError) {
-      if (process.env.NODE_ENV === "development") {
-        console.warn("Sentry reportError failed:", sentryError);
-      }
     }
-  }
 
-  if (isCanaryEnabled()) {
-    try {
-      ensureCanaryBrowserInit();
-      void canaryCapture(error, { context: sanitizedContext }).catch(
-        (canaryError) => {
-          if (process.env.NODE_ENV === "development") {
-            console.warn("Canary reportError failed:", canaryError);
-          }
-        }
-      );
-    } catch (canaryError) {
-      if (process.env.NODE_ENV === "development") {
-        console.warn("Canary reportError failed:", canaryError);
-      }
+    if (isCanaryEnabled()) {
+      void captureCanaryException(error, { context: sanitizedContext });
+    }
+  } catch (sentryError) {
+    // Never break user flow due to Sentry errors
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Sentry reportError failed:", sentryError);
     }
   }
 }
