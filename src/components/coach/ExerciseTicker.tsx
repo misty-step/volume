@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 
@@ -53,13 +54,7 @@ type SummaryItem = {
   unit: string | null;
 };
 
-function ExerciseChip({
-  item,
-  even,
-}: {
-  item: SummaryItem;
-  even: boolean;
-}) {
+function ExerciseChip({ item }: { item: SummaryItem }) {
   const stats: string[] = [`${item.totalSets} sets`];
   if (item.totalReps > 0) stats.push(`${item.totalReps} reps`);
   if (item.maxWeight > 0)
@@ -69,11 +64,7 @@ function ExerciseChip({
   if (item.totalDuration > 0) stats.push(formatDuration(item.totalDuration));
 
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap px-4 py-1.5 ${
-        even ? "bg-muted/40" : ""
-      }`}
-    >
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-muted/50 px-3 py-1">
       <span className="text-sm">{muscleIcon(item.muscleGroups)}</span>
       <span className="text-xs font-semibold text-foreground">
         {item.name}
@@ -85,6 +76,31 @@ function ExerciseChip({
   );
 }
 
+/** Measures whether the chip content overflows its container. */
+function useOverflows(itemCount: number) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [overflows, setOverflows] = useState(false);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!container || !content) return;
+
+    const check = () => {
+      setOverflows(content.scrollWidth > container.clientWidth);
+    };
+
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(container);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [itemCount]);
+
+  return { containerRef, contentRef, overflows };
+}
+
 export function ExerciseTicker() {
   const { dayStartMs, dayEndMs } = getDayBounds();
   const summary = useQuery(api.sets.getTodayExerciseSummary, {
@@ -92,31 +108,75 @@ export function ExerciseTicker() {
     dayEndMs,
   });
 
-  if (!summary || summary.length === 0) return null;
-
-  const items = summary as SummaryItem[];
+  const items = (summary ?? []) as SummaryItem[];
+  const { containerRef, contentRef, overflows } = useOverflows(items.length);
 
   // ~8s per exercise so speed feels consistent regardless of item count
   const durationSeconds = Math.max(12, items.length * 8);
 
+  // Empty state
+  if (summary !== undefined && items.length === 0) {
+    return (
+      <div className="w-full border-b border-border-subtle bg-card/60 px-4 py-2.5 backdrop-blur-sm">
+        <p className="text-center text-xs text-muted-foreground">
+          No exercises logged today. Start your session below.
+        </p>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (summary === undefined) {
+    return (
+      <div className="w-full border-b border-border-subtle bg-card/60 px-4 py-2 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-md justify-center gap-2">
+          <div className="h-6 w-28 animate-pulse rounded-full bg-muted" />
+          <div className="h-6 w-36 animate-pulse rounded-full bg-muted" />
+        </div>
+      </div>
+    );
+  }
+
+  // Static layout: chips fit within the container width
+  if (!overflows) {
+    return (
+      <div
+        ref={containerRef}
+        className="w-full overflow-hidden border-b border-border-subtle bg-card/60 px-3 py-2 backdrop-blur-sm"
+        aria-label="Today's exercise summary"
+      >
+        <div
+          ref={contentRef}
+          className="flex flex-wrap items-center justify-center gap-1.5"
+        >
+          {items.map((item, idx) => (
+            <ExerciseChip key={idx} item={item} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Scrolling ticker: enough exercises to overflow
   return (
     <div
+      ref={containerRef}
       className="sticky top-0 z-30 w-full overflow-hidden border-b border-border-subtle bg-card/60 backdrop-blur-sm"
       aria-label="Today's exercise summary"
       role="marquee"
     >
       <div
-        className="ticker-track flex w-max items-center"
+        className="ticker-track flex w-max items-center gap-1.5 py-2"
         style={{ animationDuration: `${durationSeconds}s` }}
       >
-        <div className="flex shrink-0 items-center">
+        <div ref={contentRef} className="flex shrink-0 items-center gap-1.5 px-1.5">
           {items.map((item, idx) => (
-            <ExerciseChip key={`a-${idx}`} item={item} even={idx % 2 === 0} />
+            <ExerciseChip key={`a-${idx}`} item={item} />
           ))}
         </div>
-        <div className="flex shrink-0 items-center" aria-hidden>
+        <div className="flex shrink-0 items-center gap-1.5 px-1.5" aria-hidden>
           {items.map((item, idx) => (
-            <ExerciseChip key={`b-${idx}`} item={item} even={idx % 2 === 0} />
+            <ExerciseChip key={`b-${idx}`} item={item} />
           ))}
         </div>
       </div>
