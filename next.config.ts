@@ -10,6 +10,10 @@ const packageJson = JSON.parse(
   readFileSync(join(__dirname, "package.json"), "utf-8")
 );
 const packageVersion = packageJson.version;
+const canaryConnectSrc = resolveExternalOrigin(
+  process.env.NEXT_PUBLIC_CANARY_ENDPOINT,
+  "https://canary-obs.fly.dev"
+);
 
 const nextConfig: NextConfig = {
   env: {
@@ -73,7 +77,7 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://*.convex.cloud https://browser.sentry-cdn.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
-              "connect-src 'self' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud https://*.ingest.sentry.io",
+              `connect-src 'self' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud https://*.ingest.sentry.io ${canaryConnectSrc}`,
               "font-src 'self' data:",
               "frame-src https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev",
             ].join("; "),
@@ -111,3 +115,16 @@ export default withSentryConfig(
   bundleAnalyzer(nextConfig),
   sentryWebpackPluginOptions
 );
+
+function resolveExternalOrigin(
+  rawValue: string | undefined,
+  fallback: string
+): string {
+  const value = rawValue?.trim() || fallback;
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return new URL(fallback).origin;
+  }
+}
