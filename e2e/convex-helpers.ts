@@ -1,6 +1,7 @@
 import { ConvexHttpClient } from "convex/browser";
 import type { Page } from "@playwright/test";
 import { api } from "../convex/_generated/api";
+import { expect } from "./auth-fixture";
 import { waitForClerkLoaded } from "./clerk-helpers";
 import { loadE2EEnv } from "./env";
 
@@ -35,4 +36,32 @@ export async function createExerciseForCurrentUser(
   const token = await getConvexToken(page);
   const client = createConvexClient(token);
   return client.action(api.exercises.createExercise, { name });
+}
+
+export async function countSetsForCurrentUser(page: Page): Promise<number> {
+  const token = await getConvexToken(page);
+  const client = createConvexClient(token);
+  const sets = await client.query(api.sets.listSets, {});
+  return sets.length;
+}
+
+export async function waitForSetCountIncrease(
+  page: Page,
+  previousCount: number
+): Promise<number> {
+  const token = await getConvexToken(page);
+  const client = createConvexClient(token);
+  let nextCount = previousCount;
+
+  await expect
+    .poll(
+      async () => {
+        nextCount = (await client.query(api.sets.listSets, {})).length;
+        return nextCount;
+      },
+      { timeout: 30_000 }
+    )
+    .toBeGreaterThan(previousCount);
+
+  return nextCount;
 }

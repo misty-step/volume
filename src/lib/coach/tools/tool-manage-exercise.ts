@@ -8,11 +8,56 @@ import {
 import { exerciseNotFoundResult, titleCase } from "./helpers";
 import {
   ExerciseNameArgsSchema,
+  ManageExerciseArgsSchema,
   MergeExerciseArgsSchema,
   RenameExerciseArgsSchema,
   UpdateMuscleGroupsArgsSchema,
 } from "./schemas";
 import type { CoachToolContext, ToolResult } from "./types";
+
+export async function runManageExerciseTool(
+  rawArgs: unknown,
+  ctx: CoachToolContext
+): Promise<ToolResult> {
+  const args = ManageExerciseArgsSchema.parse(rawArgs);
+
+  switch (args.action) {
+    case "rename":
+      return runRenameExerciseTool(
+        {
+          exercise_name: args.exercise_name,
+          new_name: args.new_name,
+        },
+        ctx
+      );
+    case "delete":
+      return runDeleteExerciseTool({ exercise_name: args.exercise_name }, ctx);
+    case "restore":
+      return runRestoreExerciseTool({ exercise_name: args.exercise_name }, ctx);
+    case "merge":
+      return runMergeExerciseTool(
+        {
+          source_exercise: args.source_exercise,
+          target_exercise: args.target_exercise,
+        },
+        ctx
+      );
+    case "update_muscle_groups":
+      return runUpdateExerciseMuscleGroupsTool(
+        {
+          exercise_name: args.exercise_name,
+          muscle_groups: args.muscle_groups,
+        },
+        ctx
+      );
+    default: {
+      const _exhaustive: never = args;
+      throw new Error(
+        `Unhandled manage_exercise action: ${String(_exhaustive)}`
+      );
+    }
+  }
+}
 
 export async function runRenameExerciseTool(
   rawArgs: unknown,

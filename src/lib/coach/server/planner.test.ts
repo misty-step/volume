@@ -127,43 +127,6 @@ const DEFAULT_ARGS = {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("buildEndOfTurnSuggestions", () => {
-  it("returns prompt strings for log_set", async () => {
-    const { buildEndOfTurnSuggestions } = await import("./planner");
-    const result = buildEndOfTurnSuggestions(["log_set"]);
-    expect(result).toEqual([
-      "show today's summary",
-      "what should I work on today?",
-      "show trend for pushups",
-    ]);
-  });
-
-  it("returns prompt strings for get_exercise_snapshot", async () => {
-    const { buildEndOfTurnSuggestions } = await import("./planner");
-    const result = buildEndOfTurnSuggestions(["get_exercise_snapshot"]);
-    expect(result).toEqual([
-      "10 pushups",
-      "show today's summary",
-      "show analytics overview",
-    ]);
-  });
-
-  it("returns null when no tools ran", async () => {
-    const { buildEndOfTurnSuggestions } = await import("./planner");
-    const result = buildEndOfTurnSuggestions([]);
-    expect(result).toBeNull();
-  });
-
-  it("returns fallback suggestions for unknown tools", async () => {
-    const { buildEndOfTurnSuggestions } = await import("./planner");
-    const result = buildEndOfTurnSuggestions(["some_future_tool"]);
-    expect(result).toEqual([
-      "show today's summary",
-      "what should I work on today?",
-    ]);
-  });
-});
-
 describe("buildPlannerSystemPrompt", () => {
   it("includes the stored conversation summary when provided", async () => {
     const { buildPlannerSystemPrompt } = await import("./planner");
@@ -188,8 +151,96 @@ describe("buildPlannerSystemPrompt", () => {
     expect(prompt).not.toContain("Conversation summary:");
     expect(prompt).toContain("default weight unit: kg");
     expect(prompt).toContain("tactile sounds: disabled");
-    expect(prompt).toContain("Do not emit json-render specs");
-    expect(prompt).not.toContain("_uiBlocks");
+    expect(prompt).toContain("You are a UI generator that outputs JSON");
+    expect(prompt).toContain("When a tool returns `_uiBlocks`");
+  });
+
+  it("requires 2-3 contextual suggestions after tool calls", async () => {
+    const { buildPlannerSystemPrompt } = await import("./planner");
+
+    const prompt = buildPlannerSystemPrompt({
+      preferences: { unit: "lbs", soundEnabled: true },
+    });
+
+    expect(prompt).toContain(
+      "append a Suggestions component with 2-3 contextual follow-up prompts"
+    );
+  });
+});
+
+describe("buildEndOfTurnSuggestions", () => {
+  it.each([
+    [
+      ["log_sets"],
+      [
+        "show today's summary",
+        "what should I work on today?",
+        "show trend for pushups",
+      ],
+    ],
+    [
+      ["query_exercise"],
+      ["10 pushups", "show today's summary", "show analytics overview"],
+    ],
+    [
+      ["query_workouts"],
+      [
+        "what should I work on today?",
+        "show trend for pushups",
+        "show analytics overview",
+      ],
+    ],
+    [
+      ["get_insights"],
+      ["show today's summary", "show trend for pushups", "10 pushups"],
+    ],
+    [["modify_set"], ["show history overview", "show today's summary"]],
+    [
+      ["manage_exercise"],
+      [
+        "show exercise library",
+        "show today's summary",
+        "show history overview",
+      ],
+    ],
+    [
+      ["get_exercise_library"],
+      [
+        "show exercise library",
+        "show today's summary",
+        "show history overview",
+      ],
+    ],
+    [
+      ["get_report_history"],
+      [
+        "show today's summary",
+        "show history overview",
+        "show exercise library",
+      ],
+    ],
+    [
+      ["update_settings"],
+      [
+        "show today's summary",
+        "what should I work on today?",
+        "show analytics overview",
+      ],
+    ],
+    [
+      ["show_workspace"],
+      ["show today's summary", "10 pushups", "what should I work on today?"],
+    ],
+  ])("maps %j to contextual suggestions", async (toolsUsed, expected) => {
+    const { buildEndOfTurnSuggestions } = await import("./planner");
+
+    expect(buildEndOfTurnSuggestions(toolsUsed)).toEqual(expected);
+  });
+
+  it("returns null when no tools ran", async () => {
+    const { buildEndOfTurnSuggestions } = await import("./planner");
+
+    expect(buildEndOfTurnSuggestions([])).toBeNull();
   });
 });
 
@@ -215,9 +266,9 @@ describe("runPlannerTurn", () => {
       callCount++;
       if (callCount === 1) {
         return {
-          stream: toolCallStream("log_set", {
-            exercise_name: "Push-ups",
-            reps: 10,
+          stream: toolCallStream("log_sets", {
+            action: "log_set",
+            set: { exercise_name: "Push-ups", reps: 10 },
           }),
           rawCall: {},
         };
@@ -229,18 +280,89 @@ describe("runPlannerTurn", () => {
 
     expect(result.kind).toBe("ok");
     expect(result.assistantText).toBe("Done.");
-    expect(result.toolsUsed).toEqual(["log_set"]);
+    expect(result.toolsUsed).toEqual(["log_sets"]);
     expect(mockLogSetExecute).toHaveBeenCalledTimes(1);
     // responseMessages captures the full tool interaction for multi-turn context
     expect(Array.isArray(result.responseMessages)).toBe(true);
     expect(result.responseMessages.length).toBeGreaterThan(0);
     expect(result.toolResults).toEqual([
       expect.objectContaining({
-        toolName: "log_set",
+        toolName: "log_sets",
         summary: "logged",
         outputForModel: { status: "ok" },
       }),
     ]);
+  });
+
+  it("supports canonical log_sets tool calls", async () => {
+    const { runPlannerTurn } = await import("./planner");
+
+    mockLogSetExecute.mockResolvedValue({
+      summary: "logged",
+      blocks: [
+        { type: "status", tone: "success", title: "Logged", description: "ok" },
+      ],
+      outputForModel: { status: "ok" },
+    });
+
+    let callCount = 0;
+    const runtime = makeRuntime(async () => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          stream: toolCallStream("log_sets", {
+            action: "log_set",
+            set: { exercise_name: "Push-ups", reps: 12 },
+          }),
+          rawCall: {},
+        };
+      }
+      return { stream: textStream("Done."), rawCall: {} };
+    });
+
+    const result = await runPlannerTurn({ runtime, ...DEFAULT_ARGS });
+
+    expect(result.kind).toBe("ok");
+    expect(result.toolsUsed).toEqual(["log_sets"]);
+    expect(mockLogSetExecute).toHaveBeenCalledWith(
+      { exercise_name: "Push-ups", reps: 12 },
+      expect.objectContaining({ turnId: "turn-test" }),
+      undefined
+    );
+  });
+
+  it("supports canonical query_workouts tool calls", async () => {
+    const { runPlannerTurn } = await import("./planner");
+
+    mockGetTodaySummaryExecute.mockResolvedValue({
+      summary: "summary",
+      blocks: [],
+      outputForModel: { status: "ok" },
+    });
+
+    let callCount = 0;
+    const runtime = makeRuntime(async () => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          stream: toolCallStream("query_workouts", {
+            action: "today_summary",
+          }),
+          rawCall: {},
+        };
+      }
+      return { stream: textStream("Summary."), rawCall: {} };
+    });
+
+    const result = await runPlannerTurn({
+      runtime,
+      ...DEFAULT_ARGS,
+      history: [{ role: "user", content: "what did I do today" }],
+    });
+
+    expect(result.kind).toBe("ok");
+    expect(result.toolsUsed).toEqual(["query_workouts"]);
+    expect(mockGetTodaySummaryExecute).toHaveBeenCalledTimes(1);
   });
 
   it("tracks toolsUsed without emitting SSE events", async () => {
@@ -257,7 +379,9 @@ describe("runPlannerTurn", () => {
       callCount++;
       if (callCount === 1) {
         return {
-          stream: toolCallStream("get_today_summary", {}),
+          stream: toolCallStream("query_workouts", {
+            action: "today_summary",
+          }),
           rawCall: {},
         };
       }
@@ -271,7 +395,7 @@ describe("runPlannerTurn", () => {
     });
 
     expect(result.kind).toBe("ok");
-    expect(result.toolsUsed).toContain("get_today_summary");
+    expect(result.toolsUsed).toContain("query_workouts");
   });
 
   it("deduplicates repeated tool-call chunks by toolCallId", async () => {
@@ -288,7 +412,9 @@ describe("runPlannerTurn", () => {
       callCount++;
       if (callCount === 1) {
         return {
-          stream: duplicateToolCallStream("get_today_summary", {}),
+          stream: duplicateToolCallStream("query_workouts", {
+            action: "today_summary",
+          }),
           rawCall: {},
         };
       }
@@ -302,7 +428,7 @@ describe("runPlannerTurn", () => {
     });
 
     expect(result.kind).toBe("ok");
-    expect(result.toolsUsed).toEqual(["get_today_summary"]);
+    expect(result.toolsUsed).toEqual(["query_workouts"]);
   });
 
   it("returns an error result when the model stream throws", async () => {
@@ -355,9 +481,8 @@ describe("runPlannerTurn", () => {
       callCount++;
       if (callCount === 1) {
         return {
-          stream: toolCallStream("log_set", {
-            exercise_name: "Squats",
-            reps: 5,
+          stream: toolCallStream("log_sets", {
+            sets: [{ exercise_name: "Squats", reps: 5 }],
           }),
           rawCall: {},
         };
@@ -368,7 +493,7 @@ describe("runPlannerTurn", () => {
     const result = await runPlannerTurn({ runtime, ...DEFAULT_ARGS });
 
     expect(result.kind).toBe("ok");
-    expect(result.toolsUsed).toContain("log_set");
+    expect(result.toolsUsed).toContain("log_sets");
   });
 
   it("stops after MAX_TOOL_ROUNDS and reports step limit", async () => {
@@ -382,7 +507,9 @@ describe("runPlannerTurn", () => {
 
     // Model always returns a tool call -> forces the loop
     const runtime = makeRuntime(async () => ({
-      stream: toolCallStream("get_today_summary", {}),
+      stream: toolCallStream("query_workouts", {
+        action: "today_summary",
+      }),
       rawCall: {},
     }));
 
@@ -413,7 +540,9 @@ describe("runPlannerTurn", () => {
       callCount++;
       if (callCount <= 4) {
         return {
-          stream: toolCallStream("get_today_summary", {}),
+          stream: toolCallStream("query_workouts", {
+            action: "today_summary",
+          }),
           rawCall: {},
         };
       }

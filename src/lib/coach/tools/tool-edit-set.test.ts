@@ -76,16 +76,14 @@ describe("runEditSetTool", () => {
     expect((result.blocks[0] as any).title).toBe("Set not found");
   });
 
-  it("returns error when no fields provided", async () => {
-    query.mockResolvedValue(makeSet());
-
-    const result = await runEditSetTool({ set_id: "set_1" }, TEST_CTX as any);
-
+  it("rejects edits without any editable fields", async () => {
+    await expect(
+      runEditSetTool({ set_id: "set_1" }, TEST_CTX as any)
+    ).rejects.toThrowError(
+      /Provide at least one of reps, duration_seconds, weight, or unit/
+    );
+    expect(query).not.toHaveBeenCalled();
     expect(mutation).not.toHaveBeenCalled();
-    expect(result.outputForModel).toEqual({
-      status: "error",
-      error: "no_fields_provided",
-    });
   });
 
   it("returns edit_failed on mutation error", async () => {

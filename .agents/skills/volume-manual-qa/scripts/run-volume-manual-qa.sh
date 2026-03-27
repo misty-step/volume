@@ -229,8 +229,8 @@ if ! jq -e '.trace.toolsUsed | length > 0' "$COACH_API_JSON" >/dev/null; then
   exit 1
 fi
 
-if ! jq -e '.trace.toolsUsed | index("get_today_summary") != null' "$COACH_API_JSON" >/dev/null; then
-  echo "Coach semantic check failed: expected get_today_summary tool usage" >&2
+if ! jq -e '.trace.toolsUsed | index("query_workouts") != null' "$COACH_API_JSON" >/dev/null; then
+  echo "Coach semantic check failed: expected query_workouts tool usage" >&2
   exit 1
 fi
 

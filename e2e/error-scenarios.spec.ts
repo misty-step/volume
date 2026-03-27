@@ -1,10 +1,5 @@
 import { test, expect, publicTest } from "./auth-fixture";
-import {
-  coachComposer,
-  coachInput,
-  openCoachWorkspace,
-  waitForHistoryOverview,
-} from "./coach-helpers";
+import { coachComposer, coachInput, openCoachWorkspace } from "./coach-helpers";
 
 /**
  * Error Scenario E2E Tests
@@ -55,11 +50,12 @@ test.describe("404 and Navigation Errors", () => {
     expect(response?.status()).toBe(404);
   });
 
-  test("Invalid exercise deep link is handled via workspace redirect", async ({
+  test("Invalid exercise deep link lands in the workspace shell", async ({
     page,
   }) => {
     await openCoachWorkspace(page, "/history/exercise/invalid-id-12345");
-    await waitForHistoryOverview(page);
+    await expect(coachInput(page)).toBeVisible();
+    await expect(coachInput(page)).toBeEnabled();
   });
 });
 
