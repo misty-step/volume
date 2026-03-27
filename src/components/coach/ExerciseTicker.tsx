@@ -147,7 +147,7 @@ export function ExerciseTicker() {
       >
         <div
           ref={contentRef}
-          className="flex flex-wrap items-center justify-center gap-1.5"
+          className="flex items-center justify-center gap-1.5"
         >
           {items.map((item, idx) => (
             <ExerciseChip key={idx} item={item} />
