@@ -44,35 +44,15 @@ export function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function latestBlockForTitle(page: Page, title: string | RegExp): Locator {
-  return coachTimeline(page)
-    .getByText(title, { exact: typeof title === "string" })
-    .last()
-    .locator("xpath=ancestor::section[1]");
-}
-
-function parseMetricValue(blockText: string, label: string): string {
-  const lines = blockText
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const normalizedLabel = label.toLowerCase();
-  const labelIndex = lines.findIndex(
-    (line) => line.toLowerCase() === normalizedLabel
-  );
-  if (labelIndex === -1 || labelIndex === lines.length - 1) {
-    throw new Error(`Could not find metric "${label}" in block:\n${blockText}`);
-  }
-  return lines[labelIndex + 1] ?? "";
-}
-
-async function latestTodaySummaryBlock(page: Page): Promise<Locator> {
+async function countTodaySummaryBlocks(page: Page): Promise<number> {
   const dailySnapshot = coachScene(page, "coach-scene-daily-snapshot");
-  if ((await dailySnapshot.count()) > 0) {
-    return dailySnapshot.last();
-  }
-
-  return latestBlockForTitle(page, /^Today's totals$/i);
+  const totalsTitle = coachTimeline(page).getByText(/^Today's totals$/i);
+  const emptyTitle = coachTimeline(page).getByText(/^No sets logged today$/i);
+  return (
+    (await dailySnapshot.count()) +
+    (await totalsTitle.count()) +
+    (await emptyTitle.count())
+  );
 }
 
 export function randomExerciseName(prefix: string): string {
@@ -132,20 +112,13 @@ export async function waitForCoachScene(
   });
 }
 
-export async function waitForTodaySummary(page: Page): Promise<void> {
-  const dailySnapshot = coachScene(page, "coach-scene-daily-snapshot");
-  const totalsTitle = coachTimeline(page).getByText(/^Today's totals$/i);
-  const emptyTitle = coachTimeline(page).getByText(/^No sets logged today$/i);
+export async function requestTodaySummary(page: Page): Promise<void> {
+  const summaryCountBefore = await countTodaySummaryBlocks(page);
 
+  await sendCoachMessage(page, "show today's summary");
   await expect
-    .poll(
-      async () =>
-        (await dailySnapshot.count()) > 0 ||
-        (await totalsTitle.count()) > 0 ||
-        (await emptyTitle.count()) > 0,
-      { timeout: 30_000 }
-    )
-    .toBe(true);
+    .poll(() => countTodaySummaryBlocks(page), { timeout: 30_000 })
+    .toBeGreaterThan(summaryCountBefore);
 }
 
 export async function waitForAnalyticsOverview(page: Page): Promise<void> {
@@ -212,40 +185,6 @@ export function entityActionButton(
         .getByRole("button")
         .filter({ hasText: new RegExp(`^${escapeRegExp(actionLabel)}$`) })
     : actionContainer.getByRole("button", { name: actionLabel });
-}
-
-export async function requestTodaySetCount(page: Page): Promise<number> {
-  const dailySnapshot = coachScene(page, "coach-scene-daily-snapshot");
-  const totalsTitle = coachTimeline(page).getByText(/^Today's totals$/i);
-  const emptyTitle = coachTimeline(page).getByText(/^No sets logged today$/i);
-  const dailyBefore = await dailySnapshot.count();
-  const totalsBefore = await totalsTitle.count();
-  const emptyBefore = await emptyTitle.count();
-
-  await sendCoachMessage(page, "show today's summary");
-  await expect
-    .poll(
-      async () =>
-        (await dailySnapshot.count()) > dailyBefore ||
-        (await totalsTitle.count()) > totalsBefore ||
-        (await emptyTitle.count()) > emptyBefore,
-      { timeout: 30_000 }
-    )
-    .toBe(true);
-
-  if (
-    (await dailySnapshot.count()) > dailyBefore ||
-    (await totalsTitle.count()) > totalsBefore
-  ) {
-    return await readTodaySetCount(page);
-  }
-
-  return 0;
-}
-
-export async function readTodaySetCount(page: Page): Promise<number> {
-  const block = await latestTodaySummaryBlock(page);
-  return Number.parseInt(parseMetricValue(await block.innerText(), "Sets"), 10);
 }
 
 export function createUniqueExerciseName(prefix: string): string {
