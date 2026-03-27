@@ -161,7 +161,7 @@ export function ExerciseTicker() {
   return (
     <div
       ref={containerRef}
-      className="sticky top-0 z-30 w-full overflow-hidden border-b border-border-subtle bg-card/60 backdrop-blur-sm"
+      className="w-full overflow-hidden border-b border-border-subtle bg-card/60 backdrop-blur-sm"
       aria-label="Today's exercise summary"
       role="marquee"
     >
