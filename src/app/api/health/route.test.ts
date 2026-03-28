@@ -39,6 +39,7 @@ describe("GET /api/health", () => {
     expect(data.checks.convex.status).toBe("pass");
     expect(data.checks.stripe.status).toBe("pass");
     expect(data.checks.coachRuntime.status).toBe("pass");
+    expect(data.checks.errorTracking.status).toBe("pass");
     expect(data.checks.sentry.status).toBe("pass");
     expect(data.checks.coachRuntime.defaultModel).toBe(
       "anthropic/claude-sonnet-4.6"
@@ -204,6 +205,34 @@ describe("GET /api/health", () => {
     }
   );
 
+  it("returns pass when Canary public env provides both client and server error tracking", async () => {
+    delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+    delete process.env.SENTRY_DSN;
+    process.env.NEXT_PUBLIC_CANARY_ENDPOINT = "https://canary.example";
+    process.env.NEXT_PUBLIC_CANARY_API_KEY = "public-key";
+
+    vi.resetModules();
+    vi.mock("@/lib/version", () => ({
+      resolveVersion: () => "test-version-123",
+    }));
+    const { GET } = await import("./route");
+    const response = await GET();
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.status).toBe("pass");
+    expect(data.checks.errorTracking.status).toBe("pass");
+    expect(data.checks.errorTracking.clientProviders).toEqual({
+      sentry: false,
+      canary: true,
+    });
+    expect(data.checks.errorTracking.serverProviders).toEqual({
+      sentry: false,
+      canary: true,
+    });
+    expect(data.checks.sentry.status).toBe("fail");
+  });
+
   it("includes version and timestamp in response", async () => {
     vi.resetModules();
     vi.mock("@/lib/version", () => ({
@@ -230,7 +259,7 @@ describe("GET /api/health", () => {
     );
   });
 
-  it("returns fail when client Sentry DSN is missing", async () => {
+  it("returns fail when no client error-tracking provider is configured", async () => {
     delete process.env.NEXT_PUBLIC_SENTRY_DSN;
 
     vi.resetModules();
@@ -243,8 +272,9 @@ describe("GET /api/health", () => {
 
     expect(response.status).toBe(503);
     expect(data.status).toBe("fail");
+    expect(data.checks.errorTracking.status).toBe("fail");
     expect(data.checks.sentry.status).toBe("fail");
-    expect(data.checks.sentry.reason).toBe(
+    expect(data.checks.errorTracking.reason).toBe(
       "missing required error-tracking configuration"
     );
   });

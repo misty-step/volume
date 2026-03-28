@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCanaryInitOptions } from "@/lib/canary";
 import { resolveVersion } from "@/lib/version";
 import { getDeploymentEnvironment } from "@/lib/environment";
 import {
@@ -40,7 +41,7 @@ function getStripeKeyMode(
  * - Convex: Backend connectivity
  * - Stripe: Payment configuration (checkout and pricing)
  * - Coach runtime: OpenRouter API key availability for agent execution
- * - Sentry: client and server DSNs for production error capture
+ * - Error tracking: Canary and/or Sentry runtime capture for browser + server
  *
  * @returns 200 with health status when healthy, 503 when unhealthy
  */
@@ -75,6 +76,16 @@ export async function GET() {
   const coachRuntimeMetadata = getCoachRuntimeHealthMetadata();
   const clientSentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN?.trim();
   const serverSentryDsn = process.env.SENTRY_DSN?.trim();
+  const clientCanaryConfigured = Boolean(getCanaryInitOptions("client"));
+  const serverCanaryConfigured = Boolean(getCanaryInitOptions("server"));
+  const clientErrorTrackingHealthy = Boolean(
+    clientSentryDsn || clientCanaryConfigured
+  );
+  const serverErrorTrackingHealthy = Boolean(
+    serverSentryDsn || serverCanaryConfigured
+  );
+  const errorTrackingHealthy =
+    clientErrorTrackingHealthy && serverErrorTrackingHealthy;
   const sentryHealthy = Boolean(clientSentryDsn && serverSentryDsn);
 
   const isHealthy =
@@ -82,7 +93,7 @@ export async function GET() {
     convexHealthy &&
     stripeHealthy &&
     coachRuntimeHealthy &&
-    sentryHealthy;
+    errorTrackingHealthy;
 
   const response = {
     status: isHealthy ? "pass" : "fail",
@@ -112,6 +123,28 @@ export async function GET() {
           reason: "missing required coach runtime configuration",
         }),
       }),
+      errorTracking: errorTrackingHealthy
+        ? createCheck("pass", {
+            clientProviders: {
+              sentry: Boolean(clientSentryDsn),
+              canary: clientCanaryConfigured,
+            },
+            serverProviders: {
+              sentry: Boolean(serverSentryDsn),
+              canary: serverCanaryConfigured,
+            },
+          })
+        : createCheck("fail", {
+            clientProviders: {
+              sentry: Boolean(clientSentryDsn),
+              canary: clientCanaryConfigured,
+            },
+            serverProviders: {
+              sentry: Boolean(serverSentryDsn),
+              canary: serverCanaryConfigured,
+            },
+            reason: "missing required error-tracking configuration",
+          }),
       sentry: sentryHealthy
         ? createCheck("pass")
         : createCheck("fail", {

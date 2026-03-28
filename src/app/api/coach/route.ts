@@ -6,6 +6,10 @@ import { auth } from "@clerk/nextjs/server";
 import { api } from "@/../convex/_generated/api";
 import { CoachPreferencesSchema, MAX_COACH_MESSAGES } from "@/lib/coach/schema";
 import { streamCoachPresentation } from "@/lib/coach/presentation/compose";
+import {
+  sliceRecentWholeTurns,
+  type StoredCoachMessage,
+} from "@/lib/coach/server/history";
 import { getCoachRuntime } from "@/lib/coach/server/runtime";
 import {
   buildEndOfTurnSuggestions,
@@ -29,16 +33,6 @@ const CONTEXT_SUMMARY_TRIGGER_MESSAGES = 40;
 const CONTEXT_RECENT_MESSAGE_WINDOW = 20;
 const MAX_UI_MESSAGE_PAYLOAD_BYTES = 200_000;
 const MODEL_CALL_TIMEOUT_MS = 30_000;
-
-type StoredCoachMessage = {
-  _id: string;
-  role: "user" | "assistant" | "tool";
-  content: string;
-  blocks?: string;
-  turnId?: string;
-  createdAt: number;
-  summarizedAt?: number;
-};
 
 type CoachContextState = {
   session: { _id: string; summary?: string };
@@ -169,9 +163,9 @@ async function buildCoachHistory({
     (message) => message.summarizedAt === undefined
   );
   let conversationSummary = contextState.summary ?? undefined;
-
-  let recentMessages = unsummarizedMessages.slice(
-    -CONTEXT_RECENT_MESSAGE_WINDOW
+  const recentMessages = sliceRecentWholeTurns(
+    unsummarizedMessages,
+    CONTEXT_RECENT_MESSAGE_WINDOW
   );
 
   if (
@@ -180,7 +174,7 @@ async function buildCoachHistory({
   ) {
     const messagesToSummarize = unsummarizedMessages.slice(
       0,
-      -CONTEXT_RECENT_MESSAGE_WINDOW
+      Math.max(0, unsummarizedMessages.length - recentMessages.length)
     );
 
     if (messagesToSummarize.length > 0) {
@@ -213,9 +207,6 @@ async function buildCoachHistory({
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
         reportError(err, { route: "coach", operation: "context_summary" });
-        recentMessages = unsummarizedMessages.slice(
-          -CONTEXT_RECENT_MESSAGE_WINDOW
-        );
       }
     }
   }
@@ -475,6 +466,14 @@ export async function POST(request: Request) {
   });
 
   if (plannerResult.kind === "error" && plannerResult.toolsUsed.length === 0) {
+    reportError(new Error(plannerResult.errorMessage), {
+      route: "coach",
+      operation: "planner",
+      phase: "handled_failure",
+      sessionId: sessionId ?? "none",
+      historyLength: history.length,
+      conversationSummaryPresent: Boolean(conversationSummary),
+    });
     return createStatusAssistantResponse(
       `I hit an error while planning this turn. ${sanitizeError(plannerResult.errorMessage)}`,
       500

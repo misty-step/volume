@@ -7,13 +7,17 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as Sentry from "@sentry/nextjs";
-import * as Canary from "@canary-obs/sdk";
 import {
   setUserContext,
   clearUserContext,
   trackEvent,
   reportError,
 } from "./analytics";
+
+const canaryMocks = vi.hoisted(() => ({
+  initCanary: vi.fn(),
+  captureException: vi.fn(() => Promise.resolve(null)),
+}));
 
 // Mock Sentry
 vi.mock("@sentry/nextjs", () => ({
@@ -22,8 +26,9 @@ vi.mock("@sentry/nextjs", () => ({
 }));
 
 vi.mock("@canary-obs/sdk", () => ({
-  initCanary: vi.fn(),
-  captureException: vi.fn(() => Promise.resolve(null)),
+  initCanary: (...args: unknown[]) => canaryMocks.initCanary(...args),
+  captureException: (...args: unknown[]) =>
+    canaryMocks.captureException(...args),
 }));
 
 describe("analytics - server-side safety guards", () => {
@@ -265,8 +270,34 @@ describe("reportError", () => {
     const error = new Error("Test error");
     reportError(error);
 
-    expect(Canary.captureException).not.toHaveBeenCalled();
-    expect(Canary.initCanary).not.toHaveBeenCalled();
+    expect(canaryMocks.captureException).not.toHaveBeenCalled();
+    expect(canaryMocks.initCanary).not.toHaveBeenCalled();
+  });
+
+  it("should initialize Canary on the server before capturing when only public Canary env is present", () => {
+    // @ts-expect-error - Intentionally deleting window for test
+    delete global.window;
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_SENTRY_DSN: "https://test@sentry.io/123",
+      NEXT_PUBLIC_CANARY_ENDPOINT: "https://canary.example",
+      NEXT_PUBLIC_CANARY_API_KEY: "public-key",
+      NODE_ENV: "production",
+    };
+
+    const error = new Error("Test error");
+    reportError(error, { route: "coach" });
+
+    expect(canaryMocks.initCanary).toHaveBeenCalledWith({
+      endpoint: "https://canary.example",
+      apiKey: "public-key",
+      service: "volume",
+      environment: "production",
+      scrubPii: true,
+    });
+    expect(canaryMocks.captureException).toHaveBeenCalledWith(error, {
+      context: { route: "coach" },
+    });
   });
 
   it("should initialize Canary in the browser before capturing", () => {
@@ -282,14 +313,14 @@ describe("reportError", () => {
     const error = new Error("Test error");
     reportError(error, { boundary: "app/error.tsx" });
 
-    expect(Canary.initCanary).toHaveBeenCalledWith({
+    expect(canaryMocks.initCanary).toHaveBeenCalledWith({
       endpoint: "https://canary.example",
       apiKey: "public-key",
       service: "volume",
       environment: "production",
       scrubPii: true,
     });
-    expect(Canary.captureException).toHaveBeenCalledWith(error, {
+    expect(canaryMocks.captureException).toHaveBeenCalledWith(error, {
       context: { boundary: "app/error.tsx" },
     });
   });

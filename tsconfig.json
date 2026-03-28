@@ -24,6 +24,8 @@
       }
     ],
     "paths": {
+      "@canary-obs/sdk": ["./packages/canary-sdk/dist/index"],
+      "@canary-obs/sdk/nextjs": ["./packages/canary-sdk/dist/nextjs"],
       "@volume/core": ["./packages/core/src"],
       "@volume/core/*": ["./packages/core/src/*"],
       "@/*": ["./src/*"]

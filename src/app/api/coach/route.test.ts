@@ -8,6 +8,13 @@ vi.mock("@clerk/nextjs/server", () => ({
   auth: () => authMock(),
 }));
 
+const analyticsMocks = vi.hoisted(() => ({
+  reportErrorMock: vi.fn(),
+}));
+vi.mock("@/lib/analytics", () => ({
+  reportError: (...args: unknown[]) => analyticsMocks.reportErrorMock(...args),
+}));
+
 const getCoachRuntimeMock = vi.fn();
 vi.mock("@/lib/coach/server/runtime", () => ({
   getCoachRuntime: () => getCoachRuntimeMock(),
@@ -243,6 +250,7 @@ describe("POST /api/coach", () => {
     streamTextMock.mockReset();
     pipeJsonRenderMock.mockClear();
     ConvexHttpClientMock.mockReset();
+    analyticsMocks.reportErrorMock.mockReset();
   });
 
   it("returns 401 when userId is missing", async () => {
@@ -425,6 +433,57 @@ describe("POST /api/coach", () => {
     await expect(response.json()).resolves.toEqual({
       error: "Too many messages",
     });
+  });
+
+  it("reports handled planner failures before returning a 500 stream", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    ConvexHttpClientMock.mockReturnValue(convex);
+    getCoachRuntimeMock.mockReturnValue({
+      model: "test-model",
+      classificationModel: "test-classifier",
+    });
+    plannerMocks.runPlannerTurnMock.mockResolvedValue(
+      createPlannerResult({
+        kind: "error",
+        assistantText: "",
+        errorMessage:
+          "Each tool_result block must have a corresponding tool_use block",
+        toolsUsed: [],
+        responseMessages: [],
+      })
+    );
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: validBody(),
+      })
+    );
+
+    expect(response.status).toBe(500);
+    const body = await response.text();
+    expect(body).toContain("I hit an error while planning this turn.");
+    expect(analyticsMocks.reportErrorMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message:
+          "Each tool_result block must have a corresponding tool_use block",
+      }),
+      expect.objectContaining({
+        route: "coach",
+        operation: "planner",
+        phase: "handled_failure",
+        historyLength: 1,
+        conversationSummaryPresent: false,
+      })
+    );
   });
 
   it("pipes the successful UI stream through json-render", async () => {

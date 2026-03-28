@@ -55,6 +55,14 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      "@canary-obs/sdk": path.resolve(
+        __dirname,
+        "./packages/canary-sdk/dist/index.js"
+      ),
+      "@canary-obs/sdk/nextjs": path.resolve(
+        __dirname,
+        "./packages/canary-sdk/dist/nextjs.js"
+      ),
       "@": path.resolve(__dirname, "./src"),
     },
   },

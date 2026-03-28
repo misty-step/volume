@@ -126,8 +126,6 @@ VERCEL_REQUIRED_VARS=(
   "STRIPE_SECRET_KEY"
   "NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID"
   "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID"
-  "NEXT_PUBLIC_SENTRY_DSN"
-  "SENTRY_DSN"
   "$OPENROUTER_API_KEY_VAR"
 )
 
@@ -139,8 +137,6 @@ VERCEL_REQUIRED_DESCRIPTIONS=(
   "Stripe API key for checkout and billing"
   "Stripe monthly price ID"
   "Stripe annual price ID"
-  "Sentry DSN for browser error capture"
-  "Sentry DSN for server error capture"
   "OpenRouter API for coach runtime"
 )
 
@@ -157,7 +153,6 @@ VERCEL_VALUE_VALIDATED_VARS=(
   "CLERK_JWT_ISSUER_DOMAIN"
   "NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID"
   "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID"
-  "NEXT_PUBLIC_SENTRY_DSN"
 )
 
 PRODUCTION_HEALTH_URL="https://volume.fitness/api/health"
@@ -339,9 +334,9 @@ check_production_health() {
     return 1
   fi
 
-  if ! echo "$health_json" | jq -e '.checks.sentry.status == "pass"' >/dev/null; then
-    log "    [INVALID] Sentry runtime health failed"
-    MISSING_VARS+=("Vercel:SENTRY (HEALTH CHECK FAIL)")
+  if ! echo "$health_json" | jq -e '.checks.errorTracking.status == "pass"' >/dev/null; then
+    log "    [INVALID] runtime error-tracking health failed"
+    MISSING_VARS+=("Vercel:ERROR_TRACKING (HEALTH CHECK FAIL)")
     return 1
   fi
 

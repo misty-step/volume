@@ -1,8 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
-import {
-  captureException as canaryCapture,
-  initCanary,
-} from "@canary-obs/sdk";
+import { captureException as canaryCapture, initCanary } from "@canary-obs/sdk";
+import { getCanaryInitOptions, type CanaryTarget } from "./canary";
 import { sanitizeEmail } from "./sanitize";
 import { shouldEnableSentry } from "./sentry";
 import type posthogJs from "posthog-js";
@@ -249,39 +247,28 @@ function isSentryEnabled(): boolean {
 }
 
 function isCanaryEnabled(): boolean {
-  if (typeof window === "undefined") {
-    return Boolean(process.env.CANARY_ENDPOINT && process.env.CANARY_API_KEY);
-  }
-
-  return Boolean(
-    process.env.NEXT_PUBLIC_CANARY_ENDPOINT &&
-      process.env.NEXT_PUBLIC_CANARY_API_KEY
-  );
+  return getCanaryInitOptions(getCanaryTarget()) !== null;
 }
 
-let canaryBrowserInitialized = false;
+function getCanaryTarget(): CanaryTarget {
+  return typeof window === "undefined" ? "server" : "client";
+}
 
-function ensureCanaryBrowserInit(): void {
-  if (typeof window === "undefined" || canaryBrowserInitialized) {
+const canaryInitializedTargets: Partial<Record<CanaryTarget, boolean>> = {};
+
+function ensureCanaryInit(): void {
+  const target = getCanaryTarget();
+  if (canaryInitializedTargets[target]) {
     return;
   }
 
-  const endpoint = process.env.NEXT_PUBLIC_CANARY_ENDPOINT;
-  const apiKey = process.env.NEXT_PUBLIC_CANARY_API_KEY;
-
-  if (!endpoint || !apiKey) {
+  const options = getCanaryInitOptions(target);
+  if (!options) {
     return;
   }
 
-  initCanary({
-    endpoint,
-    apiKey,
-    service: "volume",
-    environment: process.env.NODE_ENV ?? "production",
-    scrubPii: true,
-  });
-
-  canaryBrowserInitialized = true;
+  initCanary(options);
+  canaryInitializedTargets[target] = true;
 }
 
 /**
@@ -507,7 +494,7 @@ export function reportError(
 
   if (isCanaryEnabled()) {
     try {
-      ensureCanaryBrowserInit();
+      ensureCanaryInit();
       void canaryCapture(error, { context: sanitizedContext }).catch(
         (canaryError) => {
           if (process.env.NODE_ENV === "development") {
