@@ -14,6 +14,8 @@ created_env_file=0
 if [[ ! -f .env.local && -f .env.example ]]; then
   cp .env.example .env.local
   created_env_file=1
+elif [[ ! -f .env.local ]]; then
+  echo "Warning: .env.example not found, so .env.local was not created." >&2
 fi
 
 echo "==> Installing dependencies"

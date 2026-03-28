@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 /**
  * Tests for Lefthook Configuration Validator
  *
@@ -313,6 +315,34 @@ echo "second"`;
     });
   });
 
+  describe("resolvePackageJsonPath", () => {
+    it("uses package.json next to the config file when present", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          fileExists: (path) =>
+            path === "configs/.lefthook.yml" || path === "configs/package.json",
+        })
+      );
+
+      expect(validator.resolvePackageJsonPath("configs/.lefthook.yml")).toBe(
+        "configs/package.json"
+      );
+    });
+
+    it("falls back to the repo root package.json when adjacent file is absent", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          fileExists: (path) =>
+            path === "configs/.lefthook.yml" || path === "package.json",
+        })
+      );
+
+      expect(validator.resolvePackageJsonPath("configs/.lefthook.yml")).toBe(
+        "package.json"
+      );
+    });
+  });
+
   describe("validateBranchReferences", () => {
     it("passes for valid branch references (master)", () => {
       validator = new LefthookConfigValidator(createMockDeps());
@@ -527,6 +557,27 @@ pre-push:
       validator.validate("custom-lefthook.yml");
 
       expect(calledPaths[0]).toBe("custom-lefthook.yml");
+    });
+
+    it("reads package.json relative to the config path when available", () => {
+      const readPaths: string[] = [];
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: (path) => {
+            readPaths.push(path);
+            return path === "configs/package.json"
+              ? packageJsonWithValidAuditScript
+              : validConfig;
+          },
+          fileExists: (path) =>
+            path === "configs/.lefthook.yml" || path === "configs/package.json",
+        })
+      );
+
+      const result = validator.validate("configs/.lefthook.yml");
+
+      expect(result.valid).toBe(true);
+      expect(readPaths).toContain("configs/package.json");
     });
 
     it("collects multiple errors", () => {

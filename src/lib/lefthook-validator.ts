@@ -9,6 +9,7 @@
  */
 
 import * as fs from "fs";
+import * as path from "path";
 import * as yaml from "js-yaml";
 import { execSync } from "child_process";
 
@@ -126,8 +127,20 @@ export class LefthookConfigValidator {
     }
   }
 
-  validateSecurityAuditScript(): void {
-    const packageJsonPath = "package.json";
+  resolvePackageJsonPath(configPath: string): string {
+    const configRelativePath = path.join(
+      path.dirname(configPath),
+      "package.json"
+    );
+    if (this.deps.fileExists(configRelativePath)) {
+      return configRelativePath;
+    }
+
+    return "package.json";
+  }
+
+  validateSecurityAuditScript(configPath: string): void {
+    const packageJsonPath = this.resolvePackageJsonPath(configPath);
     if (!this.deps.fileExists(packageJsonPath)) {
       this.errors.push("❌ package.json not found");
       return;
@@ -229,7 +242,7 @@ export class LefthookConfigValidator {
       const config = this.parseYaml(content);
 
       this.validateSecurityAuditCommand(config);
-      this.validateSecurityAuditScript();
+      this.validateSecurityAuditScript(configPath);
       this.validateBranchReferences(config);
       this.validateCommandsExist(config);
     } catch (error) {

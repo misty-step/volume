@@ -31,7 +31,8 @@ Prefer `bun run quality:check` for a quick confidence pass and
 
 - Pre-commit hooks run formatting, lint, typecheck, secret scanning, and
   config validation through Lefthook.
-- Pre-push hooks run coverage and build verification.
+- Pre-push hooks run coverage, build verification, and the `security-audit`
+  gate via `bun run security:audit`.
 - Commit messages must follow Conventional Commits.
 - Do not lower lint, type, test, or coverage gates to land a change.
 

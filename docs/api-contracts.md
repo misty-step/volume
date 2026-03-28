@@ -126,4 +126,5 @@ must-revalidate`.
 
 `POST /api/test/reset` exists only to reset authenticated E2E state outside
 production. It must stay unavailable in production and must continue to require
-`X-TEST-SECRET`.
+an authenticated Clerk session, a Convex token, and the `X-TEST-SECRET`
+header.
