@@ -6,8 +6,23 @@ import { CoachPrototype } from "./CoachPrototype";
 import { useCoachChat } from "@/components/coach/useCoachChat";
 import type { UIMessage } from "ai";
 
+const { mockExerciseTicker, mockReportError } = vi.hoisted(() => ({
+  mockExerciseTicker: vi.fn(() => (
+    <div data-testid="exercise-ticker">Ticker</div>
+  )),
+  mockReportError: vi.fn(),
+}));
+
 vi.mock("@/components/coach/useCoachChat", () => ({
   useCoachChat: vi.fn(),
+}));
+
+vi.mock("@/components/coach/ExerciseTicker", () => ({
+  ExerciseTicker: () => mockExerciseTicker(),
+}));
+
+vi.mock("@/lib/analytics", () => ({
+  reportError: mockReportError,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -53,6 +68,9 @@ describe("CoachPrototype", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockExerciseTicker.mockImplementation(() => (
+      <div data-testid="exercise-ticker">Ticker</div>
+    ));
   });
 
   afterEach(() => {
@@ -205,5 +223,31 @@ describe("CoachPrototype", () => {
         inline: "nearest",
       });
     });
+  });
+
+  it("keeps the workspace shell available when the ticker crashes", () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    mockExerciseTicker.mockImplementation(() => {
+      throw new Error("Ticker query failed");
+    });
+    mockedUseCoachChat.mockReturnValue(buildChatState());
+
+    render(<CoachPrototype />);
+
+    expect(screen.getByTestId("coach-timeline")).toBeInTheDocument();
+    expect(screen.getByTestId("coach-composer")).toBeInTheDocument();
+    expect(screen.getByTestId("coach-ticker-fallback")).toBeInTheDocument();
+    expect(mockReportError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Ticker query failed" }),
+      expect.objectContaining({
+        component: "CoachTickerBoundary",
+        operation: "render",
+      })
+    );
+
+    consoleErrorSpy.mockRestore();
   });
 });

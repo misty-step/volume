@@ -63,6 +63,11 @@ pre-push:
       run: "NODE_ENV=test CI=true bun run test:coverage"
       fail_text: "❌ Test suite failed. Run 'bun run test' for details."
 
+    # === Dependency Audit (Security) ===
+    security-audit:
+      run: bun run security:audit
+      fail_text: "❌ High-severity dependency vulnerabilities detected."
+
     # === Build Verification (Integration) ===
     build-check:
       run: bun run build

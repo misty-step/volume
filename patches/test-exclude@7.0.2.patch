@@ -1,0 +1,21 @@
+diff --git a/index.js b/index.js
+index 1bb66669ca7c859285040ca62fa2495a6c10698b..08b0d7615236cd7869997e96e22d8e21752001f0 100644
+--- a/index.js
++++ b/index.js
+@@ -2,10 +2,15 @@
+ 
+ const path = require('path');
+ const { glob } = require('glob');
+-const { minimatch } = require('minimatch');
++const minimatchModule = require('minimatch');
+ const { defaults } = require('@istanbuljs/schema');
+ const isOutsideDir = require('./is-outside-dir');
+ 
++const minimatch =
++    typeof minimatchModule === 'function'
++        ? minimatchModule
++        : minimatchModule.minimatch;
++
+ class TestExclude {
+     constructor(opts = {}) {
+         Object.assign(

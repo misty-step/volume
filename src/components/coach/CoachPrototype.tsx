@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  Component,
   type FormEvent,
+  type ErrorInfo,
   type ReactNode,
   useEffect,
   useRef,
@@ -14,6 +16,7 @@ import { PaperPlaneIcon, ReloadIcon } from "@radix-ui/react-icons";
 import { CoachSpecRenderer } from "@/components/coach/CoachBlockRenderer";
 import { ExerciseTicker } from "@/components/coach/ExerciseTicker";
 import { useCoachChat } from "@/components/coach/useCoachChat";
+import { reportError } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import type { UIMessage } from "ai";
 
@@ -54,6 +57,42 @@ const markdownComponents = {
     </code>
   ),
 };
+
+class CoachTickerBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    reportError(error, {
+      component: "CoachTickerBoundary",
+      componentStack: errorInfo.componentStack,
+      operation: "render",
+    });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div
+          data-testid="coach-ticker-fallback"
+          className="w-full border-b border-border-subtle bg-card/60 px-4 py-2.5 backdrop-blur-sm"
+        >
+          <p className="text-center text-xs text-muted-foreground">
+            Today&apos;s exercise summary is temporarily unavailable.
+          </p>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 function AssistantMessageBody({
   message,
@@ -183,7 +222,9 @@ export function CoachPrototype() {
         className="flex-1 min-h-0 space-y-2 overflow-y-auto px-3 pb-4 pr-1 md:px-4"
       >
         <div className="sticky top-0 z-30 -mx-3 md:-mx-4">
-          <ExerciseTicker />
+          <CoachTickerBoundary>
+            <ExerciseTicker />
+          </CoachTickerBoundary>
         </div>
         <p className="px-1 text-xs text-muted-foreground md:px-1">
           Try &quot;12 pushups&quot;, &quot;show today&apos;s summary&quot;, or

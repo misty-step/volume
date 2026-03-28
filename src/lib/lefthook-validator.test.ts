@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 /**
  * Tests for Lefthook Configuration Validator
  *
@@ -28,32 +30,57 @@ pre-push:
   parallel: true
   commands:
     test-suite:
-      run: pnpm test:coverage
+      run: bun run test:coverage
     security-audit:
-      run: pnpm audit --audit-level=high
+      run: bun run security:audit
     bundle-analysis:
-      run: pnpm analyze
+      run: bun run analyze
       only:
         - ref: master
 
 commit-msg:
   commands:
     commitlint:
-      run: pnpm commitlint --edit {1}
+      run: bunx commitlint --edit {1}
 `;
 
-const configMissingAuditLevel = `
+const packageJsonWithValidAuditScript = JSON.stringify({
+  scripts: {
+    "security:audit": "bun audit --audit-level=high",
+  },
+});
+
+const configMissingAuditCommand = `
+pre-push:
+  commands:
+    test:
+      run: bun run test
+`;
+
+const configMissingPrePushHook = `
+pre-commit:
+  commands:
+    lint:
+      run: bun run lint
+`;
+
+const configMissingPrePushCommands = `
+pre-push:
+  parallel: true
+`;
+
+const configInvalidAuditCommand = `
 pre-push:
   commands:
     security-audit:
-      run: pnpm audit
+      run: bun audit --audit-level=high
 `;
 
 const configInvalidBranch = `
 pre-push:
   commands:
     bundle-analysis:
-      run: pnpm analyze
+      run: bun run analyze
       only:
         - ref: feature-branch
 `;
@@ -65,19 +92,27 @@ pre-commit:
       run: |
         echo "Warning message"
         echo "Another line"
+
+pre-push:
+  commands:
+    security-audit:
+      run: bun run security:audit
 `;
 
 const configWithEnvPrefix = `
 pre-push:
   commands:
     test-suite:
-      run: NODE_ENV=test CI=true pnpm test:coverage
+      run: NODE_ENV=test CI=true bun run test:coverage
+    security-audit:
+      run: bun run security:audit
 `;
 
 function createMockDeps(overrides: Partial<ValidatorDeps> = {}): ValidatorDeps {
   return {
-    readFile: () => validConfig,
-    fileExists: () => true,
+    readFile: (path) =>
+      path === "package.json" ? packageJsonWithValidAuditScript : validConfig,
+    fileExists: (path) => path === ".lefthook.yml" || path === "package.json",
     commandExists: () => true,
     ...overrides,
   };
@@ -174,22 +209,24 @@ echo "second"`;
     });
   });
 
-  describe("validateSecurityAuditLevel", () => {
-    it("passes when audit uses --audit-level=high", () => {
+  describe("validateSecurityAuditCommand", () => {
+    it("passes when Lefthook runs bun run security:audit", () => {
       validator = new LefthookConfigValidator(createMockDeps());
-      const _config = validator.parseYaml(validConfig);
       const result = validator.validate();
 
       expect(result.valid).toBe(true);
       expect(result.errors).not.toContainEqual(
-        expect.stringContaining("audit level")
+        expect.stringContaining("Security audit")
       );
     });
 
-    it("fails when audit missing --audit-level=high", () => {
+    it("fails when the security-audit command is missing", () => {
       validator = new LefthookConfigValidator(
         createMockDeps({
-          readFile: () => configMissingAuditLevel,
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configMissingAuditCommand,
         })
       );
 
@@ -197,47 +234,112 @@ echo "second"`;
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContainEqual(
-        expect.stringContaining("Security audit level mismatch")
+        expect.stringContaining("Missing security-audit pre-push command")
       );
     });
 
-    it("passes when audit uses bun pm scan", () => {
-      const configBunScan = `
-pre-push:
-  commands:
-    security-audit:
-      run: bun pm scan
-`;
+    it("fails when the pre-push hook is missing entirely", () => {
       validator = new LefthookConfigValidator(
         createMockDeps({
-          readFile: () => configBunScan,
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configMissingPrePushHook,
         })
       );
 
       const result = validator.validate();
 
-      expect(result.valid).toBe(true);
-      expect(result.errors).not.toContainEqual(
-        expect.stringContaining("Security audit level mismatch")
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining("Missing pre-push hook")
       );
     });
 
-    it("passes when no audit commands exist", () => {
-      const configNoAudit = `
-pre-push:
-  commands:
-    test:
-      run: pnpm test
-`;
+    it("fails when the pre-push hook has no commands", () => {
       validator = new LefthookConfigValidator(
         createMockDeps({
-          readFile: () => configNoAudit,
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configMissingPrePushCommands,
         })
       );
 
       const result = validator.validate();
 
-      expect(result.valid).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining("Missing pre-push commands")
+      );
+    });
+
+    it("fails when the security-audit command bypasses the package script", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configInvalidAuditCommand,
+        })
+      );
+
+      const result = validator.validate();
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining("Security audit command mismatch")
+      );
+    });
+
+    it("fails when package.json defines a different audit script", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: (path) =>
+            path === "package.json"
+              ? JSON.stringify({
+                  scripts: {
+                    "security:audit": "bun audit",
+                  },
+                })
+              : validConfig,
+        })
+      );
+
+      const result = validator.validate();
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining("Security audit script mismatch")
+      );
+    });
+  });
+
+  describe("resolvePackageJsonPath", () => {
+    it("uses package.json next to the config file when present", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          fileExists: (path) =>
+            path === "configs/.lefthook.yml" || path === "configs/package.json",
+        })
+      );
+
+      expect(validator.resolvePackageJsonPath("configs/.lefthook.yml")).toBe(
+        "configs/package.json"
+      );
+    });
+
+    it("falls back to the repo root package.json when adjacent file is absent", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          fileExists: (path) =>
+            path === "configs/.lefthook.yml" || path === "package.json",
+        })
+      );
+
+      expect(validator.resolvePackageJsonPath("configs/.lefthook.yml")).toBe(
+        "package.json"
+      );
     });
   });
 
@@ -256,7 +358,10 @@ pre-push:
       const configMain = validConfig.replace("master", "main");
       validator = new LefthookConfigValidator(
         createMockDeps({
-          readFile: () => configMain,
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configMain,
         })
       );
 
@@ -268,7 +373,10 @@ pre-push:
     it("fails for invalid branch references", () => {
       validator = new LefthookConfigValidator(
         createMockDeps({
-          readFile: () => configInvalidBranch,
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configInvalidBranch,
         })
       );
 
@@ -285,11 +393,16 @@ pre-push:
 pre-push:
   commands:
     test:
-      run: pnpm test
+      run: bun run test
+    security-audit:
+      run: bun run security:audit
 `;
       validator = new LefthookConfigValidator(
         createMockDeps({
-          readFile: () => configNoBundleAnalysis,
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configNoBundleAnalysis,
         })
       );
 
@@ -315,7 +428,7 @@ pre-push:
     it("fails when command not found", () => {
       validator = new LefthookConfigValidator(
         createMockDeps({
-          commandExists: (cmd) => cmd !== "pnpm",
+          commandExists: (cmd) => cmd !== "bun",
         })
       );
 
@@ -323,14 +436,17 @@ pre-push:
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContainEqual(
-        expect.stringContaining("Command not found: 'pnpm'")
+        expect.stringContaining("Command not found: 'bun'")
       );
     });
 
     it("skips built-in shell commands", () => {
       validator = new LefthookConfigValidator(
         createMockDeps({
-          readFile: () => configWithMultilineCommand,
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configWithMultilineCommand,
           commandExists: (cmd) => {
             // Should not be called for 'echo'
             if (cmd === "echo") {
@@ -349,8 +465,11 @@ pre-push:
     it("handles commands with env prefix", () => {
       validator = new LefthookConfigValidator(
         createMockDeps({
-          readFile: () => configWithEnvPrefix,
-          commandExists: (cmd) => cmd === "pnpm",
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configWithEnvPrefix,
+          commandExists: (cmd) => cmd === "bun",
         })
       );
 
@@ -372,9 +491,11 @@ pre-push:
 
       validator.validate();
 
-      // pnpm appears multiple times but should only be checked once
-      const pnpmChecks = checkedCommands.filter((c) => c === "pnpm");
-      expect(pnpmChecks.length).toBe(1);
+      const bunChecks = checkedCommands.filter((c) => c === "bun");
+      const bunxChecks = checkedCommands.filter((c) => c === "bunx");
+
+      expect(bunChecks.length).toBe(1);
+      expect(bunxChecks.length).toBe(1);
     });
   });
 
@@ -407,7 +528,10 @@ pre-push:
     it("returns error on YAML parsing failure", () => {
       validator = new LefthookConfigValidator(
         createMockDeps({
-          readFile: () => "invalid: yaml: content:",
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : "invalid: yaml: content:",
         })
       );
 
@@ -420,11 +544,11 @@ pre-push:
     });
 
     it("uses custom config path when provided", () => {
-      let calledPath = "";
+      const calledPaths: string[] = [];
       validator = new LefthookConfigValidator(
         createMockDeps({
           fileExists: (path) => {
-            calledPath = path;
+            calledPaths.push(path);
             return true;
           },
         })
@@ -432,7 +556,28 @@ pre-push:
 
       validator.validate("custom-lefthook.yml");
 
-      expect(calledPath).toBe("custom-lefthook.yml");
+      expect(calledPaths[0]).toBe("custom-lefthook.yml");
+    });
+
+    it("reads package.json relative to the config path when available", () => {
+      const readPaths: string[] = [];
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: (path) => {
+            readPaths.push(path);
+            return path === "configs/package.json"
+              ? packageJsonWithValidAuditScript
+              : validConfig;
+          },
+          fileExists: (path) =>
+            path === "configs/.lefthook.yml" || path === "configs/package.json",
+        })
+      );
+
+      const result = validator.validate("configs/.lefthook.yml");
+
+      expect(result.valid).toBe(true);
+      expect(readPaths).toContain("configs/package.json");
     });
 
     it("collects multiple errors", () => {
@@ -442,13 +587,16 @@ pre-push:
     security-audit:
       run: pnpm audit
     bundle-analysis:
-      run: pnpm analyze
+      run: bun run analyze
       only:
         - ref: bad-branch
 `;
       validator = new LefthookConfigValidator(
         createMockDeps({
-          readFile: () => configMultipleErrors,
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configMultipleErrors,
           commandExists: () => false,
         })
       );
