@@ -55,6 +55,18 @@ pre-push:
       run: bun run test
 `;
 
+const configMissingPrePushHook = `
+pre-commit:
+  commands:
+    lint:
+      run: bun run lint
+`;
+
+const configMissingPrePushCommands = `
+pre-push:
+  parallel: true
+`;
+
 const configInvalidAuditCommand = `
 pre-push:
   commands:
@@ -221,6 +233,42 @@ echo "second"`;
       expect(result.valid).toBe(false);
       expect(result.errors).toContainEqual(
         expect.stringContaining("Missing security-audit pre-push command")
+      );
+    });
+
+    it("fails when the pre-push hook is missing entirely", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configMissingPrePushHook,
+        })
+      );
+
+      const result = validator.validate();
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining("Missing pre-push hook")
+      );
+    });
+
+    it("fails when the pre-push hook has no commands", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configMissingPrePushCommands,
+        })
+      );
+
+      const result = validator.validate();
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining("Missing pre-push commands")
       );
     });
 

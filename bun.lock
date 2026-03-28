@@ -103,13 +103,15 @@
       },
     },
   },
+  "patchedDependencies": {
+    "test-exclude@7.0.2": "patches/test-exclude@7.0.2.patch",
+  },
   "overrides": {
     "flatted": "^3.4.2",
     "minimatch": "^3.1.5",
     "picomatch": "^2.3.2",
     "rollup": "^4.60.0",
     "terser-webpack-plugin": "^5.4.0",
-    "webpack": "^5.105.4",
   },
   "packages": {
     "@acemir/cssom": ["@acemir/cssom@0.9.31", "", {}, "sha512-ZnR3GSaH+/vJ0YlHau21FjfLYjMpYVIzTD8M8vIEQvIGxeOXyXdzCI140rrCY862p/C/BbzWsjc1dgnM9mkoTA=="],

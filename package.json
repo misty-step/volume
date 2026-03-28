@@ -130,5 +130,8 @@
     "*.{js,jsx,ts,tsx}": [
       "eslint --fix --max-warnings=0"
     ]
+  },
+  "patchedDependencies": {
+    "test-exclude@7.0.2": "patches/test-exclude@7.0.2.patch"
   }
 }

@@ -97,7 +97,19 @@ export class LefthookConfigValidator {
 
   validateSecurityAuditCommand(config: LefthookConfig): void {
     const prePushConfig = config["pre-push"];
-    if (!prePushConfig?.commands) return;
+    if (!prePushConfig) {
+      this.errors.push(
+        "❌ Missing pre-push hook: Lefthook must define a pre-push hook that runs bun run security:audit"
+      );
+      return;
+    }
+
+    if (!prePushConfig.commands) {
+      this.errors.push(
+        "❌ Missing pre-push commands: Lefthook pre-push hook must run bun run security:audit"
+      );
+      return;
+    }
 
     const auditCommand = prePushConfig.commands["security-audit"]?.run?.trim();
     if (!auditCommand) {
