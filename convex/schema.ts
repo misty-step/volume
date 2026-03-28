@@ -1,6 +1,12 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v, Validator } from "convex/values";
 import { GOAL_TYPES, type GoalType } from "@/lib/goals";
+import {
+  MEMORY_CATEGORIES,
+  MEMORY_SOURCES,
+  type MemoryCategory,
+  type MemorySource,
+} from "@/lib/coach/memory";
 
 // Derive validator from GOAL_TYPES constant (single source of truth)
 // Type assertion needed because v.union loses literal inference with spread
@@ -10,6 +16,20 @@ const goalValidator = v.union(
     ...Validator<GoalType>[],
   ])
 ) as unknown as Validator<GoalType>;
+
+const memoryCategoryValidator = v.union(
+  ...(MEMORY_CATEGORIES.map((category) => v.literal(category)) as unknown as [
+    Validator<MemoryCategory>,
+    ...Validator<MemoryCategory>[],
+  ])
+) as unknown as Validator<MemoryCategory>;
+
+const memorySourceValidator = v.union(
+  ...(MEMORY_SOURCES.map((source) => v.literal(source)) as unknown as [
+    Validator<MemorySource>,
+    ...Validator<MemorySource>[],
+  ])
+) as unknown as Validator<MemorySource>;
 
 export default defineSchema({
   exercises: defineTable({
@@ -193,6 +213,18 @@ export default defineSchema({
   })
     .index("by_session", ["sessionId", "createdAt"])
     .index("by_user_session", ["userId", "sessionId"]),
+
+  userMemories: defineTable({
+    userId: v.string(),
+    category: memoryCategoryValidator,
+    content: v.string(),
+    source: memorySourceValidator,
+    createdAt: v.number(),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_user_created", ["userId", "createdAt"])
+    .index("by_user_source_created", ["userId", "source", "createdAt"])
+    .index("by_user_deleted_created", ["userId", "deletedAt", "createdAt"]),
 
   /**
    * Pre-aggregated platform statistics cache for landing page social proof.

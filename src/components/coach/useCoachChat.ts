@@ -196,11 +196,19 @@ export function useCoachChat() {
         url?: string;
         error?: string;
       };
-      if (response.ok && data.url) {
-        window.location.href = data.url;
+      if (!response.ok || !data.url) {
+        reportError(new Error(data.error ?? "Failed to open billing portal."), {
+          component: "useCoachChat",
+          operation: "openBillingPortal",
+        });
+        return;
       }
-    } catch {
-      // Handled by error boundary
+      window.location.href = data.url;
+    } catch (error) {
+      reportError(error instanceof Error ? error : new Error(String(error)), {
+        component: "useCoachChat",
+        operation: "openBillingPortal",
+      });
     }
   }
 

@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as convexReact from "convex/react";
 import { useCoachChat } from "./useCoachChat";
 
+const analyticsMocks = vi.hoisted(() => ({
+  mockTrackEvent: vi.fn(),
+  mockReportError: vi.fn(),
+}));
 const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
@@ -26,8 +30,8 @@ vi.mock("convex/react", () => ({
 }));
 
 vi.mock("@/lib/analytics", () => ({
-  trackEvent: vi.fn(),
-  reportError: vi.fn(),
+  trackEvent: analyticsMocks.mockTrackEvent,
+  reportError: analyticsMocks.mockReportError,
 }));
 
 const mockSendMessage = vi.fn();
@@ -39,7 +43,7 @@ const mockMessages: Array<{
 
 vi.mock("@ai-sdk/react", () => ({
   useChat: vi.fn(() => ({
-    messages: mockMessages,
+    messages: [...mockMessages],
     status: "ready",
     error: undefined,
     sendMessage: mockSendMessage,
@@ -49,10 +53,16 @@ vi.mock("@ai-sdk/react", () => ({
 describe("useCoachChat", () => {
   const getOrCreateTodaySessionMock = vi.fn();
   const undoAgentActionMock = vi.fn();
+  const mockFetch = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockMessages.length = 0;
+    vi.stubGlobal("fetch", mockFetch);
+    mockFetch.mockResolvedValue({
+      ok: false,
+      json: async () => ({}),
+    });
 
     getOrCreateTodaySessionMock.mockResolvedValue({
       session: { _id: "session_123", status: "active" },
@@ -201,5 +211,21 @@ describe("useCoachChat", () => {
     });
 
     expect(mockPush).toHaveBeenCalledWith("/pricing");
+  });
+
+  it("reports billing portal failures for open_billing_portal", async () => {
+    const { result } = renderHook(() => useCoachChat());
+
+    await act(async () => {
+      await result.current.jsonRenderHandlers.open_billing_portal?.({});
+    });
+
+    expect(analyticsMocks.mockReportError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        component: "useCoachChat",
+        operation: "openBillingPortal",
+      })
+    );
   });
 });

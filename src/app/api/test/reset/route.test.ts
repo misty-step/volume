@@ -267,4 +267,26 @@ describe("POST /api/test/reset", () => {
     expect(response.status).toBe(500);
     expect(await response.text()).toBe("Internal Server Error");
   });
+
+  it("ignores missing resources during reset so concurrent workers stay idempotent", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.VERCEL_ENV = "preview";
+
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("convex-token"),
+    });
+    queryMock
+      .mockResolvedValueOnce([{ _id: "set_123" }])
+      .mockResolvedValueOnce([{ _id: "exercise_123" }]);
+    mutationMock
+      .mockRejectedValueOnce(new Error("set not found"))
+      .mockRejectedValueOnce(new Error("exercise not found"));
+
+    const { POST } = await import("./route");
+    const response = await POST(createRequest("test-secret"));
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("User data reset");
+  });
 });

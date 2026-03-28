@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { GOAL_TYPES } from "@/lib/goals";
+import {
+  MAX_MEMORY_CONTENT_LENGTH,
+  MEMORY_CATEGORIES,
+} from "@/lib/coach/memory";
 
 const ISO_LOCAL_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -122,6 +126,22 @@ export const UpdatePreferencesArgsSchema = z.object({
   training_split: z.string().trim().max(280).optional(),
   coach_notes: z.string().trim().max(500).optional(),
 });
+
+export const ManageMemoriesArgsSchema = z
+  .object({
+    action: z.enum(["remember", "forget"]),
+    category: z.enum(MEMORY_CATEGORIES).optional(),
+    content: z.string().trim().min(1).max(MAX_MEMORY_CONTENT_LENGTH),
+  })
+  .superRefine((data, ctx) => {
+    if (data.action === "remember" && !data.category) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Remember requests require a category.",
+        path: ["category"],
+      });
+    }
+  });
 
 export const ReportHistoryArgsSchema = z.object({
   limit: z.number().int().min(1).max(30).optional(),
