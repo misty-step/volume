@@ -11,7 +11,7 @@ Workout tracker that makes logging sets fast and shows you what's working.
 ## Quick Start
 
 ```bash
-bun install
+bun run setup
 bun run dev     # Runs Next.js (port 3000) + Convex (cloud) together
 ```
 
@@ -21,12 +21,15 @@ Open [localhost:3000](http://localhost:3000).
 
 ## Understanding the Codebase
 
-| Doc                                | Purpose                                                |
-| ---------------------------------- | ------------------------------------------------------ |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | System shape, data flow, where to start reading        |
-| [CLAUDE.md](CLAUDE.md)             | Detailed reference (commands, env vars, observability) |
-| [AGENTS.md](AGENTS.md)             | Conventions for AI assistants                          |
-| [docs/adr/](docs/adr/)             | Architectural decisions                                |
+| Doc                                            | Purpose                                                |
+| ---------------------------------------------- | ------------------------------------------------------ |
+| [ARCHITECTURE.md](ARCHITECTURE.md)             | System shape, data flow, where to start reading        |
+| [CLAUDE.md](CLAUDE.md)                         | Detailed reference (commands, env vars, observability) |
+| [AGENTS.md](AGENTS.md)                         | Conventions for AI assistants                          |
+| [CONTRIBUTING.md](CONTRIBUTING.md)             | Change workflow and quality expectations               |
+| [docs/api-contracts.md](docs/api-contracts.md) | Route contracts and runtime invariants                 |
+| [SECURITY.md](SECURITY.md)                     | Vulnerability reporting process                        |
+| [docs/adr/](docs/adr/)                         | Architectural decisions                                |
 
 **TL;DR architecture:**
 
@@ -37,9 +40,11 @@ Open [localhost:3000](http://localhost:3000).
 ## Development
 
 ```bash
+bun run setup         # Install deps + create .env.local when missing
 bun run dev           # Both servers
 bun run typecheck     # TypeScript
 bun run lint          # ESLint
+bun run security:audit # High-severity dependency vulnerabilities
 bun run test          # Vitest (watch mode)
 bun run test --run    # Vitest (single run)
 ```
@@ -63,6 +68,7 @@ Requires local `agent-browser`, `jq`, `CLERK_TEST_USER_EMAIL`, `CLERK_TEST_USER_
 ### 1. Convex (backend)
 
 ```bash
+bun run setup   # if you have not already bootstrapped the repo
 bunx convex dev   # Creates project, generates .env.local
 ```
 

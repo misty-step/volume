@@ -18,7 +18,7 @@ vi.mock("stripe", () => ({
 
 vi.mock("./config", () => ({
   getRequiredEnv: mockGetRequiredEnv,
-  STRIPE_API_VERSION: "2026-01-28.clover",
+  STRIPE_API_VERSION: "2026-02-25.clover",
 }));
 
 vi.mock("@/lib/environment", () => ({
@@ -47,7 +47,7 @@ describe("getStripe", () => {
     expect(mockStripeConstructor).toHaveBeenCalledWith(
       "sk_live_prod_123",
       expect.objectContaining({
-        apiVersion: "2026-01-28.clover",
+        apiVersion: "2026-02-25.clover",
         typescript: true,
       })
     );

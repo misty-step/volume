@@ -5,8 +5,10 @@ Volume: workout tracker. Log sets fast, see what's working.
 ## Run & Test
 
 ```bash
+bun run setup         # Install deps + create .env.local if needed
 bun run dev           # Next.js + Convex together
 bun run test --run    # Tests (single run)
+bun run security:audit # High-severity dependency vulnerabilities
 bun run typecheck && bun run lint && bun run build  # Quality checks
 ```
 
@@ -94,6 +96,9 @@ CONVEX_DEPLOYMENT=prod:whimsical-marten-631 bunx convex logs --history 100
 | Doc                                                          | What                                                        |
 | ------------------------------------------------------------ | ----------------------------------------------------------- |
 | [ARCHITECTURE.md](ARCHITECTURE.md)                           | System shape, data flow                                     |
+| [docs/api-contracts.md](docs/api-contracts.md)               | Route contracts and runtime invariants                      |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                           | Contributor workflow and quality gates                      |
+| [SECURITY.md](SECURITY.md)                                   | Vulnerability reporting process                             |
 | [docs/adr/](docs/adr/)                                       | 7 ADRs: rate limits, soft delete, Stripe, AI, subscriptions |
 | [docs/state-diagrams/](docs/state-diagrams/)                 | Checkout, auth, paywall, quick-log flows                    |
 | [docs/postmortems/](docs/postmortems/)                       | Incident analyses                                           |

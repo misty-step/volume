@@ -3,7 +3,7 @@
  *
  * Validates .lefthook.yml for:
  * - YAML syntax correctness
- * - Security audit level consistency with CI
+ * - Security audit command consistency with CI and package scripts
  * - Valid branch references
  * - Command existence in PATH
  */
@@ -44,6 +44,9 @@ export interface ValidationResult {
   errors: string[];
   warnings: string[];
 }
+
+const SECURITY_AUDIT_COMMAND = "bun run security:audit";
+const SECURITY_AUDIT_SCRIPT = "bun audit --audit-level=high";
 
 export const defaultDeps: ValidatorDeps = {
   readFile: (path: string) => fs.readFileSync(path, "utf8"),
@@ -92,30 +95,53 @@ export class LefthookConfigValidator {
     return command.split(/\s+/)[0] ?? null;
   }
 
-  /**
-   * Validate that security audit uses --audit-level=high (npm/pnpm) or bun pm scan (bun)
-   */
-  validateSecurityAuditLevel(config: LefthookConfig): void {
+  validateSecurityAuditCommand(config: LefthookConfig): void {
     const prePushConfig = config["pre-push"];
     if (!prePushConfig?.commands) return;
 
-    const auditCommands = Object.entries(prePushConfig.commands).filter(
-      ([name, cmd]) =>
-        cmd.run && (cmd.run.includes("audit") || name.includes("audit"))
-    );
-
-    if (auditCommands.length === 0) return;
-
-    const usesValidAudit = auditCommands.some(
-      ([, cmd]) =>
-        cmd.run?.includes("--audit-level=high") ||
-        cmd.run?.includes("bun pm scan") // bun's security scanner (no level flag needed)
-    );
-
-    if (!usesValidAudit) {
+    const auditCommand = prePushConfig.commands["security-audit"]?.run?.trim();
+    if (!auditCommand) {
       this.errors.push(
-        "❌ Security audit level mismatch: Lefthook should use --audit-level=high to match CI"
+        "❌ Missing security-audit pre-push command: Lefthook must run bun run security:audit"
       );
+      return;
+    }
+
+    if (auditCommand !== SECURITY_AUDIT_COMMAND) {
+      this.errors.push(
+        "❌ Security audit command mismatch: Lefthook should run bun run security:audit to match CI"
+      );
+    }
+  }
+
+  validateSecurityAuditScript(): void {
+    const packageJsonPath = "package.json";
+    if (!this.deps.fileExists(packageJsonPath)) {
+      this.errors.push("❌ package.json not found");
+      return;
+    }
+
+    try {
+      const packageJson = JSON.parse(this.deps.readFile(packageJsonPath)) as {
+        scripts?: Record<string, string>;
+      };
+      const auditScript = packageJson.scripts?.["security:audit"]?.trim();
+
+      if (!auditScript) {
+        this.errors.push(
+          "❌ Missing security:audit script: package.json must define bun audit --audit-level=high"
+        );
+        return;
+      }
+
+      if (auditScript !== SECURITY_AUDIT_SCRIPT) {
+        this.errors.push(
+          "❌ Security audit script mismatch: package.json should define bun audit --audit-level=high"
+        );
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.errors.push(`❌ package.json parsing error: ${message}`);
     }
   }
 
@@ -190,7 +216,8 @@ export class LefthookConfigValidator {
       const content = this.deps.readFile(configPath);
       const config = this.parseYaml(content);
 
-      this.validateSecurityAuditLevel(config);
+      this.validateSecurityAuditCommand(config);
+      this.validateSecurityAuditScript();
       this.validateBranchReferences(config);
       this.validateCommandsExist(config);
     } catch (error) {
