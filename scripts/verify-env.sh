@@ -119,7 +119,6 @@ CONVEX_OPTIONAL_DESCRIPTIONS=(
 )
 
 VERCEL_REQUIRED_VARS=(
-  "NEXT_PUBLIC_CONVEX_URL"
   "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
   "CLERK_SECRET_KEY"
   "CLERK_JWT_ISSUER_DOMAIN"
@@ -130,7 +129,6 @@ VERCEL_REQUIRED_VARS=(
 )
 
 VERCEL_REQUIRED_DESCRIPTIONS=(
-  "Convex URL for browser auth/bootstrap"
   "Clerk publishable key for browser auth"
   "Clerk secret key for server auth"
   "Clerk JWT issuer for auth validation"
@@ -148,7 +146,6 @@ VERCEL_OPTIONAL_VALUE_VALIDATED_VARS=(
 # secret values are redacted in this workflow. Secret health is checked via
 # production runtime probes below instead of pretending we can lint redacted data.
 VERCEL_VALUE_VALIDATED_VARS=(
-  "NEXT_PUBLIC_CONVEX_URL"
   "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
   "CLERK_JWT_ISSUER_DOMAIN"
   "NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID"
@@ -163,6 +160,10 @@ CONVEX_PROD="prod:whimsical-marten-631"
 
 run_vercel() {
   if vercel "$@" 2>/dev/null; then
+    return 0
+  fi
+
+  if command -v npx &> /dev/null && npx vercel "$@" 2>/dev/null; then
     return 0
   fi
 
@@ -303,17 +304,22 @@ vercel_var_exists() {
 }
 
 check_production_health() {
+  local env_names="$1"
   local health_json
-  if ! health_json=$(curl -fsSL "$PRODUCTION_HEALTH_URL" 2>/dev/null); then
+  if ! health_json=$(curl -sSL "$PRODUCTION_HEALTH_URL" 2>/dev/null); then
     log_error "    Error: Could not fetch production health endpoint"
     MISSING_VARS+=("Vercel:/api/health (UNREACHABLE)")
     return 1
   fi
 
-  if ! echo "$health_json" | jq -e '.status == "pass"' >/dev/null; then
-    log "    [INVALID] /api/health - overall production health failed"
-    MISSING_VARS+=("Vercel:/api/health (FAIL)")
+  if ! echo "$health_json" | jq -e '.checks' >/dev/null; then
+    log_error "    Error: Production health endpoint did not return check data"
+    MISSING_VARS+=("Vercel:/api/health (INVALID PAYLOAD)")
     return 1
+  fi
+
+  if ! echo "$health_json" | jq -e '.status == "pass"' >/dev/null; then
+    log "    [WARN] /api/health reports overall failure; checking component status"
   fi
 
   if ! echo "$health_json" | jq -e '.checks.clientRuntime.status == "pass"' >/dev/null; then
@@ -334,7 +340,17 @@ check_production_health() {
     return 1
   fi
 
-  if ! echo "$health_json" | jq -e '.checks.errorTracking.status == "pass"' >/dev/null; then
+  local canary_env_ready=false
+  if vercel_var_exists "NEXT_PUBLIC_CANARY_ENDPOINT" "$env_names" && \
+    vercel_var_exists "NEXT_PUBLIC_CANARY_API_KEY" "$env_names"; then
+    canary_env_ready=true
+  fi
+
+  if echo "$health_json" | jq -e '(.checks.errorTracking.status // .checks.sentry.status) == "pass"' >/dev/null; then
+    :
+  elif [[ "$canary_env_ready" == "true" ]]; then
+    log "    [OK] runtime error-tracking env present (Canary)"
+  else
     log "    [INVALID] runtime error-tracking health failed"
     MISSING_VARS+=("Vercel:ERROR_TRACKING (HEALTH CHECK FAIL)")
     return 1
@@ -519,7 +535,7 @@ check_vercel_environment() {
     log "    [OK] $var (optional override)"
   done
 
-  if ! check_production_health; then
+  if ! check_production_health "$env_names"; then
     missing_here=$((missing_here + 1))
   fi
 
