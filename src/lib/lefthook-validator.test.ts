@@ -80,7 +80,7 @@ const configInvalidBranch = `
 pre-push:
   commands:
     bundle-analysis:
-      run: pnpm analyze
+      run: bun run analyze
       only:
         - ref: feature-branch
 `;
@@ -587,7 +587,7 @@ pre-push:
     security-audit:
       run: pnpm audit
     bundle-analysis:
-      run: pnpm analyze
+      run: bun run analyze
       only:
         - ref: bad-branch
 `;
