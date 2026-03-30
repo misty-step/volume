@@ -6,30 +6,62 @@ Estimate: M
 
 ## Goal
 
-Reduce CI wall-clock time by splitting lint, typecheck, tests, and build into parallel cached jobs.
+Cut agent and human feedback latency by parallelizing both CI workflows and local
+pre-push hooks, with dependency caching to avoid redundant installs.
 
 ## Non-Goals
 
 - Replace GitHub Actions
 - Rework product tests or coverage policy in the same change
 - Optimize every workflow in the repository at once
+- Reduce test suite duration (separate concern — setup overhead is 48s vs 26s execution)
 
 ## Oracle
 
-- [ ] [command] The main CI workflow runs lint, typecheck, tests, and build in separate jobs
-- [ ] [command] Dependency or build caching is configured in the CI workflow
-- [ ] [behavioral] CI still publishes the required `merge-gate` status on PR heads
-- [ ] [command] Any workflow-specific tests or validation commands continue to pass
+- [ ] `bun run typecheck && bun run lint` completes in parallel during pre-push (wall time < max of the two, not sum)
+- [ ] CI workflow runs lint, typecheck, tests, and build as separate parallel jobs
+- [ ] CI caches `node_modules` and `.next` between runs
+- [ ] CI still publishes the required `merge-gate` status on PR heads
+- [ ] Pre-push wall time < 50s (down from ~82s serial)
+- [ ] `bundle-analysis` does not conflict with `build-check` on `.next/lock`
 
 ## Notes
 
-The current `.github/workflows/ci.yml` runs install, lint, typecheck, and test
-sequentially in one job and does not cache build artifacts. This keeps the repo
-at L3 Build & CI maturity even though the verification surface is already strong.
+### Local Pre-push (Primary Bottleneck)
+
+Current `.lefthook.yml` pre-push is `parallel: false` (line 59) because
+`build-check` and `bundle-analysis` both access `.next/lock`. Measured times:
+
+| Hook            | Time  | Can Parallelize              |
+| --------------- | ----- | ---------------------------- |
+| test-suite      | 43.4s | Yes (no .next dependency)    |
+| lint            | 16.3s | Yes (runs in pre-commit too) |
+| security-audit  | <1s   | Yes                          |
+| build-check     | 13.1s | No (creates .next/lock)      |
+| bundle-analysis | ~5s   | No (reads .next/lock)        |
+| verify-prod-env | <1s   | Yes (master only)            |
+
+**Fix**: Split into two groups:
+
+- Group 1 (parallel): test-suite, security-audit, verify-prod-env
+- Group 2 (sequential after group 1): build-check → bundle-analysis
+
+Or move `bundle-analysis` to CI-only (not pre-push) and parallelize everything else.
+Estimated new wall time: ~45s (test-suite dominates).
+
+### CI Workflow
+
+`.github/workflows/ci.yml` runs install → security audit → lint → typecheck → test
+sequentially in one job. Split into parallel jobs with shared cache.
+
+### Stale Branches
+
+113 unmerged branches (98 local, 15 remote). Pruning these improves `git branch`
+ergonomics and reduces cognitive load. Safe cleanup: `git branch --merged | grep -v master | xargs git branch -d`.
 
 ## Touchpoints
 
-- `.github/workflows/ci.yml`
+- `.lefthook.yml` (pre-push parallel groups)
+- `.github/workflows/ci.yml` (job parallelization + caching)
 - `.github/workflows/e2e.yml`
-- `README.md`
 - `CLAUDE.md`
