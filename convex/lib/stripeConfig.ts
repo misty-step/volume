@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 
-export const STRIPE_API_VERSION = "2026-02-25.clover";
+export const STRIPE_API_VERSION = "2026-01-28.clover";
 
 // Production deployment identifier (from CONVEX_CLOUD_URL pattern)
 const PROD_DEPLOYMENT = "whimsical-marten-631";

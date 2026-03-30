@@ -43,6 +43,26 @@ describe("stripe config", () => {
     expect(STRIPE_API_VERSION.length).toBeGreaterThan(0);
   });
 
+  it("STRIPE_API_VERSION matches installed stripe package", async () => {
+    const { STRIPE_API_VERSION } = await import("./config");
+    const fs = await import("fs");
+    const path = await import("path");
+    const typesPath = path.resolve("node_modules/stripe/types/ApiVersion.d.ts");
+    const content = fs.readFileSync(typesPath, "utf8");
+    const match = content.match(/ApiVersion = '([^']+)'/);
+
+    expect(match).not.toBeNull();
+    expect(STRIPE_API_VERSION).toBe(match![1]);
+  });
+
+  it("STRIPE_API_VERSION matches convex stripeConfig", async () => {
+    const { STRIPE_API_VERSION: clientVersion } = await import("./config");
+    const { STRIPE_API_VERSION: convexVersion } =
+      await import("../../../convex/lib/stripeConfig");
+
+    expect(clientVersion).toBe(convexVersion);
+  });
+
   it("getPriceIds returns trimmed values", async () => {
     process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "  price_monthly_trim  ";
     process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "  price_annual_trim  ";

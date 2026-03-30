@@ -41,7 +41,7 @@ export default defineConfig({
         "**/src/app/**/route.ts",
         "**/src/app/**/*-icon.tsx",
         "**/src/app/**/*-image.tsx",
-        "**/middleware.ts",
+        "**/proxy.ts",
         "**/convex/admin/**",
         "**/scripts/**", // CLI wrappers, not library code
       ],
