@@ -56,7 +56,7 @@ commit-msg:
 
 # Comprehensive quality gates (full verification)
 pre-push:
-  parallel: false # Changed: build-check and bundle-analysis conflict on .next/lock
+  parallel: true
   commands:
     # === Test Suite (Correctness) ===
     test-suite:
@@ -69,14 +69,19 @@ pre-push:
       fail_text: "❌ High-severity dependency vulnerabilities detected."
 
     # === Build Verification (Integration) ===
+    # On master, `analyze` runs instead (includes a full build + bundle analysis).
     build-check:
       run: bun run build
       fail_text: "❌ Build failed. Fix build errors before pushing."
+      skip:
+        - ref: master
 
-    # === Bundle Analysis (Performance) ===
-    bundle-analysis:
+    # === Build + Bundle Analysis (master only) ===
+    # `analyze` = ANALYZE=true next build — a full build with bundle analysis.
+    # Replaces separate build-check on master to avoid .next/lock conflicts.
+    build-and-analyze:
       run: bun run analyze
-      fail_text: "❌ Bundle analysis failed. Review bundle size changes."
+      fail_text: "❌ Build or bundle analysis failed."
       only:
         - ref: master
 

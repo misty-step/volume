@@ -33,7 +33,7 @@ pre-push:
       run: bun run test:coverage
     security-audit:
       run: bun run security:audit
-    bundle-analysis:
+    build-and-analyze:
       run: bun run analyze
       only:
         - ref: master
@@ -79,7 +79,7 @@ pre-push:
 const configInvalidBranch = `
 pre-push:
   commands:
-    bundle-analysis:
+    build-and-analyze:
       run: bun run analyze
       only:
         - ref: feature-branch
@@ -145,9 +145,10 @@ describe("LefthookConfigValidator", () => {
 
     it("parses only refs as array of objects", () => {
       const config = validator.parseYaml(validConfig);
-      const bundleAnalysis = config["pre-push"]?.commands?.["bundle-analysis"];
+      const buildAndAnalyze =
+        config["pre-push"]?.commands?.["build-and-analyze"];
 
-      expect(bundleAnalysis?.only).toEqual([{ ref: "master" }]);
+      expect(buildAndAnalyze?.only).toEqual([{ ref: "master" }]);
     });
 
     it("throws on invalid YAML", () => {
@@ -388,8 +389,36 @@ echo "second"`;
       );
     });
 
-    it("passes when no bundle-analysis command exists", () => {
-      const configNoBundleAnalysis = `
+    it("fails for invalid skip branch references", () => {
+      const configInvalidSkipBranch = `
+pre-push:
+  commands:
+    security-audit:
+      run: bun run security:audit
+    build-check:
+      run: bun run build
+      skip:
+        - ref: typo-branch
+`;
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configInvalidSkipBranch,
+        })
+      );
+
+      const result = validator.validate();
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining("Invalid branch reference: typo-branch")
+      );
+    });
+
+    it("passes when no build-and-analyze command exists", () => {
+      const configNoBuildAndAnalyze = `
 pre-push:
   commands:
     test:
@@ -402,7 +431,7 @@ pre-push:
           readFile: (path) =>
             path === "package.json"
               ? packageJsonWithValidAuditScript
-              : configNoBundleAnalysis,
+              : configNoBuildAndAnalyze,
         })
       );
 
@@ -586,7 +615,7 @@ pre-push:
   commands:
     security-audit:
       run: pnpm audit
-    bundle-analysis:
+    build-and-analyze:
       run: bun run analyze
       only:
         - ref: bad-branch
