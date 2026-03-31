@@ -47,7 +47,7 @@ describe("stripe config", () => {
     const { STRIPE_API_VERSION } = await import("./config");
     const fs = await import("fs");
     const path = await import("path");
-    const typesPath = path.resolve("node_modules/stripe/types/ApiVersion.d.ts");
+    const typesPath = path.resolve("node_modules/stripe/types/apiVersion.d.ts");
     const content = fs.readFileSync(typesPath, "utf8");
     const match = content.match(/ApiVersion = '([^']+)'/);
 
