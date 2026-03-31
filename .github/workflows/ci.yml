@@ -136,10 +136,35 @@ jobs:
 
       - run: bun run security:audit
 
+  build:
+    name: build
+    needs: setup
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Restore node_modules
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: node-modules-${{ runner.os }}-
+
+      - run: bun run build
+        env:
+          CI: true
+
   # ---------- gate ----------
   merge-gate:
     name: merge-gate
-    needs: [lint, typecheck, test, security-audit]
+    needs: [setup, lint, typecheck, test, security-audit, build]
     if: always()
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 5
@@ -150,8 +175,9 @@ jobs:
       - name: Check upstream results
         run: |
           if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]] || \
-             [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
-            echo "::error::One or more quality jobs failed or were cancelled."
+             [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]] || \
+             [[ "${{ contains(needs.*.result, 'skipped') }}" == "true" ]]; then
+            echo "::error::One or more quality jobs failed, were cancelled, or were skipped."
             exit 1
           fi
 
