@@ -1,7 +1,7 @@
 # Parallelize and cache quality checks
 
 Priority: high
-Status: ready
+Status: in-progress
 Estimate: M
 
 ## Goal

@@ -15,41 +15,145 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
-    name: quality-checks
+  # ---------- shared setup ----------
+  setup:
+    name: install
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 45
-    permissions:
-      contents: read
-      statuses: write
-
+    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
 
+      - name: Cache node_modules
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+
       - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
         run: bun install --frozen-lockfile
 
-      - name: Security Audit
-        run: bun run security:audit
+  # ---------- parallel quality jobs ----------
+  lint:
+    name: lint
+    needs: setup
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
-      - name: Lint
-        run: bun run lint
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
 
-      - name: Typecheck
-        run: bun run typecheck
+      - name: Restore node_modules
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: node-modules-${{ runner.os }}-
+
+      - run: bun run lint
+
+  typecheck:
+    name: typecheck
+    needs: setup
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Restore node_modules
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: node-modules-${{ runner.os }}-
+
+      - run: bun run typecheck
+
+  test:
+    name: test
+    needs: setup
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Restore node_modules
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: node-modules-${{ runner.os }}-
 
       - name: Test + Coverage
         run: bun run test:coverage
         env:
           CI: true
+
+  security-audit:
+    name: security-audit
+    needs: setup
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Restore node_modules
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: node-modules-${{ runner.os }}-
+
+      - run: bun run security:audit
+
+  # ---------- gate ----------
+  merge-gate:
+    name: merge-gate
+    needs: [lint, typecheck, test, security-audit]
+    if: always()
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - name: Check upstream results
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]] || \
+             [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "::error::One or more quality jobs failed or were cancelled."
+            exit 1
+          fi
 
       - name: Publish merge-gate status on PR head
         if: ${{ github.event_name == 'pull_request' && always() }}

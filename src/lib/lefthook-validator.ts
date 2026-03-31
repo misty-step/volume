@@ -17,6 +17,7 @@ interface CommandConfig {
   run?: string;
   glob?: string;
   only?: Array<{ ref: string }>;
+  skip?: Array<{ ref: string }>;
   stage_fixed?: boolean;
   fail_text?: string;
   interactive?: boolean;
@@ -171,19 +172,22 @@ export class LefthookConfigValidator {
   }
 
   /**
-   * Validate branch references in 'only' conditions
+   * Validate branch references in 'only' and 'skip' conditions
    */
   validateBranchReferences(config: LefthookConfig): void {
-    const bundleAnalysis = config["pre-push"]?.commands?.["bundle-analysis"];
-    if (!bundleAnalysis?.only) return;
+    const commands = config["pre-push"]?.commands;
+    if (!commands) return;
 
     const validBranches = ["main", "master", "develop"];
 
-    for (const { ref } of bundleAnalysis.only) {
-      if (!validBranches.includes(ref)) {
-        this.errors.push(
-          `❌ Invalid branch reference: ${ref} in bundle-analysis`
-        );
+    for (const [name, cmd] of Object.entries(commands)) {
+      for (const refList of [cmd.only, cmd.skip]) {
+        if (!refList) continue;
+        for (const { ref } of refList) {
+          if (!validBranches.includes(ref)) {
+            this.errors.push(`❌ Invalid branch reference: ${ref} in ${name}`);
+          }
+        }
       }
     }
   }
