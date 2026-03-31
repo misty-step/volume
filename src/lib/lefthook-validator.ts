@@ -172,20 +172,29 @@ export class LefthookConfigValidator {
   }
 
   /**
-   * Validate branch references in 'only' and 'skip' conditions
+   * Validate branch references in 'only' and 'skip' conditions across all hooks.
    */
   validateBranchReferences(config: LefthookConfig): void {
-    const commands = config["pre-push"]?.commands;
-    if (!commands) return;
-
+    const hooks: Array<keyof LefthookConfig> = [
+      "pre-commit",
+      "pre-push",
+      "commit-msg",
+      "post-checkout",
+    ];
     const validBranches = ["main", "master", "develop"];
 
-    for (const [name, cmd] of Object.entries(commands)) {
-      for (const refList of [cmd.only, cmd.skip]) {
-        if (!refList) continue;
-        for (const { ref } of refList) {
-          if (!validBranches.includes(ref)) {
-            this.errors.push(`❌ Invalid branch reference: ${ref} in ${name}`);
+    for (const hookName of hooks) {
+      const commands = config[hookName]?.commands;
+      if (!commands) continue;
+      for (const [name, cmd] of Object.entries(commands)) {
+        for (const refList of [cmd.only, cmd.skip]) {
+          if (!refList) continue;
+          for (const { ref } of refList) {
+            if (!validBranches.includes(ref)) {
+              this.errors.push(
+                `❌ Invalid branch reference: ${ref} in ${hookName}:${name}`
+              );
+            }
           }
         }
       }

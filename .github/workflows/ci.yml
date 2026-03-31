@@ -60,7 +60,6 @@ jobs:
         with:
           path: node_modules
           key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: node-modules-${{ runner.os }}-
 
       - run: bun run lint
 
@@ -83,7 +82,6 @@ jobs:
         with:
           path: node_modules
           key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: node-modules-${{ runner.os }}-
 
       - run: bun run typecheck
 
@@ -106,7 +104,6 @@ jobs:
         with:
           path: node_modules
           key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: node-modules-${{ runner.os }}-
 
       - name: Test + Coverage
         run: bun run test:coverage
@@ -132,7 +129,6 @@ jobs:
         with:
           path: node_modules
           key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: node-modules-${{ runner.os }}-
 
       - run: bun run security:audit
 
@@ -155,7 +151,6 @@ jobs:
         with:
           path: node_modules
           key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: node-modules-${{ runner.os }}-
 
       - run: bun run build
         env:
@@ -173,6 +168,9 @@ jobs:
       statuses: write
     steps:
       - name: Check upstream results
+        # All upstream jobs are unconditional — 'skipped' means a dependency
+        # failed, not an intentional skip. If you add a conditional job,
+        # remove 'skipped' from this check or gate it behind that job's name.
         run: |
           if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]] || \
              [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]] || \
