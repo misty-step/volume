@@ -24,15 +24,16 @@ describe("openrouter constants", () => {
   });
 
   it("exports model identifiers", () => {
-    expect(MODELS.MAIN).toBe("anthropic/claude-sonnet-4.6");
-    expect(MODELS.CLASSIFICATION).toBe("minimax/minimax-m2.5");
-    expect(MODELS.WRITER).toBe("moonshotai/kimi-k2.5");
-    expect(MODELS.FALLBACK).toBe("z-ai/glm-5");
+    expect(MODELS.MAIN).toBe("google/gemini-3.1-flash-lite-preview");
+    expect(MODELS.CLASSIFICATION).toBe("google/gemini-3.1-flash-lite-preview");
+    expect(MODELS.WRITER).toBe("google/gemini-3.1-flash-lite-preview");
+    expect(MODELS.FALLBACK).toBe("google/gemini-3.1-flash-lite-preview");
   });
 
   it("has pricing for all models", () => {
-    expect(PRICING[MODELS.MAIN]).toBeDefined();
-    expect(PRICING[MODELS.CLASSIFICATION]).toBeDefined();
+    for (const model of Object.values(MODELS)) {
+      expect(PRICING[model]).toBeDefined();
+    }
   });
 
   it("exports the canonical routing policy and runtime config", () => {
@@ -78,34 +79,34 @@ describe("calculateCost", () => {
   });
 
   it("calculates input token cost", () => {
-    // 1M input tokens at $3.00 = $3.00
+    // 1M input tokens at $0.25 = $0.25
     const cost = calculateCost(MODELS.MAIN, 1_000_000, 0);
-    expect(cost).toBeCloseTo(3.0, 4);
+    expect(cost).toBeCloseTo(0.25, 4);
   });
 
   it("calculates output token cost", () => {
-    // 1M output tokens at $15.00 = $15.00
+    // 1M output tokens at $1.50 = $1.50
     const cost = calculateCost(MODELS.MAIN, 0, 1_000_000);
-    expect(cost).toBeCloseTo(15.0, 4);
+    expect(cost).toBeCloseTo(1.5, 4);
   });
 
   it("calculates combined cost", () => {
-    // 1M input ($3.00) + 1M output ($15.00) = $18.00
+    // 1M input ($0.25) + 1M output ($1.50) = $1.75
     const cost = calculateCost(MODELS.MAIN, 1_000_000, 1_000_000);
-    expect(cost).toBeCloseTo(18.0, 4);
+    expect(cost).toBeCloseTo(1.75, 4);
   });
 
   it("calculates cost for small token counts", () => {
     // 1000 input + 500 output
     const cost = calculateCost(MODELS.MAIN, 1000, 500);
-    // 1000 * 3.00 / 1M + 500 * 15.00 / 1M = 0.003 + 0.0075 = 0.0105
-    expect(cost).toBeCloseTo(0.0105, 4);
+    // 1000 * 0.25 / 1M + 500 * 1.50 / 1M = 0.00025 + 0.00075 = 0.001
+    expect(cost).toBeCloseTo(0.001, 4);
   });
 
   it("works with classification model", () => {
     const cost = calculateCost(MODELS.CLASSIFICATION, 1_000_000, 1_000_000);
-    // 1M input ($0.30) + 1M output ($1.20) = $1.50
-    expect(cost).toBeCloseTo(1.5, 4);
+    // Same model: 1M input ($0.25) + 1M output ($1.50) = $1.75
+    expect(cost).toBeCloseTo(1.75, 4);
   });
 
   it("returns number with max 4 decimal places", () => {

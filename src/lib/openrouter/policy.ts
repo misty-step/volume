@@ -1,10 +1,10 @@
 export const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
 export const MODELS = {
-  MAIN: "anthropic/claude-sonnet-4.6",
-  CLASSIFICATION: "minimax/minimax-m2.5",
-  WRITER: "moonshotai/kimi-k2.5",
-  FALLBACK: "z-ai/glm-5",
+  MAIN: "google/gemini-3.1-flash-lite-preview",
+  CLASSIFICATION: "google/gemini-3.1-flash-lite-preview",
+  WRITER: "google/gemini-3.1-flash-lite-preview",
+  FALLBACK: "google/gemini-3.1-flash-lite-preview",
 } as const;
 
 export const ROUTING_POLICY = {
@@ -25,20 +25,8 @@ export const RUNTIME_CONFIG = {
 
 export const PRICING = {
   [MODELS.MAIN]: {
-    inputPerMillion: 3.0,
-    outputPerMillion: 15.0,
-  },
-  [MODELS.CLASSIFICATION]: {
-    inputPerMillion: 0.3,
-    outputPerMillion: 1.2,
-  },
-  [MODELS.WRITER]: {
-    inputPerMillion: 0.23,
-    outputPerMillion: 3.0,
-  },
-  [MODELS.FALLBACK]: {
-    inputPerMillion: 0.3,
-    outputPerMillion: 2.55,
+    inputPerMillion: 0.25,
+    outputPerMillion: 1.5,
   },
 } as const;
 

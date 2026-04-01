@@ -377,7 +377,10 @@ describe("POST /api/coach", () => {
 
     const convex = createConvexStub({ rateLimitOk: false });
     ConvexHttpClientMock.mockReturnValue(convex);
-    getCoachRuntimeMock.mockReturnValue(null);
+    getCoachRuntimeMock.mockReturnValue({
+      model: "test-model",
+      classificationModel: "test-classifier",
+    });
 
     const { POST } = await import("./route");
     const response = await POST(

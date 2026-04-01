@@ -545,50 +545,6 @@ export async function POST(request: Request) {
   const convex = new ConvexHttpClient(convexUrl);
   convex.setAuth(token);
 
-  if (!hasValidE2ETestSession(request)) {
-    try {
-      const rateLimit = (await convex.mutation(
-        api.coach.checkCoachTurnRateLimit,
-        {}
-      )) as
-        | { ok: true; limit: number; remaining: number; resetAt: number }
-        | {
-            ok: false;
-            limit: number;
-            remaining: number;
-            resetAt: number;
-            retryAfterMs: number;
-          };
-
-      if (!rateLimit.ok) {
-        const retryAfterSeconds = Math.max(
-          Math.ceil(rateLimit.retryAfterMs / 1000),
-          1
-        );
-        return NextResponse.json(
-          {
-            error: "Rate limit exceeded. Try again soon.",
-            retryAfterSeconds,
-            resetAt: rateLimit.resetAt,
-          },
-          {
-            status: 429,
-            headers: {
-              "Retry-After": String(retryAfterSeconds),
-            },
-          }
-        );
-      }
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      reportError(err, { route: "coach", operation: "rate_limit_check" });
-      return NextResponse.json(
-        { error: "Failed to check rate limit" },
-        { status: 500 }
-      );
-    }
-  }
-
   const turnId = crypto.randomUUID();
 
   const runtime = getCoachRuntime();
@@ -635,104 +591,171 @@ export async function POST(request: Request) {
     role: "user",
     content: latestUserText,
   };
-  const [{ history, conversationSummary }, promptMemory] = await Promise.all([
-    buildCoachHistory({
-      convex,
-      runtime,
-      sessionId,
-      fallbackHistory,
-      latestUserMessage,
-    }),
-    loadPromptMemory(convex),
-  ]);
 
-  const plannerResult = await runPlannerTurn({
-    runtime,
-    history,
-    conversationSummary,
-    preferences,
-    memories: promptMemory.memories,
-    observations: promptMemory.observations,
-    ctx: context,
-    signal: createModelAbortSignal(request.signal),
-  });
-
-  if (plannerResult.kind === "error" && plannerResult.toolsUsed.length === 0) {
-    reportError(new Error(plannerResult.errorMessage), {
-      route: "coach",
-      operation: "planner",
-      phase: "handled_failure",
-      sessionId: sessionId ?? "none",
-      historyLength: history.length,
-      conversationSummaryPresent: Boolean(conversationSummary),
-    });
-    return createStatusAssistantResponse(
-      `I hit an error while planning this turn. ${sanitizeError(plannerResult.errorMessage)}`,
-      500
-    );
-  }
-
-  const presentation = streamCoachPresentation({
-    runtime,
-    signal: createModelAbortSignal(request.signal),
-    context: {
-      latestUserText,
-      conversationSummary,
-      preferences,
-      planner: {
-        kind: plannerResult.kind,
-        assistantText: plannerResult.assistantText,
-        toolsUsed: plannerResult.toolsUsed,
-        errorMessage:
-          plannerResult.kind === "error"
-            ? sanitizeError(plannerResult.errorMessage)
-            : undefined,
-        hitToolLimit: plannerResult.hitToolLimit,
-        toolResults: plannerResult.toolResults,
-      },
-      followUpPrompts: buildEndOfTurnSuggestions(plannerResult.toolsUsed) ?? [],
-    },
-  });
-
-  after(async () => {
-    try {
-      await presentation.finishReason;
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      reportError(err, { route: "coach", operation: "presentation_finish" });
-      return;
-    }
-
-    try {
-      await persistCoachTurn({
-        convex,
-        sessionId,
-        latestUserText,
-        turnId,
-        responseMessages: plannerResult.responseMessages as ModelMessage[],
+  // Parallelize rate limit check with history + memory loading.
+  // Tag rate limit errors distinctly so on-call can distinguish infrastructure
+  // failures from history/memory failures.
+  const rateLimitPromise = hasValidE2ETestSession(request)
+    ? Promise.resolve({ ok: true as const, limit: 0, remaining: 0, resetAt: 0 })
+    : (
+        convex.mutation(api.coach.checkCoachTurnRateLimit, {}) as Promise<
+          | { ok: true; limit: number; remaining: number; resetAt: number }
+          | {
+              ok: false;
+              limit: number;
+              remaining: number;
+              resetAt: number;
+              retryAfterMs: number;
+            }
+        >
+      ).catch((error) => {
+        const err = error instanceof Error ? error : new Error(String(error));
+        reportError(err, { route: "coach", operation: "rate_limit_check" });
+        return NextResponse.json(
+          { error: "Failed to check rate limit" },
+          { status: 500 }
+        );
       });
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      reportError(err, { route: "coach", operation: "persist_turn" });
+
+  try {
+    const [rateLimitResult, { history, conversationSummary }, promptMemory] =
+      await Promise.all([
+        rateLimitPromise,
+        buildCoachHistory({
+          convex,
+          runtime,
+          sessionId,
+          fallbackHistory,
+          latestUserMessage,
+        }),
+        loadPromptMemory(convex),
+      ]);
+
+    // Rate limit .catch() returns a NextResponse on infrastructure failure.
+    if (rateLimitResult instanceof NextResponse) return rateLimitResult;
+
+    if (!rateLimitResult.ok) {
+      const retryAfterSeconds = Math.max(
+        Math.ceil(rateLimitResult.retryAfterMs / 1000),
+        1
+      );
+      return NextResponse.json(
+        {
+          error: "Rate limit exceeded. Try again soon.",
+          retryAfterSeconds,
+          resetAt: rateLimitResult.resetAt,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(retryAfterSeconds),
+          },
+        }
+      );
     }
 
-    await processCoachMemory({
-      convex,
+    const plannerResult = await runPlannerTurn({
       runtime,
       history,
-      responseMessages: plannerResult.responseMessages as ModelMessage[],
+      conversationSummary,
+      preferences,
+      memories: promptMemory.memories,
+      observations: promptMemory.observations,
+      ctx: context,
+      signal: createModelAbortSignal(request.signal),
     });
-  });
 
-  const stream = createUIMessageStream({
-    execute: async ({ writer }) => {
-      writer.merge(
-        pipeJsonRender(presentation.toUIMessageStream({ sendFinish: false }))
+    if (
+      plannerResult.kind === "error" &&
+      plannerResult.toolsUsed.length === 0
+    ) {
+      reportError(new Error(plannerResult.errorMessage), {
+        route: "coach",
+        operation: "planner",
+        phase: "handled_failure",
+        sessionId: sessionId ?? "none",
+        historyLength: history.length,
+        conversationSummaryPresent: Boolean(conversationSummary),
+      });
+      return createStatusAssistantResponse(
+        `I hit an error while planning this turn. ${sanitizeError(plannerResult.errorMessage)}`,
+        500
       );
-      const finishReason = await presentation.finishReason;
-      writer.write({ type: "finish", finishReason });
-    },
-  });
+    }
 
-  return createUIMessageStreamResponse({ stream });
+    const presentation = streamCoachPresentation({
+      runtime,
+      signal: createModelAbortSignal(request.signal),
+      context: {
+        latestUserText,
+        conversationSummary,
+        preferences,
+        planner: {
+          kind: plannerResult.kind,
+          assistantText: plannerResult.assistantText,
+          toolsUsed: plannerResult.toolsUsed,
+          errorMessage:
+            plannerResult.kind === "error"
+              ? sanitizeError(plannerResult.errorMessage)
+              : undefined,
+          hitToolLimit: plannerResult.hitToolLimit,
+          toolResults: plannerResult.toolResults,
+        },
+        followUpPrompts:
+          buildEndOfTurnSuggestions(plannerResult.toolsUsed) ?? [],
+      },
+    });
+
+    after(async () => {
+      try {
+        await presentation.finishReason;
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        reportError(err, {
+          route: "coach",
+          operation: "presentation_finish",
+        });
+        return;
+      }
+
+      try {
+        await persistCoachTurn({
+          convex,
+          sessionId,
+          latestUserText,
+          turnId,
+          responseMessages: plannerResult.responseMessages as ModelMessage[],
+        });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        reportError(err, { route: "coach", operation: "persist_turn" });
+      }
+
+      await processCoachMemory({
+        convex,
+        runtime,
+        history,
+        responseMessages: plannerResult.responseMessages as ModelMessage[],
+      });
+    });
+
+    const stream = createUIMessageStream({
+      execute: async ({ writer }) => {
+        writer.merge(
+          pipeJsonRender(presentation.toUIMessageStream({ sendFinish: false }))
+        );
+        const finishReason = await presentation.finishReason;
+        writer.write({ type: "finish", finishReason });
+      },
+    });
+
+    return createUIMessageStreamResponse({ stream });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    reportError(err, { route: "coach", operation: "coach_turn" });
+    return NextResponse.json(
+      { error: "Failed to process coach turn" },
+      { status: 500 }
+    );
+  }
 }

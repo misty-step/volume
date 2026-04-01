@@ -33,7 +33,7 @@ vi.mock("./llm", () => ({
       directive: "Add a leg day Wednesday",
       rationale: "Your push volume is 2x your leg volume",
     },
-    model: "minimax/minimax-m2.5",
+    model: "google/gemini-3.1-flash-lite-preview",
     tokenUsage: {
       input: 250,
       output: 150,
@@ -97,7 +97,7 @@ describe("AI Report Queries and Mutations", () => {
           streak: { currentStreak: 5, longestStreak: 10, totalWorkouts: 50 },
           frequency: { workoutDays: 5, restDays: 2, avgSetsPerDay: 12 },
         },
-        model: "minimax/minimax-m2.5",
+        model: "google/gemini-3.1-flash-lite-preview",
         tokenUsage: { input: 250, output: 150, costUSD: 0.0001 },
       });
     });

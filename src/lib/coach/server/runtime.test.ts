@@ -35,7 +35,7 @@ describe("getCoachRuntime", () => {
     const { getCoachRuntime } = await import("./runtime");
     const result = getCoachRuntime();
     expect(result).not.toBeNull();
-    expect(result!.modelId).toBe("anthropic/claude-sonnet-4.6");
+    expect(result!.modelId).toBe("google/gemini-3.1-flash-lite-preview");
     expect(result!.model).toBeDefined();
     expect(result!.classificationModel).toBeDefined();
   });
@@ -53,6 +53,6 @@ describe("getCoachRuntime", () => {
     process.env.COACH_AGENT_MODEL = "   ";
     const { getCoachRuntime } = await import("./runtime");
     const result = getCoachRuntime();
-    expect(result!.modelId).toBe("anthropic/claude-sonnet-4.6");
+    expect(result!.modelId).toBe("google/gemini-3.1-flash-lite-preview");
   });
 });
