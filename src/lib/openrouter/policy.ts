@@ -32,6 +32,12 @@ export const PRICING = {
 
 export type OpenRouterModelId = (typeof MODELS)[keyof typeof MODELS];
 
+// Compile-time check: every distinct model string in MODELS must have a PRICING
+// entry. Adding a new model without pricing triggers a type error here.
+type _AssertPricingComplete = {
+  [K in OpenRouterModelId]: K extends keyof typeof PRICING ? true : never;
+};
+
 export function getOpenRouterApiKey(
   env: NodeJS.ProcessEnv = process.env
 ): string | null {

@@ -146,11 +146,14 @@ export function useCoachChat() {
     setInput("");
 
     try {
-      // Fast path: read from the ref (populated synchronously by the mount-time
-      // pre-warm). Slow path: await the mutation. This avoids blocking on a
-      // React render cycle while guaranteeing a session ID is always present.
+      // Fast path: read from the ref if it's still valid for today (handles
+      // midnight rollover). Slow path: await the mutation. This avoids blocking
+      // on a React render cycle while guaranteeing a session ID is always present.
+      const today = new Date().toDateString();
       const currentSessionId =
-        sessionIdRef.current ?? (await ensureSessionId());
+        sessionIdRef.current && sessionDateRef.current === today
+          ? sessionIdRef.current
+          : await ensureSessionId();
 
       trackEvent("Coach Message Sent", {
         messageLength: trimmed.length,
