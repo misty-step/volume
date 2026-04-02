@@ -1,7 +1,7 @@
 # Enforce codebase conventions for agent readiness
 
 Priority: high
-Status: ready
+Status: done
 Estimate: M
 
 ## Goal
@@ -18,11 +18,11 @@ issues in PR review.
 
 ## Oracle
 
-- [ ] `bun run lint` fails if a new `convex/**/*.ts` file uses relative imports (excluding `../_generated/` and `../packages/core/`)
-- [ ] `bun run test --run` fails if a coach tool file in `src/lib/coach/tools/tool-*.ts` is not registered in `registry.ts`
-- [ ] `bun run test --run` includes a soft-delete coverage test asserting exercise queries filter `deletedAt`
-- [ ] `docs/patterns/coach-tools.md` exists and covers: tool signature, schema registration, ToolResult contract, error handling, step-by-step new-tool checklist
-- [ ] CLAUDE.md links to the coach tool guide
+- [x] `bun run lint` fails if a new `convex/**/*.ts` file uses relative imports (excluding `../_generated/` and `../packages/core/`)
+- [x] `bun run test --run` fails if a coach tool file in `src/lib/coach/tools/tool-*.ts` is not registered in `registry.ts`
+- [x] `bun run test --run` includes a soft-delete coverage test asserting exercise queries filter `deletedAt` (pre-existing: exercises.test.ts lines 241-258)
+- [x] `docs/patterns/coach-tools.md` exists and covers: tool signature, schema registration, ToolResult contract, error handling, step-by-step new-tool checklist
+- [x] CLAUDE.md links to the coach tool guide
 
 ## Notes
 
@@ -72,3 +72,29 @@ Document the pattern from `registry.ts`:
 - `convex/exercises.test.ts`
 - `docs/patterns/coach-tools.md` (new)
 - `CLAUDE.md`
+
+## What Was Built
+
+PR: https://github.com/misty-step/volume/pull/463
+
+**ESLint rule** (`convex-local/no-relative-escape`): Custom AST rule using depth-counting
+to detect when a relative import escapes the `convex/` directory boundary. Allows
+`_generated` and `packages/core` cross-boundary imports. Handles files at any nesting
+depth within convex subdirectories (ai/, lib/, migrations/, test/).
+
+**Registry test** (`registry.test.ts`): Filesystem scan + quote-agnostic regex match
+verifying every `tool-*.ts` file is imported by at least one other module in the tools
+directory. Catches orphaned tools that would be silently unregistered.
+
+**Coach tool guide** (`docs/patterns/coach-tools.md`): Covers tool runner signature,
+schema registration, ToolResult contract, error handling patterns (exerciseNotFoundResult),
+and 5-step new-tool checklist.
+
+**Oracle 3 (soft-delete)** was already satisfied by existing tests — 12 tests across
+4 describe blocks in `exercises.test.ts` covering delete, restore, includeDeleted,
+default filtering, and edge cases.
+
+**Correction from backlog:** Oracle 1 originally said "fails if relative imports
+(excluding \_generated and packages/core)." This was imprecise — convex subdirectories
+legitimately use `../` for intra-convex imports (e.g., `ai/reports.ts` → `../lib/rateLimit`).
+The rule only flags imports that escape the convex boundary, not all `../` imports.
