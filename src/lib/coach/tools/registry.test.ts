@@ -21,6 +21,9 @@ describe("Coach tool registration", () => {
       sourceContents.set(f, readFileSync(join(TOOLS_DIR, f), "utf-8"));
     }
 
+    // Guard against vacuous pass if test file moves or naming convention changes
+    expect(toolFiles.length).toBeGreaterThan(0);
+
     const orphaned: string[] = [];
 
     for (const toolFile of toolFiles) {
