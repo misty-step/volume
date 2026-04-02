@@ -278,6 +278,17 @@ export function CoachPrototype() {
             </article>
           );
         })}
+        {isWorking &&
+        (messages.length === 0 || lastAssistantIdx < messages.length - 1) ? (
+          <article className="flex justify-start">
+            <div className="max-w-[92%] rounded-xl px-3 py-3 rounded-[--radius] border border-border-subtle bg-card mr-10">
+              <div className="flex items-center gap-2">
+                <ReloadIcon className="h-4 w-4 animate-spin text-accent" />
+                <p className="text-xs text-muted-foreground">Planning...</p>
+              </div>
+            </div>
+          </article>
+        ) : null}
         {error && !isWorking ? (
           <article className="flex justify-start">
             <div className="max-w-[92%] rounded-xl px-3 py-3 rounded-[--radius] border border-destructive/50 bg-destructive/10 mr-10">

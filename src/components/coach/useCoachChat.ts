@@ -69,17 +69,19 @@ export function useCoachChat() {
   );
   const undoAgentActionMutation = useMutation(api.agentActions.undoAgentAction);
 
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  // Session ID is tracked via sessionIdRef (synchronous, no render-cycle
+  // delay). No React state needed — nothing in the render tree reads it.
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const sessionBootstrapRef = useRef<Promise<string | null> | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
   const sessionDateRef = useRef<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   async function ensureSessionId(): Promise<string | null> {
     const today = new Date().toDateString();
-    if (sessionId && sessionDateRef.current === today) {
-      return sessionId;
+    if (sessionIdRef.current && sessionDateRef.current === today) {
+      return sessionIdRef.current;
     }
 
     if (!sessionBootstrapRef.current) {
@@ -88,7 +90,8 @@ export function useCoachChat() {
       })
         .then((result) => {
           const nextSessionId = result.session._id as string;
-          setSessionId(nextSessionId);
+          sessionIdRef.current = nextSessionId;
+
           sessionDateRef.current = new Date().toDateString();
           return nextSessionId;
         })
@@ -143,7 +146,15 @@ export function useCoachChat() {
     setInput("");
 
     try {
-      const ensuredSessionId = await ensureSessionId();
+      // Fast path: read from the ref if it's still valid for today (handles
+      // midnight rollover). Slow path: await the mutation. This avoids blocking
+      // on a React render cycle while guaranteeing a session ID is always present.
+      const today = new Date().toDateString();
+      const currentSessionId =
+        sessionIdRef.current && sessionDateRef.current === today
+          ? sessionIdRef.current
+          : await ensureSessionId();
+
       trackEvent("Coach Message Sent", {
         messageLength: trimmed.length,
         turnIndex: messages.length,
@@ -153,7 +164,7 @@ export function useCoachChat() {
         { text: trimmed },
         {
           body: {
-            ...(ensuredSessionId ? { sessionId: ensuredSessionId } : {}),
+            ...(currentSessionId ? { sessionId: currentSessionId } : {}),
             preferences: {
               unit,
               soundEnabled,
