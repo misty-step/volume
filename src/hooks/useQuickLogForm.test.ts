@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
-import { useQuickLogForm } from "./useQuickLogForm";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { useQuickLogForm, type QuickLogFormValues } from "./useQuickLogForm";
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/error-handler";
 import * as convexReact from "convex/react";
 import { checkForPR } from "@/lib/pr-detection";
-import { showPRCelebration } from "@/components/dashboard/pr-celebration";
+import { showPRCelebration } from "@/lib/pr-celebration";
 
 // Mock dependencies
 vi.mock("sonner", () => ({
@@ -28,9 +28,39 @@ vi.mock("@/lib/pr-detection", () => ({
   checkForPR: vi.fn(() => null), // Default: no PR detected
 }));
 
-vi.mock("@/components/dashboard/pr-celebration", () => ({
+vi.mock("@/lib/pr-celebration", () => ({
   showPRCelebration: vi.fn(),
 }));
+
+type QuickLogFormHookResult = {
+  current: ReturnType<typeof useQuickLogForm>;
+};
+
+async function setFormValues(
+  result: QuickLogFormHookResult,
+  values: Partial<QuickLogFormValues>
+) {
+  await act(async () => {
+    for (const [field, value] of Object.entries(values)) {
+      result.current.form.setValue(
+        field as keyof QuickLogFormValues,
+        value as QuickLogFormValues[keyof QuickLogFormValues]
+      );
+    }
+  });
+}
+
+async function submitCurrentValues(result: QuickLogFormHookResult) {
+  await act(async () => {
+    await result.current.onSubmit(result.current.form.getValues());
+  });
+}
+
+async function submitViaHandleSubmit(result: QuickLogFormHookResult) {
+  await act(async () => {
+    await result.current.form.handleSubmit(result.current.onSubmit)();
+  });
+}
 
 describe("useQuickLogForm", () => {
   const mockLogSet = vi.fn();
@@ -102,7 +132,7 @@ describe("useQuickLogForm", () => {
     );
 
     // Try to submit without exerciseId
-    await result.current.form.handleSubmit(result.current.onSubmit)();
+    await submitViaHandleSubmit(result);
 
     await waitFor(() => {
       expect(result.current.form.formState.errors.exerciseId).toBeDefined();
@@ -125,10 +155,12 @@ describe("useQuickLogForm", () => {
     );
 
     // Set invalid data
-    result.current.form.setValue("exerciseId", "exercise123");
-    result.current.form.setValue("reps", 0); // Invalid: below minimum
+    await setFormValues(result, {
+      exerciseId: "exercise123",
+      reps: 0,
+    });
 
-    await result.current.form.handleSubmit(result.current.onSubmit)();
+    await submitViaHandleSubmit(result);
 
     await waitFor(() => {
       expect(result.current.form.formState.errors.reps).toBeDefined();
@@ -153,11 +185,13 @@ describe("useQuickLogForm", () => {
     );
 
     // Set valid data with weight
-    result.current.form.setValue("exerciseId", "exercise123");
-    result.current.form.setValue("reps", 10);
-    result.current.form.setValue("weight", 135);
+    await setFormValues(result, {
+      exerciseId: "exercise123",
+      reps: 10,
+      weight: 135,
+    });
 
-    await result.current.onSubmit(result.current.form.getValues());
+    await submitCurrentValues(result);
 
     await waitFor(() => {
       expect(mockLogSet).toHaveBeenCalledWith({
@@ -189,10 +223,12 @@ describe("useQuickLogForm", () => {
       })
     );
 
-    result.current.form.setValue("exerciseId", "exercise1");
-    result.current.form.setValue("reps", 6);
+    await setFormValues(result, {
+      exerciseId: "exercise1",
+      reps: 6,
+    });
 
-    await result.current.onSubmit(result.current.form.getValues());
+    await submitCurrentValues(result);
 
     await waitFor(() => {
       expect(onHapticFeedback).toHaveBeenCalledTimes(1);
@@ -222,11 +258,13 @@ describe("useQuickLogForm", () => {
       })
     );
 
-    result.current.form.setValue("exerciseId", "exercise1");
-    result.current.form.setValue("reps", 5);
-    result.current.form.setValue("weight", 200);
+    await setFormValues(result, {
+      exerciseId: "exercise1",
+      reps: 5,
+      weight: 200,
+    });
 
-    await result.current.onSubmit(result.current.form.getValues());
+    await submitCurrentValues(result);
 
     await waitFor(() => {
       expect(onPRFlash).toHaveBeenCalledTimes(1);
@@ -252,10 +290,12 @@ describe("useQuickLogForm", () => {
     );
 
     // Set valid data without weight (bodyweight exercise)
-    result.current.form.setValue("exerciseId", "exercise456");
-    result.current.form.setValue("reps", 20);
+    await setFormValues(result, {
+      exerciseId: "exercise456",
+      reps: 20,
+    });
 
-    await result.current.onSubmit(result.current.form.getValues());
+    await submitCurrentValues(result);
 
     await waitFor(() => {
       expect(mockLogSet).toHaveBeenCalledWith({
@@ -284,11 +324,13 @@ describe("useQuickLogForm", () => {
       })
     );
 
-    result.current.form.setValue("exerciseId", "exercise789");
-    result.current.form.setValue("reps", 5);
-    result.current.form.setValue("weight", 100);
+    await setFormValues(result, {
+      exerciseId: "exercise789",
+      reps: 5,
+      weight: 100,
+    });
 
-    await result.current.onSubmit(result.current.form.getValues());
+    await submitCurrentValues(result);
 
     await waitFor(() => {
       expect(mockLogSet).toHaveBeenCalledWith(
@@ -311,11 +353,13 @@ describe("useQuickLogForm", () => {
       })
     );
 
-    result.current.form.setValue("exerciseId", "exercise999");
-    result.current.form.setValue("reps", 12);
-    result.current.form.setValue("weight", 200);
+    await setFormValues(result, {
+      exerciseId: "exercise999",
+      reps: 12,
+      weight: 200,
+    });
 
-    await result.current.onSubmit(result.current.form.getValues());
+    await submitCurrentValues(result);
 
     await waitFor(() => {
       const values = result.current.form.getValues();
@@ -337,10 +381,12 @@ describe("useQuickLogForm", () => {
     );
 
     const exerciseId = "exercise111";
-    result.current.form.setValue("exerciseId", exerciseId);
-    result.current.form.setValue("reps", 8);
+    await setFormValues(result, {
+      exerciseId,
+      reps: 8,
+    });
 
-    await result.current.onSubmit(result.current.form.getValues());
+    await submitCurrentValues(result);
 
     await waitFor(() => {
       expect(result.current.form.getValues().exerciseId).toBe(exerciseId);
@@ -360,10 +406,12 @@ describe("useQuickLogForm", () => {
       })
     );
 
-    result.current.form.setValue("exerciseId", "exercise222");
-    result.current.form.setValue("reps", 15);
+    await setFormValues(result, {
+      exerciseId: "exercise222",
+      reps: 15,
+    });
 
-    await result.current.onSubmit(result.current.form.getValues());
+    await submitCurrentValues(result);
 
     await waitFor(() => {
       expect(handleMutationError).toHaveBeenCalledWith(mockError, "Log Set");
@@ -394,12 +442,14 @@ describe("useQuickLogForm", () => {
       })
     );
 
-    result.current.form.setValue("exerciseId", "exercise-timeout");
-    result.current.form.setValue("reps", 10);
+    await setFormValues(result, {
+      exerciseId: "exercise-timeout",
+      reps: 10,
+    });
 
-    const submitPromise = result.current.onSubmit(
-      result.current.form.getValues()
-    );
+    const submitPromise = act(async () => {
+      await result.current.onSubmit(result.current.form.getValues());
+    });
 
     vi.advanceTimersByTime(9_999);
     expect(toast.info).not.toHaveBeenCalled();

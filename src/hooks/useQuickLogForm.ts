@@ -10,7 +10,7 @@ import { handleMutationError } from "@/lib/error-handler";
 import { getTodayRange } from "@/lib/date-utils";
 import { trackEvent } from "@/lib/analytics";
 import { checkForPR } from "@/lib/pr-detection";
-import { showPRCelebration } from "@/components/dashboard/pr-celebration";
+import { showPRCelebration } from "@/lib/pr-celebration";
 import { type Exercise } from "@/types/domain";
 
 // Validation schema for quick log form

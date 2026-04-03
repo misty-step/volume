@@ -1,7 +1,10 @@
 // @vitest-environment node
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { runSettingsOverviewTool } from "./tool-settings-overview";
+import {
+  buildBillingBlock,
+  runSettingsOverviewTool,
+} from "./tool-settings-overview";
 
 vi.mock("@/../convex/_generated/api", () => ({
   api: {
@@ -135,6 +138,32 @@ describe("runSettingsOverviewTool", () => {
         cta_action: "open_checkout",
       },
       goals: [],
+    });
+  });
+
+  it("builds the billing block from subscription fallback data", () => {
+    expect(
+      buildBillingBlock({
+        subscription: {
+          status: "trial",
+          hasAccess: true,
+          trialDaysRemaining: 5,
+          subscriptionPeriodEnd: null,
+        },
+        billing: {
+          stripeCustomerId: null,
+          subscriptionStatus: "trial",
+          subscriptionPeriodEnd: 1_735_689_600_000,
+        },
+      })
+    ).toMatchObject({
+      status: "trial",
+      title: "Subscription",
+      subtitle: "Your account currently has access.",
+      trialDaysRemaining: 5,
+      ctaAction: "open_checkout",
+      ctaLabel: "Upgrade plan",
+      periodEnd: "Dec 31, 2024",
     });
   });
 });

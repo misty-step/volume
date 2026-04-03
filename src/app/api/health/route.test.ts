@@ -205,6 +205,27 @@ describe("GET /api/health", () => {
     }
   );
 
+  it("builds the Stripe check from configuration and deployment context", async () => {
+    const { buildStripeCheck } = await import("./route");
+
+    expect(
+      buildStripeCheck({
+        stripeSecretKey: "sk_test_123",
+        monthlyPriceId: "price_monthly",
+        annualPriceId: "price_annual",
+        deploymentEnv: "production",
+      })
+    ).toMatchObject({
+      healthy: false,
+      check: {
+        status: "fail",
+        keyMode: "test",
+        environment: "production",
+        warning: "KEY/ENV MISMATCH: test key in production",
+      },
+    });
+  });
+
   it("returns pass when Canary public env provides both client and server error tracking", async () => {
     delete process.env.NEXT_PUBLIC_SENTRY_DSN;
     delete process.env.SENTRY_DSN;
