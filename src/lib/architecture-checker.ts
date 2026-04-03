@@ -458,6 +458,11 @@ export class ArchitectureChecker {
       this.repoRoot
     );
 
+    if (parsedConfig.errors.length > 0) {
+      this.compilerOptions = fallback;
+      return this.compilerOptions;
+    }
+
     this.compilerOptions = {
       ...fallback,
       ...parsedConfig.options,

@@ -133,6 +133,37 @@ describe("ArchitectureChecker", () => {
     );
   });
 
+  it("falls back to repo defaults when tsconfig parsing reports errors", () => {
+    const repoRoot = createRepo({
+      "tsconfig.json": `{
+  "extends": "./missing-tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "./broken-root",
+    "paths": {
+      "@/*": ["./broken-root/*"]
+    }
+  }
+}
+`,
+      "src/components/ui/button.tsx":
+        "export function Button() { return null; }\n",
+      "src/lib/format-button.ts":
+        'import { Button } from "@/components/ui/button";\nexport const formatButton = () => Button;\n',
+    });
+
+    const checker = new ArchitectureChecker(repoRoot);
+    const result = checker.check();
+
+    expect(result.passed).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        code: "boundary",
+        file: "src/lib/format-button.ts",
+        importPath: "@/components/ui/button",
+      })
+    );
+  });
+
   it("fails when shared core modules depend on app-specific layers", () => {
     const repoRoot = createRepo({
       "src/lib/logger.ts": "export const logger = true;\n",
