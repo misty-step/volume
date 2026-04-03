@@ -85,6 +85,28 @@ jobs:
 
       - run: bun run typecheck
 
+  architecture:
+    name: architecture
+    needs: setup
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Restore node_modules
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+
+      - run: bun run architecture:check
+
   test:
     name: test
     needs: setup
@@ -159,7 +181,7 @@ jobs:
   # ---------- gate ----------
   merge-gate:
     name: merge-gate
-    needs: [setup, lint, typecheck, test, security-audit, build]
+    needs: [setup, lint, typecheck, architecture, test, security-audit, build]
     if: always()
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 5

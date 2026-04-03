@@ -6,29 +6,24 @@ import { fileURLToPath } from "node:url";
 const repoRoot = dirname(fileURLToPath(import.meta.url));
 
 async function lintText(source: string) {
+  return lintTextAtPath(source, "src/tmp.ts");
+}
+
+async function lintTextAtPath(source: string, relativePath: string) {
   const eslint = new ESLint({
     cwd: repoRoot,
     overrideConfigFile: join(repoRoot, "eslint.config.mjs"),
   });
 
   const [result] = await eslint.lintText(source, {
-    filePath: join(repoRoot, "src/tmp.ts"),
+    filePath: join(repoRoot, relativePath),
   });
 
   return result.messages.map((message) => message.message);
 }
 
 async function lintClientText(source: string) {
-  const eslint = new ESLint({
-    cwd: repoRoot,
-    overrideConfigFile: join(repoRoot, "eslint.config.mjs"),
-  });
-
-  const [result] = await eslint.lintText(source, {
-    filePath: join(repoRoot, "src/tmp.client.ts"),
-  });
-
-  return result.messages.map((message) => message.message);
+  return lintTextAtPath(source, "src/tmp.client.ts");
 }
 
 describe("Next env direct access guard", () => {
@@ -98,5 +93,65 @@ describe("client env guard", () => {
     );
 
     expect(messages).toEqual([]);
+  });
+});
+
+describe("complexity rule", () => {
+  it("rejects functions above the configured complexity threshold", async () => {
+    const conditions = Array.from({ length: 41 }, (_, index) => {
+      return `if (value === ${index}) return ${index};`;
+    }).join("\n");
+
+    const messages = await lintTextAtPath(
+      `export function tooComplex(value: number) {\n${conditions}\nreturn value;\n}`,
+      "src/lib/tmp-complex.ts"
+    );
+
+    expect(messages).toContainEqual(
+      expect.stringContaining("Maximum allowed is 40")
+    );
+  });
+
+  it("allows functions within the configured complexity threshold", async () => {
+    const conditions = Array.from({ length: 3 }, (_, index) => {
+      return `if (value === ${index}) return ${index};`;
+    }).join("\n");
+
+    const messages = await lintTextAtPath(
+      `export function simple(value: number) {\n${conditions}\nreturn value;\n}`,
+      "src/lib/tmp-simple.ts"
+    );
+
+    expect(messages).toEqual([]);
+  });
+
+  it("rejects complex functions in convex modules too", async () => {
+    const conditions = Array.from({ length: 41 }, (_, index) => {
+      return `if (value === ${index}) return ${index};`;
+    }).join("\n");
+
+    const messages = await lintTextAtPath(
+      `export function tooComplex(value: number) {\n${conditions}\nreturn value;\n}`,
+      "convex/tmp-complex.ts"
+    );
+
+    expect(messages).toContainEqual(
+      expect.stringContaining("Maximum allowed is 40")
+    );
+  });
+
+  it("skips complexity enforcement for generated convex files", async () => {
+    const conditions = Array.from({ length: 41 }, (_, index) => {
+      return `if (value === ${index}) return ${index};`;
+    }).join("\n");
+
+    const messages = await lintTextAtPath(
+      `export function generated(value: number) {\n${conditions}\nreturn value;\n}`,
+      "convex/_generated/tmp-complex.ts"
+    );
+
+    expect(messages).not.toContainEqual(
+      expect.stringContaining("Maximum allowed is 40")
+    );
   });
 });
