@@ -1,7 +1,7 @@
 # Enforce architecture boundaries and complexity
 
 Priority: high
-Status: ready
+Status: in-progress
 Estimate: M
 
 ## Goal
