@@ -676,13 +676,17 @@ export async function POST(request: Request) {
         console.warn(
           `[Coach] Planner failed with ${lastFailedModelId}, retrying with ${fallback.modelId}`
         );
-        reportError(new Error(plannerResult.errorMessage), {
-          route: "coach",
-          operation: "planner_fallback",
-          failedModel: lastFailedModelId,
-          nextModel: fallback.modelId,
-          sessionId: sessionId ?? "none",
-        });
+        reportError(
+          plannerResult.cause ?? new Error(plannerResult.errorMessage),
+          {
+            route: "coach",
+            operation: "planner_fallback",
+            failedModel: lastFailedModelId,
+            nextModel: fallback.modelId,
+            sessionId: sessionId ?? "none",
+            errorMessage: plannerResult.errorMessage,
+          }
+        );
 
         plannerResult = await runPlannerTurn({
           runtime: {
@@ -711,14 +715,18 @@ export async function POST(request: Request) {
       plannerResult.kind === "error" &&
       plannerResult.toolsUsed.length === 0
     ) {
-      reportError(new Error(plannerResult.errorMessage), {
-        route: "coach",
-        operation: "planner",
-        phase: "handled_failure",
-        sessionId: sessionId ?? "none",
-        historyLength: history.length,
-        conversationSummaryPresent: Boolean(conversationSummary),
-      });
+      reportError(
+        plannerResult.cause ?? new Error(plannerResult.errorMessage),
+        {
+          route: "coach",
+          operation: "planner",
+          phase: "handled_failure",
+          sessionId: sessionId ?? "none",
+          historyLength: history.length,
+          conversationSummaryPresent: Boolean(conversationSummary),
+          errorMessage: plannerResult.errorMessage,
+        }
+      );
       return createStatusAssistantResponse(
         `I hit an error while planning this turn. ${sanitizeError(plannerResult.errorMessage)}`,
         500
