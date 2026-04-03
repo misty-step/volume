@@ -14,6 +14,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
+    "architecture:check": "tsx scripts/verify-architecture.ts",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -29,7 +30,7 @@
     "security:audit": "bun audit --audit-level=high",
     "security:scan": "trufflehog git \"file://$(git rev-parse --git-common-dir)\" --bare --only-verified --fail --no-update",
     "quality:check": "tsx scripts/verify-coverage.ts",
-    "quality:full": "bun run typecheck && bun run lint && bun run test:coverage && bun run build",
+    "quality:full": "bun run typecheck && bun run lint && bun run architecture:check && bun run test:coverage && bun run build",
     "generate:releases": "tsx scripts/generate-releases.ts"
   },
   "packageManager": "bun@1.3.9",

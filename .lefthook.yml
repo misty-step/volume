@@ -68,6 +68,11 @@ pre-push:
       run: bun run security:audit
       fail_text: "❌ High-severity dependency vulnerabilities detected."
 
+    # === Architecture Regression Checks ===
+    architecture-check:
+      run: bun run architecture:check
+      fail_text: "❌ Architecture boundary or cycle regression detected."
+
     # === Build Verification (Integration) ===
     # On master, `analyze` runs instead (includes a full build + bundle analysis).
     build-check:

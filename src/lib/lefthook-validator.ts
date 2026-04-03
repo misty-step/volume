@@ -49,6 +49,8 @@ export interface ValidationResult {
 
 const SECURITY_AUDIT_COMMAND = "bun run security:audit";
 const SECURITY_AUDIT_SCRIPT = "bun audit --audit-level=high";
+const ARCHITECTURE_CHECK_COMMAND = "bun run architecture:check";
+const ARCHITECTURE_CHECK_SCRIPT = "tsx scripts/verify-architecture.ts";
 
 export const defaultDeps: ValidatorDeps = {
   readFile: (path: string) => fs.readFileSync(path, "utf8"),
@@ -128,6 +130,32 @@ export class LefthookConfigValidator {
     }
   }
 
+  validateArchitectureCheckCommand(config: LefthookConfig): void {
+    const prePushConfig = config["pre-push"];
+    if (!prePushConfig?.commands) {
+      this.errors.push(
+        "❌ Missing architecture-check pre-push command: Lefthook must run bun run architecture:check"
+      );
+      return;
+    }
+
+    const architectureCommand =
+      prePushConfig.commands["architecture-check"]?.run?.trim();
+
+    if (!architectureCommand) {
+      this.errors.push(
+        "❌ Missing architecture-check pre-push command: Lefthook must run bun run architecture:check"
+      );
+      return;
+    }
+
+    if (architectureCommand !== ARCHITECTURE_CHECK_COMMAND) {
+      this.errors.push(
+        "❌ Architecture check command mismatch: Lefthook should run bun run architecture:check"
+      );
+    }
+  }
+
   resolvePackageJsonPath(configPath: string): string {
     const configRelativePath = path.join(
       path.dirname(configPath),
@@ -163,6 +191,38 @@ export class LefthookConfigValidator {
       if (auditScript !== SECURITY_AUDIT_SCRIPT) {
         this.errors.push(
           "❌ Security audit script mismatch: package.json should define bun audit --audit-level=high"
+        );
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.errors.push(`❌ package.json parsing error: ${message}`);
+    }
+  }
+
+  validateArchitectureCheckScript(configPath: string): void {
+    const packageJsonPath = this.resolvePackageJsonPath(configPath);
+    if (!this.deps.fileExists(packageJsonPath)) {
+      this.errors.push("❌ package.json not found");
+      return;
+    }
+
+    try {
+      const packageJson = JSON.parse(this.deps.readFile(packageJsonPath)) as {
+        scripts?: Record<string, string>;
+      };
+      const architectureScript =
+        packageJson.scripts?.["architecture:check"]?.trim();
+
+      if (!architectureScript) {
+        this.errors.push(
+          "❌ Missing architecture:check script: package.json must define tsx scripts/verify-architecture.ts"
+        );
+        return;
+      }
+
+      if (architectureScript !== ARCHITECTURE_CHECK_SCRIPT) {
+        this.errors.push(
+          "❌ Architecture check script mismatch: package.json should define tsx scripts/verify-architecture.ts"
         );
       }
     } catch (error) {
@@ -255,7 +315,9 @@ export class LefthookConfigValidator {
       const config = this.parseYaml(content);
 
       this.validateSecurityAuditCommand(config);
+      this.validateArchitectureCheckCommand(config);
       this.validateSecurityAuditScript(configPath);
+      this.validateArchitectureCheckScript(configPath);
       this.validateBranchReferences(config);
       this.validateCommandsExist(config);
     } catch (error) {
