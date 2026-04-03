@@ -446,6 +446,28 @@ pre-push:
         expect.stringContaining("Architecture check script mismatch")
       );
     });
+
+    it("fails when package.json is missing architecture:check", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: (path) =>
+            path === "package.json"
+              ? JSON.stringify({
+                  scripts: {
+                    "security:audit": "bun audit --audit-level=high",
+                  },
+                })
+              : validConfig,
+        })
+      );
+
+      const result = validator.validate();
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining("Missing architecture:check script")
+      );
+    });
   });
 
   describe("resolvePackageJsonPath", () => {
