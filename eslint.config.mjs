@@ -54,6 +54,64 @@ const nextEnvDirectAccessGuard = {
   },
 };
 
+const convexRelativeImportGuard = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow relative imports that escape the convex/ directory boundary",
+    },
+    schema: [],
+  },
+  create(context) {
+    function checkSource(node, source) {
+      if (typeof source !== "string" || !source.startsWith("..")) return;
+
+      // Allow known cross-boundary imports
+      const stripped = source.replace(/^(\.\.\/)+/, "");
+      if (
+        stripped.startsWith("_generated") ||
+        stripped.startsWith("packages/core")
+      ) {
+        return;
+      }
+
+      // Count ../ depth and compare to file depth within convex/
+      const parentSteps = source.split("/").filter((s) => s === "..").length;
+      const filename = (context.filename || context.getFilename()).replace(
+        /\\/g,
+        "/"
+      );
+      const convexIdx = filename.lastIndexOf("/convex/");
+      if (convexIdx === -1) return;
+      const relPath = filename.substring(convexIdx + "/convex/".length);
+      // +1: a file at convex/foo.ts has depth 1, convex/ai/foo.ts has depth 2.
+      // One ../ from depth 1 escapes; one ../ from depth 2 stays in convex.
+      const fileDepth = relPath.split("/").length;
+
+      if (parentSteps >= fileDepth) {
+        context.report({
+          node,
+          message:
+            "Use @/lib/... alias instead of relative imports that escape the convex/ directory.",
+        });
+      }
+    }
+
+    return {
+      ImportDeclaration(node) {
+        checkSource(node, node.source.value);
+      },
+      ExportNamedDeclaration(node) {
+        if (node.source) checkSource(node, node.source.value);
+      },
+      ExportAllDeclaration(node) {
+        checkSource(node, node.source.value);
+      },
+    };
+  },
+};
+
 const clientEnvGuard = {
   meta: {
     type: "problem",
@@ -213,6 +271,20 @@ const config = [
     files: ["src/**/*.client.{js,jsx,ts,tsx}"],
     rules: {
       "local/client-env-guard": "error",
+    },
+  },
+  {
+    files: ["convex/**/*.ts"],
+    ignores: ["convex/_generated/**"],
+    plugins: {
+      "convex-local": {
+        rules: {
+          "no-relative-escape": convexRelativeImportGuard,
+        },
+      },
+    },
+    rules: {
+      "convex-local/no-relative-escape": "error",
     },
   },
   {
