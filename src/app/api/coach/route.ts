@@ -654,7 +654,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const plannerResult = await runPlannerTurn({
+    // Run planner with fallback chain: try primary, then each fallback on failure.
+    let plannerResult = await runPlannerTurn({
       runtime,
       history,
       conversationSummary,
@@ -664,6 +665,47 @@ export async function POST(request: Request) {
       ctx: context,
       signal: createModelAbortSignal(request.signal),
     });
+
+    if (
+      plannerResult.kind === "error" &&
+      plannerResult.toolsUsed.length === 0 &&
+      runtime.fallbacks.length > 0
+    ) {
+      let lastFailedModelId = runtime.modelId;
+      for (const fallback of runtime.fallbacks) {
+        console.warn(
+          `[Coach] Planner failed with ${lastFailedModelId}, retrying with ${fallback.modelId}`
+        );
+        reportError(new Error(plannerResult.errorMessage), {
+          route: "coach",
+          operation: "planner_fallback",
+          failedModel: lastFailedModelId,
+          nextModel: fallback.modelId,
+          sessionId: sessionId ?? "none",
+        });
+
+        plannerResult = await runPlannerTurn({
+          runtime: {
+            ...runtime,
+            model: fallback.model,
+            modelId: fallback.modelId,
+          },
+          history,
+          conversationSummary,
+          preferences,
+          memories: promptMemory.memories,
+          observations: promptMemory.observations,
+          ctx: context,
+          signal: createModelAbortSignal(request.signal),
+        });
+
+        if (plannerResult.kind === "ok" || plannerResult.toolsUsed.length > 0) {
+          console.warn(`[Coach] Fallback to ${fallback.modelId} succeeded`);
+          break;
+        }
+        lastFailedModelId = fallback.modelId;
+      }
+    }
 
     if (
       plannerResult.kind === "error" &&
@@ -683,27 +725,28 @@ export async function POST(request: Request) {
       );
     }
 
+    const presentationContext = {
+      latestUserText,
+      conversationSummary,
+      preferences,
+      planner: {
+        kind: plannerResult.kind,
+        assistantText: plannerResult.assistantText,
+        toolsUsed: plannerResult.toolsUsed,
+        errorMessage:
+          plannerResult.kind === "error"
+            ? sanitizeError(plannerResult.errorMessage)
+            : undefined,
+        hitToolLimit: plannerResult.hitToolLimit,
+        toolResults: plannerResult.toolResults,
+      },
+      followUpPrompts: buildEndOfTurnSuggestions(plannerResult.toolsUsed) ?? [],
+    };
+
     const presentation = streamCoachPresentation({
       runtime,
       signal: createModelAbortSignal(request.signal),
-      context: {
-        latestUserText,
-        conversationSummary,
-        preferences,
-        planner: {
-          kind: plannerResult.kind,
-          assistantText: plannerResult.assistantText,
-          toolsUsed: plannerResult.toolsUsed,
-          errorMessage:
-            plannerResult.kind === "error"
-              ? sanitizeError(plannerResult.errorMessage)
-              : undefined,
-          hitToolLimit: plannerResult.hitToolLimit,
-          toolResults: plannerResult.toolResults,
-        },
-        followUpPrompts:
-          buildEndOfTurnSuggestions(plannerResult.toolsUsed) ?? [],
-      },
+      context: presentationContext,
     });
 
     after(async () => {
@@ -741,11 +784,46 @@ export async function POST(request: Request) {
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
-        writer.merge(
-          pipeJsonRender(presentation.toUIMessageStream({ sendFinish: false }))
-        );
-        const finishReason = await presentation.finishReason;
-        writer.write({ type: "finish", finishReason });
+        try {
+          writer.merge(
+            pipeJsonRender(
+              presentation.toUIMessageStream({ sendFinish: false })
+            )
+          );
+          const finishReason = await presentation.finishReason;
+          writer.write({ type: "finish", finishReason });
+        } catch (error) {
+          // Presentation failed — retry with first fallback if available.
+          // This only helps when the failure occurs before chunks are sent;
+          // if partial output was already written, the client sees garbled
+          // output, but that's no worse than the current hard-fail behavior.
+          const fb = runtime.fallbacks[0];
+          if (!fb) throw error;
+
+          console.warn(
+            `[Coach] Presentation failed with ${runtime.modelId}, retrying with ${fb.modelId}`
+          );
+          reportError(
+            error instanceof Error ? error : new Error(String(error)),
+            {
+              route: "coach",
+              operation: "presentation_fallback",
+              failedModel: runtime.modelId,
+              nextModel: fb.modelId,
+            }
+          );
+
+          const retry = streamCoachPresentation({
+            runtime: { ...runtime, model: fb.model, modelId: fb.modelId },
+            signal: createModelAbortSignal(request.signal),
+            context: presentationContext,
+          });
+          writer.merge(
+            pipeJsonRender(retry.toUIMessageStream({ sendFinish: false }))
+          );
+          const finishReason = await retry.finishReason;
+          writer.write({ type: "finish", finishReason });
+        }
       },
     });
 

@@ -379,6 +379,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
 
@@ -493,6 +495,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
     plannerMocks.runPlannerTurnMock.mockResolvedValue(
@@ -544,6 +548,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
     plannerMocks.runPlannerTurnMock.mockResolvedValue(
@@ -583,6 +589,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
     plannerMocks.runPlannerTurnMock.mockResolvedValue(
@@ -669,6 +677,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
     plannerMocks.runPlannerTurnMock.mockResolvedValue(
@@ -734,6 +744,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
     streamTextMock.mockReturnValue(createStreamTextResult({ text: "hello" }));
@@ -802,6 +814,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
     plannerMocks.runPlannerTurnMock.mockResolvedValue(
@@ -931,6 +945,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
     plannerMocks.runPlannerTurnMock.mockResolvedValue(
@@ -1034,6 +1050,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
     plannerMocks.runPlannerTurnMock.mockResolvedValue(
