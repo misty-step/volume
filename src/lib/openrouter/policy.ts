@@ -5,17 +5,17 @@ export const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
  * model is tried on failure. Provider diversity ensures uncorrelated outages.
  *
  * Chain rationale (April 2026):
- *   Qwen 3.5 Flash  — 97.5% tool-calling pass rate, $0.065/$0.26, 1M ctx
+ *   Gemini 3 Flash   — 78% SWE-bench, near-Pro quality, 1M ctx, strong tool calling
+ *   GPT-5.4 Mini     — OSWorld 72.2%, strongest budget agentic model, excellent instruction following
  *   MiniMax M2.7     — 86.2% PinchBench (near Opus), agentic-tuned, GA
- *   Gemini 3 Flash   — 78% SWE-bench, near-Pro quality, 1M ctx
  */
 export const MODEL_CHAINS = {
   COACH: [
-    "qwen/qwen3.5-flash-02-23",
-    "minimax/minimax-m2.7",
     "google/gemini-3-flash-preview",
+    "openai/gpt-5.4-mini",
+    "minimax/minimax-m2.7",
   ],
-  CLASSIFICATION: ["qwen/qwen3.5-flash-02-23"],
+  CLASSIFICATION: ["google/gemini-3-flash-preview"],
 } as const;
 
 // Flat aliases derived from chains — keeps existing consumers working.
@@ -43,17 +43,17 @@ export const RUNTIME_CONFIG = {
 } as const;
 
 export const PRICING = {
-  "qwen/qwen3.5-flash-02-23": {
-    inputPerMillion: 0.065,
-    outputPerMillion: 0.26,
+  "google/gemini-3-flash-preview": {
+    inputPerMillion: 0.5,
+    outputPerMillion: 3.0,
+  },
+  "openai/gpt-5.4-mini": {
+    inputPerMillion: 0.75,
+    outputPerMillion: 4.5,
   },
   "minimax/minimax-m2.7": {
     inputPerMillion: 0.3,
     outputPerMillion: 1.2,
-  },
-  "google/gemini-3-flash-preview": {
-    inputPerMillion: 0.5,
-    outputPerMillion: 3.0,
   },
 } as const;
 

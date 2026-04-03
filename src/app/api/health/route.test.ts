@@ -42,10 +42,10 @@ describe("GET /api/health", () => {
     expect(data.checks.errorTracking.status).toBe("pass");
     expect(data.checks.sentry.status).toBe("pass");
     expect(data.checks.coachRuntime.defaultModel).toBe(
-      "qwen/qwen3.5-flash-02-23"
+      "google/gemini-3-flash-preview"
     );
     expect(data.checks.coachRuntime.configuredModel).toBe(
-      "qwen/qwen3.5-flash-02-23"
+      "google/gemini-3-flash-preview"
     );
     expect(data.checks.coachRuntime.apiKeyEnvVar).toBeUndefined();
     expect(data.checks.coachRuntime.modelOverrideEnvVar).toBeUndefined();
@@ -65,7 +65,7 @@ describe("GET /api/health", () => {
 
     expect(response.status).toBe(200);
     expect(data.checks.coachRuntime.defaultModel).toBe(
-      "qwen/qwen3.5-flash-02-23"
+      "google/gemini-3-flash-preview"
     );
     expect(data.checks.coachRuntime.configuredModel).toBe("openai/gpt-4o-mini");
   });

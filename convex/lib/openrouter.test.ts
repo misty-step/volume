@@ -24,10 +24,10 @@ describe("openrouter constants", () => {
   });
 
   it("exports model identifiers", () => {
-    expect(MODELS.MAIN).toBe("qwen/qwen3.5-flash-02-23");
-    expect(MODELS.CLASSIFICATION).toBe("qwen/qwen3.5-flash-02-23");
-    expect(MODELS.WRITER).toBe("qwen/qwen3.5-flash-02-23");
-    expect(MODELS.FALLBACK).toBe("google/gemini-3-flash-preview");
+    expect(MODELS.MAIN).toBe("google/gemini-3-flash-preview");
+    expect(MODELS.CLASSIFICATION).toBe("google/gemini-3-flash-preview");
+    expect(MODELS.WRITER).toBe("google/gemini-3-flash-preview");
+    expect(MODELS.FALLBACK).toBe("minimax/minimax-m2.7");
   });
 
   it("has pricing for all models", () => {
@@ -79,34 +79,34 @@ describe("calculateCost", () => {
   });
 
   it("calculates input token cost", () => {
-    // 1M input tokens at $0.065 = $0.065
+    // 1M input tokens at $0.50 = $0.50
     const cost = calculateCost(MODELS.MAIN, 1_000_000, 0);
-    expect(cost).toBeCloseTo(0.065, 4);
+    expect(cost).toBeCloseTo(0.5, 4);
   });
 
   it("calculates output token cost", () => {
-    // 1M output tokens at $0.26 = $0.26
+    // 1M output tokens at $3.00 = $3.00
     const cost = calculateCost(MODELS.MAIN, 0, 1_000_000);
-    expect(cost).toBeCloseTo(0.26, 4);
+    expect(cost).toBeCloseTo(3.0, 4);
   });
 
   it("calculates combined cost", () => {
-    // 1M input ($0.065) + 1M output ($0.26) = $0.325
+    // 1M input ($0.50) + 1M output ($3.00) = $3.50
     const cost = calculateCost(MODELS.MAIN, 1_000_000, 1_000_000);
-    expect(cost).toBeCloseTo(0.325, 4);
+    expect(cost).toBeCloseTo(3.5, 4);
   });
 
   it("calculates cost for small token counts", () => {
     // 1000 input + 500 output
     const cost = calculateCost(MODELS.MAIN, 1000, 500);
-    // 1000 * 0.065 / 1M + 500 * 0.26 / 1M = 0.000065 + 0.00013 = 0.000195
-    expect(cost).toBeCloseTo(0.0002, 4);
+    // 1000 * 0.50 / 1M + 500 * 3.00 / 1M = 0.0005 + 0.0015 = 0.002
+    expect(cost).toBeCloseTo(0.002, 4);
   });
 
   it("works with classification model", () => {
     const cost = calculateCost(MODELS.CLASSIFICATION, 1_000_000, 1_000_000);
-    // Same model as MAIN: $0.065 + $0.26 = $0.325
-    expect(cost).toBeCloseTo(0.325, 4);
+    // Same model as MAIN: $0.50 + $3.00 = $3.50
+    expect(cost).toBeCloseTo(3.5, 4);
   });
 
   it("returns number with max 4 decimal places", () => {
