@@ -4,7 +4,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { afterEach, describe, expect, it } from "vitest";
-import { ArchitectureChecker } from "./architecture-checker";
+import { ArchitectureChecker } from "@/lib/architecture-checker";
 
 function writeFixtureRepo(files: Record<string, string>): string {
   const repoRoot = fs.mkdtempSync(
@@ -101,6 +101,34 @@ describe("ArchitectureChecker", () => {
         code: "boundary",
         file: "src/lib/format-button.ts",
         importPath: "@custom/components/ui/button",
+      })
+    );
+  });
+
+  it("keeps repo default aliases when tsconfig adds custom paths", () => {
+    const repoRoot = createRepo({
+      "tsconfig.json": `{
+  "compilerOptions": {
+    "paths": {
+      "@custom/*": ["./src/*"]
+    }
+  }
+}
+`,
+      "src/lib/logger.ts": "export const logger = true;\n",
+      "packages/core/src/bad.ts":
+        'import { logger } from "@/lib/logger";\nexport const bad = logger;\n',
+    });
+
+    const checker = new ArchitectureChecker(repoRoot);
+    const result = checker.check();
+
+    expect(result.passed).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        code: "boundary",
+        file: "packages/core/src/bad.ts",
+        importPath: "@/lib/logger",
       })
     );
   });
@@ -203,6 +231,35 @@ describe("ArchitectureChecker", () => {
     );
   });
 
+  it("enforces boundaries when TypeScript resolves declaration entrypoints", () => {
+    const repoRoot = createRepo({
+      "tsconfig.json": `{
+  "compilerOptions": {
+    "paths": {
+      "@component-lib": ["./src/components/ui/button.d.ts"]
+    }
+  }
+}
+`,
+      "src/components/ui/button.d.ts":
+        "export declare function Button(): null;\n",
+      "src/lib/format-button.ts":
+        'import { Button } from "@component-lib";\nexport const formatButton = () => Button;\n',
+    });
+
+    const checker = new ArchitectureChecker(repoRoot);
+    const result = checker.check();
+
+    expect(result.passed).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        code: "boundary",
+        file: "src/lib/format-button.ts",
+        importPath: "@component-lib",
+      })
+    );
+  });
+
   it("keeps the presentation exception scoped to the registry bridge", () => {
     const repoRoot = createRepo({
       "src/components/coach/CoachSceneBlocks.tsx":
@@ -219,6 +276,27 @@ describe("ArchitectureChecker", () => {
       expect.objectContaining({
         code: "boundary",
         file: "src/lib/coach/presentation/compose.ts",
+      })
+    );
+  });
+
+  it("limits the presentation exception to the approved component targets", () => {
+    const repoRoot = createRepo({
+      "src/components/ui/button.tsx":
+        "export function Button() { return null; }\n",
+      "src/lib/coach/presentation/registry.tsx":
+        'import { Button } from "@/components/ui/button";\nexport const registry = Button;\n',
+    });
+
+    const checker = new ArchitectureChecker(repoRoot);
+    const result = checker.check();
+
+    expect(result.passed).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        code: "boundary",
+        file: "src/lib/coach/presentation/registry.tsx",
+        importPath: "@/components/ui/button",
       })
     );
   });

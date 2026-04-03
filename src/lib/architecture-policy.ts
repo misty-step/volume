@@ -17,6 +17,7 @@ export interface BoundaryRule {
 export interface BoundaryException {
   from: RegExp;
   toDomain: ModuleDomain;
+  to?: RegExp;
 }
 
 export const BOUNDARY_RULES: BoundaryRule[] = [
@@ -71,5 +72,11 @@ export const BOUNDARY_EXCEPTIONS: BoundaryException[] = [
   {
     from: /^src\/lib\/coach\/presentation\/registry\.tsx$/,
     toDomain: "src/components",
+    to: /^src\/components\/coach\/CoachSceneBlocks\.tsx$/,
+  },
+  {
+    from: /^src\/lib\/coach\/presentation\/registry\.tsx$/,
+    toDomain: "src/components",
+    to: /^src\/components\/ui\/coach-block\.tsx$/,
   },
 ];

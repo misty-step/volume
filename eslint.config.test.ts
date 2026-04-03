@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { ESLint } from "eslint";
 import { describe, expect, it } from "vitest";
 import { dirname, join } from "node:path";

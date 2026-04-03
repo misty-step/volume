@@ -5,7 +5,7 @@ import {
   BOUNDARY_EXCEPTIONS,
   BOUNDARY_RULES,
   type ModuleDomain,
-} from "./architecture-policy";
+} from "@/lib/architecture-policy";
 
 const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs"];
 const SCAN_ROOTS = ["src", "convex", "packages/core"] as const;
@@ -63,6 +63,16 @@ function toPosixPath(filePath: string): string {
 
 function compareStrings(a: string, b: string): number {
   return a.localeCompare(b, "en");
+}
+
+function mergePathAliases(
+  fallbackPaths: ts.CompilerOptions["paths"],
+  configuredPaths: ts.CompilerOptions["paths"]
+): ts.CompilerOptions["paths"] {
+  return {
+    ...(fallbackPaths ?? {}),
+    ...(configuredPaths ?? {}),
+  };
 }
 
 export class ArchitectureChecker {
@@ -278,16 +288,29 @@ export class ArchitectureChecker {
       return null;
     }
 
-    if (resolvedModule.resolvedFileName.endsWith(".d.ts")) {
-      return null;
-    }
-
-    const resolvedPath = this.resolveFile(resolvedModule.resolvedFileName);
+    const resolvedPath = this.resolveTypeScriptResolution(
+      resolvedModule.resolvedFileName
+    );
     if (!resolvedPath) {
       return null;
     }
 
     return this.buildResolvedImport(resolvedPath);
+  }
+
+  private resolveTypeScriptResolution(resolvedFileName: string): string | null {
+    if (!resolvedFileName.endsWith(".d.ts")) {
+      return this.resolveFile(resolvedFileName);
+    }
+
+    const sourceResolution = this.resolveModulePath(
+      resolvedFileName.slice(0, -".d.ts".length)
+    );
+    if (sourceResolution) {
+      return sourceResolution;
+    }
+
+    return this.resolveFile(resolvedFileName);
   }
 
   private buildResolvedImport(resolvedPath: string): ResolvedImport {
@@ -401,17 +424,12 @@ export class ArchitectureChecker {
       return this.pathAliases;
     }
 
-    const configuredAliases = Object.entries(
-      this.getCompilerOptions().paths ?? {}
-    )
+    this.pathAliases = Object.entries(this.getCompilerOptions().paths ?? {})
       .map(([key, targets]) => ({
         key,
         targets,
       }))
       .sort((left, right) => compareStrings(right.key, left.key));
-
-    this.pathAliases =
-      configuredAliases.length > 0 ? configuredAliases : DEFAULT_PATH_ALIASES;
 
     return this.pathAliases;
   }
@@ -445,10 +463,7 @@ export class ArchitectureChecker {
       ...parsedConfig.options,
       allowJs: true,
       baseUrl: parsedConfig.options.baseUrl ?? this.repoRoot,
-      paths:
-        Object.keys(parsedConfig.options.paths ?? {}).length > 0
-          ? parsedConfig.options.paths
-          : fallback.paths,
+      paths: mergePathAliases(fallback.paths, parsedConfig.options.paths),
     };
 
     return this.compilerOptions;
@@ -486,7 +501,8 @@ export class ArchitectureChecker {
     const isException = BOUNDARY_EXCEPTIONS.some(
       (exception) =>
         exception.toDomain === targetDomain &&
-        exception.from.test(sourceRelativePath)
+        exception.from.test(sourceRelativePath) &&
+        (!exception.to || exception.to.test(targetRelativePath))
     );
 
     if (isException) {

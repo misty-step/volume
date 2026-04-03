@@ -338,6 +338,42 @@ echo "second"`;
       );
     });
 
+    it("fails when the pre-push hook is missing entirely", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configMissingPrePushHook,
+        })
+      );
+
+      const result = validator.validate();
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining("Missing pre-push hook")
+      );
+    });
+
+    it("fails when the pre-push hook has no commands", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configMissingPrePushCommands,
+        })
+      );
+
+      const result = validator.validate();
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining("Missing pre-push commands")
+      );
+    });
+
     it("fails when the architecture-check command is missing", () => {
       const configMissingArchitectureCommand = `
 pre-push:

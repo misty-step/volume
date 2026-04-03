@@ -132,9 +132,16 @@ export class LefthookConfigValidator {
 
   validateArchitectureCheckCommand(config: LefthookConfig): void {
     const prePushConfig = config["pre-push"];
-    if (!prePushConfig?.commands) {
+    if (!prePushConfig) {
       this.errors.push(
-        "❌ Missing architecture-check pre-push command: Lefthook must run bun run architecture:check"
+        "❌ Missing pre-push hook: Lefthook must define a pre-push hook that runs bun run architecture:check"
+      );
+      return;
+    }
+
+    if (!prePushConfig.commands) {
+      this.errors.push(
+        "❌ Missing pre-push commands: Lefthook pre-push hook must run bun run architecture:check"
       );
       return;
     }
