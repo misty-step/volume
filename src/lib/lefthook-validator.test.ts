@@ -33,6 +33,8 @@ pre-push:
       run: bun run test:coverage
     security-audit:
       run: bun run security:audit
+    architecture-check:
+      run: bun run architecture:check
     build-and-analyze:
       run: bun run analyze
       only:
@@ -47,6 +49,7 @@ commit-msg:
 const packageJsonWithValidAuditScript = JSON.stringify({
   scripts: {
     "security:audit": "bun audit --audit-level=high",
+    "architecture:check": "bun run architecture:cycles",
   },
 });
 
@@ -74,6 +77,26 @@ pre-push:
   commands:
     security-audit:
       run: bun audit --audit-level=high
+    architecture-check:
+      run: bun run architecture:check
+`;
+
+const configMissingArchitectureCommand = `
+pre-push:
+  commands:
+    test-suite:
+      run: bun run test:coverage
+    security-audit:
+      run: bun run security:audit
+`;
+
+const configInvalidArchitectureCommand = `
+pre-push:
+  commands:
+    security-audit:
+      run: bun run security:audit
+    architecture-check:
+      run: tsx scripts/check-circular-deps.ts
 `;
 
 const configInvalidBranch = `
@@ -97,6 +120,8 @@ pre-push:
   commands:
     security-audit:
       run: bun run security:audit
+    architecture-check:
+      run: bun run architecture:check
 `;
 
 const configWithEnvPrefix = `
@@ -106,6 +131,8 @@ pre-push:
       run: NODE_ENV=test CI=true bun run test:coverage
     security-audit:
       run: bun run security:audit
+    architecture-check:
+      run: bun run architecture:check
 `;
 
 function createMockDeps(overrides: Partial<ValidatorDeps> = {}): ValidatorDeps {
@@ -316,6 +343,77 @@ echo "second"`;
     });
   });
 
+  describe("validateArchitectureCheckCommand", () => {
+    it("passes when Lefthook runs bun run architecture:check", () => {
+      validator = new LefthookConfigValidator(createMockDeps());
+      const result = validator.validate();
+
+      expect(result.valid).toBe(true);
+      expect(result.errors).not.toContainEqual(
+        expect.stringContaining("architecture-check")
+      );
+    });
+
+    it("fails when the architecture-check command is missing", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configMissingArchitectureCommand,
+        })
+      );
+
+      const result = validator.validate();
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining("Missing architecture-check pre-push command")
+      );
+    });
+
+    it("fails when the architecture-check command bypasses the package script", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configInvalidArchitectureCommand,
+        })
+      );
+
+      const result = validator.validate();
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining("Architecture check command mismatch")
+      );
+    });
+
+    it("fails when package.json defines a different architecture script", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: (path) =>
+            path === "package.json"
+              ? JSON.stringify({
+                  scripts: {
+                    "security:audit": "bun audit --audit-level=high",
+                    "architecture:check": "tsx scripts/check-circular-deps.ts",
+                  },
+                })
+              : validConfig,
+        })
+      );
+
+      const result = validator.validate();
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining("Architecture check script mismatch")
+      );
+    });
+  });
+
   describe("resolvePackageJsonPath", () => {
     it("uses package.json next to the config file when present", () => {
       validator = new LefthookConfigValidator(
@@ -425,6 +523,8 @@ pre-push:
       run: bun run test
     security-audit:
       run: bun run security:audit
+    architecture-check:
+      run: bun run architecture:check
 `;
       validator = new LefthookConfigValidator(
         createMockDeps({

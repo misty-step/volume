@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, render, screen, waitFor } from "@testing-library/react";
-import { PaywallGate } from "./paywall-gate";
+import { PaywallGate, getBootstrapPhase } from "./paywall-gate";
 
 const mockReplace = vi.fn();
 const mockUseQuery = vi.fn();
@@ -60,6 +60,68 @@ describe("PaywallGate", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("derives the bootstrap phase from auth and subscription state", () => {
+    expect(
+      getBootstrapPhase({
+        isClerkLoaded: false,
+        isSignedOut: false,
+        isAuthenticated: false,
+        isConvexAuthLoading: true,
+        authReady: false,
+        subscriptionStatus: undefined,
+        userBootstrapError: null,
+      })
+    ).toBe("clerk");
+
+    expect(
+      getBootstrapPhase({
+        isClerkLoaded: true,
+        isSignedOut: false,
+        isAuthenticated: false,
+        isConvexAuthLoading: true,
+        authReady: false,
+        subscriptionStatus: undefined,
+        userBootstrapError: null,
+      })
+    ).toBe("convex_auth");
+
+    expect(
+      getBootstrapPhase({
+        isClerkLoaded: true,
+        isSignedOut: false,
+        isAuthenticated: true,
+        isConvexAuthLoading: false,
+        authReady: true,
+        subscriptionStatus: undefined,
+        userBootstrapError: null,
+      })
+    ).toBe("subscription_query");
+
+    expect(
+      getBootstrapPhase({
+        isClerkLoaded: true,
+        isSignedOut: false,
+        isAuthenticated: true,
+        isConvexAuthLoading: false,
+        authReady: true,
+        subscriptionStatus: null,
+        userBootstrapError: null,
+      })
+    ).toBe("user_bootstrap");
+
+    expect(
+      getBootstrapPhase({
+        isClerkLoaded: true,
+        isSignedOut: false,
+        isAuthenticated: true,
+        isConvexAuthLoading: false,
+        authReady: true,
+        subscriptionStatus: { hasAccess: true, status: "active" },
+        userBootstrapError: null,
+      })
+    ).toBeNull();
   });
 
   it("shows a loading state while subscription status loads", () => {

@@ -1,3 +1,4 @@
+import path from "node:path";
 import next from "eslint-config-next";
 
 function isProcessEnv(node) {
@@ -7,6 +8,98 @@ function isProcessEnv(node) {
     node.object.name === "process" &&
     node.property?.type === "Identifier" &&
     node.property.name === "env"
+  );
+}
+
+function normalizePath(value) {
+  return value.replace(/\\/g, "/");
+}
+
+function getRepoRelativePath(filename, marker) {
+  const normalized = normalizePath(filename);
+  const markerIndex = normalized.lastIndexOf(marker);
+  if (markerIndex === -1) return null;
+  return normalized.slice(markerIndex + marker.length);
+}
+
+function resolveSrcImport(context, source) {
+  if (typeof source !== "string") return null;
+  if (source.startsWith("@/")) {
+    return source.slice(2);
+  }
+
+  if (!source.startsWith(".")) return null;
+
+  const filename = normalizePath(context.filename || context.getFilename());
+  const repoRelativePath = getRepoRelativePath(filename, "/src/");
+  if (!repoRelativePath) return null;
+
+  const resolved = path.posix.normalize(
+    path.posix.join(path.posix.dirname(repoRelativePath), source)
+  );
+
+  return resolved.startsWith("../") ? null : resolved;
+}
+
+function isTypeOnlyImport(node) {
+  if (node.importKind === "type") return true;
+  return (
+    node.specifiers.length > 0 &&
+    node.specifiers.every((specifier) => specifier.importKind === "type")
+  );
+}
+
+function createSrcBoundaryGuard(message, shouldReport) {
+  return {
+    meta: {
+      type: "problem",
+      docs: {
+        description: message,
+      },
+      schema: [],
+    },
+    create(context) {
+      const filename = normalizePath(context.filename || context.getFilename());
+      const repoRelativePath = getRepoRelativePath(filename, "/src/");
+      if (!repoRelativePath) {
+        return {};
+      }
+
+      function reportIfNeeded(node, source, isTypeOnly = false) {
+        const resolvedImport = resolveSrcImport(context, source);
+        if (!resolvedImport) return;
+
+        if (
+          shouldReport({
+            filename,
+            repoRelativePath,
+            resolvedImport,
+            isTypeOnly,
+          })
+        ) {
+          context.report({ node, message });
+        }
+      }
+
+      return {
+        ImportDeclaration(node) {
+          reportIfNeeded(node, node.source.value, isTypeOnlyImport(node));
+        },
+        ExportNamedDeclaration(node) {
+          if (!node.source) return;
+          reportIfNeeded(node, node.source.value, node.exportKind === "type");
+        },
+        ExportAllDeclaration(node) {
+          reportIfNeeded(node, node.source.value, node.exportKind === "type");
+        },
+      };
+    },
+  };
+}
+
+function isSrcLayer(resolvedImport, layerName) {
+  return (
+    resolvedImport === layerName || resolvedImport.startsWith(`${layerName}/`)
   );
 }
 
@@ -111,6 +204,38 @@ const convexRelativeImportGuard = {
     };
   },
 };
+
+const hookComponentBoundaryGuard = createSrcBoundaryGuard(
+  "Hooks may not import runtime values from components. Move the dependency into lib or pass it in from a component.",
+  ({ repoRelativePath, resolvedImport, isTypeOnly }) =>
+    repoRelativePath.startsWith("hooks/") &&
+    isSrcLayer(resolvedImport, "components") &&
+    !isTypeOnly
+);
+
+const libLayerBoundaryGuard = createSrcBoundaryGuard(
+  "Lib modules may not import from app, components, hooks, or contexts.",
+  ({ repoRelativePath, resolvedImport }) => {
+    if (!repoRelativePath.startsWith("lib/")) return false;
+
+    const disallowedLayers = ["app", "hooks", "contexts"];
+    if (disallowedLayers.some((layer) => isSrcLayer(resolvedImport, layer))) {
+      return true;
+    }
+
+    if (!isSrcLayer(resolvedImport, "components")) {
+      return false;
+    }
+
+    return !repoRelativePath.startsWith("lib/coach/presentation/");
+  }
+);
+
+const appRouteBoundaryGuard = createSrcBoundaryGuard(
+  "Only files under src/app may import from app routes.",
+  ({ repoRelativePath, resolvedImport }) =>
+    !repoRelativePath.startsWith("app/") && isSrcLayer(resolvedImport, "app")
+);
 
 const clientEnvGuard = {
   meta: {
@@ -234,11 +359,17 @@ const config = [
         rules: {
           "next-env-direct-access": nextEnvDirectAccessGuard,
           "client-env-guard": clientEnvGuard,
+          "hook-component-boundary": hookComponentBoundaryGuard,
+          "lib-layer-boundary": libLayerBoundaryGuard,
+          "app-route-boundary": appRouteBoundaryGuard,
         },
       },
     },
     rules: {
       "local/next-env-direct-access": "error",
+      "local/hook-component-boundary": "error",
+      "local/lib-layer-boundary": "error",
+      "local/app-route-boundary": "error",
       "no-console": ["error", { allow: ["warn", "error"] }],
       // TODO: @typescript-eslint/no-floating-promises requires typed linting (parserOptions.project).
       // Add tsconfig.eslint.json + wire parserOptions when ready to take the lint-speed hit.
@@ -285,6 +416,26 @@ const config = [
     },
     rules: {
       "convex-local/no-relative-escape": "error",
+    },
+  },
+  {
+    files: [
+      "src/**/*.{js,jsx,ts,tsx}",
+      "convex/**/*.ts",
+      "packages/core/src/**/*.ts",
+    ],
+    ignores: [
+      "src/**/*.test.{js,jsx,ts,tsx}",
+      "src/**/*.spec.{js,jsx,ts,tsx}",
+      "src/**/*.test-d.ts",
+      "convex/_generated/**",
+      "convex/**/*.test.ts",
+      "convex/**/*.spec.ts",
+      "packages/core/src/**/*.test.ts",
+      "packages/core/src/**/*.spec.ts",
+    ],
+    rules: {
+      complexity: ["error", 30],
     },
   },
   {

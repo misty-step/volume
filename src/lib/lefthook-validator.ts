@@ -49,6 +49,8 @@ export interface ValidationResult {
 
 const SECURITY_AUDIT_COMMAND = "bun run security:audit";
 const SECURITY_AUDIT_SCRIPT = "bun audit --audit-level=high";
+const ARCHITECTURE_CHECK_COMMAND = "bun run architecture:check";
+const ARCHITECTURE_CHECK_SCRIPT = "bun run architecture:cycles";
 
 export const defaultDeps: ValidatorDeps = {
   readFile: (path: string) => fs.readFileSync(path, "utf8"),
@@ -98,33 +100,57 @@ export class LefthookConfigValidator {
   }
 
   validateSecurityAuditCommand(config: LefthookConfig): void {
+    this.validatePrePushCommand(
+      config,
+      "security-audit",
+      SECURITY_AUDIT_COMMAND,
+      "❌ Missing pre-push hook: Lefthook must define a pre-push hook that runs bun run security:audit",
+      "❌ Missing pre-push commands: Lefthook pre-push hook must run bun run security:audit",
+      "❌ Missing security-audit pre-push command: Lefthook must run bun run security:audit",
+      "❌ Security audit command mismatch: Lefthook should run bun run security:audit to match CI"
+    );
+  }
+
+  validateArchitectureCheckCommand(config: LefthookConfig): void {
+    this.validatePrePushCommand(
+      config,
+      "architecture-check",
+      ARCHITECTURE_CHECK_COMMAND,
+      "❌ Missing pre-push hook: Lefthook must define a pre-push hook that runs bun run architecture:check",
+      "❌ Missing pre-push commands: Lefthook pre-push hook must run bun run architecture:check",
+      "❌ Missing architecture-check pre-push command: Lefthook must run bun run architecture:check",
+      "❌ Architecture check command mismatch: Lefthook should run bun run architecture:check to match CI"
+    );
+  }
+
+  validatePrePushCommand(
+    config: LefthookConfig,
+    commandName: string,
+    expectedCommand: string,
+    missingHookMessage: string,
+    missingCommandsMessage: string,
+    missingCommandMessage: string,
+    mismatchMessage: string
+  ): void {
     const prePushConfig = config["pre-push"];
     if (!prePushConfig) {
-      this.errors.push(
-        "❌ Missing pre-push hook: Lefthook must define a pre-push hook that runs bun run security:audit"
-      );
+      this.errors.push(missingHookMessage);
       return;
     }
 
     if (!prePushConfig.commands) {
-      this.errors.push(
-        "❌ Missing pre-push commands: Lefthook pre-push hook must run bun run security:audit"
-      );
+      this.errors.push(missingCommandsMessage);
       return;
     }
 
-    const auditCommand = prePushConfig.commands["security-audit"]?.run?.trim();
-    if (!auditCommand) {
-      this.errors.push(
-        "❌ Missing security-audit pre-push command: Lefthook must run bun run security:audit"
-      );
+    const command = prePushConfig.commands[commandName]?.run?.trim();
+    if (!command) {
+      this.errors.push(missingCommandMessage);
       return;
     }
 
-    if (auditCommand !== SECURITY_AUDIT_COMMAND) {
-      this.errors.push(
-        "❌ Security audit command mismatch: Lefthook should run bun run security:audit to match CI"
-      );
+    if (command !== expectedCommand) {
+      this.errors.push(mismatchMessage);
     }
   }
 
@@ -141,6 +167,32 @@ export class LefthookConfigValidator {
   }
 
   validateSecurityAuditScript(configPath: string): void {
+    this.validatePackageScript(
+      configPath,
+      "security:audit",
+      SECURITY_AUDIT_SCRIPT,
+      "❌ Missing security:audit script: package.json must define bun audit --audit-level=high",
+      "❌ Security audit script mismatch: package.json should define bun audit --audit-level=high"
+    );
+  }
+
+  validateArchitectureCheckScript(configPath: string): void {
+    this.validatePackageScript(
+      configPath,
+      "architecture:check",
+      ARCHITECTURE_CHECK_SCRIPT,
+      "❌ Missing architecture:check script: package.json must define bun run architecture:cycles",
+      "❌ Architecture check script mismatch: package.json should define bun run architecture:cycles"
+    );
+  }
+
+  validatePackageScript(
+    configPath: string,
+    scriptName: string,
+    expectedCommand: string,
+    missingScriptMessage: string,
+    mismatchMessage: string
+  ): void {
     const packageJsonPath = this.resolvePackageJsonPath(configPath);
     if (!this.deps.fileExists(packageJsonPath)) {
       this.errors.push("❌ package.json not found");
@@ -151,19 +203,15 @@ export class LefthookConfigValidator {
       const packageJson = JSON.parse(this.deps.readFile(packageJsonPath)) as {
         scripts?: Record<string, string>;
       };
-      const auditScript = packageJson.scripts?.["security:audit"]?.trim();
+      const script = packageJson.scripts?.[scriptName]?.trim();
 
-      if (!auditScript) {
-        this.errors.push(
-          "❌ Missing security:audit script: package.json must define bun audit --audit-level=high"
-        );
+      if (!script) {
+        this.errors.push(missingScriptMessage);
         return;
       }
 
-      if (auditScript !== SECURITY_AUDIT_SCRIPT) {
-        this.errors.push(
-          "❌ Security audit script mismatch: package.json should define bun audit --audit-level=high"
-        );
+      if (script !== expectedCommand) {
+        this.errors.push(mismatchMessage);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -255,7 +303,9 @@ export class LefthookConfigValidator {
       const config = this.parseYaml(content);
 
       this.validateSecurityAuditCommand(config);
+      this.validateArchitectureCheckCommand(config);
       this.validateSecurityAuditScript(configPath);
+      this.validateArchitectureCheckScript(configPath);
       this.validateBranchReferences(config);
       this.validateCommandsExist(config);
     } catch (error) {

@@ -20,6 +20,21 @@ type BootstrapPhase =
   | "subscription_query"
   | "user_bootstrap";
 
+type SubscriptionGateStatus =
+  | { hasAccess: boolean; status: string }
+  | null
+  | undefined;
+
+type BootstrapPhaseInput = {
+  isClerkLoaded: boolean;
+  isSignedOut: boolean;
+  isAuthenticated: boolean;
+  isConvexAuthLoading: boolean;
+  authReady: boolean;
+  subscriptionStatus: SubscriptionGateStatus;
+  userBootstrapError: Error | null;
+};
+
 const BOOTSTRAP_TIMEOUT_MS = 8000;
 
 const BOOTSTRAP_MESSAGES: Record<BootstrapPhase, string> = {
@@ -28,6 +43,198 @@ const BOOTSTRAP_MESSAGES: Record<BootstrapPhase, string> = {
   subscription_query: "Loading your workspace...",
   user_bootstrap: "Setting up your account...",
 };
+
+export function getBootstrapPhase({
+  isClerkLoaded,
+  isSignedOut,
+  isAuthenticated,
+  isConvexAuthLoading,
+  authReady,
+  subscriptionStatus,
+  userBootstrapError,
+}: BootstrapPhaseInput): BootstrapPhase | null {
+  if (!isClerkLoaded) return "clerk";
+  if (isSignedOut) return null;
+  if (!isAuthenticated || isConvexAuthLoading) return "convex_auth";
+  if (authReady && subscriptionStatus === undefined) {
+    return "subscription_query";
+  }
+  if (authReady && subscriptionStatus === null && !userBootstrapError) {
+    return "user_bootstrap";
+  }
+  return null;
+}
+
+function renderCenteredState({
+  testId,
+  message,
+  iconClassName,
+  messageClassName = "text-sm text-muted-foreground",
+}: {
+  testId: string;
+  message: string;
+  iconClassName: string;
+  messageClassName?: string;
+}) {
+  return (
+    <div
+      data-testid={testId}
+      className="flex min-h-screen flex-col items-center justify-center gap-4"
+    >
+      <Loader2 className={iconClassName} />
+      <p className={messageClassName}>{message}</p>
+    </div>
+  );
+}
+
+function renderRefreshState(title: string, message: string, testId?: string) {
+  return (
+    <div
+      data-testid={testId}
+      className="flex min-h-screen flex-col items-center justify-center gap-4 p-4 text-center"
+    >
+      <p className="text-lg font-medium">{title}</p>
+      <p className="max-w-md text-muted-foreground">{message}</p>
+      <Button onClick={() => window.location.reload()}>Refresh Page</Button>
+    </div>
+  );
+}
+
+function getBootstrapErrorCopy(activeUserBootstrapError: Error | null) {
+  if (activeUserBootstrapError) {
+    return {
+      title: "We couldn't finish loading your account.",
+      message:
+        "Please refresh the page. If this keeps happening, contact support.",
+    };
+  }
+
+  return {
+    title: "We couldn't finish connecting to Volume.",
+    message:
+      "Authentication took too long. Refresh the page and sign in again if needed.",
+  };
+}
+
+type PaywallRenderState =
+  | { kind: "signed_out" }
+  | { kind: "verifying" }
+  | { kind: "verification_timeout" }
+  | { kind: "bootstrap_error"; title: string; message: string }
+  | { kind: "loading"; message: string }
+  | { kind: "redirecting" }
+  | { kind: "content" };
+
+function getPaywallRenderState({
+  isSignedOut,
+  isVerifying,
+  verificationTimeout,
+  bootstrapTimeoutPhase,
+  bootstrapPhase,
+  subscriptionStatus,
+  userBootstrapError,
+}: {
+  isSignedOut: boolean;
+  isVerifying: boolean;
+  verificationTimeout: boolean;
+  bootstrapTimeoutPhase: BootstrapPhase | null;
+  bootstrapPhase: BootstrapPhase | null;
+  subscriptionStatus: SubscriptionGateStatus;
+  userBootstrapError: Error | null;
+}): PaywallRenderState {
+  if (isSignedOut) {
+    return { kind: "signed_out" };
+  }
+
+  if (isVerifying && !verificationTimeout) {
+    return { kind: "verifying" };
+  }
+
+  const activeUserBootstrapError =
+    subscriptionStatus === null ? userBootstrapError : null;
+
+  if (verificationTimeout && !subscriptionStatus?.hasAccess) {
+    return { kind: "verification_timeout" };
+  }
+
+  if (
+    (bootstrapTimeoutPhase && !subscriptionStatus?.hasAccess) ||
+    activeUserBootstrapError
+  ) {
+    return {
+      kind: "bootstrap_error",
+      ...getBootstrapErrorCopy(activeUserBootstrapError),
+    };
+  }
+
+  if (
+    bootstrapPhase ||
+    subscriptionStatus === undefined ||
+    subscriptionStatus === null
+  ) {
+    return {
+      kind: "loading",
+      message: bootstrapPhase
+        ? BOOTSTRAP_MESSAGES[bootstrapPhase]
+        : "Loading your workspace...",
+    };
+  }
+
+  if (!subscriptionStatus.hasAccess) {
+    return { kind: "redirecting" };
+  }
+
+  return { kind: "content" };
+}
+
+function renderPaywallState(
+  renderState: PaywallRenderState,
+  children: React.ReactNode
+) {
+  switch (renderState.kind) {
+    case "signed_out":
+      return renderCenteredState({
+        testId: "paywall-signed-out",
+        message: "Your session expired. Redirecting you to sign in...",
+        iconClassName: "h-8 w-8 animate-spin text-muted-foreground",
+      });
+    case "verifying":
+      return renderCenteredState({
+        testId: "paywall-verifying",
+        message: "Verifying your payment...",
+        iconClassName: "h-8 w-8 animate-spin text-primary",
+        messageClassName: "animate-pulse text-muted-foreground",
+      });
+    case "verification_timeout":
+      return renderRefreshState(
+        "Payment received!",
+        "Your subscription is being activated. This usually takes a few seconds. Please refresh the page or contact support if this persists."
+      );
+    case "bootstrap_error":
+      return renderRefreshState(
+        renderState.title,
+        renderState.message,
+        "paywall-bootstrap-error"
+      );
+    case "loading":
+      return renderCenteredState({
+        testId: "paywall-loading",
+        message: renderState.message,
+        iconClassName: "h-8 w-8 animate-spin text-muted-foreground",
+      });
+    case "redirecting":
+      return (
+        <div
+          data-testid="paywall-redirecting"
+          className="flex min-h-screen items-center justify-center"
+        >
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      );
+    case "content":
+      return <>{children}</>;
+  }
+}
 
 /**
  * PaywallGate - Wraps authenticated routes to enforce subscription access
@@ -95,18 +302,15 @@ export function PaywallGate({ children }: PaywallGateProps) {
     isVerifying,
   }));
 
-  let bootstrapPhase: BootstrapPhase | null = null;
-  if (!isClerkLoaded) {
-    bootstrapPhase = "clerk";
-  } else if (isSignedOut) {
-    bootstrapPhase = null;
-  } else if (!isAuthenticated || isConvexAuthLoading) {
-    bootstrapPhase = "convex_auth";
-  } else if (authReady && subscriptionStatus === undefined) {
-    bootstrapPhase = "subscription_query";
-  } else if (authReady && subscriptionStatus === null && !userBootstrapError) {
-    bootstrapPhase = "user_bootstrap";
-  }
+  const bootstrapPhase = getBootstrapPhase({
+    isClerkLoaded,
+    isSignedOut,
+    isAuthenticated,
+    isConvexAuthLoading,
+    authReady,
+    subscriptionStatus,
+    userBootstrapError,
+  });
 
   // 1. Handle checkout redirect on mount
   useEffect(() => {
@@ -280,108 +484,15 @@ export function PaywallGate({ children }: PaywallGateProps) {
     }
   }, [subscriptionStatus, isVerifying, verificationTimeout, router]);
 
-  // --- Render States ---
+  const renderState = getPaywallRenderState({
+    isSignedOut,
+    isVerifying,
+    verificationTimeout,
+    bootstrapTimeoutPhase,
+    bootstrapPhase,
+    subscriptionStatus,
+    userBootstrapError,
+  });
 
-  if (isSignedOut) {
-    return (
-      <div
-        data-testid="paywall-signed-out"
-        className="flex min-h-screen flex-col items-center justify-center gap-4 p-4 text-center"
-      >
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          Your session expired. Redirecting you to sign in...
-        </p>
-      </div>
-    );
-  }
-
-  // Verifying payment
-  if (isVerifying && !verificationTimeout) {
-    return (
-      <div
-        data-testid="paywall-verifying"
-        className="flex min-h-screen flex-col items-center justify-center gap-4"
-      >
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="animate-pulse text-muted-foreground">
-          Verifying your payment...
-        </p>
-      </div>
-    );
-  }
-
-  const activeUserBootstrapError =
-    subscriptionStatus === null ? userBootstrapError : null;
-
-  if (verificationTimeout && !subscriptionStatus?.hasAccess) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4 text-center">
-        <p className="text-lg font-medium">Payment received!</p>
-        <p className="max-w-md text-muted-foreground">
-          Your subscription is being activated. This usually takes a few
-          seconds. Please refresh the page or contact support if this persists.
-        </p>
-        <Button onClick={() => window.location.reload()}>Refresh Page</Button>
-      </div>
-    );
-  }
-
-  if (
-    (bootstrapTimeoutPhase && !subscriptionStatus?.hasAccess) ||
-    activeUserBootstrapError
-  ) {
-    const title = activeUserBootstrapError
-      ? "We couldn't finish loading your account."
-      : "We couldn't finish connecting to Volume.";
-    const message = activeUserBootstrapError
-      ? "Please refresh the page. If this keeps happening, contact support."
-      : "Authentication took too long. Refresh the page and sign in again if needed.";
-
-    return (
-      <div
-        data-testid="paywall-bootstrap-error"
-        className="flex min-h-screen flex-col items-center justify-center gap-4 p-4 text-center"
-      >
-        <p className="text-lg font-medium">{title}</p>
-        <p className="max-w-md text-muted-foreground">{message}</p>
-        <Button onClick={() => window.location.reload()}>Refresh Page</Button>
-      </div>
-    );
-  }
-
-  // Loading state
-  if (
-    bootstrapPhase ||
-    subscriptionStatus === undefined ||
-    subscriptionStatus === null
-  ) {
-    const loadingMessage = bootstrapPhase
-      ? BOOTSTRAP_MESSAGES[bootstrapPhase]
-      : "Loading your workspace...";
-
-    return (
-      <div
-        data-testid="paywall-loading"
-        className="flex min-h-screen flex-col items-center justify-center gap-4"
-      >
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">{loadingMessage}</p>
-      </div>
-    );
-  }
-
-  // No access - show loading while redirecting
-  if (!subscriptionStatus.hasAccess) {
-    return (
-      <div
-        data-testid="paywall-redirecting"
-        className="flex min-h-screen items-center justify-center"
-      >
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  return <>{children}</>;
+  return renderPaywallState(renderState, children);
 }
