@@ -4,7 +4,7 @@ How to add, modify, and test coach tools in the Volume AI coach system.
 
 ## Architecture
 
-```
+```text
 src/lib/coach/tools/
   registry.ts     — Tool definitions and lookup
   execute.ts      — Execution pipeline (lookup → validate → run → error handling)
