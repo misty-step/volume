@@ -6,29 +6,24 @@ import { fileURLToPath } from "node:url";
 const repoRoot = dirname(fileURLToPath(import.meta.url));
 
 async function lintText(source: string) {
+  return lintTextAtPath(source, "src/tmp.ts");
+}
+
+async function lintTextAtPath(source: string, relativePath: string) {
   const eslint = new ESLint({
     cwd: repoRoot,
     overrideConfigFile: join(repoRoot, "eslint.config.mjs"),
   });
 
   const [result] = await eslint.lintText(source, {
-    filePath: join(repoRoot, "src/tmp.ts"),
+    filePath: join(repoRoot, relativePath),
   });
 
   return result.messages.map((message) => message.message);
 }
 
 async function lintClientText(source: string) {
-  const eslint = new ESLint({
-    cwd: repoRoot,
-    overrideConfigFile: join(repoRoot, "eslint.config.mjs"),
-  });
-
-  const [result] = await eslint.lintText(source, {
-    filePath: join(repoRoot, "src/tmp.client.ts"),
-  });
-
-  return result.messages.map((message) => message.message);
+  return lintTextAtPath(source, "src/tmp.client.ts");
 }
 
 describe("Next env direct access guard", () => {
@@ -95,6 +90,36 @@ describe("client env guard", () => {
   it("allows public env reads in .client modules", async () => {
     const messages = await lintClientText(
       "export const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;\nexport const mode = process.env.NODE_ENV;"
+    );
+
+    expect(messages).toEqual([]);
+  });
+});
+
+describe("complexity rule", () => {
+  it("rejects functions above the configured complexity threshold", async () => {
+    const conditions = Array.from({ length: 41 }, (_, index) => {
+      return `if (value === ${index}) return ${index};`;
+    }).join("\n");
+
+    const messages = await lintTextAtPath(
+      `export function tooComplex(value: number) {\n${conditions}\nreturn value;\n}`,
+      "src/lib/tmp-complex.ts"
+    );
+
+    expect(messages).toContainEqual(
+      expect.stringContaining("Maximum allowed is 40")
+    );
+  });
+
+  it("allows functions within the configured complexity threshold", async () => {
+    const conditions = Array.from({ length: 3 }, (_, index) => {
+      return `if (value === ${index}) return ${index};`;
+    }).join("\n");
+
+    const messages = await lintTextAtPath(
+      `export function simple(value: number) {\n${conditions}\nreturn value;\n}`,
+      "src/lib/tmp-simple.ts"
     );
 
     expect(messages).toEqual([]);

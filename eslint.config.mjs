@@ -1,5 +1,7 @@
 import next from "eslint-config-next";
 
+const MAX_ARCHITECTURE_COMPLEXITY = 40;
+
 function isProcessEnv(node) {
   return (
     node?.type === "MemberExpression" &&
@@ -168,6 +170,19 @@ const config = [
     ],
   },
   ...next,
+  {
+    files: ["src/**/*.{js,jsx,ts,tsx}", "convex/**/*.ts"],
+    ignores: [
+      "src/**/*.test.{js,jsx,ts,tsx}",
+      "src/**/*.spec.{js,jsx,ts,tsx}",
+      "src/**/*.test-d.ts",
+      "convex/**/*.test.ts",
+      "convex/_generated/**",
+    ],
+    rules: {
+      complexity: ["error", MAX_ARCHITECTURE_COMPLEXITY],
+    },
+  },
   {
     files: ["src/**/*.{js,jsx,ts,tsx}"],
     ignores: ["src/**/*.test.{js,jsx,ts,tsx}", "src/**/*.spec.{js,jsx,ts,tsx}"],
