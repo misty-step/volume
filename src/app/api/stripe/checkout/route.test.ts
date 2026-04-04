@@ -39,8 +39,20 @@ vi.mock("@/lib/analytics", () => ({
   reportError: vi.fn(),
 }));
 
+// Mock logger (structured logging)
+vi.mock("@/lib/logger", () => ({
+  createChildLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  }),
+  log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
 // Import after mocks are set up
 import { POST } from "./route";
+import { reportError } from "@/lib/analytics";
 
 describe("Stripe checkout route", () => {
   beforeEach(() => {
@@ -234,5 +246,26 @@ describe("Stripe checkout route", () => {
 
     expect(response.status).toBe(400);
     expect(data.error).toBe("Invalid request body");
+  });
+
+  it("returns 500 when Convex query fails", async () => {
+    mockAuth.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token_123"),
+    });
+    mockConvexQuery.mockRejectedValue(new Error("Convex unavailable"));
+
+    const request = new Request("http://localhost:3000/api/stripe/checkout", {
+      method: "POST",
+      body: JSON.stringify({ priceId: "price_123" }),
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(data.error).toBe("Failed to fetch user data");
+    expect(reportError).toHaveBeenCalled();
+    expect(mockStripeCreate).not.toHaveBeenCalled();
   });
 });

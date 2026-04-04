@@ -225,6 +225,7 @@ const config = [
       "playwright-report/**",
       "test-results/**",
       "convex/_generated/**",
+      "dagger/**",
     ],
   },
   ...next,

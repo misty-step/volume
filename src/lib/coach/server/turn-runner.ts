@@ -1,5 +1,6 @@
 import type { CoachPreferences, CoachTurnResponse } from "@/lib/coach/schema";
 import { sanitizeError } from "@/lib/coach/sanitize-error";
+import { log } from "@/lib/logger";
 import type { ModelMessage } from "ai";
 import type { CoachToolContext } from "@/lib/coach/tools/types";
 import {
@@ -27,6 +28,7 @@ function abortTurn(controller: AbortController, reason: string | Error) {
   try {
     controller.abort(reason);
   } catch {
+    log.debug("AbortController.abort with reason failed, using bare abort");
     controller.abort();
   }
 }
