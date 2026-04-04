@@ -3,8 +3,11 @@ import { auth } from "@clerk/nextjs/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { reportError } from "@/lib/analytics";
+import { createChildLogger } from "@/lib/logger";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/../convex/_generated/api";
+
+const routeLog = createChildLogger({ route: "stripe/checkout" });
 
 /** 14-day trial period in milliseconds */
 const TRIAL_PERIOD_MS = 14 * 24 * 60 * 60 * 1000;
@@ -29,6 +32,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
+    routeLog.warn("Request body parse failed");
     return NextResponse.json(
       { error: "Invalid request body" },
       { status: 400 }
@@ -51,10 +55,28 @@ export async function POST(request: Request) {
   // Fetch user data server-side to prevent IDOR attacks and get trial info
   const convex = new ConvexHttpClient(convexUrl);
   convex.setAuth(token);
-  const [stripeCustomerId, user] = await Promise.all([
-    convex.query(api.subscriptions.getStripeCustomerId),
-    convex.query(api.users.getCurrentUser),
-  ]);
+  let stripeCustomerId: string | null;
+  let user: { trialEndsAt?: number; _creationTime?: number } | null;
+  try {
+    [stripeCustomerId, user] = await Promise.all([
+      convex.query(api.subscriptions.getStripeCustomerId),
+      convex.query(api.users.getCurrentUser),
+    ]);
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error("Convex query failed");
+    routeLog.error("Failed to fetch user data from Convex", {
+      operation: "fetch_user_data",
+      error,
+    });
+    reportError(error, {
+      context: "stripe/checkout",
+      operation: "convex_query",
+    });
+    return NextResponse.json(
+      { error: "Failed to fetch user data" },
+      { status: 500 }
+    );
+  }
 
   // Calculate remaining trial time to honor on upgrade
   // Business rule: User upgrading mid-trial finishes trial before billing starts
@@ -117,7 +139,10 @@ export async function POST(request: Request) {
     const error =
       err instanceof Error ? err : new Error("Unknown checkout error");
     reportError(error, { context: "stripe/checkout", priceId });
-    console.error("Error creating checkout session:", err);
+    routeLog.error("Stripe checkout session creation failed", {
+      priceId,
+      error,
+    });
     return NextResponse.json(
       { error: "Failed to create checkout session" },
       { status: 500 }

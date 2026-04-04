@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getStripe } from "@/lib/stripe";
 import { reportError } from "@/lib/analytics";
+import { createChildLogger } from "@/lib/logger";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/../convex/_generated/api";
+
+const routeLog = createChildLogger({ route: "stripe/portal" });
 
 /**
  * Create a Stripe Billing Portal session for the authenticated user.
@@ -32,9 +35,20 @@ export async function POST(_request: Request) {
   // Fetch stripeCustomerId server-side to prevent IDOR attacks
   const convex = new ConvexHttpClient(convexUrl);
   convex.setAuth(token);
-  const stripeCustomerId = await convex.query(
-    api.subscriptions.getStripeCustomerId
-  );
+  let stripeCustomerId: string | null;
+  try {
+    stripeCustomerId = await convex.query(
+      api.subscriptions.getStripeCustomerId
+    );
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error("Convex query failed");
+    routeLog.error("Failed to fetch Stripe customer ID from Convex", { error });
+    reportError(error, { context: "stripe/portal", operation: "convex_query" });
+    return NextResponse.json(
+      { error: "Failed to fetch user data" },
+      { status: 500 }
+    );
+  }
 
   if (!stripeCustomerId) {
     return NextResponse.json(
@@ -57,7 +71,7 @@ export async function POST(_request: Request) {
     const error =
       err instanceof Error ? err : new Error("Unknown portal error");
     reportError(error, { context: "stripe/portal", stripeCustomerId });
-    console.error("Error creating portal session:", err);
+    routeLog.error("Stripe portal session creation failed", { error });
     return NextResponse.json(
       { error: "Failed to create portal session" },
       { status: 500 }

@@ -36,6 +36,7 @@ export function createOpenRouterClient(): OpenAI | null {
   } catch {
     // OpenAI SDK throws in browser-like environments (e.g., vitest with jsdom)
     // Return null to trigger fallback classification
+    console.warn("[OpenRouter] SDK construction failed, returning null");
     return null;
   }
 }

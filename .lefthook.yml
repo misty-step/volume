@@ -20,7 +20,9 @@ pre-commit:
     # === Code Quality (Auto-fixable) ===
     lint:
       glob: "*.{ts,tsx,js,jsx}"
-      exclude: "convex/_generated/**"
+      exclude:
+        - "convex/_generated/**"
+        - "dagger/**"
       run: bunx eslint --fix --max-warnings=0 {staged_files}
       stage_fixed: true
       fail_text: "Linting issues auto-fixed. Review and re-commit."

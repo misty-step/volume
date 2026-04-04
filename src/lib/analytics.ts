@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { captureException as canaryCapture, initCanary } from "@canary-obs/sdk";
 import { getCanaryInitOptions, type CanaryTarget } from "./canary";
+import { log } from "./logger";
 import { sanitizeEmail } from "./sanitize";
 import { shouldEnableSentry } from "./sentry";
 import type posthogJs from "posthog-js";
@@ -431,8 +432,6 @@ export function trackEvent<Name extends AnalyticsEventName>(
 ): void {
   if (!isAnalyticsEnabled()) return;
 
-  const isDev = process.env.NODE_ENV === "development";
-
   // Extract properties from args (undefined if not provided)
   const properties = args[0] || {};
 
@@ -444,8 +443,8 @@ export function trackEvent<Name extends AnalyticsEventName>(
   if (typeof window !== "undefined") {
     try {
       getPostHog()?.capture(name, enriched);
-    } catch (error) {
-      if (isDev) console.warn("Analytics trackEvent failed:", error);
+    } catch (err) {
+      log.warn("PostHog capture failed", { eventName: name, error: err });
     }
     return;
   }

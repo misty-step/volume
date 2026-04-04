@@ -36,6 +36,17 @@ vi.mock("@/lib/analytics", () => ({
   reportError: mocks.reportError,
 }));
 
+// Mock logger (structured logging)
+vi.mock("@/lib/logger", () => ({
+  createChildLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  }),
+  log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
 vi.mock("@/../convex/_generated/api", () => ({
   api: {
     subscriptions: {
@@ -111,5 +122,18 @@ describe("POST /api/stripe/portal", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { url: string };
     expect(body.url).toBe("https://billing.stripe.com/session");
+  });
+
+  it("Convex query fails -> 500 with reportError", async () => {
+    mocks.getToken.mockResolvedValue("tok_123");
+    mocks.auth.mockResolvedValue({ userId: "user1", getToken: mocks.getToken });
+    mocks.query.mockRejectedValue(new Error("Convex unavailable"));
+
+    const res = await POST(makeRequest());
+    const body = (await res.json()) as { error: string };
+    expect(res.status).toBe(500);
+    expect(body.error).toBe("Failed to fetch user data");
+    expect(mocks.reportError).toHaveBeenCalled();
+    expect(mocks.create).not.toHaveBeenCalled();
   });
 });

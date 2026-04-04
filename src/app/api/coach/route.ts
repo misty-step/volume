@@ -1,6 +1,7 @@
 import { after, NextResponse } from "next/server";
 import { pipeJsonRender } from "@json-render/core";
 import { reportError } from "@/lib/analytics";
+import { createChildLogger } from "@/lib/logger";
 import { ConvexHttpClient } from "convex/browser";
 import { auth } from "@clerk/nextjs/server";
 import { api } from "@/../convex/_generated/api";
@@ -40,6 +41,8 @@ import {
   type PromptCoachMemory,
 } from "@/lib/coach/memory";
 
+const routeLog = createChildLogger({ route: "coach" });
+
 const CONTEXT_SUMMARY_TRIGGER_MESSAGES = 40;
 const CONTEXT_RECENT_MESSAGE_WINDOW = 20;
 const MAX_UI_MESSAGE_PAYLOAD_BYTES = 200_000;
@@ -55,6 +58,9 @@ function deserializeStoredMessage(content: string): ModelMessage | null {
   try {
     return JSON.parse(content) as ModelMessage;
   } catch {
+    routeLog.warn("Failed to deserialize stored coach message", {
+      contentLength: content.length,
+    });
     return null;
   }
 }
@@ -466,6 +472,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
+    routeLog.warn("Coach request body parse failed");
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
@@ -513,6 +520,7 @@ export async function POST(request: Request) {
       (m) => m.role !== "system"
     );
   } catch {
+    routeLog.warn("Coach message format conversion failed");
     return NextResponse.json(
       { error: "Invalid message format" },
       { status: 400 }
@@ -673,9 +681,10 @@ export async function POST(request: Request) {
     ) {
       let lastFailedModelId = runtime.modelId;
       for (const fallback of runtime.fallbacks) {
-        console.warn(
-          `[Coach] Planner failed with ${lastFailedModelId}, retrying with ${fallback.modelId}`
-        );
+        routeLog.warn("Planner failed, retrying with fallback", {
+          failedModel: lastFailedModelId,
+          nextModel: fallback.modelId,
+        });
         reportError(
           plannerResult.cause ?? new Error(plannerResult.errorMessage),
           {
@@ -704,7 +713,9 @@ export async function POST(request: Request) {
         });
 
         if (plannerResult.kind === "ok" || plannerResult.toolsUsed.length > 0) {
-          console.warn(`[Coach] Fallback to ${fallback.modelId} succeeded`);
+          routeLog.info("Planner fallback succeeded", {
+            model: fallback.modelId,
+          });
           break;
         }
         lastFailedModelId = fallback.modelId;
@@ -808,9 +819,10 @@ export async function POST(request: Request) {
           const fb = runtime.fallbacks[0];
           if (!fb) throw error;
 
-          console.warn(
-            `[Coach] Presentation failed with ${runtime.modelId}, retrying with ${fb.modelId}`
-          );
+          routeLog.warn("Presentation failed, retrying with fallback", {
+            failedModel: runtime.modelId,
+            nextModel: fb.modelId,
+          });
           reportError(
             error instanceof Error ? error : new Error(String(error)),
             {
