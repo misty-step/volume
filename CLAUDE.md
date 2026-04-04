@@ -10,6 +10,7 @@ bun run dev           # Next.js + Convex together
 bun run test --run    # Tests (single run)
 bun run security:audit # High-severity dependency vulnerabilities
 bun run typecheck && bun run lint && bun run build  # Quality checks
+dagger call check --source .                       # Full CI locally (Docker required)
 ```
 
 Lefthook enforces quality gates on commit/push.
@@ -57,19 +58,22 @@ CONVEX_DEPLOYMENT=prod:whimsical-marten-631 bunx convex deploy -y
 
 ## Pitfalls
 
-| Don't                                       | Do                                                                                             |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Deploy with uncommitted code                | `git status` clean, then deploy                                                                |
-| Assume code bug on service failure          | Check env vars first: `./scripts/verify-env.sh`                                                |
-| Hard-delete exercises                       | Use soft delete (`deleteExercise` mutation)                                                    |
-| Skip `includeDeleted` param                 | History views need `includeDeleted: true`                                                      |
-| Trust Stripe TypeScript types fully         | Docs > types (mode-dependent params)                                                           |
-| Re-validate in handler after `v.union`      | Convex validates args before handler runs                                                      |
-| Use relative imports in `convex/`           | Use `@/lib/...` alias (works in convex too)                                                    |
-| Use fake timers in Convex tests             | Prefer time window assertions (before/after)                                                   |
-| Read server-only env in `.client` code      | Keep browser-only env reads in `.client` files and limit them to `NEXT_PUBLIC_*` or `NODE_ENV` |
-| Inline error blocks in tool handlers        | Use `exerciseNotFoundResult()` from `helpers.ts` for all exercise-not-found errors             |
-| Call `get_exercise_library` to disambiguate | Use `close_matches` from tool error output — prompt handles the rest                           |
+| Don't                                            | Do                                                                                              |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| Deploy with uncommitted code                     | `git status` clean, then deploy                                                                 |
+| Assume code bug on service failure               | Check env vars first: `./scripts/verify-env.sh`                                                 |
+| Hard-delete exercises                            | Use soft delete (`deleteExercise` mutation)                                                     |
+| Skip `includeDeleted` param                      | History views need `includeDeleted: true`                                                       |
+| Trust Stripe TypeScript types fully              | Docs > types (mode-dependent params)                                                            |
+| Re-validate in handler after `v.union`           | Convex validates args before handler runs                                                       |
+| Use relative imports in `convex/`                | Use `@/lib/...` alias (works in convex too)                                                     |
+| Use fake timers in Convex tests                  | Prefer time window assertions (before/after)                                                    |
+| Read server-only env in `.client` code           | Keep browser-only env reads in `.client` files and limit them to `NEXT_PUBLIC_*` or `NODE_ENV`  |
+| Inline error blocks in tool handlers             | Use `exerciseNotFoundResult()` from `helpers.ts` for all exercise-not-found errors              |
+| Call `get_exercise_library` to disambiguate      | Use `close_matches` from tool error output — prompt handles the rest                            |
+| Use `console.error`/`console.warn` in API routes | Use `createChildLogger({ route })` from `@/lib/logger` — PII-sanitized, structured JSON in prod |
+| Leave `catch {}` blocks empty                    | Always log or report — `log.warn(msg, ctx)` for expected failures, `reportError` for unexpected |
+| Use `@/lib/logger` in Convex runtime             | Use `console.warn` — Convex can't import Next.js modules                                        |
 
 ## Key Patterns
 
