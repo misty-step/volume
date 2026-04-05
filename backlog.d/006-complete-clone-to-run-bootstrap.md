@@ -1,7 +1,7 @@
 # Complete clone-to-run bootstrap
 
 Priority: medium
-Status: ready
+Status: in-progress
 Estimate: M
 
 ## Goal
