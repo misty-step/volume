@@ -12,12 +12,16 @@ Workout tracker that makes logging sets fast and shows you what's working.
 
 ```bash
 bun run setup
-bun run dev     # Runs Next.js (port 3000) + Convex (cloud) together
+bunx convex dev
+bun run dev
 ```
 
 Open [localhost:3000](http://localhost:3000).
 
-**First time?** You need Clerk keys. See [First-Time Setup](#first-time-setup) below.
+Run `bun run setup:check` first if you want a no-side-effect prerequisite check.
+
+**First time?** You need Clerk keys plus a personal Convex dev deployment. See
+[First-Time Setup](#first-time-setup) below.
 
 ## Understanding the Codebase
 
@@ -40,8 +44,10 @@ Open [localhost:3000](http://localhost:3000).
 ## Development
 
 ```bash
+bun run setup:check   # Validate local tooling with no file changes
 bun run setup         # Install deps + create .env.local when missing
-bun run dev           # Both servers
+bunx convex dev       # Provision/sync your personal Convex dev deployment
+bun run dev           # Next.js + Convex + local Stripe forwarding
 bun run typecheck     # TypeScript
 bun run lint          # ESLint
 bun run security:audit # High-severity dependency vulnerabilities
@@ -65,43 +71,75 @@ Requires local `agent-browser`, `jq`, `CLERK_TEST_USER_EMAIL`, `CLERK_TEST_USER_
 
 ## First-Time Setup
 
-### 1. Convex (backend)
+### 1. Bootstrap the clone
 
 ```bash
-bun run setup   # if you have not already bootstrapped the repo
-bunx convex dev   # Creates project, generates .env.local
+bun run setup
 ```
 
-### 2. Clerk (auth)
+This installs dependencies, creates `.env.local` from `.env.example` when
+missing, and prints the remaining env work.
 
-Get keys from [dashboard.clerk.com](https://dashboard.clerk.com) and add to `.env.local`:
+### 2. Fill in the required local auth values
 
-```
+Add your Clerk development keys to `.env.local`:
+
+```bash
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
+CLERK_JWT_ISSUER_DOMAIN=https://<your-dev>.clerk.accounts.dev
 ```
 
-Then sync the JWT issuer to Convex:
+Get the keys from [dashboard.clerk.com](https://dashboard.clerk.com).
+
+### 3. Provision or sync Convex
+
+```bash
+bunx convex dev
+```
+
+This command creates or reconnects your personal Convex dev deployment and
+refreshes `CONVEX_DEPLOYMENT` plus `NEXT_PUBLIC_CONVEX_URL` in `.env.local`.
+
+### 4. Sync Clerk into Convex
+
+After `bunx convex dev`, push the same Clerk issuer into Convex:
 
 ```bash
 bunx convex env set CLERK_JWT_ISSUER_DOMAIN "https://<your-dev>.clerk.accounts.dev"
 ```
 
-### 3. Start development
+### 5. Optional feature env
+
+For coach features and `/api/health` to pass locally, set
+`OPENROUTER_API_KEY` in `.env.local` and in Convex:
+
+```bash
+OPENROUTER_API_KEY=sk-or-v1-...
+bunx convex env set OPENROUTER_API_KEY "sk-or-v1-..."
+```
+
+For local billing flows, also add Stripe values to `.env.local`:
+
+```bash
+STRIPE_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID=price_...
+NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID=price_...
+```
+
+If you want webhook forwarding during `bun run dev`, install the Stripe CLI and
+run `stripe login`. The dev process will configure `STRIPE_WEBHOOK_SECRET`
+automatically when Stripe is available.
+
+### 6. Start development
 
 ```bash
 bun run dev
 ```
 
-### 4. Configure coach runtime
-
-`/api/health` now requires `OPENROUTER_API_KEY` to report `pass`, so local dev and uptime checks should treat the coach runtime as a hard dependency.
-
-```bash
-OPENROUTER_API_KEY=sk-or-v1-...
-```
-
 ## Troubleshooting
+
+**Setup check fails** - Run `bun run setup:check` to see missing local tooling.
 
 **"Could not find public function"** - Run `bunx convex dev` to sync after pulling changes.
 

@@ -6,12 +6,34 @@ behavior-focused, and documented where contracts change.
 ## Bootstrap
 
 ```bash
+./scripts/setup.sh --check
 bun run setup
+bunx convex dev
 ```
 
 `bun run setup` installs dependencies, creates `.env.local` from
 `.env.example` when missing, and prints the remaining external credentials you
 need before `bun run dev` will succeed.
+
+Canonical order: `bun run setup` -> `bunx convex dev` -> `bun run dev`.
+
+Before the core local app flow is useful, fill in these `.env.local` values:
+
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
+- `CLERK_JWT_ISSUER_DOMAIN`
+
+Then sync the Clerk issuer into Convex:
+
+```bash
+bunx convex env set CLERK_JWT_ISSUER_DOMAIN "https://<your-dev>.clerk.accounts.dev"
+```
+
+Optional full-feature parity:
+
+- Add `OPENROUTER_API_KEY` locally and in Convex for coach features and `/api/health`.
+- Add Stripe keys and price IDs locally for checkout/billing flows.
+- Install Stripe CLI and run `stripe login` if you want local webhook forwarding.
 
 ## Daily Workflow
 
