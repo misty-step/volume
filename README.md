@@ -174,5 +174,7 @@ Conventional Commits + release-please. Merging to `master` auto-creates Release 
 
 Required PR mergeability is tracked by the `merge-gate` status on the PR head
 commit so squash merges do not depend on GitHub's synthetic merge ref.
+Changes to `master` land through pull requests: GitHub requires one approving
+review plus a passing `merge-gate` status on the PR head commit.
 
 See CLAUDE.md "Release Management" for commit format.

@@ -70,6 +70,8 @@ Prefer `bun run quality:check` for a quick confidence pass and
 ## Pull Requests
 
 - Keep PRs focused and easy to review.
+- Changes to `master` land through pull requests with one approving review plus
+  a passing `merge-gate` status on the PR head commit.
 - Summarize user-visible behavior changes and any env or schema impact.
 - Include screenshots for UI changes.
 - Call out any follow-up work instead of hiding it in the diff.
