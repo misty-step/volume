@@ -338,6 +338,42 @@ echo "second"`;
       );
     });
 
+    it("fails when the pre-push hook is missing entirely", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configMissingPrePushHook,
+        })
+      );
+
+      const result = validator.validate();
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining("Missing pre-push hook")
+      );
+    });
+
+    it("fails when the pre-push hook has no commands", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: (path) =>
+            path === "package.json"
+              ? packageJsonWithValidAuditScript
+              : configMissingPrePushCommands,
+        })
+      );
+
+      const result = validator.validate();
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining("Missing pre-push commands")
+      );
+    });
+
     it("fails when the architecture-check command is missing", () => {
       const configMissingArchitectureCommand = `
 pre-push:
@@ -408,6 +444,28 @@ pre-push:
       expect(result.valid).toBe(false);
       expect(result.errors).toContainEqual(
         expect.stringContaining("Architecture check script mismatch")
+      );
+    });
+
+    it("fails when package.json is missing architecture:check", () => {
+      validator = new LefthookConfigValidator(
+        createMockDeps({
+          readFile: (path) =>
+            path === "package.json"
+              ? JSON.stringify({
+                  scripts: {
+                    "security:audit": "bun audit --audit-level=high",
+                  },
+                })
+              : validConfig,
+        })
+      );
+
+      const result = validator.validate();
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining("Missing architecture:check script")
       );
     });
   });

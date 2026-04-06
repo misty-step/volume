@@ -4,7 +4,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { afterEach, describe, expect, it } from "vitest";
-import { ArchitectureChecker } from "./architecture-checker";
+import { ArchitectureChecker } from "@/lib/architecture-checker";
 
 function writeFixtureRepo(files: Record<string, string>): string {
   const repoRoot = fs.mkdtempSync(
@@ -71,6 +71,115 @@ describe("ArchitectureChecker", () => {
       expect.objectContaining({
         code: "boundary",
         file: "src/lib/format-button.ts",
+      })
+    );
+  });
+
+  it("parses JSONC tsconfig path aliases before enforcing boundaries", () => {
+    const repoRoot = createRepo({
+      "tsconfig.json": `{
+  // Comments and trailing commas are valid in tsconfig.json
+  "compilerOptions": {
+    "paths": {
+      "@custom/*": ["./src/*"],
+    },
+  },
+}
+`,
+      "src/components/ui/button.tsx":
+        "export function Button() { return null; }\n",
+      "src/lib/format-button.ts":
+        'import { Button } from "@custom/components/ui/button";\nexport const formatButton = () => Button;\n',
+    });
+
+    const checker = new ArchitectureChecker(repoRoot);
+    const result = checker.check();
+
+    expect(result.passed).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        code: "boundary",
+        file: "src/lib/format-button.ts",
+        importPath: "@custom/components/ui/button",
+      })
+    );
+  });
+
+  it("keeps repo default aliases when tsconfig adds custom paths", () => {
+    const repoRoot = createRepo({
+      "tsconfig.json": `{
+  "compilerOptions": {
+    "paths": {
+      "@custom/*": ["./src/*"]
+    }
+  }
+}
+`,
+      "src/lib/logger.ts": "export const logger = true;\n",
+      "packages/core/src/bad.ts":
+        'import { logger } from "@/lib/logger";\nexport const bad = logger;\n',
+    });
+
+    const checker = new ArchitectureChecker(repoRoot);
+    const result = checker.check();
+
+    expect(result.passed).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        code: "boundary",
+        file: "packages/core/src/bad.ts",
+        importPath: "@/lib/logger",
+      })
+    );
+  });
+
+  it("falls back to repo defaults when tsconfig parsing reports errors", () => {
+    const repoRoot = createRepo({
+      "tsconfig.json": `{
+  "extends": "./missing-tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "./broken-root",
+    "paths": {
+      "@/*": ["./broken-root/*"]
+    }
+  }
+}
+`,
+      "src/components/ui/button.tsx":
+        "export function Button() { return null; }\n",
+      "src/lib/format-button.ts":
+        'import { Button } from "@/components/ui/button";\nexport const formatButton = () => Button;\n',
+    });
+
+    const checker = new ArchitectureChecker(repoRoot);
+    const result = checker.check();
+
+    expect(result.passed).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        code: "boundary",
+        file: "src/lib/format-button.ts",
+        importPath: "@/components/ui/button",
+      })
+    );
+  });
+
+  it("fails when shared core modules depend on app-specific layers", () => {
+    const repoRoot = createRepo({
+      "src/lib/logger.ts": "export const logger = true;\n",
+      "packages/core/src/bad.ts":
+        'import { logger } from "@/lib/logger";\nexport const bad = logger;\n',
+    });
+
+    const checker = new ArchitectureChecker(repoRoot);
+    const result = checker.check();
+
+    expect(result.passed).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        code: "boundary",
+        file: "packages/core/src/bad.ts",
+        importPath: "@/lib/logger",
       })
     );
   });
@@ -153,6 +262,35 @@ describe("ArchitectureChecker", () => {
     );
   });
 
+  it("enforces boundaries when TypeScript resolves declaration entrypoints", () => {
+    const repoRoot = createRepo({
+      "tsconfig.json": `{
+  "compilerOptions": {
+    "paths": {
+      "@component-lib": ["./src/components/ui/button.d.ts"]
+    }
+  }
+}
+`,
+      "src/components/ui/button.d.ts":
+        "export declare function Button(): null;\n",
+      "src/lib/format-button.ts":
+        'import { Button } from "@component-lib";\nexport const formatButton = () => Button;\n',
+    });
+
+    const checker = new ArchitectureChecker(repoRoot);
+    const result = checker.check();
+
+    expect(result.passed).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        code: "boundary",
+        file: "src/lib/format-button.ts",
+        importPath: "@component-lib",
+      })
+    );
+  });
+
   it("keeps the presentation exception scoped to the registry bridge", () => {
     const repoRoot = createRepo({
       "src/components/coach/CoachSceneBlocks.tsx":
@@ -173,6 +311,27 @@ describe("ArchitectureChecker", () => {
     );
   });
 
+  it("limits the presentation exception to the approved component targets", () => {
+    const repoRoot = createRepo({
+      "src/components/ui/button.tsx":
+        "export function Button() { return null; }\n",
+      "src/lib/coach/presentation/registry.tsx":
+        'import { Button } from "@/components/ui/button";\nexport const registry = Button;\n',
+    });
+
+    const checker = new ArchitectureChecker(repoRoot);
+    const result = checker.check();
+
+    expect(result.passed).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        code: "boundary",
+        file: "src/lib/coach/presentation/registry.tsx",
+        importPath: "@/components/ui/button",
+      })
+    );
+  });
+
   it("reports circular dependencies between tracked modules", () => {
     const repoRoot = createRepo({
       "src/lib/a.ts": 'import { b } from "./b";\nexport const a = b;\n',
@@ -189,5 +348,19 @@ describe("ArchitectureChecker", () => {
         cycle: ["src/lib/a.ts", "src/lib/b.ts", "src/lib/a.ts"],
       })
     );
+  });
+
+  it("ignores JavaScript test fixtures when collecting modules", () => {
+    const repoRoot = createRepo({
+      "src/components/ui/button.js": "export const Button = null;\n",
+      "src/lib/format-button.test.js":
+        'import { Button } from "@/components/ui/button";\nexport const formatButton = () => Button;\n',
+    });
+
+    const checker = new ArchitectureChecker(repoRoot);
+    const result = checker.check();
+
+    expect(result.passed).toBe(true);
+    expect(result.issues).toHaveLength(0);
   });
 });

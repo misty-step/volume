@@ -6,7 +6,7 @@
  * The actual verifier logic lives in src/lib/architecture-checker.ts
  */
 
-import { ArchitectureChecker } from "../src/lib/architecture-checker";
+import { ArchitectureChecker } from "@/lib/architecture-checker";
 
 try {
   const checker = new ArchitectureChecker();

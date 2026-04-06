@@ -29,25 +29,29 @@ already reports generated-file cycles through `convex/_generated/api.d.ts`.
 
 ## What Was Built
 
-- Added a first-party `ArchitectureChecker` plus `scripts/verify-architecture.ts`
-  and wired it into `bun run architecture:check`, pre-push Lefthook, CI, and
-  `quality:full`.
-- Enforced boundary rules for `convex`, `src/components`, `src/hooks`, and
-  `src/lib`, with one explicit exception for
-  `src/lib/coach/presentation/registry.tsx`.
-- Added cycle detection over tracked `src/` and `convex/` modules, excluding
-  generated and test artifacts.
-- Added a conservative ESLint complexity gate (`40`) so complexity is enforced
-  without forcing unrelated refactors in this item.
-- Added regression tests for boundary failures, `require(...)` bypasses,
-  exception scope, CI job wiring, and complexity enforcement.
+- Added a first-party architecture verification path via
+  `scripts/verify-architecture.ts` and `bun run architecture:check`, then wired
+  it into CI, pre-push Lefthook, and `bun run quality:full`.
+- Added `src/lib/architecture-checker.ts` as the verification engine plus
+  `src/lib/architecture-policy.ts` to hold repo-specific boundary policy and
+  explicit exceptions.
+- Enforced cycle/boundary checks across `src/`, `convex/`, and `packages/core/`
+  with TypeScript-aware module resolution so repo aliases and JSONC `tsconfig`
+  files stay supported.
+- Added a conservative ESLint complexity gate (`40`) for `src/**/*` and
+  `convex/**/*.ts`, with regression coverage for both normal and excluded
+  generated files.
+- Added regression tests for CI wiring, Lefthook/package contract enforcement,
+  JSONC alias resolution, packages/core boundaries, JS test ignores, and
+  real-boundary failure cases.
 
 ## Workarounds
 
-- The complexity threshold is intentionally conservative because the current
-  baseline already exceeds stricter limits in several untouched modules.
-- Boundary checking follows repo path aliases from `tsconfig.json`, with a small
-  fallback alias set so checker tests do not depend on a fixture-local tsconfig.
+- The complexity threshold stays intentionally conservative because stricter
+  defaults would force unrelated refactors in untouched modules.
+- Boundary checking still keeps one explicit exception for
+  `src/lib/coach/presentation/registry.tsx`, which remains the sanctioned bridge
+  into coach presentation components.
 
 ## Touchpoints
 
@@ -57,10 +61,12 @@ already reports generated-file cycles through `convex/_generated/api.d.ts`.
 - `.lefthook.yml`
 - `scripts/verify-architecture.ts`
 - `eslint.config.test.ts`
+- `src/lib/architecture-policy.ts`
 - `src/lib/architecture-checker.ts`
 - `src/lib/architecture-checker.test.ts`
 - `src/lib/ci-workflow.test.ts`
 - `src/lib/lefthook-validator.ts`
 - `src/lib/lefthook-validator.test.ts`
+- `packages/core/`
 - `convex/`
 - `src/`

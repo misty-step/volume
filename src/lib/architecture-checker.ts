@@ -1,38 +1,21 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as ts from "typescript";
+import {
+  BOUNDARY_EXCEPTIONS,
+  BOUNDARY_RULES,
+  type ModuleDomain,
+} from "@/lib/architecture-policy";
 
 const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs"];
-const SCAN_ROOTS = ["src", "convex"] as const;
+const SCAN_ROOTS = ["src", "convex", "packages/core"] as const;
 
 const IGNORE_PATTERNS = [
   /^convex\/_generated\//,
-  /(?:^|\/)[^/]+\.test\.(ts|tsx)$/,
-  /(?:^|\/)[^/]+\.spec\.(ts|tsx)$/,
+  /(?:^|\/)[^/]+\.(test|spec)\.(ts|tsx|js|jsx|mjs)$/,
   /(?:^|\/)[^/]+\.test-d\.ts$/,
   /\.d\.ts$/,
 ];
-
-type ModuleDomain =
-  | "convex"
-  | "packages/core"
-  | "src/app"
-  | "src/components"
-  | "src/contexts"
-  | "src/hooks"
-  | "src/lib"
-  | "other";
-
-interface BoundaryRule {
-  fromDomain: ModuleDomain;
-  forbiddenDomains: ModuleDomain[];
-  message: string;
-}
-
-interface BoundaryException {
-  from: RegExp;
-  toDomain: ModuleDomain;
-}
 
 interface ResolvedImport {
   absolutePath: string;
@@ -59,48 +42,6 @@ export interface ArchitectureCheckResult {
   issues: ArchitectureIssue[];
 }
 
-const BOUNDARY_RULES: BoundaryRule[] = [
-  {
-    fromDomain: "convex",
-    forbiddenDomains: [
-      "src/app",
-      "src/components",
-      "src/contexts",
-      "src/hooks",
-    ],
-    message:
-      "Convex backend modules may not depend on frontend route or UI layers.",
-  },
-  {
-    fromDomain: "src/components",
-    forbiddenDomains: ["src/app"],
-    message: "Components may not depend on route modules.",
-  },
-  {
-    fromDomain: "src/hooks",
-    forbiddenDomains: ["src/app"],
-    message: "Hooks may not depend on route modules.",
-  },
-  {
-    fromDomain: "src/lib",
-    forbiddenDomains: [
-      "src/app",
-      "src/components",
-      "src/contexts",
-      "src/hooks",
-    ],
-    message:
-      "Library modules must stay independent of route, UI, and hook layers.",
-  },
-];
-
-const BOUNDARY_EXCEPTIONS: BoundaryException[] = [
-  {
-    from: /^src\/lib\/coach\/presentation\/registry\.tsx$/,
-    toDomain: "src/components",
-  },
-];
-
 const DEFAULT_PATH_ALIASES: PathAlias[] = [
   {
     key: "@/*",
@@ -124,8 +65,19 @@ function compareStrings(a: string, b: string): number {
   return a.localeCompare(b, "en");
 }
 
+function mergePathAliases(
+  fallbackPaths: ts.CompilerOptions["paths"],
+  configuredPaths: ts.CompilerOptions["paths"]
+): ts.CompilerOptions["paths"] {
+  return {
+    ...(fallbackPaths ?? {}),
+    ...(configuredPaths ?? {}),
+  };
+}
+
 export class ArchitectureChecker {
   private pathAliases: PathAlias[] | null = null;
+  private compilerOptions: ts.CompilerOptions | null = null;
 
   constructor(private repoRoot: string = process.cwd()) {}
 
@@ -289,6 +241,14 @@ export class ArchitectureChecker {
     importerPath: string,
     specifier: string
   ): ResolvedImport | null {
+    const typeScriptResolved = this.resolveWithTypeScript(
+      importerPath,
+      specifier
+    );
+    if (typeScriptResolved) {
+      return typeScriptResolved;
+    }
+
     const candidatePaths: string[] = [];
 
     if (specifier.startsWith(".")) {
@@ -307,20 +267,64 @@ export class ArchitectureChecker {
         continue;
       }
 
-      const relativePath = this.getRelativePath(resolvedPath);
-      const tracked = SCAN_ROOTS.some(
-        (scanRoot) =>
-          relativePath === scanRoot || relativePath.startsWith(`${scanRoot}/`)
-      );
-
-      return {
-        absolutePath: resolvedPath,
-        relativePath,
-        tracked,
-      };
+      return this.buildResolvedImport(resolvedPath);
     }
 
     return null;
+  }
+
+  private resolveWithTypeScript(
+    importerPath: string,
+    specifier: string
+  ): ResolvedImport | null {
+    const resolvedModule = ts.resolveModuleName(
+      specifier,
+      importerPath,
+      this.getCompilerOptions(),
+      ts.sys
+    ).resolvedModule;
+
+    if (!resolvedModule) {
+      return null;
+    }
+
+    const resolvedPath = this.resolveTypeScriptResolution(
+      resolvedModule.resolvedFileName
+    );
+    if (!resolvedPath) {
+      return null;
+    }
+
+    return this.buildResolvedImport(resolvedPath);
+  }
+
+  private resolveTypeScriptResolution(resolvedFileName: string): string | null {
+    if (!resolvedFileName.endsWith(".d.ts")) {
+      return this.resolveFile(resolvedFileName);
+    }
+
+    const sourceResolution = this.resolveModulePath(
+      resolvedFileName.slice(0, -".d.ts".length)
+    );
+    if (sourceResolution) {
+      return sourceResolution;
+    }
+
+    return this.resolveFile(resolvedFileName);
+  }
+
+  private buildResolvedImport(resolvedPath: string): ResolvedImport {
+    const relativePath = this.getRelativePath(resolvedPath);
+    const tracked = SCAN_ROOTS.some(
+      (scanRoot) =>
+        relativePath === scanRoot || relativePath.startsWith(`${scanRoot}/`)
+    );
+
+    return {
+      absolutePath: resolvedPath,
+      relativePath,
+      tracked,
+    };
   }
 
   private resolveModulePath(candidatePath: string): string | null {
@@ -420,31 +424,65 @@ export class ArchitectureChecker {
       return this.pathAliases;
     }
 
-    const tsconfigPath = path.join(this.repoRoot, "tsconfig.json");
-    if (!fs.existsSync(tsconfigPath)) {
-      this.pathAliases = DEFAULT_PATH_ALIASES;
-      return this.pathAliases;
-    }
-
-    const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, "utf8")) as {
-      compilerOptions?: {
-        paths?: Record<string, string[]>;
-      };
-    };
-
-    const configuredAliases = Object.entries(
-      tsconfig.compilerOptions?.paths ?? {}
-    )
+    this.pathAliases = Object.entries(this.getCompilerOptions().paths ?? {})
       .map(([key, targets]) => ({
         key,
         targets,
       }))
       .sort((left, right) => compareStrings(right.key, left.key));
 
-    this.pathAliases =
-      configuredAliases.length > 0 ? configuredAliases : DEFAULT_PATH_ALIASES;
-
     return this.pathAliases;
+  }
+
+  private getCompilerOptions(): ts.CompilerOptions {
+    if (this.compilerOptions) {
+      return this.compilerOptions;
+    }
+
+    const fallback = this.createDefaultCompilerOptions();
+    const tsconfigPath = path.join(this.repoRoot, "tsconfig.json");
+    if (!fs.existsSync(tsconfigPath)) {
+      this.compilerOptions = fallback;
+      return this.compilerOptions;
+    }
+
+    const configFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
+    if (configFile.error) {
+      this.compilerOptions = fallback;
+      return this.compilerOptions;
+    }
+
+    const parsedConfig = ts.parseJsonConfigFileContent(
+      configFile.config,
+      ts.sys,
+      this.repoRoot
+    );
+
+    if (parsedConfig.errors.length > 0) {
+      this.compilerOptions = fallback;
+      return this.compilerOptions;
+    }
+
+    this.compilerOptions = {
+      ...fallback,
+      ...parsedConfig.options,
+      allowJs: true,
+      baseUrl: parsedConfig.options.baseUrl ?? this.repoRoot,
+      paths: mergePathAliases(fallback.paths, parsedConfig.options.paths),
+    };
+
+    return this.compilerOptions;
+  }
+
+  private createDefaultCompilerOptions(): ts.CompilerOptions {
+    return {
+      allowJs: true,
+      baseUrl: this.repoRoot,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
+      paths: Object.fromEntries(
+        DEFAULT_PATH_ALIASES.map(({ key, targets }) => [key, targets])
+      ),
+    };
   }
 
   private getBoundaryIssue(
@@ -468,7 +506,8 @@ export class ArchitectureChecker {
     const isException = BOUNDARY_EXCEPTIONS.some(
       (exception) =>
         exception.toDomain === targetDomain &&
-        exception.from.test(sourceRelativePath)
+        exception.from.test(sourceRelativePath) &&
+        (!exception.to || exception.to.test(targetRelativePath))
     );
 
     if (isException) {

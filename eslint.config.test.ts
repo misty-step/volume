@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { ESLint } from "eslint";
 import { describe, expect, it } from "vitest";
 import { dirname, join } from "node:path";
@@ -123,5 +125,35 @@ describe("complexity rule", () => {
     );
 
     expect(messages).toEqual([]);
+  });
+
+  it("rejects complex functions in convex modules too", async () => {
+    const conditions = Array.from({ length: 41 }, (_, index) => {
+      return `if (value === ${index}) return ${index};`;
+    }).join("\n");
+
+    const messages = await lintTextAtPath(
+      `export function tooComplex(value: number) {\n${conditions}\nreturn value;\n}`,
+      "convex/tmp-complex.ts"
+    );
+
+    expect(messages).toContainEqual(
+      expect.stringContaining("Maximum allowed is 40")
+    );
+  });
+
+  it("skips complexity enforcement for generated convex files", async () => {
+    const conditions = Array.from({ length: 41 }, (_, index) => {
+      return `if (value === ${index}) return ${index};`;
+    }).join("\n");
+
+    const messages = await lintTextAtPath(
+      `export function generated(value: number) {\n${conditions}\nreturn value;\n}`,
+      "convex/_generated/tmp-complex.ts"
+    );
+
+    expect(messages).not.toContainEqual(
+      expect.stringContaining("Maximum allowed is 40")
+    );
   });
 });

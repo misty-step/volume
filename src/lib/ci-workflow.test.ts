@@ -6,7 +6,13 @@ import * as yaml from "js-yaml";
 import { describe, expect, it } from "vitest";
 
 interface WorkflowConfig {
-  jobs?: Record<string, { needs?: string[] | string }>;
+  jobs?: Record<
+    string,
+    {
+      needs?: string[] | string;
+      steps?: Array<{ run?: string }>;
+    }
+  >;
 }
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
@@ -33,5 +39,15 @@ describe("ci workflow contract", () => {
         : [];
 
     expect(needs).toContain("architecture");
+  });
+
+  it("runs the architecture checker in the architecture job", () => {
+    const workflow = readCiWorkflow();
+    const architectureRuns =
+      workflow.jobs?.architecture?.steps
+        ?.map((step) => step.run?.trim())
+        .filter((run): run is string => Boolean(run)) ?? [];
+
+    expect(architectureRuns).toContain("bun run architecture:check");
   });
 });
