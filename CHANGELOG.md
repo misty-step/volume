@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.0](https://github.com/misty-step/volume/compare/v1.18.0...v1.19.0) (2026-04-06)
+
+
+### Features
+
+* **ci:** parallelize quality checks and add dependency caching ([#459](https://github.com/misty-step/volume/issues/459)) ([aa57495](https://github.com/misty-step/volume/commit/aa57495a5d6ff8a3477b9eecb5b96464b1be1cf1))
+* **ci:** parallelize quality checks and add dependency caching ([#460](https://github.com/misty-step/volume/issues/460)) ([5f8cc7b](https://github.com/misty-step/volume/commit/5f8cc7bc3bf563eb13e4c1b94c9147cdc074d046))
+* **coach:** add exercise ticker chiron to agent workspace ([#447](https://github.com/misty-step/volume/issues/447)) ([2da7188](https://github.com/misty-step/volume/commit/2da718829f25afed5f85d5be186a255ca398a39f))
+* **coach:** add model fallback chain for resilient coach responses ([9b82bff](https://github.com/misty-step/volume/commit/9b82bff800b360602e40c9264e747b84bcfd7d33))
+* **coach:** add persistent user memory ([#442](https://github.com/misty-step/volume/issues/442)) ([a1cf1a2](https://github.com/misty-step/volume/commit/a1cf1a2aa642fd0e20038169c2b7381f5a15e7f2))
+* enforce convex import boundary and coach tool registration ([#463](https://github.com/misty-step/volume/issues/463)) ([b16c1f1](https://github.com/misty-step/volume/commit/b16c1f18b96c1f15b0076ed48ed8f70375b9baa9))
+* improve exercise summary ticker UX ([#449](https://github.com/misty-step/volume/issues/449)) ([b331f9e](https://github.com/misty-step/volume/commit/b331f9e5135b672bd1ebf49e13a2b5e34df4b50e))
+* reduce coach latency and swap to Gemini Flash Lite ([#462](https://github.com/misty-step/volume/issues/462)) ([470aa31](https://github.com/misty-step/volume/commit/470aa31b0a75c0f760060681033a6b0344b1096d))
+
+
+### Bug Fixes
+
+* **coach:** improve exercise ticker for low exercise counts and empty state ([#454](https://github.com/misty-step/volume/issues/454)) ([66898cc](https://github.com/misty-step/volume/commit/66898cc990ee802af7e0a6582102b45603cc261e))
+* **coach:** make exercise ticker sticky in all states ([#455](https://github.com/misty-step/volume/issues/455)) ([4b5614a](https://github.com/misty-step/volume/commit/4b5614a3b8f4262643e08571e350a13ed226f0f1))
+* **coach:** make ticker a single-row chiron, fix sticky, show errors ([#456](https://github.com/misty-step/volume/issues/456)) ([0fce25d](https://github.com/misty-step/volume/commit/0fce25d53c92ebb922d774fec9b8a8e77f7395b1))
+* **coach:** preserve original error cause for Canary diagnostics ([57d3f9c](https://github.com/misty-step/volume/commit/57d3f9cd59fbdca0f0476ff3dee4efec5e93cc54))
+* **coach:** swap to Gemini 3 Flash primary, drop Qwen 3.5 Flash ([5442216](https://github.com/misty-step/volume/commit/54422168fed028bc12137f1f3378e3614303c875))
+* harden runtime observability paths ([#472](https://github.com/misty-step/volume/issues/472)) ([#472](https://github.com/misty-step/volume/issues/472)) ([cdd963f](https://github.com/misty-step/volume/commit/cdd963fdc46070e2767151c2871ee7e8c26dde8e))
+* make prod env verification deploy-safe ([a3e00d5](https://github.com/misty-step/volume/commit/a3e00d531e2eed76c07134c8d8a44ab2c747b7ea))
+* restore coach replies and canary triage ([a16dca7](https://github.com/misty-step/volume/commit/a16dca79bbd0722139a7b8208f01b6e756f35bc5))
+* restore quality gates — Stripe API version + middleware→proxy ([835886e](https://github.com/misty-step/volume/commit/835886eb1508ac30bd807af600cb481c0d8d17b4))
+* show immediate feedback when sending coach message ([#450](https://github.com/misty-step/volume/issues/450)) ([29e15c1](https://github.com/misty-step/volume/commit/29e15c12e5d15c6c827869f585c5e9635b549623))
+
 ## [1.18.0](https://github.com/misty-step/volume/compare/v1.17.0...v1.18.0) (2026-03-24)
 
 
