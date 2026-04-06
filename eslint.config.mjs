@@ -31,14 +31,9 @@ function resolveSrcImport(context, source) {
   if (!source.startsWith(".")) return null;
 
   const filename = normalizePath(context.filename || context.getFilename());
-  const repoRelativePath = getRepoRelativePath(filename, "/src/");
-  if (!repoRelativePath) return null;
+  const resolved = normalizePath(path.resolve(path.dirname(filename), source));
 
-  const resolved = path.posix.normalize(
-    path.posix.join(path.posix.dirname(repoRelativePath), source)
-  );
-
-  return resolved.startsWith("../") ? null : resolved;
+  return getRepoRelativePath(resolved, "/src/");
 }
 
 function isTypeOnlyImport(node) {

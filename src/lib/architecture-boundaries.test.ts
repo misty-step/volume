@@ -42,6 +42,18 @@ describe("architecture boundaries", () => {
     );
   });
 
+  it("rejects runtime imports from hooks into components via ../../src/ paths", async () => {
+    const messages = await lintSnippet(
+      "src/hooks/runtime-import.ts",
+      'import { Button } from "../../src/components/ui/button";\nexport const x = Button;\n'
+    );
+
+    expectToContainMessage(
+      messages,
+      "Hooks may not import runtime values from components"
+    );
+  });
+
   it("allows type-only imports from hooks into components", async () => {
     const messages = await lintSnippet(
       "src/hooks/type-import.ts",

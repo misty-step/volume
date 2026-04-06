@@ -28,6 +28,13 @@ interface HookConfig {
   commands?: Record<string, CommandConfig>;
 }
 
+interface PrePushCommandMessages {
+  missingHook: string;
+  missingCommands: string;
+  missingCommand: string;
+  mismatch: string;
+}
+
 export interface LefthookConfig {
   "pre-commit"?: HookConfig;
   "pre-push"?: HookConfig;
@@ -104,10 +111,16 @@ export class LefthookConfigValidator {
       config,
       "security-audit",
       SECURITY_AUDIT_COMMAND,
-      "❌ Missing pre-push hook: Lefthook must define a pre-push hook that runs bun run security:audit",
-      "❌ Missing pre-push commands: Lefthook pre-push hook must run bun run security:audit",
-      "❌ Missing security-audit pre-push command: Lefthook must run bun run security:audit",
-      "❌ Security audit command mismatch: Lefthook should run bun run security:audit to match CI"
+      {
+        missingHook:
+          "❌ Missing pre-push hook: Lefthook must define a pre-push hook that runs bun run security:audit",
+        missingCommands:
+          "❌ Missing pre-push commands: Lefthook pre-push hook must run bun run security:audit",
+        missingCommand:
+          "❌ Missing security-audit pre-push command: Lefthook must run bun run security:audit",
+        mismatch:
+          "❌ Security audit command mismatch: Lefthook should run bun run security:audit to match CI",
+      }
     );
   }
 
@@ -116,10 +129,16 @@ export class LefthookConfigValidator {
       config,
       "architecture-check",
       ARCHITECTURE_CHECK_COMMAND,
-      "❌ Missing pre-push hook: Lefthook must define a pre-push hook that runs bun run architecture:check",
-      "❌ Missing pre-push commands: Lefthook pre-push hook must run bun run architecture:check",
-      "❌ Missing architecture-check pre-push command: Lefthook must run bun run architecture:check",
-      "❌ Architecture check command mismatch: Lefthook should run bun run architecture:check to match CI"
+      {
+        missingHook:
+          "❌ Missing pre-push hook: Lefthook must define a pre-push hook that runs bun run architecture:check",
+        missingCommands:
+          "❌ Missing pre-push commands: Lefthook pre-push hook must run bun run architecture:check",
+        missingCommand:
+          "❌ Missing architecture-check pre-push command: Lefthook must run bun run architecture:check",
+        mismatch:
+          "❌ Architecture check command mismatch: Lefthook should run bun run architecture:check to match CI",
+      }
     );
   }
 
@@ -127,30 +146,27 @@ export class LefthookConfigValidator {
     config: LefthookConfig,
     commandName: string,
     expectedCommand: string,
-    missingHookMessage: string,
-    missingCommandsMessage: string,
-    missingCommandMessage: string,
-    mismatchMessage: string
+    messages: PrePushCommandMessages
   ): void {
     const prePushConfig = config["pre-push"];
     if (!prePushConfig) {
-      this.errors.push(missingHookMessage);
+      this.errors.push(messages.missingHook);
       return;
     }
 
     if (!prePushConfig.commands) {
-      this.errors.push(missingCommandsMessage);
+      this.errors.push(messages.missingCommands);
       return;
     }
 
     const command = prePushConfig.commands[commandName]?.run?.trim();
     if (!command) {
-      this.errors.push(missingCommandMessage);
+      this.errors.push(messages.missingCommand);
       return;
     }
 
     if (command !== expectedCommand) {
-      this.errors.push(mismatchMessage);
+      this.errors.push(messages.mismatch);
     }
   }
 

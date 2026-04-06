@@ -12,10 +12,6 @@ export const dynamic = "force-dynamic";
 type HealthCheckStatus = "pass" | "fail";
 
 type HealthCheck = ReturnType<typeof createCheck>;
-type ErrorTrackingProviders = {
-  sentry: boolean;
-  canary: boolean;
-};
 
 type StripeCheckInput = {
   stripeSecretKey: string | undefined;
@@ -98,10 +94,7 @@ function buildCoachRuntimeCheck(): { healthy: boolean; check: HealthCheck } {
   };
 }
 
-function getErrorTrackingProviders(): {
-  client: ErrorTrackingProviders;
-  server: ErrorTrackingProviders;
-} {
+function getErrorTrackingProviders() {
   const clientSentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN?.trim();
   const serverSentryDsn = process.env.SENTRY_DSN?.trim();
 

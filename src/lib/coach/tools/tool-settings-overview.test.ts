@@ -142,6 +142,10 @@ describe("runSettingsOverviewTool", () => {
   });
 
   it("builds the billing block from subscription fallback data", () => {
+    const subscriptionPeriodEnd = new Date(
+      "2025-01-15T12:00:00.000Z"
+    ).getTime();
+
     expect(
       buildBillingBlock({
         subscription: {
@@ -153,7 +157,7 @@ describe("runSettingsOverviewTool", () => {
         billing: {
           stripeCustomerId: null,
           subscriptionStatus: "trial",
-          subscriptionPeriodEnd: 1_735_689_600_000,
+          subscriptionPeriodEnd,
         },
       })
     ).toMatchObject({
@@ -163,7 +167,7 @@ describe("runSettingsOverviewTool", () => {
       trialDaysRemaining: 5,
       ctaAction: "open_checkout",
       ctaLabel: "Upgrade plan",
-      periodEnd: "Dec 31, 2024",
+      periodEnd: "Jan 15, 2025",
     });
   });
 });
