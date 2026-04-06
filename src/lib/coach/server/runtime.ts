@@ -5,12 +5,19 @@ import {
   ROUTING_POLICY,
   getOpenRouterApiKey,
   getOpenRouterHeaders,
-  resolveCoachModelId,
+  resolveCoachModelChain,
 } from "@/lib/openrouter/policy";
+
+export type FallbackRuntime = {
+  model: LanguageModel;
+  modelId: string;
+};
 
 export type CoachRuntime = {
   model: LanguageModel;
   modelId: string;
+  /** Ordered fallback models (does NOT include the primary). */
+  fallbacks: FallbackRuntime[];
   classificationModel: LanguageModel;
 };
 
@@ -23,15 +30,23 @@ export function getCoachRuntime(): CoachRuntime | null {
     return null;
   }
 
-  const modelId = resolveCoachModelId();
+  const chain = resolveCoachModelChain();
   const openrouter = createOpenRouter({
     apiKey: openRouterKey,
     headers: getOpenRouterHeaders(RUNTIME_CONFIG.coachAppTitle),
   });
 
+  // Chain is always non-empty: override produces [override], default has 3 models.
+  const primaryId = chain[0]!;
+  const fallbackIds = chain.slice(1);
+
   return {
-    model: openrouter(modelId),
-    modelId,
+    model: openrouter(primaryId),
+    modelId: primaryId,
+    fallbacks: fallbackIds.map((id) => ({
+      model: openrouter(id),
+      modelId: id,
+    })),
     classificationModel: openrouter(ROUTING_POLICY.CLASSIFICATION),
   };
 }

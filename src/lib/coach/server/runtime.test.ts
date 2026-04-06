@@ -35,9 +35,12 @@ describe("getCoachRuntime", () => {
     const { getCoachRuntime } = await import("./runtime");
     const result = getCoachRuntime();
     expect(result).not.toBeNull();
-    expect(result!.modelId).toBe("google/gemini-3.1-flash-lite-preview");
+    expect(result!.modelId).toBe("google/gemini-3-flash-preview");
     expect(result!.model).toBeDefined();
     expect(result!.classificationModel).toBeDefined();
+    expect(result!.fallbacks).toHaveLength(2);
+    expect(result!.fallbacks[0]!.modelId).toBe("openai/gpt-5.4-mini");
+    expect(result!.fallbacks[1]!.modelId).toBe("minimax/minimax-m2.7");
   });
 
   it("uses COACH_AGENT_MODEL env var when set", async () => {
@@ -46,6 +49,7 @@ describe("getCoachRuntime", () => {
     const { getCoachRuntime } = await import("./runtime");
     const result = getCoachRuntime();
     expect(result!.modelId).toBe("openai/gpt-4o");
+    expect(result!.fallbacks).toHaveLength(0);
   });
 
   it("ignores whitespace-only COACH_AGENT_MODEL overrides", async () => {
@@ -53,6 +57,6 @@ describe("getCoachRuntime", () => {
     process.env.COACH_AGENT_MODEL = "   ";
     const { getCoachRuntime } = await import("./runtime");
     const result = getCoachRuntime();
-    expect(result!.modelId).toBe("google/gemini-3.1-flash-lite-preview");
+    expect(result!.modelId).toBe("google/gemini-3-flash-preview");
   });
 });

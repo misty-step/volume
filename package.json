@@ -11,6 +11,7 @@
     "dev:convex": "convex dev",
     "dev:stripe": "./scripts/dev-stripe.sh",
     "setup": "./scripts/setup.sh",
+    "setup:check": "./scripts/setup.sh --check",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",

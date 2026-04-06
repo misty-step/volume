@@ -30,6 +30,8 @@ export type PlannerRunResult =
       assistantText: string;
       toolsUsed: string[];
       errorMessage: string;
+      /** Original error with real stack trace — pass to reportError, not to users. */
+      cause?: Error;
       hitToolLimit: boolean;
       responseMessages: ResponseMessage[];
       toolResults: ToolExecutionRecord[];
@@ -337,13 +339,13 @@ export async function runPlannerTurn({
       toolResults,
     };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unknown planner error";
+    const cause = error instanceof Error ? error : new Error(String(error));
     return {
       kind: "error",
       assistantText: "",
       toolsUsed,
-      errorMessage: message,
+      errorMessage: cause.message || "Unknown planner error",
+      cause,
       hitToolLimit: false,
       responseMessages: [],
       toolResults,

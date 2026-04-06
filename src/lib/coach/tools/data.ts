@@ -5,6 +5,7 @@ import {
   type TodayTotalsSummary,
 } from "@/lib/coach/prototype-analytics";
 import { getTodayRangeForTimezoneOffset } from "@/lib/date-utils";
+import { log } from "@/lib/logger";
 import type { Exercise } from "@/types/domain";
 import { normalizeLookup, titleCase, toAnalyticsSetInput } from "./helpers";
 import type { CoachToolContext, SetInput } from "./types";
@@ -109,7 +110,7 @@ export async function findExercise(
       const semantic = await ctx.resolveExerciseName(exerciseName, exercises);
       if (semantic) return semantic;
     } catch {
-      // LLM/network failure — fall through to null
+      log.warn("Semantic exercise name resolution failed", { exerciseName });
     }
   }
 

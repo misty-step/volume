@@ -1,6 +1,7 @@
 import { after, NextResponse } from "next/server";
 import { pipeJsonRender } from "@json-render/core";
 import { reportError } from "@/lib/analytics";
+import { createChildLogger } from "@/lib/logger";
 import { ConvexHttpClient } from "convex/browser";
 import { auth } from "@clerk/nextjs/server";
 import { api } from "@/../convex/_generated/api";
@@ -40,6 +41,8 @@ import {
   type PromptCoachMemory,
 } from "@/lib/coach/memory";
 
+const routeLog = createChildLogger({ route: "coach" });
+
 const CONTEXT_SUMMARY_TRIGGER_MESSAGES = 40;
 const CONTEXT_RECENT_MESSAGE_WINDOW = 20;
 const MAX_UI_MESSAGE_PAYLOAD_BYTES = 200_000;
@@ -55,6 +58,9 @@ function deserializeStoredMessage(content: string): ModelMessage | null {
   try {
     return JSON.parse(content) as ModelMessage;
   } catch {
+    routeLog.warn("Failed to deserialize stored coach message", {
+      contentLength: content.length,
+    });
     return null;
   }
 }
@@ -466,6 +472,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
+    routeLog.warn("Coach request body parse failed");
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
@@ -513,6 +520,7 @@ export async function POST(request: Request) {
       (m) => m.role !== "system"
     );
   } catch {
+    routeLog.warn("Coach message format conversion failed");
     return NextResponse.json(
       { error: "Invalid message format" },
       { status: 400 }
@@ -654,7 +662,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const plannerResult = await runPlannerTurn({
+    // Run planner with fallback chain: try primary, then each fallback on failure.
+    let plannerResult = await runPlannerTurn({
       runtime,
       history,
       conversationSummary,
@@ -667,43 +676,96 @@ export async function POST(request: Request) {
 
     if (
       plannerResult.kind === "error" &&
+      plannerResult.toolsUsed.length === 0 &&
+      runtime.fallbacks.length > 0
+    ) {
+      let lastFailedModelId = runtime.modelId;
+      for (const fallback of runtime.fallbacks) {
+        routeLog.warn("Planner failed, retrying with fallback", {
+          failedModel: lastFailedModelId,
+          nextModel: fallback.modelId,
+        });
+        reportError(
+          plannerResult.cause ?? new Error(plannerResult.errorMessage),
+          {
+            route: "coach",
+            operation: "planner_fallback",
+            failedModel: lastFailedModelId,
+            nextModel: fallback.modelId,
+            sessionId: sessionId ?? "none",
+            errorMessage: plannerResult.errorMessage,
+          }
+        );
+
+        plannerResult = await runPlannerTurn({
+          runtime: {
+            ...runtime,
+            model: fallback.model,
+            modelId: fallback.modelId,
+          },
+          history,
+          conversationSummary,
+          preferences,
+          memories: promptMemory.memories,
+          observations: promptMemory.observations,
+          ctx: context,
+          signal: createModelAbortSignal(request.signal),
+        });
+
+        if (plannerResult.kind === "ok" || plannerResult.toolsUsed.length > 0) {
+          routeLog.info("Planner fallback succeeded", {
+            model: fallback.modelId,
+          });
+          break;
+        }
+        lastFailedModelId = fallback.modelId;
+      }
+    }
+
+    if (
+      plannerResult.kind === "error" &&
       plannerResult.toolsUsed.length === 0
     ) {
-      reportError(new Error(plannerResult.errorMessage), {
-        route: "coach",
-        operation: "planner",
-        phase: "handled_failure",
-        sessionId: sessionId ?? "none",
-        historyLength: history.length,
-        conversationSummaryPresent: Boolean(conversationSummary),
-      });
+      reportError(
+        plannerResult.cause ?? new Error(plannerResult.errorMessage),
+        {
+          route: "coach",
+          operation: "planner",
+          phase: "handled_failure",
+          sessionId: sessionId ?? "none",
+          historyLength: history.length,
+          conversationSummaryPresent: Boolean(conversationSummary),
+          errorMessage: plannerResult.errorMessage,
+        }
+      );
       return createStatusAssistantResponse(
         `I hit an error while planning this turn. ${sanitizeError(plannerResult.errorMessage)}`,
         500
       );
     }
 
+    const presentationContext = {
+      latestUserText,
+      conversationSummary,
+      preferences,
+      planner: {
+        kind: plannerResult.kind,
+        assistantText: plannerResult.assistantText,
+        toolsUsed: plannerResult.toolsUsed,
+        errorMessage:
+          plannerResult.kind === "error"
+            ? sanitizeError(plannerResult.errorMessage)
+            : undefined,
+        hitToolLimit: plannerResult.hitToolLimit,
+        toolResults: plannerResult.toolResults,
+      },
+      followUpPrompts: buildEndOfTurnSuggestions(plannerResult.toolsUsed) ?? [],
+    };
+
     const presentation = streamCoachPresentation({
       runtime,
       signal: createModelAbortSignal(request.signal),
-      context: {
-        latestUserText,
-        conversationSummary,
-        preferences,
-        planner: {
-          kind: plannerResult.kind,
-          assistantText: plannerResult.assistantText,
-          toolsUsed: plannerResult.toolsUsed,
-          errorMessage:
-            plannerResult.kind === "error"
-              ? sanitizeError(plannerResult.errorMessage)
-              : undefined,
-          hitToolLimit: plannerResult.hitToolLimit,
-          toolResults: plannerResult.toolResults,
-        },
-        followUpPrompts:
-          buildEndOfTurnSuggestions(plannerResult.toolsUsed) ?? [],
-      },
+      context: presentationContext,
     });
 
     after(async () => {
@@ -741,11 +803,47 @@ export async function POST(request: Request) {
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
-        writer.merge(
-          pipeJsonRender(presentation.toUIMessageStream({ sendFinish: false }))
-        );
-        const finishReason = await presentation.finishReason;
-        writer.write({ type: "finish", finishReason });
+        try {
+          writer.merge(
+            pipeJsonRender(
+              presentation.toUIMessageStream({ sendFinish: false })
+            )
+          );
+          const finishReason = await presentation.finishReason;
+          writer.write({ type: "finish", finishReason });
+        } catch (error) {
+          // Presentation failed — retry with first fallback if available.
+          // This only helps when the failure occurs before chunks are sent;
+          // if partial output was already written, the client sees garbled
+          // output, but that's no worse than the current hard-fail behavior.
+          const fb = runtime.fallbacks[0];
+          if (!fb) throw error;
+
+          routeLog.warn("Presentation failed, retrying with fallback", {
+            failedModel: runtime.modelId,
+            nextModel: fb.modelId,
+          });
+          reportError(
+            error instanceof Error ? error : new Error(String(error)),
+            {
+              route: "coach",
+              operation: "presentation_fallback",
+              failedModel: runtime.modelId,
+              nextModel: fb.modelId,
+            }
+          );
+
+          const retry = streamCoachPresentation({
+            runtime: { ...runtime, model: fb.model, modelId: fb.modelId },
+            signal: createModelAbortSignal(request.signal),
+            context: presentationContext,
+          });
+          writer.merge(
+            pipeJsonRender(retry.toUIMessageStream({ sendFinish: false }))
+          );
+          const finishReason = await retry.finishReason;
+          writer.write({ type: "finish", finishReason });
+        }
       },
     });
 

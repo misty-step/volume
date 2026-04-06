@@ -379,6 +379,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
 
@@ -493,6 +495,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
     plannerMocks.runPlannerTurnMock.mockResolvedValue(
@@ -533,6 +537,57 @@ describe("POST /api/coach", () => {
     );
   });
 
+  it("preserves original error cause in reportError for planner failures", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    ConvexHttpClientMock.mockReturnValue(convex);
+    getCoachRuntimeMock.mockReturnValue({
+      model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
+      classificationModel: "test-classifier",
+    });
+
+    const originalCause = new Error("API returned 400: invalid tool schema");
+    originalCause.stack =
+      "Error: API returned 400\n    at OpenRouterProvider.doStream (node_modules/@openrouter/...)";
+    plannerMocks.runPlannerTurnMock.mockResolvedValue(
+      createPlannerResult({
+        kind: "error",
+        assistantText: "",
+        errorMessage: "API returned 400: invalid tool schema",
+        cause: originalCause,
+        toolsUsed: [],
+        responseMessages: [],
+      })
+    );
+
+    const { POST } = await import("./route");
+    await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: validBody(),
+      })
+    );
+
+    // reportError must receive the ORIGINAL error (with real stack trace),
+    // not a reconstructed Error wrapping the message string.
+    expect(analyticsMocks.reportErrorMock).toHaveBeenCalledWith(
+      originalCause,
+      expect.objectContaining({
+        route: "coach",
+        operation: "planner",
+        errorMessage: "API returned 400: invalid tool schema",
+      })
+    );
+  });
+
   it("pipes the successful UI stream through json-render", async () => {
     process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
     authMock.mockResolvedValue({
@@ -544,6 +599,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
     plannerMocks.runPlannerTurnMock.mockResolvedValue(
@@ -583,6 +640,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
     plannerMocks.runPlannerTurnMock.mockResolvedValue(
@@ -669,6 +728,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
     plannerMocks.runPlannerTurnMock.mockResolvedValue(
@@ -734,6 +795,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
     streamTextMock.mockReturnValue(createStreamTextResult({ text: "hello" }));
@@ -802,6 +865,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
     plannerMocks.runPlannerTurnMock.mockResolvedValue(
@@ -931,6 +996,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
     plannerMocks.runPlannerTurnMock.mockResolvedValue(
@@ -1034,6 +1101,8 @@ describe("POST /api/coach", () => {
     ConvexHttpClientMock.mockReturnValue(convex);
     getCoachRuntimeMock.mockReturnValue({
       model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
       classificationModel: "test-classifier",
     });
     plannerMocks.runPlannerTurnMock.mockResolvedValue(
