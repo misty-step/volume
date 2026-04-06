@@ -172,7 +172,4 @@ Override via `RATE_LIMIT_EXERCISE_PER_MIN`, `RATE_LIMIT_REPORTS_PER_DAY` env var
 
 Conventional Commits + release-please. Merging to `master` auto-creates Release PR. Merging Release PR bumps version + publishes changelog.
 
-Required PR mergeability is tracked by the `merge-gate` status on the PR head
-commit so squash merges do not depend on GitHub's synthetic merge ref.
-
 See CLAUDE.md "Release Management" for commit format.

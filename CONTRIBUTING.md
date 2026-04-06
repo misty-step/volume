@@ -70,6 +70,10 @@ Prefer `bun run quality:check` for a quick confidence pass and
 ## Pull Requests
 
 - Keep PRs focused and easy to review.
+- Treat Git as the primary workflow. Run local hooks, local review, and
+  `dagger call check --source=.` before pushing or merging.
+- Open a PR when collaboration or visibility helps, not as the only way to
+  satisfy quality gates.
 - Summarize user-visible behavior changes and any env or schema impact.
 - Include screenshots for UI changes.
 - Call out any follow-up work instead of hiding it in the diff.

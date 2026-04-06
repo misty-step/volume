@@ -22,12 +22,22 @@ Require PR review and required checks on the default branch so governance matche
 
 ## Notes
 
-GitHub branch protection currently requires only the `merge-gate` status and no
-required PR reviews. This is blocked on repository settings access and owner
-policy decisions.
+Owner policy changed on 2026-04-06: for personal projects, GitHub-enforced PR
+reviews and required checks are not the preferred governance model. The desired
+direction is Git-first workflow with local hooks, local `dagger` checks, and
+local agent review, using pull requests only when they materially help.
 
 ## Touchpoints
 
 - GitHub branch protection settings
 - `README.md`
 - `CONTRIBUTING.md`
+
+## What Was Built
+
+- Re-opened this item as blocked because the owner no longer wants GitHub
+  branch-protection rules to be the primary quality gate on personal repos.
+- Updated contributor-facing docs to prefer local hooks, local `dagger`
+  verification, and local review over mandatory GitHub PR/ruleset workflow.
+- The remaining GitHub org/repo rules are now an external policy question, not
+  a repository-docs completion.
