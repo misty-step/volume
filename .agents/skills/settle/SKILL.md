@@ -209,6 +209,9 @@ releases).
 - Declaring "done" while merge-gate is still running
 - Reading only one of the three comment endpoints (Claude bot lives on
   `/issues/<n>/comments` — easy to miss)
+- **Truncating review comments** — reading 300-char previews from `gh pr view`
+  instead of full bodies. Run `skills/settle/scripts/fetch-pr-reviews.sh <n>`
+  to pull complete comments across all three endpoints in one pass.
 - Reflexive dismissal of bot reviews with "by design" without steelmanning
 - Batch-reply instead of addressing each thread inline
 - Polish without re-running `bun run quality:full`
