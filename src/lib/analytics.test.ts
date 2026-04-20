@@ -280,6 +280,8 @@ describe("reportError", () => {
     process.env = {
       ...originalEnv,
       NEXT_PUBLIC_SENTRY_DSN: "https://test@sentry.io/123",
+      CANARY_ENDPOINT: undefined,
+      CANARY_API_KEY: undefined,
       NEXT_PUBLIC_CANARY_ENDPOINT: "https://canary.example",
       NEXT_PUBLIC_CANARY_API_KEY: "public-key",
       NODE_ENV: "production",
