@@ -1,25 +1,20 @@
 ---
 name: settle
 description: |
-  Unblock, polish, and merge. Works in two modes:
-  GitHub mode (PR exists): fix CI/conflicts/reviews, polish, refactor, land PR.
-  Git-native mode (no PR): use verdict refs, Dagger CI, agent swarm review,
-  and land the branch.
-  /land alias: validate verdict ref, run Dagger, and land the branch using
-  repo policy (default: squash single-ticket branches).
+  Unblock, polish, and merge a Volume PR. Fix CI/conflicts/reviews,
+  polish, refactor, land via `gh pr merge <n> --squash --auto`.
+  /land alias runs the final merge.
   Use when: PR is blocked, CI red, review comments open, "land this",
   "get this mergeable", "fix and polish", "unblock", "clean up",
   "make this merge-ready", "address reviews", "fix CI", "land this branch".
   Trigger: /settle, /land (alias), /pr-fix, /pr-polish.
-argument-hint: "[PR-number|branch-name]"
+argument-hint: "[PR-number]"
 ---
 
 # /settle
 
-Take a Volume branch from blocked to clean. Plain `/settle` stops at merge-ready.
-`/land` is the landing mode of this same skill and continues through the
-`misty-step/volume` squash merge. Dual-mode: works with GitHub PRs or git-native
-verdict refs.
+Take a Volume PR from blocked to clean. Plain `/settle` stops at merge-ready.
+`/land` continues through the `misty-step/volume` squash merge.
 
 ## Role
 
@@ -36,41 +31,14 @@ You are the executive orchestrator.
 - Parallel fanout for independent fixes (e.g. separate review threads); serialize when fixes touch `convex/schema.ts` or the merge-gate job.
 - Compose `/ci`, `/code-review`, and `/refactor`; do not replace their domain contracts.
 
-## Mode Detection
-
-`/settle` operates in two modes based on context:
-
-**GitHub mode** — when `$ARGUMENTS` is a PR number, or `gh pr view` succeeds for
-the current branch. Uses GitHub PR state, the three comment endpoints below, and
-`gh` CLI against `misty-step/volume`.
-
-**Git-native mode** — when no PR exists. Uses verdict refs, local Dagger CI
-(`dagger call check --source .`), and agent swarm review output. No GitHub API
-calls.
-
-Detection sequence:
-
-1. If `$ARGUMENTS` matches `^[0-9]+$` → GitHub mode (PR number)
-2. If `gh pr view` for current branch succeeds → GitHub mode
-3. Otherwise → git-native mode
-
-When invoked as `/land <branch>`, validate the verdict ref (must exist and point
-at HEAD), reject `dont-ship` verdicts, run `dagger call check --source .` when
-Docker is available, and land via `gh pr merge <n> --squash --auto`. Volume
-merges are always squash — release-please composes the release PR from squashed
-commits on master. `SPELLBOOK_NO_REVIEW=1` bypasses the verdict gate only for
-documented emergencies.
-
 ## Objective
 
-Take the current branch through three phases until it reaches:
+Take the PR through three phases until it reaches:
 
 - No merge conflicts against `origin/master`
-- CI green: merge-gate job in `.github/workflows/ci.yml` (setup + lint +
-  typecheck + architecture + test + security-audit + build)
+- CI green: merge-gate job in `.github/workflows/ci.yml` (setup + lint + typecheck + architecture + test + security-audit + build)
 - Every review finding addressed across all three comment endpoints
-- Architecture reviewed with hindsight lens (auth checks, soft delete,
-  `@/lib/logger` usage, no relative imports in `convex/`)
+- Architecture reviewed with hindsight lens (auth checks, soft delete, `@/lib/logger` usage, no relative imports in `convex/`)
 - Tests audited for coverage and quality (`bun run test:coverage`)
 - Complexity reduced where possible
 - Docs current (ADRs, `docs/api-contracts.md`, CLAUDE.md pitfalls)
@@ -138,12 +106,9 @@ Use **builder** agent for fixes requiring TDD.
 6. **Async settlement** — push, then `gh pr view <n> --json statusCheckRollup,reviews`
    until merge-gate settles and bot re-reviews land.
 
-7. **Merge-readiness verification** —
-   - **GitHub mode:** `gh pr checks <n>` all green, all three comment endpoints
-     clean, `reviewDecision = APPROVED`.
-   - **Git-native mode:** verdict ref exists, points at HEAD, is not `dont-ship`.
-     Plus `dagger call check --source .` green (or `bun run quality:full` if
-     Docker absent).
+7. **Merge-readiness verification** — `gh pr checks <n>` all green, all three
+   comment endpoints clean, `reviewDecision = APPROVED` (or bot reviews
+   resolved, if human approval is not required by branch protection).
 
 **Exit gate:** merge-gate green, every review thread addressed, merge-readiness verified.
 
@@ -164,20 +129,16 @@ If already green and settled, skip to Phase 2.
    - Tests assert behavior, not implementation; Convex tests use time-window
      assertions, not fake timers
 
-2. **Agent-first assessment** — run `assess-review` (triad, strong tier),
-   `assess-tests` for Vitest suites, `assess-docs` if ADRs or
-   `docs/api-contracts.md` changed. Address all `fail` findings.
+2. **Architecture edits** — fix what hindsight and `/code-review` find. Commit.
 
-3. **Architecture edits** — fix what hindsight and `assess-*` find. Commit.
-
-4. **Test audit** — coverage gaps via `bun run test:coverage`, brittle tests,
+3. **Test audit** — coverage gaps via `bun run test:coverage`, brittle tests,
    missing edge cases (soft-delete restore, auth-identity mismatch, Stripe
    mode-dependent params). Fix.
 
-5. **Docs** — refresh stale ADRs (`docs/adr/`), `docs/api-contracts.md`,
+4. **Docs** — refresh stale ADRs (`docs/adr/`), `docs/api-contracts.md`,
    `ARCHITECTURE.md`, postmortem references, CLAUDE.md pitfall table entries.
 
-6. **Confidence assessment** — explicit deliverable with evidence.
+5. **Confidence assessment** — explicit deliverable with evidence.
 
 **Exit gate:** architecture clean, tests solid, docs current, confidence stated.
 
@@ -196,8 +157,6 @@ Invoke `/refactor` for this branch as the simplification engine.
    > pass-throughs and duplicated auth boilerplate in `convex/*.ts`.
 3. **Implement + verify** — preserve behavior, run `bun run test --run` and
    `bun run quality:full`, commit.
-4. **Validate simplification** — `assess-simplify` (strong tier);
-   `complexity_moved_not_removed` must be false.
 
 **Mandatory when diff >200 LOC net.** For smaller diffs, Ousterhout manual
 pass: shallow modules, information leakage, pass-throughs, compatibility shims.
@@ -221,8 +180,7 @@ produces no changes.
 
 - Repo merges via **squash** — single-ticket branches, confirmed by the
   release-please workflow. Use `gh pr merge <n> --squash --auto`.
-- `/land` only after: `gh pr checks <n>` green, all review threads resolved,
-  verdict ref present.
+- `/land` only after: `gh pr checks <n>` green, all review threads resolved.
 - Never `--admin`. Never force-push to master. Never direct-push to master.
 - Never skip hooks. `git push --no-verify` is banned. `SKIP_QUALITY_GATES=1
 git push` is the only authorized bypass and only for documented emergencies.
@@ -235,15 +193,11 @@ STRIPE_WEBHOOK_SECRET ...` on prod before merge.
 
 ## Reviewer Artifact Policy
 
-**GitHub mode:** upload screenshots/GIFs to draft GitHub release assets, embed
-download URLs in PR comments. Convert `.webm` → `.gif` (GitHub inlines GIFs,
-not video). Never use `raw.githubusercontent.com` URLs (private repo breaks).
-
-**Git-native mode:** store evidence in `.evidence/<branch>/<date>/`, write
-`qa-report.md` and `review-synthesis.md`, commit to the branch.
-
-**Both:** prefer CI artifacts for generated output. Never commit binary
-evidence directly (use LFS or GitHub releases).
+Upload screenshots/GIFs to draft GitHub release assets, embed download URLs in
+PR comments. Convert `.webm` → `.gif` (GitHub inlines GIFs, not video). Never
+use `raw.githubusercontent.com` URLs (private repo breaks). Prefer CI artifacts
+for generated output. Never commit binary evidence directly (use LFS or GitHub
+releases).
 
 ## Flags
 
@@ -265,7 +219,6 @@ evidence directly (use LFS or GitHub releases).
 - Forgetting `includeDeleted: true` on history views
 - Adding `console.error` in API routes (use `createChildLogger`)
 - Importing `@/lib/logger` inside `convex/` runtime
-- Git-native mode: merging without a verdict ref
 
 ## Output
 

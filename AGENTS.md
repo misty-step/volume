@@ -134,13 +134,10 @@ Prod Convex deployment: `prod:whimsical-marten-631`.
 
 | Pointer                                                                                                   | Debt                                                                    |
 | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `backlog.d/002-parallelize-and-cache-quality-checks.md`                                                   | CI speed                                                                |
-| `backlog.d/003-enforce-architecture-boundaries-and-complexity.md`                                         | Boundary surface hardening                                              |
-| `backlog.d/005-harden-runtime-observability-paths.md`                                                     | Observability (Sentry + Canary) coverage gaps                           |
-| `backlog.d/006-complete-clone-to-run-bootstrap.md`                                                        | Onboarding rough edges                                                  |
-| `backlog.d/007-tighten-governance-baselines.md`                                                           | Governance / lint rules                                                 |
-| `backlog.d/009-enforce-conventions-for-agent-readiness.md`                                                | Agent-readiness conventions                                             |
+| `backlog.d/004-add-repository-license.md`                                                                 | Repository license not yet filed                                        |
 | `backlog.d/010-evaluate-byok-open-source-api-first-pivot.md`                                              | BYOK open-source pivot evaluation                                       |
+| `backlog.d/011-017-*.md`                                                                                  | Coach UX + funnel + env-parity work filed 2026-04-20                    |
+| `backlog.d/_done/`                                                                                        | Prior items already shipped (002, 003, 005, 006, 007, 008, 009)         |
 | `INCIDENT-20260307T002835Z.md` · `-20260311T201508Z.md` · `-20260314T170559Z.md` · `-20260328T002018Z.md` | Prior incident traces at repo root                                      |
 | `docs/postmortems/2026-01-16-stripe-env-vars.md`                                                          | Env-drift class postmortem                                              |
 | `src/components/ui/*`                                                                                     | Intentionally shallow shadcn wrappers; don't refactor                   |
