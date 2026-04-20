@@ -1,0 +1,117 @@
+# Volume project-level Codex config.
+#
+# Cross-harness parity: the canonical skill root for this repo is
+# `.agents/skills/` (see .spellbook/repo-brief.md). `.claude/skills/` is a
+# symlink bridge to that same directory; Codex should discover the same
+# 23 tailored skills (universal / workflow / domain-invented) from there.
+#
+# Per-harness settings merge additively — user-added entries in this file
+# (or in ~/.codex/config.toml) survive future /tailor runs. Only the
+# entries /tailor derived from the current skill set are its contribution.
+
+[features]
+codex_hooks = true
+child_agents_md = true
+
+# Volume skill bench. Paths are absolute because Codex global config
+# uses absolute paths for [[skills.config]] entries; re-running /tailor
+# regenerates this list from the current contents of .agents/skills/.
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/a11y/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/ceo-review/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/ci/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/code-review/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/deliver/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/demo/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/deploy/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/deps/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/diagnose/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/flywheel/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/groom/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/implement/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/model-research/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/monitor/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/office-hours/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/qa/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/refactor/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/reflect/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/research/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/settle/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/shape/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/volume-manual-qa/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/yeet/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/harness/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/agent-readiness/SKILL.md"
+enabled = true
