@@ -2,6 +2,8 @@
 
 Volume is a workout tracker: log sets fast, see what's working. This file is the router — it points agents at what matters. Prose and philosophy live in `~/.claude/CLAUDE.md`; Volume-specific runbooks live in `CLAUDE.md`; this file names the rails.
 
+Subagents: before dispatch, read `.spellbook/repo-brief.md` — the shared spine (vision, stack, invariants, debts, terminology, session signal) every installed skill anchors to.
+
 ## Stack & Boundaries
 
 | Layer                  | Owns                                                                                            | Runtime                           | Constraints                                           |
@@ -184,14 +186,19 @@ The tailored inner/outer loop. Invoke via slash trigger; each skill's SKILL.md b
 
 ### Maintenance
 
-| Skill   | What it does here                                                                                                                        |
-| ------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `/deps` | Volume-specific bump ladder (typecheck → lint → architecture → test → e2e → build → audit → dagger); respects pinned overrides + patches |
-| `/demo` | Evidence artifacts via Claude-in-Chrome; upload via `gh release --draft`; `walkthrough/` as canonical evidence dir                       |
+| Skill              | What it does here                                                                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `/deps`            | Volume-specific bump ladder (typecheck → lint → architecture → test → e2e → build → audit → dagger); respects pinned overrides + patches |
+| `/demo`            | Evidence artifacts via Claude-in-Chrome; upload via `gh release --draft`; `walkthrough/` as canonical evidence dir                       |
+| `/harness`         | Meta-skill for the harness itself — create/eval/lint/sync/audit skills and agents; used when `/tailor` output needs tuning               |
+| `/agent-readiness` | Parallel pillar audit (style, CI, tests, docs, env, code quality, observability, security) — scores + highest-impact fixes               |
 
 ### Reviewer agents (dispatched from `/code-review` and others)
 
+Installed at `.claude/agents/` with `installed-by: tailor` markers:
 `ousterhout` · `carmack` · `grug` · `beck` · `critic` · `planner` · `builder` · `a11y-auditor` · `a11y-fixer` · `a11y-critic`
+
+Skills live at `.agents/skills/` (shared root); `.claude/skills/` symlinks to it. Cross-harness settings: `.claude/settings.local.json`, `.codex/config.toml`, `.pi/settings.json`.
 
 ## Anti-patterns (catch these before they ship)
 
