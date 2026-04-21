@@ -29,7 +29,16 @@ export async function ensureAuthenticated(
   await page.goto(entryPath);
 
   if (!isSignInUrl(page.url())) {
-    return;
+    const currentPath = new URL(page.url()).pathname;
+    if (currentPath !== "/") {
+      return;
+    }
+
+    await page.goto("/coach");
+    if (!isSignInUrl(page.url())) {
+      await page.goto(entryPath);
+      return;
+    }
   }
 
   const env = loadE2EEnv();
