@@ -22,7 +22,7 @@ test.describe("Agentic workspace critical routes", () => {
   }) => {
     const exerciseName = randomExerciseName("critical flow");
 
-    await openCoachWorkspace(page, "/today");
+    await openCoachWorkspace(page, "/");
     await createExerciseForCurrentUser(page, exerciseName);
     const setCountBefore = await countSetsForCurrentUser(page);
     await sendCoachMessage(page, `log 10 reps of "${exerciseName}"`);

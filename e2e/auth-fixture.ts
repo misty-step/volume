@@ -47,16 +47,16 @@ async function resetAuthenticatedE2EState(
 
 export const test = base.extend<AuthFixtures>({
   page: async ({ page, baseURL }, use) => {
-    await ensureAuthenticated(page, "/today");
+    await ensureAuthenticated(page, "/");
     await resetAuthenticatedE2EState(page, baseURL);
     await use(page);
   },
   resetUserData: async ({ page, baseURL }, use) => {
     await use(async () => {
-      await ensureAuthenticated(page, "/today");
+      await ensureAuthenticated(page, "/");
       await resetAuthenticatedE2EState(page, baseURL);
       if (baseURL) {
-        await page.goto(`${baseURL}/today`);
+        await page.goto(`${baseURL}/coach`);
       }
     });
   },

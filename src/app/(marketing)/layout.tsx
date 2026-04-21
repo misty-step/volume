@@ -45,7 +45,7 @@ export default async function MarketingLayout({
   const { userId } = await auth();
 
   if (userId) {
-    redirect("/today");
+    redirect("/coach");
   }
 
   return children;

@@ -6,12 +6,15 @@ import { CoachPrototype } from "./CoachPrototype";
 import { useCoachChat } from "@/components/coach/useCoachChat";
 import type { UIMessage } from "ai";
 
-const { mockExerciseTicker, mockReportError } = vi.hoisted(() => ({
-  mockExerciseTicker: vi.fn(() => (
-    <div data-testid="exercise-ticker">Ticker</div>
-  )),
-  mockReportError: vi.fn(),
-}));
+const { mockExerciseTicker, mockReportError, mockSearchParamGet } = vi.hoisted(
+  () => ({
+    mockExerciseTicker: vi.fn(() => (
+      <div data-testid="exercise-ticker">Ticker</div>
+    )),
+    mockReportError: vi.fn(),
+    mockSearchParamGet: vi.fn(() => null),
+  })
+);
 
 vi.mock("@/components/coach/useCoachChat", () => ({
   useCoachChat: vi.fn(),
@@ -27,7 +30,7 @@ vi.mock("@/lib/analytics", () => ({
 
 vi.mock("next/navigation", () => ({
   useSearchParams: () => ({
-    get: () => null,
+    get: mockSearchParamGet,
   }),
 }));
 
@@ -68,6 +71,7 @@ describe("CoachPrototype", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSearchParamGet.mockReturnValue(null);
     mockExerciseTicker.mockImplementation(() => (
       <div data-testid="exercise-ticker">Ticker</div>
     ));
@@ -109,6 +113,22 @@ describe("CoachPrototype", () => {
     expect(screen.getByTestId("coach-composer")).toBeInTheDocument();
     expect(screen.getByRole("textbox")).toHaveValue("Hello coach");
     expect(screen.getByRole("button", { name: /send/i })).toBeEnabled();
+    expect(mockedUseCoachChat).toHaveBeenCalledWith({
+      kickoffSource: "page_load",
+    });
+  });
+
+  it("marks prompt-driven entries as deeplinks", () => {
+    mockSearchParamGet.mockImplementation((key: string) =>
+      key === "prompt" ? "show history overview" : null
+    );
+    mockedUseCoachChat.mockReturnValue(buildChatState());
+
+    render(<CoachPrototype />);
+
+    expect(mockedUseCoachChat).toHaveBeenCalledWith({
+      kickoffSource: "deeplink",
+    });
   });
 
   it("submits the current input", async () => {

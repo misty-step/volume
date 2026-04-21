@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 const marketingRoutes = ["/", "/sign-in", "/sign-up"];
-const appRoutes = ["/today", "/analytics", "/history", "/settings"];
+const appRoutes = ["/coach", "/today", "/analytics", "/history", "/settings"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://volume.fitness";

@@ -64,7 +64,7 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   if (request.nextUrl.pathname === "/") {
     const session = await auth();
     if (session.userId) {
-      const redirectUrl = new URL("/today", request.url);
+      const redirectUrl = new URL("/coach", request.url);
       const redirectResponse = NextResponse.redirect(redirectUrl);
       return applySecurityHeaders(redirectResponse);
     }

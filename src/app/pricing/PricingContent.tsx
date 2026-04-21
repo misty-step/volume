@@ -107,7 +107,7 @@ export function PricingContent() {
       subscriptionStatus?.hasAccess &&
       subscriptionStatus.status !== "trial"
     ) {
-      router.replace("/today");
+      router.replace("/coach");
     }
   }, [subscriptionStatus?.hasAccess, subscriptionStatus?.status, router]);
 
@@ -127,7 +127,7 @@ export function PricingContent() {
           </Link>
           {user ? (
             <Link
-              href="/today"
+              href="/coach"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               Back to app

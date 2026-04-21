@@ -19,7 +19,7 @@ test.describe("Coach chat flows", () => {
   test.describe.configure({ mode: "serial" });
 
   test.beforeEach(async ({ page }) => {
-    await openCoachWorkspace(page, "/coach");
+    await openCoachWorkspace(page, "/");
   });
 
   test("shows the coach workspace shell", async ({ page }) => {
@@ -43,7 +43,7 @@ test.describe("Coach chat flows", () => {
     expect(await waitForSetCountIncrease(page, setCountBefore)).toBe(
       setCountBefore + 1
     );
-    await openCoachWorkspace(page, "/coach");
+    await openCoachWorkspace(page, "/");
     await requestTodaySummary(page);
   });
 

@@ -23,7 +23,7 @@ function isSignInUrl(url: string): boolean {
 
 export async function ensureAuthenticated(
   page: Page,
-  entryPath = "/today",
+  entryPath = "/",
   timeoutMs = 60000
 ) {
   await page.goto(entryPath);

@@ -111,7 +111,7 @@ export async function POST(request: Request) {
           quantity: 1,
         },
       ],
-      success_url: `${baseUrl}/today?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${baseUrl}/coach?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/pricing?checkout=canceled`,
       metadata: {
         clerkUserId: userId,

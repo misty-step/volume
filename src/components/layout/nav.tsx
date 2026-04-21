@@ -38,7 +38,7 @@ export function Nav({ initialUserId }: NavProps = {}) {
     <nav className="sticky top-0 z-50 border-b border-border-subtle bg-background/92 backdrop-blur-md">
       <div className="mx-auto flex h-[52px] max-w-4xl items-center justify-between px-4">
         <Link
-          href="/today"
+          href="/coach"
           className="text-base font-semibold tracking-tight text-foreground transition-opacity hover:opacity-80"
         >
           Volume

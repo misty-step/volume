@@ -64,10 +64,10 @@ export function randomExerciseName(prefix: string): string {
 
 export async function openCoachWorkspace(
   page: Page,
-  entryPath = "/today"
+  entryPath = "/"
 ): Promise<void> {
   await ensureAuthenticated(page, entryPath);
-  await expect(page).toHaveURL(/\/today(?:\?.*)?$/);
+  await expect(page).toHaveURL(/\/coach(?:\?.*)?$/);
   await expect(coachTimeline(page)).toBeVisible();
   await expect(coachInput(page)).toBeVisible();
   await waitForCoachIdle(page);

@@ -108,6 +108,21 @@ export interface AnalyticsEventDefinitions {
   "Session Started": {
     exerciseId: string;
   };
+  "Kickoff Reached": {
+    session_id: string;
+    source: "page_load" | "deeplink";
+    trial_day?: number;
+  };
+  "First Message": {
+    session_id: string;
+    turn_index: number;
+    tool_calls_count: number;
+  };
+  "First Log": {
+    session_id: string;
+    exercise: string;
+    time_to_first_log_ms: number;
+  };
   "Coach Message Sent": { messageLength: number; turnIndex: number };
   "Coach Response Received": {
     blocks: number;
