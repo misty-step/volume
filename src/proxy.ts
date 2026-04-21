@@ -1,6 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { COACH_HOME_PATH } from "@/lib/coach/routes";
 
 const isPublicRoute = createRouteMatcher([
   "/",
@@ -64,7 +65,7 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   if (request.nextUrl.pathname === "/") {
     const session = await auth();
     if (session.userId) {
-      const redirectUrl = new URL("/coach", request.url);
+      const redirectUrl = new URL(COACH_HOME_PATH, request.url);
       const redirectResponse = NextResponse.redirect(redirectUrl);
       return applySecurityHeaders(redirectResponse);
     }

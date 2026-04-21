@@ -9,6 +9,7 @@ import { Check, Loader2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { reportError } from "@/lib/analytics";
+import { COACH_HOME_PATH } from "@/lib/coach/routes";
 
 const PRICES = {
   monthly: {
@@ -107,7 +108,7 @@ export function PricingContent() {
       subscriptionStatus?.hasAccess &&
       subscriptionStatus.status !== "trial"
     ) {
-      router.replace("/coach");
+      router.replace(COACH_HOME_PATH);
     }
   }, [subscriptionStatus?.hasAccess, subscriptionStatus?.status, router]);
 
@@ -127,7 +128,7 @@ export function PricingContent() {
           </Link>
           {user ? (
             <Link
-              href="/coach"
+              href={COACH_HOME_PATH}
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               Back to app

@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { DASHBOARD_PATH } from "@/lib/coach/routes";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
@@ -92,7 +93,7 @@ export default function NotFound() {
 
           {/* Primary Action */}
           <Button variant="destructive" size="lg" autoFocus asChild>
-            <Link href="/today">RETURN HOME</Link>
+            <Link href={DASHBOARD_PATH}>RETURN HOME</Link>
           </Button>
         </motion.div>
       </div>

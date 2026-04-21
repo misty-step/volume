@@ -15,6 +15,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { DASHBOARD_PATH } from "@/lib/coach/routes";
 import { Activity, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import type {
@@ -287,7 +288,7 @@ export function BodyMapWidget({
               your workout history.
             </p>
             <Button asChild size="sm">
-              <Link href="/today">
+              <Link href={DASHBOARD_PATH}>
                 Log First Workout
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Link>
@@ -395,7 +396,7 @@ export function BodyMapWidget({
                     {/* Action */}
                     {selectedMuscle.status !== "recovering" && (
                       <Button asChild size="sm" className="w-full">
-                        <Link href="/today">
+                        <Link href={DASHBOARD_PATH}>
                           Train Now
                           <ChevronRight className="w-4 h-4 ml-1" />
                         </Link>

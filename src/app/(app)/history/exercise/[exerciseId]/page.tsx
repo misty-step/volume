@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
+import { buildCoachPromptPath } from "@/lib/coach/routes";
 
 export default async function ExerciseDetailPage() {
-  redirect(`/coach?prompt=${encodeURIComponent("show history overview")}`);
+  redirect(buildCoachPromptPath("show history overview"));
 }
