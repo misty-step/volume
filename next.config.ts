@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import { withSentryConfig } from "@sentry/nextjs";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import { readFileSync } from "fs";
 import { join } from "path";
@@ -10,6 +9,19 @@ const packageJson = JSON.parse(
   readFileSync(join(__dirname, "package.json"), "utf-8")
 );
 const packageVersion = packageJson.version;
+
+function getCanaryConnectOrigins(): string[] {
+  const endpoint = process.env.NEXT_PUBLIC_CANARY_ENDPOINT?.trim();
+  if (!endpoint) return [];
+
+  try {
+    return [new URL(endpoint).origin];
+  } catch {
+    return [];
+  }
+}
+
+const canaryConnectOrigins = getCanaryConnectOrigins();
 
 const nextConfig: NextConfig = {
   env: {
@@ -70,10 +82,18 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://*.convex.cloud https://browser.sentry-cdn.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://*.convex.cloud",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
-              "connect-src 'self' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud https://*.ingest.sentry.io",
+              [
+                "connect-src 'self'",
+                "https://*.clerk.com",
+                "https://clerk.volume.fitness",
+                "https://*.clerk.accounts.dev",
+                "https://*.convex.cloud",
+                "wss://*.convex.cloud",
+                ...canaryConnectOrigins,
+              ].join(" "),
               "font-src 'self' data:",
               "frame-src https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev",
             ].join("; "),
@@ -89,25 +109,4 @@ const bundleAnalyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
-// Sentry source map upload configuration
-const sentryWebpackPluginOptions = {
-  // Only run in CI or when auth token present
-  silent: !process.env.CI,
-  // Hide source maps from generated client bundles (security)
-  hideSourceMaps: true,
-  // Tree-shake Sentry logger statements in production (bundle size)
-  disableLogger: true,
-  // Upload more files for better stack traces
-  widenClientFileUpload: true,
-  // Enable automatic Vercel cron monitoring
-  automaticVercelMonitors: true,
-  // Disable upload if no auth token (local dev)
-  sourcemaps: {
-    disable: !process.env.SENTRY_AUTH_TOKEN,
-  },
-};
-
-export default withSentryConfig(
-  bundleAnalyzer(nextConfig),
-  sentryWebpackPluginOptions
-);
+export default bundleAnalyzer(nextConfig);

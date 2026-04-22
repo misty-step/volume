@@ -3,7 +3,7 @@
  *
  * Deep module: callers get a single, sanitized string without knowing
  * which environment variable provided it. This hides deployment details
- * (Sentry release vs. git SHA vs. package version) and keeps UI/server
+ * (explicit release override vs. git SHA vs. package version) and keeps UI/server
  * consumers consistent.
  *
  * IMPORTANT: Next.js only replaces process.env.NEXT_PUBLIC_* at build time
@@ -14,7 +14,6 @@
 type EnvSource = Partial<
   Pick<
     NodeJS.ProcessEnv,
-    | "SENTRY_RELEASE"
     | "VERCEL_GIT_COMMIT_SHA"
     | "NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA"
     | "NEXT_PUBLIC_PACKAGE_VERSION"
@@ -34,38 +33,36 @@ function normalizeSha(value: string): string {
 
 /**
  * Resolve the current application version using a strict precedence:
- * 1) SENTRY_RELEASE (explicit override)
- * 2) VERCEL_GIT_COMMIT_SHA or NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA (git commit SHA, short form)
- * 3) NEXT_PUBLIC_PACKAGE_VERSION (build-time injected from package.json)
- * 4) npm_package_version (npm run context only)
- * 5) "dev" fallback
+ * 1) VERCEL_GIT_COMMIT_SHA or NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA (git commit SHA, short form)
+ * 2) NEXT_PUBLIC_PACKAGE_VERSION (build-time injected from package.json)
+ * 3) npm_package_version (npm run context only)
+ * 4) "dev" fallback
  *
  * Note: Empty strings and whitespace-only values are treated as absent.
  *
  * @param env - Environment source. Server-side can omit (uses process.env).
  *              Client-side MUST pass pre-extracted values using literal access.
  */
-export function resolveVersion(env: EnvSource = process.env as EnvSource): string {
+export function resolveVersion(
+  env: EnvSource = process.env as EnvSource
+): string {
   // Helper to filter empty strings and whitespace
   const get = (key: keyof EnvSource) => env[key]?.trim() || undefined;
 
-  // Priority 1: Sentry release (explicit override)
-  const sentryRelease = get("SENTRY_RELEASE");
-  if (sentryRelease) return sentryRelease;
-
-  // Priority 2: Git commit SHA (Vercel auto-injected)
-  const gitSha = get("VERCEL_GIT_COMMIT_SHA") || get("NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA");
+  // Priority 1: Git commit SHA (Vercel auto-injected)
+  const gitSha =
+    get("VERCEL_GIT_COMMIT_SHA") || get("NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA");
   if (gitSha) return normalizeSha(gitSha);
 
-  // Priority 3: Build-time injected package version
+  // Priority 2: Build-time injected package version
   const packageVersion = get("NEXT_PUBLIC_PACKAGE_VERSION");
   if (packageVersion) return packageVersion;
 
-  // Priority 4: npm package version (local dev with npm run)
+  // Priority 3: npm package version (local dev with npm run)
   const npmVersion = get("npm_package_version");
   if (npmVersion) return npmVersion;
 
-  // Priority 5: Fallback for development
+  // Priority 4: Fallback for development
   return "dev";
 }
 
@@ -77,9 +74,9 @@ export function resolveVersion(env: EnvSource = process.env as EnvSource): strin
  */
 export const clientVersion = resolveVersion({
   // Literal access required for Next.js build-time replacement
-  SENTRY_RELEASE: process.env.SENTRY_RELEASE,
   VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
-  NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA,
+  NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA:
+    process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA,
   NEXT_PUBLIC_PACKAGE_VERSION: process.env.NEXT_PUBLIC_PACKAGE_VERSION,
   npm_package_version: process.env.npm_package_version,
 });

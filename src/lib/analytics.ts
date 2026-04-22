@@ -1,9 +1,7 @@
-import * as Sentry from "@sentry/nextjs";
 import { captureException as canaryCapture, initCanary } from "@canary-obs/sdk";
 import { getCanaryInitOptions, type CanaryTarget } from "./canary";
 import { log } from "./logger";
 import { sanitizeEmail } from "./sanitize";
-import { shouldEnableSentry } from "./sentry";
 import type posthogJs from "posthog-js";
 
 // Lazy-loaded PostHog client to avoid server-side import issues
@@ -250,18 +248,6 @@ function isAnalyticsEnabled(): boolean {
   return process.env.NODE_ENV !== "development";
 }
 
-/**
- * Check if Sentry error tracking should be enabled.
- *
- * Delegates to existing shouldEnableSentry helper from lib/sentry.ts.
- *
- * @returns true if Sentry should report errors
- */
-function isSentryEnabled(): boolean {
-  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN;
-  return shouldEnableSentry(dsn);
-}
-
 function isCanaryEnabled(): boolean {
   return getCanaryInitOptions(getCanaryTarget()) !== null;
 }
@@ -301,7 +287,8 @@ let currentUserContext: {
  * Set user context for analytics and error tracking.
  *
  * All subsequent trackEvent() calls automatically include userId.
- * Also syncs user info to Sentry for error correlation.
+ * Error reporting also picks up this context on the client when Canary
+ * captures an exception.
  *
  * **IMPORTANT**: Must only be called client-side to prevent user context
  * leakage between HTTP requests in Next.js server environments.
@@ -341,19 +328,13 @@ export function setUserContext(
     metadata: sanitizedMetadata,
   };
 
-  // Sync to Sentry for error correlation
-  Sentry.setUser({
-    id: sanitizedUserId,
-    ...sanitizedMetadata,
-  });
-
   getPostHog()?.identify(sanitizedUserId, sanitizedMetadata);
 }
 
 /**
  * Clear user context on logout.
  *
- * Removes userId from future analytics events and Sentry error reports.
+ * Removes userId from future analytics events and client-side Canary reports.
  *
  * **IMPORTANT**: Must only be called client-side to prevent user context
  * leakage between HTTP requests in Next.js server environments.
@@ -372,7 +353,6 @@ export function clearUserContext(): void {
   }
 
   currentUserContext = null;
-  Sentry.setUser(null);
   getPostHog()?.reset();
 }
 
@@ -406,6 +386,28 @@ function withUserContext(
   }
 
   // Add metadata if not present (no prefix - typed events prevent conflicts)
+  for (const [key, value] of Object.entries(currentUserContext.metadata)) {
+    if (!(key in enriched)) {
+      enriched[key] = value;
+    }
+  }
+
+  return enriched;
+}
+
+function withErrorContext(
+  context?: Record<string, unknown>
+): Record<string, unknown> | undefined {
+  if (typeof window === "undefined" || !currentUserContext) {
+    return context;
+  }
+
+  const enriched: Record<string, unknown> = { ...(context ?? {}) };
+
+  if (!("userId" in enriched)) {
+    enriched.userId = currentUserContext.userId;
+  }
+
   for (const [key, value] of Object.entries(currentUserContext.metadata)) {
     if (!(key in enriched)) {
       enriched[key] = value;
@@ -468,9 +470,9 @@ export function trackEvent<Name extends AnalyticsEventName>(
 }
 
 /**
- * Report error to Sentry with automatic PII sanitization.
+ * Report error to Canary with automatic PII sanitization.
  *
- * Wraps Sentry.captureException with context sanitization to prevent
+ * Wraps Canary capture with context sanitization to prevent
  * accidental PII exposure in error reports.
  *
  * @param error - Error to report
@@ -490,21 +492,10 @@ export function reportError(
   error: Error,
   context?: Record<string, unknown>
 ): void {
-  const sanitizedContext = context
-    ? sanitizeEventProperties(context)
+  const enrichedContext = withErrorContext(context);
+  const sanitizedContext = enrichedContext
+    ? sanitizeEventProperties(enrichedContext)
     : undefined;
-
-  if (isSentryEnabled()) {
-    try {
-      Sentry.captureException(error, {
-        extra: sanitizedContext,
-      });
-    } catch (sentryError) {
-      if (process.env.NODE_ENV === "development") {
-        console.warn("Sentry reportError failed:", sentryError);
-      }
-    }
-  }
 
   if (isCanaryEnabled()) {
     try {

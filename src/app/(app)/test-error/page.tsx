@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { reportError } from "@/lib/analytics";
 
 /**
- * Temporary test page for Sentry integration.
+ * Temporary test page for Canary integration.
  * DELETE before production deployment.
  */
 export default function TestErrorPage() {
   return (
     <div className="p-4 space-y-2">
-      <h1 className="text-lg font-semibold mb-4">Sentry Error Tests</h1>
+      <h1 className="text-lg font-semibold mb-4">Canary Error Tests</h1>
 
       <Button
         onClick={() => {

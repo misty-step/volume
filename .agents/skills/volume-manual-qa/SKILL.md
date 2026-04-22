@@ -34,7 +34,7 @@ Verify that core experiences are intact and produce artifact-backed evidence.
   - `CLERK_TEST_USER_PASSWORD`
   - `OPENROUTER_API_KEY`
 - `agent-browser` and `jq` are installed locally.
-- Local app can run on a dedicated local port. The script defaults to `http://127.0.0.1:3100` and honors `PORT`.
+- Local app can run on a dedicated local port. The script defaults to `http://localhost:3100` and honors `PORT`.
 - Use a dedicated test user.
 
 ## Run
@@ -67,7 +67,8 @@ PORT=3200 bash .agents/skills/volume-manual-qa/scripts/run-volume-manual-qa.sh
   - `coach-after-send.png`
 - Logs include:
   - URL checkpoints (`post-login-url.txt`, `today-url.txt`, `coach-url.txt`)
-  - semantic payload (`coach-response.json`)
+  - rendered coach output (`coach-body.txt`)
+  - coach request log (`coach-network.txt`)
   - `console.txt`
   - `errors.txt`
 

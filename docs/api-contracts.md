@@ -35,8 +35,11 @@ on before changing handlers or callers.
     "convex": { "status": "pass | fail" },
     "stripe": { "status": "pass | fail" },
     "coachRuntime": { "status": "pass | fail" },
-    "errorTracking": { "status": "pass | fail" },
-    "sentry": { "status": "pass | fail" }
+    "errorTracking": {
+      "status": "pass | fail",
+      "clientConfigured": "boolean",
+      "serverConfigured": "boolean"
+    }
   }
 }
 ```

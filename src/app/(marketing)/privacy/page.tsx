@@ -211,20 +211,13 @@ export default function PrivacyPolicy() {
 
                   <div className="bg-muted/30 border-l-[3px] border-primary p-4">
                     <h3 className="font-mono text-sm uppercase mb-2">
-                      Sentry (Error Tracking)
+                      Canary (Self-Hosted Observability)
                     </h3>
                     <p className="text-foreground/90 text-sm leading-relaxed">
-                      Monitors errors and performance issues. Personal data is
-                      automatically redacted. See{" "}
-                      <a
-                        href="https://sentry.io/privacy/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        Sentry&apos;s Privacy Policy
-                      </a>
-                      .
+                      Our self-hosted Canary service monitors errors and health
+                      signals. Personal data is automatically redacted before
+                      events leave the app, and the resulting telemetry stays
+                      within infrastructure we operate.
                     </p>
                   </div>
 
