@@ -36,6 +36,14 @@ describe("getCanaryInitOptions", () => {
     });
   });
 
+  it("rejects invalid public Canary endpoints", () => {
+    process.env.NEXT_PUBLIC_CANARY_ENDPOINT = "canary.example";
+    process.env.NEXT_PUBLIC_CANARY_API_KEY = "public-key";
+
+    expect(getCanaryInitOptions("client")).toBeNull();
+    expect(getServerCanaryConfigSource()).toBeNull();
+  });
+
   it("prefers dedicated server Canary env when present", () => {
     process.env.CANARY_ENDPOINT = "https://server-canary.example";
     process.env.CANARY_API_KEY = "server-key";
@@ -46,6 +54,22 @@ describe("getCanaryInitOptions", () => {
     expect(getCanaryInitOptions("server")).toEqual({
       endpoint: "https://server-canary.example",
       apiKey: "server-key",
+      service: "volume",
+      environment: "production",
+      scrubPii: true,
+    });
+  });
+
+  it("ignores an invalid dedicated Canary endpoint and falls back to public config", () => {
+    process.env.CANARY_ENDPOINT = "ftp://server-canary.example";
+    process.env.CANARY_API_KEY = "server-key";
+    process.env.NEXT_PUBLIC_CANARY_ENDPOINT = "https://public-canary.example";
+    process.env.NEXT_PUBLIC_CANARY_API_KEY = "public-key";
+
+    expect(getServerCanaryConfigSource()).toBe("public_fallback");
+    expect(getCanaryInitOptions("server")).toEqual({
+      endpoint: "https://public-canary.example",
+      apiKey: "public-key",
       service: "volume",
       environment: "production",
       scrubPii: true,

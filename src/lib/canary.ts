@@ -1,4 +1,5 @@
 import type { InitOptions } from "@canary-obs/sdk";
+import { readHttpUrl } from "@/lib/http-url";
 
 export type CanaryTarget = "client" | "server";
 export type ServerCanaryConfigSource = "dedicated" | "public_fallback";
@@ -11,7 +12,7 @@ function readNonEmpty(value: string | undefined): string | undefined {
 }
 
 function getPublicCanaryConfig(env: EnvSource) {
-  const endpoint = readNonEmpty(env.NEXT_PUBLIC_CANARY_ENDPOINT);
+  const endpoint = readHttpUrl(env.NEXT_PUBLIC_CANARY_ENDPOINT);
   const apiKey = readNonEmpty(env.NEXT_PUBLIC_CANARY_API_KEY);
 
   if (!endpoint || !apiKey) {
@@ -22,7 +23,7 @@ function getPublicCanaryConfig(env: EnvSource) {
 }
 
 function getDedicatedServerCanaryConfig(env: EnvSource) {
-  const endpoint = readNonEmpty(env.CANARY_ENDPOINT);
+  const endpoint = readHttpUrl(env.CANARY_ENDPOINT);
   const apiKey = readNonEmpty(env.CANARY_API_KEY);
 
   if (!endpoint || !apiKey) {

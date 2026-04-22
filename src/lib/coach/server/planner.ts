@@ -7,6 +7,10 @@ import {
 } from "ai";
 import { COACH_AGENT_SYSTEM_PROMPT } from "@/lib/coach/agent-prompt";
 import { catalog } from "@/lib/coach/catalog";
+import {
+  findForcedCoachRouteIntent,
+  type ForcedCoachRouteIntent,
+} from "@/lib/coach/workspace-prompts";
 import { normalizeAssistantText } from "./blocks";
 import { createCoachTools } from "./coach-tools";
 import type { ToolExecutionRecord } from "@/lib/coach/presentation/types";
@@ -73,47 +77,60 @@ function getModelMessageText(message: ModelMessage): string {
     .join("\n");
 }
 
-function selectForcedToolChoice(history: ModelMessage[]) {
-  const latestUserText = [...history]
-    .reverse()
-    .find((message) => message.role === "user");
-  const prompt = latestUserText
-    ? getModelMessageText(latestUserText).trim()
+function buildForcedRouteHint(
+  prompt: string,
+  route: ForcedCoachRouteIntent
+): string {
+  if (!route.actionHint) return prompt;
+
+  return `${prompt}\n\n<route-intent tool="${route.toolName}" action="${route.actionHint}" />`;
+}
+
+function getLatestUserMessageIndex(history: ModelMessage[]): number {
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    if (history[index]?.role === "user") {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function buildForcedPlannerInput(history: ModelMessage[]) {
+  const latestUserIndex = getLatestUserMessageIndex(history);
+  const latestUserMessage =
+    latestUserIndex >= 0 ? history[latestUserIndex] : undefined;
+  const prompt = latestUserMessage
+    ? getModelMessageText(latestUserMessage).trim()
     : "";
-  const normalized = prompt.toLowerCase();
+  const forcedRoute = findForcedCoachRouteIntent(prompt);
 
-  if (!normalized) return undefined;
+  if (!forcedRoute) {
+    return {
+      history,
+      toolChoice: undefined,
+    };
+  }
 
+  const nextHistory = history.slice();
   if (
-    normalized === "show today's summary" ||
-    normalized === "show history overview"
+    forcedRoute.actionHint &&
+    latestUserIndex >= 0 &&
+    latestUserMessage?.role === "user"
   ) {
-    return { type: "tool" as const, toolName: "query_workouts" as const };
-  }
-
-  if (normalized === "show analytics overview") {
-    return { type: "tool" as const, toolName: "get_insights" as const };
-  }
-
-  if (normalized === "show settings overview") {
-    return {
-      type: "tool" as const,
-      toolName: "get_settings_overview" as const,
+    nextHistory[latestUserIndex] = {
+      ...latestUserMessage,
+      content: buildForcedRouteHint(prompt, forcedRoute),
     };
   }
 
-  if (normalized === "show exercise library") {
-    return {
+  return {
+    history: nextHistory,
+    toolChoice: {
       type: "tool" as const,
-      toolName: "get_exercise_library" as const,
-    };
-  }
-
-  if (/^(archive|delete|restore) exercise\s+.+/i.test(prompt)) {
-    return { type: "tool" as const, toolName: "manage_exercise" as const };
-  }
-
-  return undefined;
+      toolName: forcedRoute.toolName,
+    },
+  };
 }
 
 export function buildPlannerSystemPrompt({
@@ -352,7 +369,8 @@ export async function runPlannerTurn({
       toolResults.push(record);
     },
   });
-  const toolChoice = selectForcedToolChoice(history);
+  const { history: plannerHistory, toolChoice } =
+    buildForcedPlannerInput(history);
 
   try {
     const modelAbortSignal = createModelAbortSignal(signal);
@@ -360,7 +378,7 @@ export async function runPlannerTurn({
     const result = streamText({
       model: runtime.model,
       system: systemPrompt,
-      messages: history,
+      messages: plannerHistory,
       tools,
       ...(toolChoice ? { toolChoice } : {}),
       stopWhen: stepCountIs(MAX_TOOL_ROUNDS),

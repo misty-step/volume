@@ -1,7 +1,14 @@
-import { describe, expect, it } from "vitest";
+// @vitest-environment node
+
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { log } from "./logger";
 import { buildContentSecurityPolicy } from "./content-security-policy";
 
 describe("buildContentSecurityPolicy", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("includes the Canary origin in connect-src when configured", () => {
     const policy = buildContentSecurityPolicy({
       canaryEndpoint: "https://canary.example/ingest",
@@ -20,5 +27,23 @@ describe("buildContentSecurityPolicy", () => {
     expect(
       buildContentSecurityPolicy({ includeUpgradeInsecureRequests: true })
     ).toContain("upgrade-insecure-requests");
+  });
+
+  it("drops invalid Canary endpoints and logs the reason", () => {
+    const warnSpy = vi.spyOn(log, "warn");
+
+    const policy = buildContentSecurityPolicy({
+      canaryEndpoint: "ftp://canary.example/ingest",
+    });
+
+    expect(policy).not.toContain("ftp://canary.example");
+    expect(warnSpy).toHaveBeenCalledWith(
+      "Ignoring invalid Canary endpoint in CSP",
+      expect.objectContaining({
+        endpoint: "ftp://canary.example/ingest",
+        reason: "unsupported_protocol",
+        protocol: "ftp:",
+      })
+    );
   });
 });

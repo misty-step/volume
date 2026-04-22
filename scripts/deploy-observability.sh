@@ -15,7 +15,7 @@ source ~/.secrets
 CANARY_ENDPOINT_VALUE="${CANARY_ENDPOINT:-}"
 CANARY_API_KEY_VALUE="${CANARY_API_KEY:-}"
 PUBLIC_CANARY_ENDPOINT_VALUE="${NEXT_PUBLIC_CANARY_ENDPOINT:-$CANARY_ENDPOINT_VALUE}"
-PUBLIC_CANARY_API_KEY_VALUE="${NEXT_PUBLIC_CANARY_API_KEY:-$CANARY_API_KEY_VALUE}"
+PUBLIC_CANARY_API_KEY_VALUE="${NEXT_PUBLIC_CANARY_API_KEY:-}"
 
 [[ -n "$CANARY_ENDPOINT_VALUE" ]] || {
   echo "Error: CANARY_ENDPOINT not set in ~/.secrets" >&2
@@ -33,7 +33,7 @@ PUBLIC_CANARY_API_KEY_VALUE="${NEXT_PUBLIC_CANARY_API_KEY:-$CANARY_API_KEY_VALUE
 }
 
 [[ -n "$PUBLIC_CANARY_API_KEY_VALUE" ]] || {
-  echo "Error: NEXT_PUBLIC_CANARY_API_KEY could not be resolved" >&2
+  echo "Error: NEXT_PUBLIC_CANARY_API_KEY not set in ~/.secrets" >&2
   exit 1
 }
 
@@ -48,7 +48,7 @@ PUBLIC_CANARY_API_KEY_VALUE="${NEXT_PUBLIC_CANARY_API_KEY:-$CANARY_API_KEY_VALUE
 }
 
 echo "Resolved Canary endpoint: $PUBLIC_CANARY_ENDPOINT_VALUE"
-echo "Using ingest-only key for browser and server capture"
+echo "Using explicit browser and server Canary keys"
 echo
 
 for env in production preview development; do

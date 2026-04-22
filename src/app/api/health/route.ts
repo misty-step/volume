@@ -3,6 +3,7 @@ import {
   getCanaryInitOptions,
   getServerCanaryConfigSource,
 } from "@/lib/canary";
+import { hasInvalidHttpUrl } from "@/lib/http-url";
 import { resolveVersion } from "@/lib/version";
 import { getDeploymentEnvironment } from "@/lib/environment";
 import {
@@ -81,16 +82,30 @@ export async function GET() {
   const serverCanaryConfigSource = getServerCanaryConfigSource();
   const serverCanaryConfigured = serverCanaryConfigSource !== null;
   const serverCanaryDedicated = serverCanaryConfigSource === "dedicated";
+  const clientCanaryEndpointInvalid = hasInvalidHttpUrl(
+    process.env.NEXT_PUBLIC_CANARY_ENDPOINT
+  );
+  const dedicatedServerCanaryEndpointInvalid = hasInvalidHttpUrl(
+    process.env.CANARY_ENDPOINT
+  );
   const errorTrackingHealthy =
     clientCanaryConfigured &&
     serverCanaryConfigured &&
     (!isProd || serverCanaryDedicated);
-  const errorTrackingReason =
-    !clientCanaryConfigured || !serverCanaryConfigured
-      ? "missing required Canary configuration"
-      : isProd && !serverCanaryDedicated
-        ? "missing dedicated server Canary configuration"
-        : undefined;
+  let errorTrackingReason: string | undefined;
+  if (!errorTrackingHealthy) {
+    if (clientCanaryEndpointInvalid && dedicatedServerCanaryEndpointInvalid) {
+      errorTrackingReason = "invalid public and dedicated Canary endpoint URL";
+    } else if (clientCanaryEndpointInvalid) {
+      errorTrackingReason = "invalid public Canary endpoint URL";
+    } else if (isProd && dedicatedServerCanaryEndpointInvalid) {
+      errorTrackingReason = "invalid dedicated Canary endpoint URL";
+    } else if (!clientCanaryConfigured || !serverCanaryConfigured) {
+      errorTrackingReason = "missing required Canary configuration";
+    } else if (isProd && !serverCanaryDedicated) {
+      errorTrackingReason = "missing dedicated server Canary configuration";
+    }
+  }
 
   const isHealthy =
     clientRuntimeHealthy &&

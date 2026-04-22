@@ -123,6 +123,29 @@ wait_for_body_contains_any() {
   return 1
 }
 
+wait_for_coach_request_id() {
+  local output_file="$1"
+  local attempts="${2:-10}"
+  local delay_seconds="${3:-1}"
+  local request_id
+
+  for _ in $(seq 1 "$attempts"); do
+    agent-browser --session "$SESSION" --json network requests --filter '/api/coach' --type fetch --method POST \
+      >"$output_file"
+    request_id="$(
+      jq -r '.data.requests[]? | select(.status == 200 and (.url | contains("/api/coach"))) | .requestId' \
+        "$output_file" | tail -n 1
+    )"
+    if [[ -n "$request_id" && "$request_id" != "null" ]]; then
+      echo "$request_id"
+      return 0
+    fi
+    sleep "$delay_seconds"
+  done
+
+  return 1
+}
+
 check_command agent-browser
 check_command curl
 check_command jq
@@ -261,30 +284,21 @@ if ! grep -q '/api/coach .* 200' "$LOG_DIR/coach-network.txt"; then
   exit 1
 fi
 
+COACH_API_REQUESTS_JSON="$LOG_DIR/coach-network.json"
 COACH_API_STREAM_RAW="$LOG_DIR/coach-stream-raw.json.txt"
 COACH_API_STREAM_JSON="$LOG_DIR/coach-stream.json"
 
-agent-browser --session "$SESSION" eval "(async () => {
-  const res = await fetch('/api/coach', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      messages: [{
-        id: 'qa-msg-1',
-        role: 'user',
-        parts: [{ type: 'text', text: 'show today\\'s summary' }]
-      }],
-      preferences: { unit: 'lbs', soundEnabled: true, timezoneOffsetMinutes: 0 }
-    })
-  });
-  const body = await res.text();
-  return JSON.stringify({ status: res.status, body });
-})()" >"$COACH_API_STREAM_RAW"
+if ! COACH_API_REQUEST_ID="$(wait_for_coach_request_id "$COACH_API_REQUESTS_JSON")"; then
+  echo "Coach semantic check failed: could not capture original /api/coach request details" >&2
+  exit 1
+fi
 
-jq -r '.' "$COACH_API_STREAM_RAW" >"$COACH_API_STREAM_JSON"
+agent-browser --session "$SESSION" --json network request "$COACH_API_REQUEST_ID" >"$COACH_API_STREAM_RAW"
+jq '.data | { requestId, url, method, status, body: .responseBody }' \
+  "$COACH_API_STREAM_RAW" >"$COACH_API_STREAM_JSON"
 
 STREAM_STATUS="$(jq -r '.status' "$COACH_API_STREAM_JSON")"
-STREAM_BODY="$(jq -r '.body' "$COACH_API_STREAM_JSON")"
+STREAM_BODY="$(jq -r '.body // ""' "$COACH_API_STREAM_JSON")"
 
 if [[ "$STREAM_STATUS" != "200" ]]; then
   echo "Coach semantic check failed: streamed /api/coach request returned $STREAM_STATUS" >&2
@@ -315,6 +329,11 @@ if [[ "$ERROR_LINES" -gt 0 ]]; then
   exit 1
 fi
 
+RENDERED_COACH_RESULT="$(
+  grep -E -o -m1 "Today's Summary|No sets logged today|your log is still empty for today" \
+    "$LOG_DIR/coach-body.txt" || true
+)"
+
 cat >"$OUTPUT_DIR/report.md" <<EOF
 # Volume Manual QA Report
 
@@ -333,8 +352,9 @@ cat >"$OUTPUT_DIR/report.md" <<EOF
 - Send enabled before typing: $SEND_BEFORE
 - Send enabled after typing: $SEND_AFTER
 - Page error lines: $ERROR_LINES
-- Rendered coach heading: Today's Summary
+- Rendered coach result: ${RENDERED_COACH_RESULT:-unknown}
 - Coach API request log: $LOG_DIR/coach-network.txt
+- Coach API request JSON: $COACH_API_REQUESTS_JSON
 - Coach API stream log: $COACH_API_STREAM_JSON
 
 ## Artifacts
@@ -354,6 +374,7 @@ cat >"$OUTPUT_DIR/report.md" <<EOF
   - $LOG_DIR/send-enabled-after.txt
   - $LOG_DIR/coach-body.txt
   - $LOG_DIR/coach-network.txt
+  - $LOG_DIR/coach-network.json
   - $LOG_DIR/coach-stream-raw.json.txt
   - $LOG_DIR/coach-stream.json
   - $LOG_DIR/console.txt

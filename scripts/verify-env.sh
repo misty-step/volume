@@ -261,6 +261,17 @@ value_has_literal_newline_escape() {
   [[ "$unquoted_value" == *\\n* || "$unquoted_value" == *\\r* ]]
 }
 
+is_valid_http_url() {
+  local value="$1"
+  bun -e '
+    const value = process.argv[1];
+    if (!URL.canParse(value)) process.exit(1);
+    const url = new URL(value);
+    if (!url.hostname) process.exit(1);
+    if (url.protocol !== "http:" && url.protocol !== "https:") process.exit(1);
+  ' "$value" >/dev/null 2>&1
+}
+
 # Validate Stripe key type matches deployment environment
 # Returns: 0 = valid, 1 = mismatch, 2 = can't validate (unknown format)
 validate_stripe_key_type() {
@@ -499,6 +510,13 @@ check_vercel_environment() {
     if value_has_literal_newline_escape "$raw_value"; then
       log "    [INVALID] $var - literal newline escape sequence"
       MISSING_VARS+=("Vercel:${var} (LITERAL NEWLINE ESCAPE)")
+      missing_here=$((missing_here + 1))
+      continue
+    fi
+
+    if [[ "$var" == "NEXT_PUBLIC_CANARY_ENDPOINT" ]] && ! is_valid_http_url "$trimmed_value"; then
+      log "    [INVALID] $var - must be a valid http(s) URL"
+      MISSING_VARS+=("Vercel:${var} (INVALID URL)")
       missing_here=$((missing_here + 1))
       continue
     fi

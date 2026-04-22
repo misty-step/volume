@@ -461,6 +461,36 @@ describe("runPlannerTurn", () => {
     expect(result.toolsUsed).toContain("query_workouts");
   });
 
+  it("adds an explicit action hint for forced history overview routes", async () => {
+    const { runPlannerTurn } = await import("./planner");
+
+    const model = new MockLanguageModelV3({
+      doStream: async () => ({
+        stream: textStream("History."),
+        rawCall: {},
+      }),
+    });
+    const runtime = { model, modelId: "test-model" };
+
+    const result = await runPlannerTurn({
+      runtime,
+      ...DEFAULT_ARGS,
+      history: [{ role: "user", content: "show history overview" }],
+    });
+
+    expect(result.kind).toBe("ok");
+    expect(model.doStreamCalls[0]?.toolChoice).toEqual({
+      type: "tool",
+      toolName: "query_workouts",
+    });
+    expect(JSON.stringify(model.doStreamCalls[0]?.prompt)).toContain(
+      "history_overview"
+    );
+    expect(JSON.stringify(model.doStreamCalls[0]?.prompt)).toContain(
+      "query_workouts"
+    );
+  });
+
   it("deduplicates repeated tool-call chunks by toolCallId", async () => {
     const { runPlannerTurn } = await import("./planner");
 

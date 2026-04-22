@@ -18,7 +18,8 @@ function gitRefExists(ref: string): boolean {
       }
     );
     return true;
-  } catch {
+  } catch (error) {
+    console.warn("Skipping unavailable git base ref", { ref, error });
     return false;
   }
 }

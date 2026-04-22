@@ -1,3 +1,5 @@
+import { log } from "@/lib/logger";
+
 const SCRIPT_SOURCES = [
   "'self'",
   "'unsafe-inline'",
@@ -46,11 +48,33 @@ function getCanaryConnectOrigins(endpoint: string | undefined): string[] {
   const trimmedEndpoint = endpoint?.trim();
   if (!trimmedEndpoint) return [];
 
-  try {
-    return [new URL(trimmedEndpoint).origin];
-  } catch {
+  if (!URL.canParse(trimmedEndpoint)) {
+    log.warn("Ignoring invalid Canary endpoint in CSP", {
+      endpoint: trimmedEndpoint,
+      reason: "unparseable",
+    });
     return [];
   }
+
+  const url = new URL(trimmedEndpoint);
+  if (!url.hostname) {
+    log.warn("Ignoring invalid Canary endpoint in CSP", {
+      endpoint: trimmedEndpoint,
+      reason: "missing_hostname",
+    });
+    return [];
+  }
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    log.warn("Ignoring invalid Canary endpoint in CSP", {
+      endpoint: trimmedEndpoint,
+      reason: "unsupported_protocol",
+      protocol: url.protocol,
+    });
+    return [];
+  }
+
+  return [url.origin];
 }
 
 export function buildContentSecurityPolicy({
