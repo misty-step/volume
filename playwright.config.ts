@@ -16,10 +16,15 @@ dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 const authFile = "e2e/.auth/user.json";
 const e2eEnv = loadE2EEnv();
+const playwrightBaseURL =
+  process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 const playwrightWorkers = Number.parseInt(
   process.env.PLAYWRIGHT_WORKERS || "1",
   10
 );
+const reuseExistingPlaywrightServer =
+  process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === "1";
+const shouldLaunchPlaywrightWebServer = !process.env.PLAYWRIGHT_BASE_URL;
 const ciReporter: ReporterDescription[] = [
   ["line"],
   ["html", { open: "never" }],
@@ -41,7 +46,7 @@ export default defineConfig({
   reporter: process.env.CI ? ciReporter : "html",
   globalSetup: "./e2e/global-setup.ts",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: playwrightBaseURL,
     trace: "on-first-retry",
     headless: true,
   },
@@ -60,24 +65,28 @@ export default defineConfig({
       dependencies: ["setup"],
     },
   ],
-  webServer: {
-    // Always use dev server for E2E tests - it respects runtime env vars
-    // Production build bakes env vars at build time, so they can't be overridden
-    command: "bun run dev:next",
-    url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
-    stdout: "ignore",
-    stderr: "pipe",
-    timeout: 120000,
-    env: {
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
-        e2eEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: e2eEnv.CLERK_SECRET_KEY,
-      CLERK_JWT_ISSUER_DOMAIN: e2eEnv.CLERK_JWT_ISSUER_DOMAIN,
-      NEXT_PUBLIC_CONVEX_URL: e2eEnv.NEXT_PUBLIC_CONVEX_URL,
-      TEST_RESET_SECRET: e2eEnv.TEST_RESET_SECRET,
-      OPENROUTER_API_KEY: e2eEnv.OPENROUTER_API_KEY,
-      NEXT_PUBLIC_DISABLE_ANALYTICS: "true",
-    },
-  },
+  webServer: shouldLaunchPlaywrightWebServer
+    ? {
+        // Always use a dev server for managed E2E runs - it respects runtime env vars.
+        // Production builds bake env vars at build time, so they can't be overridden.
+        command: "bun run dev:next",
+        url: playwrightBaseURL,
+        // Default to owning the local server too; silent reuse can target an
+        // unrelated app that already happens to own port 3000.
+        reuseExistingServer: reuseExistingPlaywrightServer,
+        stdout: "ignore",
+        stderr: "pipe",
+        timeout: 120000,
+        env: {
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
+            e2eEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+          CLERK_SECRET_KEY: e2eEnv.CLERK_SECRET_KEY,
+          CLERK_JWT_ISSUER_DOMAIN: e2eEnv.CLERK_JWT_ISSUER_DOMAIN,
+          NEXT_PUBLIC_CONVEX_URL: e2eEnv.NEXT_PUBLIC_CONVEX_URL,
+          TEST_RESET_SECRET: e2eEnv.TEST_RESET_SECRET,
+          OPENROUTER_API_KEY: e2eEnv.OPENROUTER_API_KEY,
+          NEXT_PUBLIC_DISABLE_ANALYTICS: "true",
+        },
+      }
+    : undefined,
 });

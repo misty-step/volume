@@ -35,6 +35,7 @@ Verify that core experiences are intact and produce artifact-backed evidence.
   - `OPENROUTER_API_KEY`
 - `agent-browser` and `jq` are installed locally.
 - Local app can run on a dedicated local port. The script defaults to `http://localhost:3100` and honors `PORT`.
+- To reuse an already-running app instead of starting its own dev server, set `APP_URL` and `SKIP_APP_START=1`.
 - Use a dedicated test user.
 
 ## Run
@@ -53,6 +54,13 @@ Optional custom port:
 
 ```bash
 PORT=3200 bash .agents/skills/volume-manual-qa/scripts/run-volume-manual-qa.sh
+```
+
+Optional existing app:
+
+```bash
+APP_URL=http://localhost:3100 SKIP_APP_START=1 \
+  bash .agents/skills/volume-manual-qa/scripts/run-volume-manual-qa.sh
 ```
 
 ## Expected Outcomes

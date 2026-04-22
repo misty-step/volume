@@ -21,6 +21,15 @@ function isSignInUrl(url: string): boolean {
   }
 }
 
+export async function waitForAuthenticatedRedirect(
+  page: Page,
+  timeoutMs = 60000
+) {
+  await page.waitForURL((url) => !isSignInUrl(url.toString()), {
+    timeout: timeoutMs,
+  });
+}
+
 export async function ensureAuthenticated(
   page: Page,
   entryPath = "/",
@@ -54,6 +63,7 @@ export async function ensureAuthenticated(
     },
   });
 
+  await waitForAuthenticatedRedirect(page, timeoutMs);
   await page.goto(entryPath);
 }
 

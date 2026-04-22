@@ -56,6 +56,66 @@ function quotePromptValue(value: string) {
   return JSON.stringify(value);
 }
 
+function getModelMessageText(message: ModelMessage): string {
+  if (typeof message.content === "string") {
+    return message.content;
+  }
+
+  if (!Array.isArray(message.content)) {
+    return "";
+  }
+
+  return message.content
+    .filter(
+      (part): part is { type: "text"; text: string } => part.type === "text"
+    )
+    .map((part) => part.text)
+    .join("\n");
+}
+
+function selectForcedToolChoice(history: ModelMessage[]) {
+  const latestUserText = [...history]
+    .reverse()
+    .find((message) => message.role === "user");
+  const prompt = latestUserText
+    ? getModelMessageText(latestUserText).trim()
+    : "";
+  const normalized = prompt.toLowerCase();
+
+  if (!normalized) return undefined;
+
+  if (
+    normalized === "show today's summary" ||
+    normalized === "show history overview"
+  ) {
+    return { type: "tool" as const, toolName: "query_workouts" as const };
+  }
+
+  if (normalized === "show analytics overview") {
+    return { type: "tool" as const, toolName: "get_insights" as const };
+  }
+
+  if (normalized === "show settings overview") {
+    return {
+      type: "tool" as const,
+      toolName: "get_settings_overview" as const,
+    };
+  }
+
+  if (normalized === "show exercise library") {
+    return {
+      type: "tool" as const,
+      toolName: "get_exercise_library" as const,
+    };
+  }
+
+  if (/^(archive|delete|restore) exercise\s+.+/i.test(prompt)) {
+    return { type: "tool" as const, toolName: "manage_exercise" as const };
+  }
+
+  return undefined;
+}
+
 export function buildPlannerSystemPrompt({
   preferences,
   conversationSummary,
@@ -292,6 +352,7 @@ export async function runPlannerTurn({
       toolResults.push(record);
     },
   });
+  const toolChoice = selectForcedToolChoice(history);
 
   try {
     const modelAbortSignal = createModelAbortSignal(signal);
@@ -301,6 +362,7 @@ export async function runPlannerTurn({
       system: systemPrompt,
       messages: history,
       tools,
+      ...(toolChoice ? { toolChoice } : {}),
       stopWhen: stepCountIs(MAX_TOOL_ROUNDS),
       onChunk: ({ chunk }) => {
         if (chunk.type === "tool-call") {

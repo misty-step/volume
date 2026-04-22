@@ -25,6 +25,10 @@ const isPublicRoute = createRouteMatcher([
   "/apple-icon",
   // Health check for uptime monitoring
   "/api/health",
+  // E2E reset route authenticates in-handler so browser fetches can rely on
+  // the active Clerk session plus X-TEST-SECRET without middleware redirecting
+  // them to /404 first.
+  "/api/test/reset",
   // Public release notes
   "/releases",
   "/releases/(.*)",

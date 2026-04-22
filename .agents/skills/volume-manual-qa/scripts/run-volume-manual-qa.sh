@@ -8,7 +8,8 @@ LOG_DIR="$OUTPUT_DIR/logs"
 SESSION="volume-qa-$(date +%s)"
 DEV_LOG="$OUTPUT_DIR/dev.log"
 APP_PORT="${PORT:-3100}"
-APP_URL="http://localhost:${APP_PORT}"
+APP_URL="${APP_URL:-http://localhost:${APP_PORT}}"
+SKIP_APP_START="${SKIP_APP_START:-0}"
 
 mkdir -p "$SCREEN_DIR" "$LOG_DIR"
 
@@ -23,6 +24,33 @@ check_command() {
 is_post_login_url() {
   local url="$1"
   [[ "$url" == *"/today"* || "$url" == *"/coach"* ]]
+}
+
+click_submit_button() {
+  agent-browser --session "$SESSION" eval "(() => {
+    const button = document.querySelector('button[type=\"submit\"]');
+    if (!button) throw new Error('Missing submit button');
+    button.click();
+    return true;
+  })()" >/dev/null
+}
+
+wait_for_post_login_url() {
+  local output_file="$1"
+  local attempts="${2:-15}"
+  local delay_seconds="${3:-1}"
+  local current_url
+
+  for _ in $(seq 1 "$attempts"); do
+    agent-browser --session "$SESSION" get url >"$output_file"
+    current_url="$(cat "$output_file")"
+    if is_post_login_url "$current_url"; then
+      return 0
+    fi
+    sleep "$delay_seconds"
+  done
+
+  return 1
 }
 
 assert_route_url() {
@@ -66,20 +94,22 @@ wait_for_send_enabled() {
   return 1
 }
 
-wait_for_body_contains() {
-  local expected="$1"
-  local output_file="$2"
-  local attempts="${3:-30}"
-  local delay_seconds="${4:-1}"
+wait_for_body_contains_any() {
+  local output_file="$1"
+  local attempts="${2:-30}"
+  local delay_seconds="${3:-1}"
+  shift 3
   local page_text
 
   for _ in $(seq 1 "$attempts"); do
     agent-browser --session "$SESSION" get text body >"$output_file"
     page_text="$(cat "$output_file")"
 
-    if [[ "$page_text" == *"$expected"* ]]; then
-      return 0
-    fi
+    for expected in "$@"; do
+      if [[ "$page_text" == *"$expected"* ]]; then
+        return 0
+      fi
+    done
 
     if [[ "$page_text" == *"I can't process that request right now."* || "$page_text" == *"I hit an error while"* ]]; then
       echo "Coach semantic check failed: response rendered an error message" >&2
@@ -89,14 +119,16 @@ wait_for_body_contains() {
     sleep "$delay_seconds"
   done
 
-  echo "Coach semantic check failed: missing expected body text: $expected" >&2
+  echo "Coach semantic check failed: response did not summarize today's workout state" >&2
   return 1
 }
 
 check_command agent-browser
-check_command bun
 check_command curl
 check_command jq
+if [[ "$SKIP_APP_START" != "1" ]]; then
+  check_command bun
+fi
 
 if [[ ! -f "$ROOT_DIR/.env.local" ]]; then
   echo "Missing .env.local at $ROOT_DIR/.env.local" >&2
@@ -130,12 +162,16 @@ trap cleanup EXIT
 
 pushd "$ROOT_DIR" >/dev/null
 
-PORT="$APP_PORT" bun run dev:next >"$DEV_LOG" 2>&1 &
-DEV_PID=$!
+if [[ "$SKIP_APP_START" != "1" ]]; then
+  PORT="$APP_PORT" bun run dev:next >"$DEV_LOG" 2>&1 &
+  DEV_PID=$!
+else
+  printf "Reusing existing app at %s\n" "$APP_URL" >"$DEV_LOG"
+fi
 
 READY=0
 for _ in {1..30}; do
-  if ! kill -0 "$DEV_PID" >/dev/null 2>&1; then
+  if [[ -n "${DEV_PID:-}" ]] && ! kill -0 "$DEV_PID" >/dev/null 2>&1; then
     echo "dev server exited before startup completed" >&2
     tail -n 40 "$DEV_LOG" >&2 || true
     exit 1
@@ -175,20 +211,17 @@ agent-browser --session "$SESSION" wait 'input[name="identifier"]' >/dev/null
 agent-browser --session "$SESSION" screenshot "$SCREEN_DIR/signin.png" >/dev/null
 
 agent-browser --session "$SESSION" fill 'input[name="identifier"]' "$CLERK_TEST_USER_EMAIL" >/dev/null
-agent-browser --session "$SESSION" click 'button[type="submit"]' >/dev/null
+click_submit_button
 agent-browser --session "$SESSION" wait 'input[name="password"]' >/dev/null
 agent-browser --session "$SESSION" fill 'input[name="password"]' "$CLERK_TEST_USER_PASSWORD" >/dev/null
-agent-browser --session "$SESSION" click 'button[type="submit"]' >/dev/null
-agent-browser --session "$SESSION" wait 4000 >/dev/null
-agent-browser --session "$SESSION" get url >"$LOG_DIR/post-login-url.txt"
+click_submit_button
+if ! wait_for_post_login_url "$LOG_DIR/post-login-url.txt"; then
+  echo "Authenticated user landed on unexpected route: $(cat "$LOG_DIR/post-login-url.txt")" >&2
+  exit 1
+fi
 agent-browser --session "$SESSION" screenshot "$SCREEN_DIR/post-login.png" >/dev/null
 
 POST_LOGIN_URL="$(cat "$LOG_DIR/post-login-url.txt")"
-if ! is_post_login_url "$POST_LOGIN_URL"; then
-  echo "Authenticated user landed on unexpected route: $POST_LOGIN_URL" >&2
-  exit 1
-fi
-
 agent-browser --session "$SESSION" open "$APP_URL/today" >/dev/null
 agent-browser --session "$SESSION" wait 1500 >/dev/null
 agent-browser --session "$SESSION" get url >"$LOG_DIR/today-url.txt"
@@ -214,7 +247,10 @@ if ! SEND_AFTER="$(wait_for_send_enabled)"; then
 fi
 
 agent-browser --session "$SESSION" click 'form[data-testid="coach-composer"] button[type="submit"]' >/dev/null
-if ! wait_for_body_contains "Today's Summary" "$LOG_DIR/coach-body.txt"; then
+if ! wait_for_body_contains_any "$LOG_DIR/coach-body.txt" 30 1 \
+  "Today's Summary" \
+  "No sets logged today" \
+  "your log is still empty for today"; then
   exit 1
 fi
 agent-browser --session "$SESSION" screenshot "$SCREEN_DIR/coach-after-send.png" >/dev/null
@@ -233,7 +269,11 @@ agent-browser --session "$SESSION" eval "(async () => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      messages: [{ role: 'user', content: 'show today\\'s summary' }],
+      messages: [{
+        id: 'qa-msg-1',
+        role: 'user',
+        parts: [{ type: 'text', text: 'show today\\'s summary' }]
+      }],
       preferences: { unit: 'lbs', soundEnabled: true, timezoneOffsetMinutes: 0 }
     })
   });

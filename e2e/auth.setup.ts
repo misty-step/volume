@@ -1,7 +1,10 @@
 import { clerk } from "@clerk/testing/playwright";
 import { expect, test as setup } from "@playwright/test";
 import { loadE2EEnv } from "./env";
-import { waitForClerkLoaded } from "./clerk-helpers";
+import {
+  waitForAuthenticatedRedirect,
+  waitForClerkLoaded,
+} from "./clerk-helpers";
 import path from "path";
 
 /**
@@ -56,7 +59,7 @@ setup("authenticate", async ({ page }) => {
   // Only verify the authenticated session here.
   // Workspace readiness belongs to the authenticated fixture/tests because
   // /coach is also gated by subscription and Convex bootstrap state.
-  await page.goto("/");
+  await waitForAuthenticatedRedirect(page);
   await expect(page).not.toHaveURL(/\/sign-in(?:\/.*)?(?:\?.*)?$/);
   await expect(page).toHaveURL(/\/coach(?:\?.*)?$/);
 
