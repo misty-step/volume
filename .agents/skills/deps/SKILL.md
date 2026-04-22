@@ -65,7 +65,7 @@ Six phases, gated. Each phase must complete before the next begins.
 Run the full quality pipeline before touching any dep:
 
 ```bash
-bun run typecheck && bun run lint && bun run test --run && bun run build
+bun run typecheck && bun run lint && bun run test && bun run build
 bun run security:audit   # = bun audit --audit-level=high
 ```
 
@@ -211,7 +211,7 @@ For **security** mode: include only the Security and Reachability sections.
 
 ## Gotchas
 
-- **Skipping baseline.** If `bun run typecheck && bun run lint && bun run test --run` is red before the bump, you cannot attribute regressions. Fix first.
+- **Skipping baseline.** If `bun run typecheck && bun run lint && bun run test` is red before the bump, you cannot attribute regressions. Fix first.
 - **Treating all CVEs equally.** A critical CVE in an unreachable function is lower priority than a medium CVE in `convex/sets.ts` or `src/app/(app)/page.tsx`. 92–97% of CVEs sit in functions never called — `bun pm scan` + `rg` first.
 - **Batch-upgrading everything.** One 40-package PR is unbisectable. Atomic groups by risk tier; one curated PR per concern (e.g., "bump AI SDK ecosystem").
 - **Forgetting `bunx convex dev` after a convex bump.** Stale `convex/_generated/api.d.ts` fails typecheck with confusing errors.

@@ -11,6 +11,9 @@ describe("GET /api/health", () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
+    delete process.env.CANARY_ENDPOINT;
+    delete process.env.CANARY_API_KEY;
+    delete process.env.VERCEL_ENV;
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_123";
     process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
     process.env.STRIPE_SECRET_KEY = "sk_test_123";
@@ -47,6 +50,7 @@ describe("GET /api/health", () => {
     expect(data.checks.errorTracking.status).toBe("pass");
     expect(data.checks.errorTracking.clientConfigured).toBe(true);
     expect(data.checks.errorTracking.serverConfigured).toBe(true);
+    expect(data.checks.errorTracking.serverKeySource).toBe("public_fallback");
     expect(data.checks.coachRuntime.defaultModel).toBe(
       "google/gemini-3-flash-preview"
     );
@@ -195,6 +199,48 @@ describe("GET /api/health", () => {
     expect(data.checks.errorTracking.status).toBe("pass");
     expect(data.checks.errorTracking.clientConfigured).toBe(true);
     expect(data.checks.errorTracking.serverConfigured).toBe(true);
+    expect(data.checks.errorTracking.serverKeySource).toBe("public_fallback");
+  });
+
+  it("returns fail in production when server Canary falls back to public config", async () => {
+    process.env.VERCEL_ENV = "production";
+    process.env.NODE_ENV = "production";
+    process.env.STRIPE_SECRET_KEY = "sk_live_123";
+    delete process.env.CANARY_ENDPOINT;
+    delete process.env.CANARY_API_KEY;
+
+    const { GET } = await loadRoute();
+    const response = await GET();
+    const data = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(data.status).toBe("fail");
+    expect(data.checks.errorTracking.status).toBe("fail");
+    expect(data.checks.errorTracking.clientConfigured).toBe(true);
+    expect(data.checks.errorTracking.serverConfigured).toBe(true);
+    expect(data.checks.errorTracking.serverKeySource).toBe("public_fallback");
+    expect(data.checks.errorTracking.reason).toBe(
+      "missing dedicated server Canary configuration"
+    );
+  });
+
+  it("returns pass in production when dedicated server Canary env is present", async () => {
+    process.env.VERCEL_ENV = "production";
+    process.env.NODE_ENV = "production";
+    process.env.STRIPE_SECRET_KEY = "sk_live_123";
+    process.env.CANARY_ENDPOINT = "https://server-canary.example";
+    process.env.CANARY_API_KEY = "server-key";
+
+    const { GET } = await loadRoute();
+    const response = await GET();
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.status).toBe("pass");
+    expect(data.checks.errorTracking.status).toBe("pass");
+    expect(data.checks.errorTracking.clientConfigured).toBe(true);
+    expect(data.checks.errorTracking.serverConfigured).toBe(true);
+    expect(data.checks.errorTracking.serverKeySource).toBe("dedicated");
   });
 
   it("returns fail when no public Canary client configuration is present", async () => {
@@ -212,6 +258,7 @@ describe("GET /api/health", () => {
     expect(data.checks.errorTracking.status).toBe("fail");
     expect(data.checks.errorTracking.clientConfigured).toBe(false);
     expect(data.checks.errorTracking.serverConfigured).toBe(true);
+    expect(data.checks.errorTracking.serverKeySource).toBe("dedicated");
     expect(data.checks.errorTracking.reason).toBe(
       "missing required Canary configuration"
     );

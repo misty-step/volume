@@ -139,7 +139,7 @@ Commands that return pass/fail, not prose.
 - [ ] `bun run typecheck` clean
 - [ ] `bun run lint` clean (eslint --max-warnings=0)
 - [ ] `bun run architecture:check` clean
-- [ ] `bun run test --run` green, including new `*.test.ts` colocated with source
+- [ ] `bun run test` green, including new `*.test.ts` colocated with source
 - [ ] `bun run test:coverage` above thresholds (lines 52 / branches 83 /
       functions 73 / statements 52)
 - [ ] `bun run test:e2e` green for affected flow (if UI path touched)

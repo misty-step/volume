@@ -127,6 +127,8 @@ VERCEL_REQUIRED_VARS=(
   "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID"
   "NEXT_PUBLIC_CANARY_ENDPOINT"
   "NEXT_PUBLIC_CANARY_API_KEY"
+  "CANARY_ENDPOINT"
+  "CANARY_API_KEY"
   "$OPENROUTER_API_KEY_VAR"
 )
 
@@ -139,6 +141,8 @@ VERCEL_REQUIRED_DESCRIPTIONS=(
   "Stripe annual price ID"
   "Canary base URL for browser error capture"
   "Canary ingest-only key for browser error capture"
+  "Dedicated Canary base URL for server error capture"
+  "Dedicated Canary ingest-only key for server error capture"
   "OpenRouter API for coach runtime"
 )
 
@@ -349,6 +353,12 @@ check_production_health() {
   if ! echo "$health_json" | jq -e '.checks.errorTracking.status == "pass"' >/dev/null; then
     log "    [INVALID] runtime error-tracking health failed"
     MISSING_VARS+=("Vercel:ERROR_TRACKING (HEALTH CHECK FAIL)")
+    return 1
+  fi
+
+  if ! echo "$health_json" | jq -e '.checks.errorTracking.serverKeySource == "dedicated"' >/dev/null; then
+    log "    [INVALID] dedicated server Canary runtime configuration missing"
+    MISSING_VARS+=("Vercel:CANARY_ENDPOINT/CANARY_API_KEY (HEALTH CHECK FAIL)")
     return 1
   fi
 

@@ -263,7 +263,7 @@ relevant ADR under `docs/adr/` in Shape cues.
 Volume is already scaffolded; this mode is largely maintenance on existing gates.
 When bootstrapping a subproject:
 
-1. Test infrastructure: `bun run test --run`, coverage via `bun run test:coverage`.
+1. Test infrastructure: `bun run test`, coverage via `bun run test:coverage`.
 2. Linting: `bun run lint` (enforced by lefthook on commit/push).
 3. Type checking: `bun run typecheck`.
 4. Pre-commit hooks via lefthook (already present).

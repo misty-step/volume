@@ -127,6 +127,6 @@ Within tool implementations:
 2. **Implementation** — Create `tool-{name}.ts` exporting a `run{Name}Tool` function matching `CoachToolRunner`
 3. **Register** — Import in `registry.ts` and add to `coachToolDefinitions` via `defineTool()`
 4. **Test** — Create `tool-{name}.test.ts`; mock `CoachToolContext` with a test `ConvexHttpClient`
-5. **Verify** — `bun run test --run` passes; `registry.test.ts` confirms the tool is wired
+5. **Verify** — `bun run test` passes; `registry.test.ts` confirms the tool is wired
 
 The `registry.test.ts` test automatically catches orphaned tool files not imported by any other module in the tools directory.

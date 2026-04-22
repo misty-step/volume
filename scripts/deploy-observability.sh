@@ -79,4 +79,4 @@ echo "  - CANARY_ENDPOINT"
 echo "  - CANARY_API_KEY"
 echo
 echo "Next step:"
-echo "  Run ./scripts/verify-env.sh --prod-only and confirm /api/health reports errorTracking=pass."
+echo "  Run ./scripts/verify-env.sh --prod-only and confirm /api/health reports errorTracking=pass with serverKeySource=dedicated."

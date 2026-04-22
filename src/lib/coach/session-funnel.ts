@@ -1,9 +1,23 @@
 import { trackEvent } from "@/lib/analytics";
+import { log } from "@/lib/logger";
 import type { CoachTraceData } from "@/lib/coach/ui-message";
 
 export type KickoffSource = "page_load" | "deeplink";
 
 const COACH_SESSION_STORAGE_PREFIX = "volume:coach-session";
+const COACH_SESSION_STORAGE_KEY_PREFIX = `${COACH_SESSION_STORAGE_PREFIX}:`;
+const COACH_SESSION_STORAGE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+
+function logStorageWarning(
+  operation: "read" | "write" | "prune",
+  error: unknown
+): void {
+  log.warn("Coach session storage unavailable", {
+    component: "session-funnel",
+    operation,
+    error: error instanceof Error ? error.message : String(error),
+  });
+}
 
 function getCoachSessionStorageKey(sessionId: string, suffix: string): string {
   return `${COACH_SESSION_STORAGE_PREFIX}:${sessionId}:${suffix}`;
@@ -19,7 +33,8 @@ function readSessionStorageValue(
     return window.localStorage.getItem(
       getCoachSessionStorageKey(sessionId, suffix)
     );
-  } catch {
+  } catch (error) {
+    logStorageWarning("read", error);
     return null;
   }
 }
@@ -36,8 +51,35 @@ function writeSessionStorageValue(
       getCoachSessionStorageKey(sessionId, suffix),
       value
     );
-  } catch {
-    // Storage can fail in private browsing or strict browser policies.
+  } catch (error) {
+    logStorageWarning("write", error);
+  }
+}
+
+function pruneSessionTracking(now: number = Date.now()): void {
+  if (typeof window === "undefined") return;
+
+  const cutoff = now - COACH_SESSION_STORAGE_RETENTION_MS;
+
+  try {
+    const keysToRemove: string[] = [];
+
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (!key?.startsWith(COACH_SESSION_STORAGE_KEY_PREFIX)) continue;
+
+      const storedValue = window.localStorage.getItem(key);
+      const timestamp = Number(storedValue);
+      if (!Number.isFinite(timestamp) || timestamp < cutoff) {
+        keysToRemove.push(key);
+      }
+    }
+
+    for (const key of keysToRemove) {
+      window.localStorage.removeItem(key);
+    }
+  } catch (error) {
+    logStorageWarning("prune", error);
   }
 }
 
@@ -70,6 +112,7 @@ export function trackCoachKickoff(
   sessionId: string,
   source: KickoffSource
 ): void {
+  pruneSessionTracking();
   ensureKickoffTimestamp(sessionId);
   if (hasTrackedSessionEvent(sessionId, "kickoff_reached")) return;
 
@@ -82,6 +125,8 @@ export function trackCoachKickoff(
 
 export function trackCoachFirstTurn(trace: CoachTraceData): void {
   if (!trace.session_id) return;
+
+  pruneSessionTracking();
 
   if (!hasTrackedSessionEvent(trace.session_id, "first_message")) {
     trackEvent("First Message", {

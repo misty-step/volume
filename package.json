@@ -27,7 +27,7 @@
     "test:e2e": "playwright test",
     "sync:prod": "./scripts/pull-prod-data.sh",
     "lint:fix": "eslint . --fix --max-warnings=0",
-    "test:affected": "vitest --related --run",
+    "test:affected": "tsx scripts/test-affected.ts",
     "security:audit": "bun audit --audit-level=high",
     "security:scan": "trufflehog git \"file://$(git rev-parse --git-common-dir)\" --bare --only-verified --fail --no-update",
     "quality:check": "tsx scripts/verify-coverage.ts",

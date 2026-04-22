@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { buildContentSecurityPolicy } from "./src/lib/content-security-policy";
 import { isServerProductionDeployment } from "./src/lib/environment";
 
 // Read package.json version at build time
@@ -9,19 +10,6 @@ const packageJson = JSON.parse(
   readFileSync(join(__dirname, "package.json"), "utf-8")
 );
 const packageVersion = packageJson.version;
-
-function getCanaryConnectOrigins(): string[] {
-  const endpoint = process.env.NEXT_PUBLIC_CANARY_ENDPOINT?.trim();
-  if (!endpoint) return [];
-
-  try {
-    return [new URL(endpoint).origin];
-  } catch {
-    return [];
-  }
-}
-
-const canaryConnectOrigins = getCanaryConnectOrigins();
 
 const nextConfig: NextConfig = {
   env: {
@@ -80,23 +68,10 @@ const nextConfig: NextConfig = {
           // Convex real-time sync requires eval for WebSocket message handling
           {
             key: "Content-Security-Policy",
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://*.convex.cloud",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https: blob:",
-              [
-                "connect-src 'self'",
-                "https://*.clerk.com",
-                "https://clerk.volume.fitness",
-                "https://*.clerk.accounts.dev",
-                "https://*.convex.cloud",
-                "wss://*.convex.cloud",
-                ...canaryConnectOrigins,
-              ].join(" "),
-              "font-src 'self' data:",
-              "frame-src https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev",
-            ].join("; "),
+            value: buildContentSecurityPolicy({
+              canaryEndpoint: process.env.NEXT_PUBLIC_CANARY_ENDPOINT,
+              includeUpgradeInsecureRequests: true,
+            }),
           },
         ],
       },

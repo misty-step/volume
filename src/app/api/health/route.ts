@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getCanaryInitOptions } from "@/lib/canary";
+import {
+  getCanaryInitOptions,
+  getServerCanaryConfigSource,
+} from "@/lib/canary";
 import { resolveVersion } from "@/lib/version";
 import { getDeploymentEnvironment } from "@/lib/environment";
 import {
@@ -75,8 +78,19 @@ export async function GET() {
   const coachRuntimeHealthy = isOpenRouterConfigured();
   const coachRuntimeMetadata = getCoachRuntimeHealthMetadata();
   const clientCanaryConfigured = Boolean(getCanaryInitOptions("client"));
-  const serverCanaryConfigured = Boolean(getCanaryInitOptions("server"));
-  const errorTrackingHealthy = clientCanaryConfigured && serverCanaryConfigured;
+  const serverCanaryConfigSource = getServerCanaryConfigSource();
+  const serverCanaryConfigured = serverCanaryConfigSource !== null;
+  const serverCanaryDedicated = serverCanaryConfigSource === "dedicated";
+  const errorTrackingHealthy =
+    clientCanaryConfigured &&
+    serverCanaryConfigured &&
+    (!isProd || serverCanaryDedicated);
+  const errorTrackingReason =
+    !clientCanaryConfigured || !serverCanaryConfigured
+      ? "missing required Canary configuration"
+      : isProd && !serverCanaryDedicated
+        ? "missing dedicated server Canary configuration"
+        : undefined;
 
   const isHealthy =
     clientRuntimeHealthy &&
@@ -117,11 +131,13 @@ export async function GET() {
         ? createCheck("pass", {
             clientConfigured: clientCanaryConfigured,
             serverConfigured: serverCanaryConfigured,
+            serverKeySource: serverCanaryConfigSource ?? "missing",
           })
         : createCheck("fail", {
             clientConfigured: clientCanaryConfigured,
             serverConfigured: serverCanaryConfigured,
-            reason: "missing required Canary configuration",
+            serverKeySource: serverCanaryConfigSource ?? "missing",
+            reason: errorTrackingReason,
           }),
     },
   };

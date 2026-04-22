@@ -190,6 +190,41 @@ describe("useCoachChat", () => {
     });
   });
 
+  it.each([
+    { isAbort: true, isDisconnect: false, isError: false },
+    { isAbort: false, isDisconnect: true, isError: false },
+    { isAbort: false, isDisconnect: false, isError: true },
+    { isAbort: false, isDisconnect: false, isError: false },
+  ])(
+    "does not track first-turn events when finish is not eligible: %j",
+    async (finishEvent) => {
+      renderHook(() => useCoachChat());
+
+      await waitFor(() => {
+        expect(getOrCreateTodaySessionMock).toHaveBeenCalled();
+      });
+
+      analyticsMocks.mockTrackEvent.mockClear();
+
+      act(() => {
+        if (
+          !finishEvent.isError &&
+          !finishEvent.isAbort &&
+          !finishEvent.isDisconnect
+        ) {
+          chatCallbacks.onData?.({
+            type: "data-unknown",
+            data: {},
+          });
+        }
+
+        chatCallbacks.onFinish?.(finishEvent);
+      });
+
+      expect(analyticsMocks.mockTrackEvent).not.toHaveBeenCalled();
+    }
+  );
+
   it("submits follow-up prompts through the typed submit_prompt action", async () => {
     const { result } = renderHook(() => useCoachChat());
 

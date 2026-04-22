@@ -1,7 +1,7 @@
 /**
  * Volume CI pipeline — local replica of .github/workflows/ci.yml
  *
- * Runs lint, typecheck, architecture, test, security-audit, and build
+ * Runs lint, typecheck, architecture, test:coverage, security-audit, and build
  * in parallel inside containers, matching the same Bun/Node versions
  * and commands as GitHub Actions.
  *
@@ -57,12 +57,13 @@ export class Volume {
       .stdout();
   }
 
-  /** Vitest unit tests */
+  /** Vitest unit tests with coverage thresholds enforced */
   @func()
   async test(source: Directory): Promise<string> {
     return this.base(source)
       .withEnvVariable("CI", "true")
-      .withExec(["bun", "run", "test", "--run"])
+      .withEnvVariable("NODE_ENV", "test")
+      .withExec(["bun", "run", "test:coverage"])
       .stdout();
   }
 
@@ -98,7 +99,8 @@ export class Volume {
         base.withExec(["bun", "run", "architecture:check"]).stdout(),
         base
           .withEnvVariable("CI", "true")
-          .withExec(["bun", "run", "test", "--run"])
+          .withEnvVariable("NODE_ENV", "test")
+          .withExec(["bun", "run", "test:coverage"])
           .stdout(),
         base.withExec(["bun", "run", "security:audit"]).stdout(),
         base

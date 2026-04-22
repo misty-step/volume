@@ -14,7 +14,7 @@ Use this checklist before deploying Convex functions to production.
 ### 2. Testing
 
 - [ ] `bun run typecheck` passes without errors
-- [ ] `bun run test --run` passes all tests
+- [ ] `bun run test` passes all tests
 - [ ] `bun run build` succeeds without errors
 - [ ] Manual testing completed for new features
 

@@ -225,6 +225,47 @@ if ! grep -q '/api/coach .* 200' "$LOG_DIR/coach-network.txt"; then
   exit 1
 fi
 
+COACH_API_STREAM_RAW="$LOG_DIR/coach-stream-raw.json.txt"
+COACH_API_STREAM_JSON="$LOG_DIR/coach-stream.json"
+
+agent-browser --session "$SESSION" eval "(async () => {
+  const res = await fetch('/api/coach', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messages: [{ role: 'user', content: 'show today\\'s summary' }],
+      preferences: { unit: 'lbs', soundEnabled: true, timezoneOffsetMinutes: 0 }
+    })
+  });
+  const body = await res.text();
+  return JSON.stringify({ status: res.status, body });
+})()" >"$COACH_API_STREAM_RAW"
+
+jq -r '.' "$COACH_API_STREAM_RAW" >"$COACH_API_STREAM_JSON"
+
+STREAM_STATUS="$(jq -r '.status' "$COACH_API_STREAM_JSON")"
+STREAM_BODY="$(jq -r '.body' "$COACH_API_STREAM_JSON")"
+
+if [[ "$STREAM_STATUS" != "200" ]]; then
+  echo "Coach semantic check failed: streamed /api/coach request returned $STREAM_STATUS" >&2
+  exit 1
+fi
+
+if [[ "$STREAM_BODY" != *"data-coach_trace"* ]]; then
+  echo "Coach semantic check failed: missing coach trace data part in stream" >&2
+  exit 1
+fi
+
+if [[ "$STREAM_BODY" != *"\"tool_calls_count\":"* ]]; then
+  echo "Coach semantic check failed: missing tool_calls_count in stream trace" >&2
+  exit 1
+fi
+
+if [[ "$STREAM_BODY" == *"\"tool_calls_count\":0"* ]]; then
+  echo "Coach semantic check failed: expected coach summary to use at least one tool" >&2
+  exit 1
+fi
+
 agent-browser --session "$SESSION" console >"$LOG_DIR/console.txt"
 agent-browser --session "$SESSION" errors >"$LOG_DIR/errors.txt"
 
@@ -254,6 +295,7 @@ cat >"$OUTPUT_DIR/report.md" <<EOF
 - Page error lines: $ERROR_LINES
 - Rendered coach heading: Today's Summary
 - Coach API request log: $LOG_DIR/coach-network.txt
+- Coach API stream log: $COACH_API_STREAM_JSON
 
 ## Artifacts
 
@@ -272,6 +314,8 @@ cat >"$OUTPUT_DIR/report.md" <<EOF
   - $LOG_DIR/send-enabled-after.txt
   - $LOG_DIR/coach-body.txt
   - $LOG_DIR/coach-network.txt
+  - $LOG_DIR/coach-stream-raw.json.txt
+  - $LOG_DIR/coach-stream.json
   - $LOG_DIR/console.txt
   - $LOG_DIR/errors.txt
   - $DEV_LOG

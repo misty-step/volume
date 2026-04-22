@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { getCanaryInitOptions } from "./canary";
+import { getCanaryInitOptions, getServerCanaryConfigSource } from "./canary";
 
 describe("getCanaryInitOptions", () => {
   const originalEnv = process.env;
@@ -20,6 +20,7 @@ describe("getCanaryInitOptions", () => {
 
   it("returns null for client when public Canary env is missing", () => {
     expect(getCanaryInitOptions("client")).toBeNull();
+    expect(getServerCanaryConfigSource()).toBeNull();
   });
 
   it("uses public Canary env for the client", () => {
@@ -41,6 +42,7 @@ describe("getCanaryInitOptions", () => {
     process.env.NEXT_PUBLIC_CANARY_ENDPOINT = "https://public-canary.example";
     process.env.NEXT_PUBLIC_CANARY_API_KEY = "public-key";
 
+    expect(getServerCanaryConfigSource()).toBe("dedicated");
     expect(getCanaryInitOptions("server")).toEqual({
       endpoint: "https://server-canary.example",
       apiKey: "server-key",
@@ -54,6 +56,7 @@ describe("getCanaryInitOptions", () => {
     process.env.NEXT_PUBLIC_CANARY_ENDPOINT = "https://public-canary.example";
     process.env.NEXT_PUBLIC_CANARY_API_KEY = "public-key";
 
+    expect(getServerCanaryConfigSource()).toBe("public_fallback");
     expect(getCanaryInitOptions("server")).toEqual({
       endpoint: "https://public-canary.example",
       apiKey: "public-key",

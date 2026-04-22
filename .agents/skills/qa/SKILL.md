@@ -119,7 +119,7 @@ Follow-up tickets → `backlog.d/<next-id>-<slug>.md`.
 
 ## Gotchas
 
-- **"Tests pass" is not QA.** `bun run test --run` and `bun run test:e2e` green still leaves paywall state, Stripe sync, and coach `ModelMessage[]` continuity unverified.
+- **"Tests pass" is not QA.** `bun run test` and `bun run test:e2e` green still leaves paywall state, Stripe sync, and coach `ModelMessage[]` continuity unverified.
 - **Stripe TypeScript types lie.** Docs > types for mode-dependent params — verify webhook payloads live via `stripe listen`, not via compile success.
 - **Convex can't import `@/lib/logger`.** When reading server-side output during QA, expect `console.warn`/`console.error` in `bunx convex logs`, not structured JSON.
 - **Do not suppress `assistantText` when reproducing coach bugs.** It is the model's memory across turns — dropping it hides the real defect.

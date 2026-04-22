@@ -38,7 +38,8 @@ on before changing handlers or callers.
     "errorTracking": {
       "status": "pass | fail",
       "clientConfigured": "boolean",
-      "serverConfigured": "boolean"
+      "serverConfigured": "boolean",
+      "serverKeySource": "dedicated | public_fallback | missing"
     }
   }
 }
@@ -46,6 +47,8 @@ on before changing handlers or callers.
 
 - Invariant: responses are uncached with `Cache-Control: no-cache, no-store,
 must-revalidate`.
+- Production invariant: `checks.errorTracking.serverKeySource` must be
+  `dedicated`; public-key fallback is only acceptable outside production.
 
 ## `POST /api/coach`
 
