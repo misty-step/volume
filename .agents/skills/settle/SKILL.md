@@ -36,7 +36,7 @@ You are the executive orchestrator.
 Take the PR through three phases until it reaches:
 
 - No merge conflicts against `origin/master`
-- CI green: merge-gate job in `.github/workflows/ci.yml` (setup + lint + typecheck + architecture + test + security-audit + build)
+- CI green: merge-gate job in `.github/workflows/ci.yml` (`dagger call check --source .`)
 - Every review finding addressed across all three comment endpoints
 - Architecture reviewed with hindsight lens (auth checks, soft delete, `@/lib/logger` usage, no relative imports in `convex/`)
 - Tests audited for coverage and quality (`bun run test:coverage`)

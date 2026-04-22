@@ -15,218 +15,52 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ---------- shared setup ----------
-  setup:
-    name: install
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - name: Cache node_modules
-        id: cache
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: bun install --frozen-lockfile
-
-  # ---------- parallel quality jobs ----------
-  lint:
-    name: lint
-    needs: setup
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - name: Restore node_modules
-        uses: actions/cache/restore@v4
-        with:
-          path: node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-
-      - run: bun run lint
-
-  typecheck:
-    name: typecheck
-    needs: setup
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - name: Restore node_modules
-        uses: actions/cache/restore@v4
-        with:
-          path: node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-
-      - run: bun run typecheck
-
-  architecture:
-    name: architecture
-    needs: setup
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - name: Restore node_modules
-        uses: actions/cache/restore@v4
-        with:
-          path: node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-
-      - run: bun run architecture:check
-
-  test:
-    name: test
-    needs: setup
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - name: Restore node_modules
-        uses: actions/cache/restore@v4
-        with:
-          path: node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-
-      - name: Test + Coverage
-        run: bun run test:coverage
-        env:
-          CI: true
-          NODE_ENV: test
-
-  security-audit:
-    name: security-audit
-    needs: setup
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - name: Restore node_modules
-        uses: actions/cache/restore@v4
-        with:
-          path: node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-
-      - run: bun run security:audit
-
-  build:
-    name: build
-    needs: setup
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - name: Restore node_modules
-        uses: actions/cache/restore@v4
-        with:
-          path: node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-
-      - run: bun run build
-        env:
-          CI: true
-
-  # ---------- gate ----------
   merge-gate:
     name: merge-gate
-    needs: [setup, lint, typecheck, architecture, test, security-audit, build]
-    if: always()
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 5
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     permissions:
       contents: read
       statuses: write
     steps:
-      - name: Check upstream results
-        # All upstream jobs are unconditional — 'skipped' means a dependency
-        # failed, not an intentional skip. If you add a conditional job,
-        # remove 'skipped' from this check or gate it behind that job's name.
-        run: |
-          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]] || \
-             [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]] || \
-             [[ "${{ contains(needs.*.result, 'skipped') }}" == "true" ]]; then
-            echo "::error::One or more quality jobs failed, were cancelled, or were skipped."
-            exit 1
-          fi
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - name: Run canonical Dagger CI pipeline
+        id: dagger
+        uses: dagger/dagger-for-github@v8.4.1
+        with:
+          version: "v0.20.3"
+          call: check --source=.
+          enable-github-summary: "true"
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
 
       - name: Publish merge-gate status on PR head
         if: ${{ github.event_name == 'pull_request' && always() }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          JOB_STATUS: ${{ job.status }}
+          DAGGER_OUTCOME: ${{ steps.dagger.outcome }}
           REPOSITORY: ${{ github.repository }}
           RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
 
           state="error"
-          description="Quality checks did not complete."
+          description="Dagger merge-gate did not complete."
 
-          case "$JOB_STATUS" in
+          case "$DAGGER_OUTCOME" in
             success)
               state="success"
-              description="Quality checks passed on PR head."
+              description="Dagger merge-gate passed on PR head."
               ;;
             failure)
               state="failure"
-              description="Quality checks failed on PR head."
+              description="Dagger merge-gate failed on PR head."
               ;;
             cancelled)
-              description="Quality checks were cancelled."
+              description="Dagger merge-gate was cancelled."
               ;;
           esac
 

@@ -10,7 +10,13 @@ interface WorkflowConfig {
     string,
     {
       needs?: string[] | string;
-      steps?: Array<{ run?: string }>;
+      steps?: Array<{
+        id?: string;
+        name?: string;
+        run?: string;
+        uses?: string;
+        with?: Record<string, string>;
+      }>;
     }
   >;
 }
@@ -23,31 +29,33 @@ function readCiWorkflow(): WorkflowConfig {
 }
 
 describe("ci workflow contract", () => {
-  it("defines an architecture job", () => {
+  it("keeps ci.yml to a single merge-gate wrapper job", () => {
     const workflow = readCiWorkflow();
 
-    expect(workflow.jobs?.architecture).toBeDefined();
+    expect(Object.keys(workflow.jobs ?? {})).toEqual(["merge-gate"]);
   });
 
-  it("keeps architecture in merge-gate dependencies", () => {
+  it("runs the canonical Dagger check from merge-gate", () => {
     const workflow = readCiWorkflow();
-    const mergeGateNeeds = workflow.jobs?.["merge-gate"]?.needs;
-    const needs = Array.isArray(mergeGateNeeds)
-      ? mergeGateNeeds
-      : mergeGateNeeds
-        ? [mergeGateNeeds]
-        : [];
+    const mergeGateSteps = workflow.jobs?.["merge-gate"]?.steps ?? [];
+    const daggerStep = mergeGateSteps.find(
+      (step) =>
+        step.id === "dagger" ||
+        step.uses?.startsWith("dagger/dagger-for-github@")
+    );
 
-    expect(needs).toContain("architecture");
+    expect(daggerStep).toBeDefined();
+    expect(daggerStep?.uses).toMatch(/^dagger\/dagger-for-github@/);
+    expect(daggerStep?.with?.call).toBe("check --source=.");
   });
 
-  it("runs the architecture checker in the architecture job", () => {
+  it("keeps PR status publication inside the merge-gate wrapper", () => {
     const workflow = readCiWorkflow();
-    const architectureRuns =
-      workflow.jobs?.architecture?.steps
-        ?.map((step) => step.run?.trim())
-        .filter((run): run is string => Boolean(run)) ?? [];
+    const mergeGateSteps = workflow.jobs?.["merge-gate"]?.steps ?? [];
+    const statusStep = mergeGateSteps.find(
+      (step) => step.name === "Publish merge-gate status on PR head"
+    );
 
-    expect(architectureRuns).toContain("bun run architecture:check");
+    expect(statusStep?.run).toContain('context="merge-gate"');
   });
 });

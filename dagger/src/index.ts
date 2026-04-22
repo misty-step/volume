@@ -1,5 +1,5 @@
 /**
- * Volume CI pipeline — local replica of .github/workflows/ci.yml
+ * Volume CI pipeline — canonical owner invoked by .github/workflows/ci.yml
  *
  * Runs lint, typecheck, architecture, test:coverage, security-audit, and build
  * in parallel inside containers, matching the same Bun/Node versions

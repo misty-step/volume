@@ -184,8 +184,8 @@ bunx convex deploy -y`)
 - **Skipping audit** on a first-run against a branch. Three-layer
   alignment drifts silently.
 - **Declaring green without `dagger call check --source .`.** "GHA
-  passed" is not equivalent — it runs on blacksmith runners with their
-  own caches.
+  passed" is not equivalent when the workflow wrapper drifts from the
+  canonical Dagger pipeline.
 - **Running raw `bun run lint` / `bun run test` as the authoritative
   gate** when Dagger is available. Raw shell bypasses the hermetic-
   container contract.
