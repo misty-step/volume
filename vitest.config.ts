@@ -3,9 +3,12 @@ import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 import path from "path";
 
+const testTimeoutMs = process.env.CI === "true" ? 10_000 : 5_000;
+
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
   test: {
+    testTimeout: testTimeoutMs,
     pool: "forks",
     poolOptions: {
       forks: { maxForks: 4 },
