@@ -268,6 +268,84 @@ describe("POST /api/test/reset", () => {
     expect(await response.text()).toBe("Internal Server Error");
   });
 
+  it("retries transient Convex gateway failures during reset", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.VERCEL_ENV = "preview";
+
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("convex-token"),
+    });
+    queryMock
+      .mockRejectedValueOnce(new Error("502 Bad Gateway"))
+      .mockResolvedValueOnce([{ _id: "set_123" }])
+      .mockResolvedValueOnce([]);
+    mutationMock.mockResolvedValue(undefined);
+
+    const setTimeoutMock = vi
+      .spyOn(globalThis, "setTimeout")
+      .mockImplementation(((callback: TimerHandler) => {
+        if (typeof callback === "function") {
+          callback();
+        }
+        return 0 as ReturnType<typeof setTimeout>;
+      }) as typeof setTimeout);
+
+    try {
+      const { POST } = await import("./route");
+      const response = await POST(createRequest("test-secret"));
+
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe("User data reset");
+      expect(queryMock).toHaveBeenCalledTimes(3);
+      expect(queryMock).toHaveBeenNthCalledWith(1, api.sets.listSets, {});
+      expect(queryMock).toHaveBeenNthCalledWith(2, api.sets.listSets, {});
+      expect(queryMock).toHaveBeenNthCalledWith(
+        3,
+        api.exercises.listExercises,
+        { includeDeleted: true }
+      );
+      expect(mutationMock).toHaveBeenCalledTimes(1);
+      expect(mutationMock).toHaveBeenCalledWith(api.sets.deleteSet, {
+        id: "set_123",
+      });
+    } finally {
+      setTimeoutMock.mockRestore();
+    }
+  });
+
+  it("returns 500 after exhausting transient Convex reset retries", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.VERCEL_ENV = "preview";
+
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("convex-token"),
+    });
+    queryMock.mockRejectedValue(new Error("502 Bad Gateway"));
+
+    const setTimeoutMock = vi
+      .spyOn(globalThis, "setTimeout")
+      .mockImplementation(((callback: TimerHandler) => {
+        if (typeof callback === "function") {
+          callback();
+        }
+        return 0 as ReturnType<typeof setTimeout>;
+      }) as typeof setTimeout);
+
+    try {
+      const { POST } = await import("./route");
+      const response = await POST(createRequest("test-secret"));
+
+      expect(response.status).toBe(500);
+      expect(await response.text()).toBe("Internal Server Error");
+      expect(queryMock).toHaveBeenCalledTimes(3);
+      expect(mutationMock).not.toHaveBeenCalled();
+    } finally {
+      setTimeoutMock.mockRestore();
+    }
+  });
+
   it("ignores missing resources during reset so concurrent workers stay idempotent", async () => {
     process.env.NODE_ENV = "production";
     process.env.VERCEL_ENV = "preview";

@@ -1,6 +1,7 @@
 {
   "name": "volume",
   "version": "1.18.0",
+  "license": "MIT",
   "private": true,
   "workspaces": [
     "packages/*"

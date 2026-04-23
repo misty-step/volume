@@ -1,7 +1,7 @@
 # Add repository license
 
 Priority: high
-Status: blocked
+Status: done
 Estimate: S
 
 ## Goal
@@ -20,11 +20,16 @@ Add an explicit repository license so documentation reaches a basic legal baseli
 
 ## Notes
 
-This is blocked on license choice. The readiness review found no `LICENSE*`
-file in the repository. The implementation is trivial once the owner selects a
-license.
+Owner selected MIT on 2026-04-23. The readiness review found no `LICENSE*`
+file in the repository.
 
 ## Touchpoints
 
 - `LICENSE`
 - `README.md`
+
+## What Was Built
+
+- Added a root MIT `LICENSE` file.
+- Declared `license: MIT` in `package.json`.
+- Linked the license from `README.md`.
