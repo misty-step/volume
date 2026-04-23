@@ -62,6 +62,12 @@ test.describe("Paywall Gate", () => {
     await expect(coachInput(page)).toBeEnabled();
   });
 
+  test("Legacy coach route redirects to the workspace", async ({ page }) => {
+    await openCoachWorkspace(page, "/coach");
+    await expect(coachInput(page)).toBeVisible();
+    await expect(coachInput(page)).toBeEnabled();
+  });
+
   test("Settings redirect resolves to the workspace", async ({ page }) => {
     await page.goto("/settings");
     await expect(page).toHaveURL(/\/(?:\?.*)?$/);

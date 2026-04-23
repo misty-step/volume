@@ -65,7 +65,7 @@ After auth, visiting `/` renders the coach workspace (not `/today`), and `Kickof
 
 - [x] `GET /` (authenticated, active subscription) renders coach workspace; no redirect
 - [x] `GET /today` still renders dashboard (backwards compatibility)
-- [x] `src/app/(app)/coach/page.tsx` deleted; no lingering `/coach` references in codebase (`rg "/coach" --type=ts src/ e2e/`)
+- [x] `/coach` remains a compatibility redirect to the canonical root workspace
 - [x] PostHog `Kickoff Reached`, `First Message`, `First Log` events verified firing in local dev (PostHog `captureEvent` mock asserted in tests)
 - [x] `bun run quality:full` green
 - [x] `bun run test:e2e` green (coach-flows + critical-flow)
