@@ -1,7 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { COACH_HOME_PATH } from "@/lib/coach/routes";
 import { buildContentSecurityPolicy } from "@/lib/content-security-policy";
 
 const isPublicRoute = createRouteMatcher([
@@ -52,16 +51,6 @@ const applySecurityHeaders = (response: NextResponse) => {
 };
 
 export default clerkMiddleware(async (auth, request: NextRequest) => {
-  // Signed-in visitors hitting marketing root should skip the landing page entirely
-  if (request.nextUrl.pathname === "/") {
-    const session = await auth();
-    if (session.userId) {
-      const redirectUrl = new URL(COACH_HOME_PATH, request.url);
-      const redirectResponse = NextResponse.redirect(redirectUrl);
-      return applySecurityHeaders(redirectResponse);
-    }
-  }
-
   // Protect non-public routes with Clerk authentication
   if (!isPublicRoute(request)) {
     await auth.protect();

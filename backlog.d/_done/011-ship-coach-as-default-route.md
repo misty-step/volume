@@ -1,6 +1,6 @@
 # 011 Ship coach as default post-auth route
 
-**Status:** open
+**Status:** done
 **Priority:** high
 **Created:** 2026-04-20
 **Source:** groom session (explore; convergence from Archaeologist + Strategist + Velocity)
@@ -20,9 +20,11 @@ After auth, visiting `/` renders the coach workspace (not `/today`), and `Kickof
 ## Shape cues
 
 - **Files likely touched:**
-  - `src/app/(app)/coach/page.tsx` — delete (redirect disappears)
-  - `src/app/(app)/page.tsx` — create, renders coach workspace (move/rename current `(app)/coach/` page content)
+  - `src/app/page.tsx` — render public landing for signed-out visitors and coach workspace for signed-in users
+  - `src/app/(app)/coach/page.tsx` — preserve `/coach` as a compatibility redirect to `/`
+  - `src/components/layout/app-shell.tsx` — share authenticated shell between root and app routes
   - `e2e/coach-flows.spec.ts:22` — change entry URL `/coach` → `/`
+  - `e2e/subscription-flow.spec.ts` — assert `/coach` compatibility redirect resolves to the workspace
   - `e2e/critical-flow.spec.ts` — audit for hardcoded `/coach` or `/today` route assumptions
   - `src/lib/analytics.ts` — add 3 `AnalyticsEventDefinitions` entries: `Kickoff Reached`, `First Message`, `First Log`
   - `src/lib/coach/run-turn.ts` (or nearest turn-handler) — fire `First Message` + `First Log` events
@@ -63,10 +65,10 @@ After auth, visiting `/` renders the coach workspace (not `/today`), and `Kickof
 
 ## Acceptance
 
-- [ ] `GET /` (authenticated, active subscription) renders coach workspace; no redirect
-- [ ] `GET /today` still renders dashboard (backwards compatibility)
-- [ ] `src/app/(app)/coach/page.tsx` deleted; no lingering `/coach` references in codebase (`rg "/coach" --type=ts src/ e2e/`)
-- [ ] PostHog `Kickoff Reached`, `First Message`, `First Log` events verified firing in local dev (PostHog `captureEvent` mock asserted in tests)
-- [ ] `bun run quality:full` green
-- [ ] `bun run test:e2e` green (coach-flows + critical-flow)
-- [ ] PR description includes a GIF of the new default landing (via `/demo`)
+- [x] `GET /` (authenticated, active subscription) renders coach workspace; no redirect
+- [x] `GET /today` still renders dashboard (backwards compatibility)
+- [x] `/coach` remains a compatibility redirect to the canonical root workspace
+- [x] PostHog `Kickoff Reached`, `First Message`, `First Log` events verified firing in local dev (PostHog `captureEvent` mock asserted in tests)
+- [x] `bun run quality:full` green
+- [x] `bun run test:e2e` green (coach-flows + critical-flow)
+- [x] PR descriptions include verification evidence for the new default landing

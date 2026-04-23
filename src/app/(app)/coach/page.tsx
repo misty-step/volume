@@ -1,10 +1,6 @@
-import type { Metadata } from "next";
-import { CoachPrototype } from "@/components/coach/CoachPrototype";
+import { redirect } from "next/navigation";
+import { COACH_HOME_PATH } from "@/lib/coach/routes";
 
-export const metadata: Metadata = {
-  title: "Volume - Agent Workspace",
-};
-
-export default function CoachPage() {
-  return <CoachPrototype />;
+export default function CoachCompatibilityPage() {
+  redirect(COACH_HOME_PATH);
 }

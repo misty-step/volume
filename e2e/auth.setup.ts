@@ -56,13 +56,13 @@ setup("authenticate", async ({ page }) => {
 
   console.log("Sign-in successful, verifying authenticated state...");
 
-  // Only verify the authenticated session here.
-  // Workspace readiness belongs to the authenticated fixture/tests because
-  // /coach is also gated by subscription and Convex bootstrap state.
+  // Only verify the authenticated session here. Workspace readiness belongs to
+  // the authenticated fixture/tests because the root coach workspace is also
+  // gated by subscription and Convex bootstrap state.
   await waitForAuthenticatedRedirect(page);
   await expect(page).not.toHaveURL(/\/sign-in(?:\/.*)?(?:\?.*)?$/);
-  await page.goto("/coach");
-  await expect(page).toHaveURL(/\/coach(?:\?.*)?$/);
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/(?:\?.*)?$/);
 
   // Save authenticated state for reuse in all tests
   await page.context().storageState({ path: authFile });

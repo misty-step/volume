@@ -45,7 +45,7 @@ export const test = base.extend<AuthFixtures>({
       await ensureAuthenticated(page, "/");
       await resetAuthenticatedE2EState(page);
       if (baseURL) {
-        await page.goto(`${baseURL}/coach`);
+        await page.goto(`${baseURL}/`);
       }
     });
   },
