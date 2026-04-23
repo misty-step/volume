@@ -62,12 +62,19 @@ vi.mock("@/lib/coach/server/memory-pipeline", () => ({
 
 const generateTextMock = vi.fn();
 const streamTextMock = vi.fn();
+const convertToModelMessagesMock = vi.fn();
 const pipeJsonRenderMock = vi.fn((stream: ReadableStream) => stream);
 vi.mock("ai", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("ai")>();
   return {
     ...actual,
     generateText: (...args: unknown[]) => generateTextMock(...args),
+    convertToModelMessages: (...args: unknown[]) =>
+      convertToModelMessagesMock.getMockImplementation()
+        ? convertToModelMessagesMock(...args)
+        : actual.convertToModelMessages(
+            ...(args as Parameters<typeof actual.convertToModelMessages>)
+          ),
     streamText: (...args: unknown[]) => streamTextMock(...args),
   };
 });
@@ -288,6 +295,7 @@ describe("POST /api/coach", () => {
     plannerMocks.buildEndOfTurnSuggestionsMock.mockReset();
     generateTextMock.mockReset();
     streamTextMock.mockReset();
+    convertToModelMessagesMock.mockReset();
     pipeJsonRenderMock.mockClear();
     extractMemoryOperationsMock.mockReset();
     summarizeObservationMock.mockReset();
@@ -629,6 +637,74 @@ describe("POST /api/coach", () => {
     expect(body).toContain("hello");
   });
 
+  it("streams deterministic tool blocks directly and persists a summary assistant message", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    ConvexHttpClientMock.mockReturnValue(convex);
+    getCoachRuntimeMock.mockReturnValue({
+      model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
+      classificationModel: "test-classifier",
+    });
+    plannerMocks.runPlannerTurnMock.mockResolvedValue(
+      createPlannerResult({
+        assistantText: "",
+        toolsUsed: ["modify_set"],
+        toolResults: [
+          {
+            toolName: "modify_set",
+            input: { action: "delete", exercise_name: "Pushups" },
+            summary: "Deleted latest Pushups set.",
+            outputForModel: { status: "ok" },
+            legacyBlocks: [
+              {
+                type: "status",
+                tone: "success",
+                title: "Set deleted",
+                description: "Deleted latest Pushups set.",
+              },
+            ],
+          },
+        ],
+        responseMessages: [],
+      })
+    );
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: validBodyWithSession("session_123"),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(streamTextMock).not.toHaveBeenCalled();
+    const body = await response.text();
+    expect(body).toContain("data-spec");
+    expect(body).toContain("Set deleted");
+
+    await waitForAssertion(() => {
+      expect(convex.mutation).toHaveBeenCalledWith(
+        api.coachSessions.addMessage,
+        expect.objectContaining({
+          role: "assistant",
+          content: JSON.stringify({
+            role: "assistant",
+            content: "Deleted latest Pushups set.",
+          }),
+        })
+      );
+    });
+  });
+
   it("passes partial planner results to presentation when planner returns an error after tools", async () => {
     process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
     authMock.mockResolvedValue({
@@ -715,6 +791,61 @@ describe("POST /api/coach", () => {
     expect(presentationRequest.messages[0]?.content).toContain(
       '"History snapshot"'
     );
+  });
+
+  it("uses presentation, not the legacy success path, when a planner error has tool results but no response messages", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    ConvexHttpClientMock.mockReturnValue(convex);
+    getCoachRuntimeMock.mockReturnValue({
+      model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
+      classificationModel: "test-classifier",
+    });
+    plannerMocks.runPlannerTurnMock.mockResolvedValue(
+      createPlannerResult({
+        kind: "error",
+        assistantText: "I found partial history.",
+        errorMessage: "secondary lookup failed",
+        toolsUsed: ["query_workouts"],
+        toolResults: [
+          {
+            toolName: "query_workouts",
+            input: { action: "history_overview" },
+            summary: "Loaded partial history.",
+            outputForModel: { status: "ok" },
+            legacyBlocks: [
+              { type: "detail_panel", title: "History snapshot", fields: [] },
+            ],
+          },
+        ],
+        responseMessages: [],
+      })
+    );
+    streamTextMock.mockReturnValueOnce(
+      createStreamTextResult({ text: "Here is the partial result." })
+    );
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: validBody(),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(streamTextMock).toHaveBeenCalledTimes(1);
+    expect(body).toContain("Here is the partial result.");
+    expect(body).not.toContain("data-spec");
   });
 
   it("does not persist planner messages when presentation fails", async () => {
@@ -834,6 +965,169 @@ describe("POST /api/coach", () => {
       })
     );
     await response.text();
+  });
+
+  it("drops stored assistant tool calls that are missing tool results before planning", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    const convex = createConvexStub();
+    convex.query
+      .mockResolvedValueOnce({ session: { _id: "session_123" }, summary: null })
+      .mockResolvedValueOnce([
+        {
+          _id: "stored_user_1",
+          role: "user",
+          content: JSON.stringify({
+            role: "user",
+            content: "show today's summary",
+          }),
+          createdAt: 1,
+          turnId: "turn_1",
+        },
+        {
+          _id: "stored_assistant_1",
+          role: "assistant",
+          content: JSON.stringify({
+            role: "assistant",
+            content: [
+              {
+                type: "tool-call",
+                toolCallId: "tool_missing",
+                toolName: "query_workouts",
+                input: { action: "today_summary" },
+              },
+            ],
+          }),
+          createdAt: 2,
+          turnId: "turn_1",
+        },
+        {
+          _id: "stored_tool_1",
+          role: "tool",
+          content: JSON.stringify({
+            role: "tool",
+            content: [
+              {
+                type: "tool-result",
+                toolCallId: "tool_orphan",
+                toolName: "query_workouts",
+                output: { status: "ok" },
+              },
+            ],
+          }),
+          createdAt: 3,
+          turnId: "turn_1",
+        },
+      ])
+      .mockResolvedValueOnce({ memories: [], observations: [] });
+    ConvexHttpClientMock.mockReturnValue(convex);
+    getCoachRuntimeMock.mockReturnValue({
+      model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
+      classificationModel: "test-classifier",
+    });
+    streamTextMock.mockReturnValue(createStreamTextResult({ text: "hello" }));
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: validBodyWithSession("session_123"),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    await response.text();
+
+    const plannerRequest = plannerMocks.runPlannerTurnMock.mock
+      .calls[0]?.[0] as { history: unknown[] } | undefined;
+    expect(JSON.stringify(plannerRequest?.history)).not.toContain(
+      "tool_missing"
+    );
+    expect(JSON.stringify(plannerRequest?.history)).not.toContain(
+      "tool_orphan"
+    );
+    expect(plannerRequest?.history).toEqual([
+      { role: "user", content: "show today's summary" },
+      { role: "user", content: "show today's summary" },
+    ]);
+  });
+
+  it("drops incomplete tool history from no-session fallback messages before planning", async () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.invalid";
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: vi.fn().mockResolvedValue("token"),
+    });
+
+    convertToModelMessagesMock.mockResolvedValueOnce([
+      { role: "user", content: "show today's summary" },
+      {
+        role: "assistant",
+        content: [
+          {
+            type: "tool-call",
+            toolCallId: "fallback_missing",
+            toolName: "query_workouts",
+            input: { action: "today_summary" },
+          },
+        ],
+      },
+      {
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: "fallback_orphan",
+            toolName: "query_workouts",
+            output: { status: "ok" },
+          },
+        ],
+      },
+      { role: "user", content: "delete set Pushups" },
+    ]);
+
+    const convex = createConvexStub();
+    convex.query.mockResolvedValueOnce({ memories: [], observations: [] });
+    ConvexHttpClientMock.mockReturnValue(convex);
+    getCoachRuntimeMock.mockReturnValue({
+      model: "test-model",
+      modelId: "test-model",
+      fallbacks: [],
+      classificationModel: "test-classifier",
+    });
+    streamTextMock.mockReturnValue(createStreamTextResult({ text: "hello" }));
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("https://volume.fitness/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: validBody(),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    await response.text();
+
+    const plannerRequest = plannerMocks.runPlannerTurnMock.mock
+      .calls[0]?.[0] as { history: unknown[] } | undefined;
+    expect(JSON.stringify(plannerRequest?.history)).not.toContain(
+      "fallback_missing"
+    );
+    expect(JSON.stringify(plannerRequest?.history)).not.toContain(
+      "fallback_orphan"
+    );
+    expect(plannerRequest?.history).toEqual([
+      { role: "user", content: "show today's summary" },
+      { role: "user", content: "delete set Pushups" },
+    ]);
   });
 
   it("processes post-turn memory operations after the streamed response completes", async () => {

@@ -9,7 +9,7 @@ const PRESENTATION_CUSTOM_RULES = [
   "Prefer deep domain surfaces such as DailySnapshot, AnalyticsOverview, ExerciseInsight, HistoryTimeline, SettingsScene, BillingState, LogOutcome, ClarifyPanel, ConfirmationPanel, and QuickLogComposer over hand-assembling many small widgets.",
   "Preserve all values exactly. Never invent numbers, IDs, prompts, or payloads.",
   "When tool outputs include stable section titles, field labels, action labels, or surface metadata, reuse them instead of renaming them.",
-  "If legacy_blocks are present in tool results, treat them as hints about useful structure, not as mandatory output.",
+  "When tool results include legacy_blocks, render equivalent structured UI. These blocks are the stable product contract: preserve titles, labels, action IDs, prompts, and payloads while mapping to modern catalog components.",
   "Use ActionTray with ActionChip children for concise follow-up prompts or branch actions.",
   "Render QuickLogComposer when structured logging is safer or faster than freeform chat.",
   "Render ClarifyPanel with ChoiceCard children when the user needs to disambiguate an exercise, action, or branch.",

@@ -60,9 +60,18 @@ describe("getCanaryInitOptions", () => {
     });
   });
 
-  it("ignores an invalid dedicated Canary endpoint and falls back to public config", () => {
+  it("does not use public fallback for production server capture", () => {
     process.env.CANARY_ENDPOINT = "ftp://server-canary.example";
     process.env.CANARY_API_KEY = "server-key";
+    process.env.NEXT_PUBLIC_CANARY_ENDPOINT = "https://public-canary.example";
+    process.env.NEXT_PUBLIC_CANARY_API_KEY = "public-key";
+
+    expect(getServerCanaryConfigSource()).toBeNull();
+    expect(getCanaryInitOptions("server")).toBeNull();
+  });
+
+  it("falls back to public Canary env on the server outside production", () => {
+    process.env.NODE_ENV = "development";
     process.env.NEXT_PUBLIC_CANARY_ENDPOINT = "https://public-canary.example";
     process.env.NEXT_PUBLIC_CANARY_API_KEY = "public-key";
 
@@ -71,12 +80,13 @@ describe("getCanaryInitOptions", () => {
       endpoint: "https://public-canary.example",
       apiKey: "public-key",
       service: "volume",
-      environment: "production",
+      environment: "development",
       scrubPii: true,
     });
   });
 
-  it("falls back to public Canary env on the server when dedicated vars are absent", () => {
+  it("allows public server fallback for Vercel preview", () => {
+    process.env.VERCEL_ENV = "preview";
     process.env.NEXT_PUBLIC_CANARY_ENDPOINT = "https://public-canary.example";
     process.env.NEXT_PUBLIC_CANARY_API_KEY = "public-key";
 

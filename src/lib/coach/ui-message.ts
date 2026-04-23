@@ -1,4 +1,5 @@
 import type { UIMessage } from "ai";
+import type { SpecDataPart } from "@json-render/core";
 import { z } from "zod";
 
 export const CoachTraceDataSchema = z.object({
@@ -8,10 +9,20 @@ export const CoachTraceDataSchema = z.object({
   first_logged_exercise: z.string().nullable(),
 });
 
+export const CoachSpecDataSchema = z.custom<SpecDataPart>((value) =>
+  Boolean(
+    value &&
+    typeof value === "object" &&
+    "type" in value &&
+    (value.type === "patch" || value.type === "flat" || value.type === "nested")
+  )
+);
+
 export type CoachTraceData = z.infer<typeof CoachTraceDataSchema>;
 
 export type CoachUIData = {
   coach_trace: CoachTraceData;
+  spec: SpecDataPart;
 };
 
 export type CoachUIMessage = UIMessage<unknown, CoachUIData>;

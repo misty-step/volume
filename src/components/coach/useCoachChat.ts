@@ -17,8 +17,10 @@ import {
 } from "@/lib/coach/session-funnel";
 import type { ZodType } from "zod";
 import {
+  CoachSpecDataSchema,
   CoachTraceDataSchema,
   type CoachTraceData,
+  type CoachUIData,
   type CoachUIMessage,
 } from "@/lib/coach/ui-message";
 
@@ -28,7 +30,8 @@ type JsonRenderActionHandler = (
 
 const coachTraceDataPartSchemas = {
   coach_trace: CoachTraceDataSchema,
-} as const satisfies Record<string, ZodType<CoachTraceData>>;
+  spec: CoachSpecDataSchema,
+} as const satisfies { [K in keyof CoachUIData]: ZodType<CoachUIData[K]> };
 
 function parseAgentActionId(actionId: string): Id<"agentActions"> | null {
   const trimmed = actionId.trim();
@@ -89,6 +92,7 @@ export function useCoachChat(options?: { kickoffSource?: KickoffSource }) {
   // delay). No React state needed — nothing in the render tree reads it.
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const isWorkingRef = useRef(false);
   const sessionBootstrapRef = useRef<Promise<string | null> | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const sessionDateRef = useRef<string | null>(null);
@@ -172,6 +176,7 @@ export function useCoachChat(options?: { kickoffSource?: KickoffSource }) {
 
   const isWorking =
     isSending || status === "streaming" || status === "submitted";
+  isWorkingRef.current = isWorking;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -179,8 +184,9 @@ export function useCoachChat(options?: { kickoffSource?: KickoffSource }) {
 
   async function sendPrompt(prompt: string) {
     const trimmed = prompt.trim();
-    if (!trimmed || isWorking) return;
+    if (!trimmed || isWorkingRef.current) return;
 
+    isWorkingRef.current = true;
     setIsSending(true);
     setInput("");
 
@@ -213,6 +219,7 @@ export function useCoachChat(options?: { kickoffSource?: KickoffSource }) {
         }
       );
     } finally {
+      isWorkingRef.current = false;
       setIsSending(false);
     }
   }

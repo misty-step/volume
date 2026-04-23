@@ -217,8 +217,8 @@ describe("GET /api/health", () => {
     expect(data.status).toBe("fail");
     expect(data.checks.errorTracking.status).toBe("fail");
     expect(data.checks.errorTracking.clientConfigured).toBe(true);
-    expect(data.checks.errorTracking.serverConfigured).toBe(true);
-    expect(data.checks.errorTracking.serverKeySource).toBe("public_fallback");
+    expect(data.checks.errorTracking.serverConfigured).toBe(false);
+    expect(data.checks.errorTracking.serverKeySource).toBe("missing");
     expect(data.checks.errorTracking.reason).toBe(
       "missing dedicated server Canary configuration"
     );
@@ -296,8 +296,8 @@ describe("GET /api/health", () => {
     expect(data.status).toBe("fail");
     expect(data.checks.errorTracking.status).toBe("fail");
     expect(data.checks.errorTracking.clientConfigured).toBe(true);
-    expect(data.checks.errorTracking.serverConfigured).toBe(true);
-    expect(data.checks.errorTracking.serverKeySource).toBe("public_fallback");
+    expect(data.checks.errorTracking.serverConfigured).toBe(false);
+    expect(data.checks.errorTracking.serverKeySource).toBe("missing");
     expect(data.checks.errorTracking.reason).toBe(
       "invalid dedicated Canary endpoint URL"
     );

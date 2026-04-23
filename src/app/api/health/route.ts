@@ -100,10 +100,10 @@ export async function GET() {
       errorTrackingReason = "invalid public Canary endpoint URL";
     } else if (isProd && dedicatedServerCanaryEndpointInvalid) {
       errorTrackingReason = "invalid dedicated Canary endpoint URL";
-    } else if (!clientCanaryConfigured || !serverCanaryConfigured) {
-      errorTrackingReason = "missing required Canary configuration";
     } else if (isProd && !serverCanaryDedicated) {
       errorTrackingReason = "missing dedicated server Canary configuration";
+    } else if (!clientCanaryConfigured || !serverCanaryConfigured) {
+      errorTrackingReason = "missing required Canary configuration";
     }
   }
 

@@ -4,15 +4,16 @@ import {
   type AssistantModelMessage,
   type ModelMessage,
   type ToolModelMessage,
+  type UserModelMessage,
 } from "ai";
 import { COACH_AGENT_SYSTEM_PROMPT } from "@/lib/coach/agent-prompt";
 import { catalog } from "@/lib/coach/catalog";
 import {
-  findForcedCoachRouteIntent,
+  findForcedCoachRouteMatch,
   type ForcedCoachRouteIntent,
 } from "@/lib/coach/workspace-prompts";
 import { normalizeAssistantText } from "./blocks";
-import { createCoachTools } from "./coach-tools";
+import { createCoachTools, runCoachToolByName } from "./coach-tools";
 import type { ToolExecutionRecord } from "@/lib/coach/presentation/types";
 import type { PromptCoachMemory } from "@/lib/coach/memory";
 import type { CoachToolContext } from "@/lib/coach/tools/types";
@@ -83,7 +84,29 @@ function buildForcedRouteHint(
 ): string {
   if (!route.actionHint) return prompt;
 
-  return `${prompt}\n\n<route-intent tool="${route.toolName}" action="${route.actionHint}" />`;
+  return `${prompt}\n\n${buildRouteIntentTag(route)}`;
+}
+
+function buildRouteIntentTag(route: ForcedCoachRouteIntent): string {
+  return `<route-intent tool="${route.toolName}" action="${route.actionHint}" />`;
+}
+
+function appendForcedRouteHint(
+  message: UserModelMessage,
+  prompt: string,
+  route: ForcedCoachRouteIntent
+): UserModelMessage["content"] {
+  if (!route.actionHint) return message.content;
+  if (typeof message.content === "string") {
+    return buildForcedRouteHint(prompt, route);
+  }
+  if (Array.isArray(message.content)) {
+    return [
+      ...message.content,
+      { type: "text", text: buildRouteIntentTag(route) },
+    ];
+  }
+  return message.content;
 }
 
 function getLatestUserMessageIndex(history: ModelMessage[]): number {
@@ -103,15 +126,18 @@ function buildForcedPlannerInput(history: ModelMessage[]) {
   const prompt = latestUserMessage
     ? getModelMessageText(latestUserMessage).trim()
     : "";
-  const forcedRoute = findForcedCoachRouteIntent(prompt);
+  const forcedMatch = findForcedCoachRouteMatch(prompt);
 
-  if (!forcedRoute) {
+  if (!forcedMatch) {
     return {
       history,
       toolChoice: undefined,
+      forcedRoute: null,
+      deterministicArgs: null,
     };
   }
 
+  const forcedRoute = forcedMatch.intent;
   const nextHistory = history.slice();
   if (
     forcedRoute.actionHint &&
@@ -120,12 +146,14 @@ function buildForcedPlannerInput(history: ModelMessage[]) {
   ) {
     nextHistory[latestUserIndex] = {
       ...latestUserMessage,
-      content: buildForcedRouteHint(prompt, forcedRoute),
+      content: appendForcedRouteHint(latestUserMessage, prompt, forcedRoute),
     };
   }
 
   return {
     history: nextHistory,
+    forcedRoute,
+    deterministicArgs: forcedMatch.deterministicArgs,
     toolChoice: {
       type: "tool" as const,
       toolName: forcedRoute.toolName,
@@ -364,13 +392,36 @@ export async function runPlannerTurn({
     observations,
   });
 
+  const {
+    history: plannerHistory,
+    toolChoice,
+    forcedRoute,
+    deterministicArgs,
+  } = buildForcedPlannerInput(history);
+
+  if (forcedRoute && deterministicArgs) {
+    const record = await runCoachToolByName(
+      forcedRoute.toolName,
+      deterministicArgs,
+      ctx
+    );
+    if (record) {
+      return {
+        kind: "ok",
+        assistantText: "",
+        toolsUsed: [record.toolName],
+        hitToolLimit: false,
+        responseMessages: [],
+        toolResults: [record],
+      };
+    }
+  }
+
   const tools = createCoachTools(ctx, {
     onToolResult: (record) => {
       toolResults.push(record);
     },
   });
-  const { history: plannerHistory, toolChoice } =
-    buildForcedPlannerInput(history);
 
   try {
     const modelAbortSignal = createModelAbortSignal(signal);

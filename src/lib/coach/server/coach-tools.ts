@@ -12,15 +12,6 @@ type CreateCoachToolsOptions = {
   onToolResult?: (record: ToolExecutionRecord) => void;
 };
 
-/**
- * Wrap a tool result into the output the model sees.
- *
- * The planner sees only semantic tool data. Presentation is composed later.
- */
-function wrap(result: ToolResult): ToolOutput {
-  return { ...result.outputForModel };
-}
-
 function toExecutionRecord({
   toolName,
   input,
@@ -58,6 +49,49 @@ function toolErrorResult(message: string): ToolResult {
   };
 }
 
+async function runCoachToolDefinition({
+  definition,
+  rawArgs,
+  ctx,
+  options,
+}: {
+  definition: CoachToolDefinition;
+  rawArgs: unknown;
+  ctx: CoachToolContext;
+  options: CreateCoachToolsOptions;
+}): Promise<ToolExecutionRecord> {
+  let result: ToolResult;
+  try {
+    result = await definition.run(rawArgs, ctx);
+  } catch (e) {
+    result = toolErrorResult(
+      e instanceof Error ? e.message : "Unexpected error"
+    );
+  }
+
+  const record = toExecutionRecord({
+    toolName: definition.name,
+    input: rawArgs,
+    result,
+  });
+  options.onToolResult?.(record);
+  return record;
+}
+
+export async function runCoachToolByName(
+  toolName: string,
+  rawArgs: unknown,
+  ctx: CoachToolContext,
+  options: CreateCoachToolsOptions = {}
+): Promise<ToolExecutionRecord | null> {
+  const definition =
+    coachToolDefinitions.find((candidate) => candidate.name === toolName) ??
+    null;
+  if (!definition) return null;
+
+  return runCoachToolDefinition({ definition, rawArgs, ctx, options });
+}
+
 export function createCoachTools(
   ctx: CoachToolContext,
   options: CreateCoachToolsOptions = {}
@@ -66,22 +100,13 @@ export function createCoachTools(
     definition: CoachToolDefinition,
     rawArgs: unknown
   ): Promise<ToolOutput> {
-    let result: ToolResult;
-    try {
-      result = await definition.run(rawArgs, ctx);
-    } catch (e) {
-      result = toolErrorResult(
-        e instanceof Error ? e.message : "Unexpected error"
-      );
-    }
-    options.onToolResult?.(
-      toExecutionRecord({
-        toolName: definition.name,
-        input: rawArgs,
-        result,
-      })
-    );
-    return wrap(result);
+    const record = await runCoachToolDefinition({
+      definition,
+      rawArgs,
+      ctx,
+      options,
+    });
+    return { ...record.outputForModel };
   }
 
   return Object.fromEntries(

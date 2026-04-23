@@ -6,6 +6,7 @@ import * as yaml from "js-yaml";
 import { describe, expect, it } from "vitest";
 
 interface WorkflowConfig {
+  concurrency?: Record<string, string | boolean>;
   jobs?: Record<
     string,
     {
@@ -26,6 +27,10 @@ const repoRoot = path.resolve(import.meta.dirname, "../..");
 function readCiWorkflow(): WorkflowConfig {
   const workflowPath = path.join(repoRoot, ".github/workflows/ci.yml");
   return yaml.load(fs.readFileSync(workflowPath, "utf8")) as WorkflowConfig;
+}
+
+function readDaggerModule(): string {
+  return fs.readFileSync(path.join(repoRoot, "dagger/src/index.ts"), "utf8");
 }
 
 describe("ci workflow contract", () => {
@@ -57,5 +62,28 @@ describe("ci workflow contract", () => {
     );
 
     expect(statusStep?.run).toContain('context="merge-gate"');
+  });
+
+  it("only cancels superseded pull request runs, never master push runs", () => {
+    const workflow = readCiWorkflow();
+
+    expect(workflow.concurrency?.["cancel-in-progress"]).toBe(
+      "${{ github.event_name == 'pull_request' }}"
+    );
+  });
+
+  it("keeps Dagger check aligned with the required merge gates", () => {
+    const source = readDaggerModule();
+
+    for (const script of [
+      "lint",
+      "typecheck",
+      "architecture:check",
+      "test:coverage",
+      "security:audit",
+      "build",
+    ]) {
+      expect(source).toContain(`.withExec(["bun", "run", "${script}"])`);
+    }
   });
 });

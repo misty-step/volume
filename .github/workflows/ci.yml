@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   merge-gate:
@@ -38,6 +38,7 @@ jobs:
 
       - name: Publish merge-gate status on PR head
         if: ${{ github.event_name == 'pull_request' && always() }}
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}

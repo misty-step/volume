@@ -25,16 +25,17 @@ export class Volume {
       .withExec(["sh", "-c", `npm install -g bun@${BUN_VERSION}`])
       .withMountedCache("/app/node_modules", dag.cacheVolume("node-modules"))
       .withDirectory("/app", source, {
-        exclude: [
-          "node_modules",
-          ".next",
-          "coverage",
-          "test-results",
-          "dagger",
-        ],
+        exclude: ["node_modules", ".next", "coverage", "test-results"],
       })
       .withWorkdir("/app")
       .withExec(["bun", "install", "--frozen-lockfile"]);
+  }
+
+  private withCoverageTest(container: Container): Container {
+    return container
+      .withEnvVariable("CI", "true")
+      .withEnvVariable("NODE_ENV", "test")
+      .withExec(["bun", "run", "test:coverage"]);
   }
 
   /** ESLint with zero warnings tolerance */
@@ -60,11 +61,7 @@ export class Volume {
   /** Vitest unit tests with coverage thresholds enforced */
   @func()
   async test(source: Directory): Promise<string> {
-    return this.base(source)
-      .withEnvVariable("CI", "true")
-      .withEnvVariable("NODE_ENV", "test")
-      .withExec(["bun", "run", "test:coverage"])
-      .stdout();
+    return this.withCoverageTest(this.base(source)).stdout();
   }
 
   /** Dependency vulnerability scan */
@@ -97,11 +94,7 @@ export class Volume {
         base.withExec(["bun", "run", "lint"]).stdout(),
         base.withExec(["bun", "run", "typecheck"]).stdout(),
         base.withExec(["bun", "run", "architecture:check"]).stdout(),
-        base
-          .withEnvVariable("CI", "true")
-          .withEnvVariable("NODE_ENV", "test")
-          .withExec(["bun", "run", "test:coverage"])
-          .stdout(),
+        this.withCoverageTest(base).stdout(),
         base.withExec(["bun", "run", "security:audit"]).stdout(),
         base
           .withEnvVariable("CI", "true")

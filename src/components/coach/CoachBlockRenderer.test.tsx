@@ -592,6 +592,59 @@ describe("CoachSpecRenderer", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("renders analytics overview when model JSON omits collection props", () => {
+    const spec: Spec = {
+      root: "analytics",
+      elements: {
+        analytics: {
+          type: "AnalyticsOverview",
+          props: {
+            currentStreak: 2,
+            longestStreak: 5,
+            workoutDays: 8,
+            recentVolume: 140,
+          },
+        },
+      },
+    };
+
+    render(<CoachSpecRenderer spec={spec} />);
+
+    expect(screen.getByText("Analytics overview")).toBeInTheDocument();
+    expect(screen.getByText("Recent PRs")).toBeInTheDocument();
+    expect(screen.getByText("Progressive overload")).toBeInTheDocument();
+    expect(screen.getByText("Focus suggestions")).toBeInTheDocument();
+  });
+
+  it("renders history timeline when model JSON omits sessions or rows", () => {
+    const spec: Spec = {
+      root: "scene",
+      elements: {
+        scene: {
+          type: "Scene",
+          props: { title: "History cases", subtitle: null },
+          children: ["withoutSessions", "withoutRows"],
+        },
+        withoutSessions: {
+          type: "HistoryTimeline",
+          props: {},
+        },
+        withoutRows: {
+          type: "HistoryTimeline",
+          props: {
+            sessions: [{ dateLabel: "Today", summary: null }],
+          },
+        },
+      },
+    };
+
+    render(<CoachSpecRenderer spec={spec} />);
+
+    expect(screen.getByText("History cases")).toBeInTheDocument();
+    expect(screen.getByText("Today")).toBeInTheDocument();
+    expect(screen.getByText("Session detail")).toBeInTheDocument();
+  });
+
   it("shows a user-facing error when quick log submission fails", async () => {
     const handlers = {
       submit_prompt: vi.fn(),

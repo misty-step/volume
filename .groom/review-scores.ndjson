@@ -3,3 +3,4 @@
 {"date":"2026-04-02","pr":null,"correctness":9,"depth":8,"simplicity":8,"craft":8,"verdict":"ship"}
 {"date":"2026-04-04","pr":472,"correctness":9,"depth":8,"simplicity":9,"craft":8,"verdict":"ship"}
 {"date":"2026-04-22","pr":478,"correctness":9,"depth":8,"simplicity":8,"craft":8,"verdict":"ship","providers":["codex","github","thinktank"]}
+{"date":"2026-04-22","pr":478,"correctness":9,"depth":8,"simplicity":9,"craft":8,"verdict":"ship","providers":["codex-subagents","dagger","playwright"]}

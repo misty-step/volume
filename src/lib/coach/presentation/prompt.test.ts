@@ -18,6 +18,8 @@ describe("coach presentation prompt", () => {
     expect(prompt).toContain("Conversation summary:");
     expect(prompt).toContain("ActionTray");
     expect(prompt).toContain("reuse them instead of renaming them");
+    expect(prompt).toContain("stable product contract");
+    expect(prompt).not.toContain("not as mandatory output");
   });
 
   it("serializes planner output for the presentation composer", () => {

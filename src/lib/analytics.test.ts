@@ -257,7 +257,7 @@ describe("reportError", () => {
     expect(canaryMocks.initCanary).not.toHaveBeenCalled();
   });
 
-  it("initializes Canary on the server from public fallback env", async () => {
+  it("does not initialize production server Canary from public fallback env", async () => {
     const { reportError } = await loadAnalytics();
     // @ts-expect-error - Intentionally deleting window for test
     delete global.window;
@@ -273,11 +273,31 @@ describe("reportError", () => {
     const error = new Error("Test error");
     reportError(error, { route: "coach" });
 
+    expect(canaryMocks.initCanary).not.toHaveBeenCalled();
+    expect(canaryMocks.captureException).not.toHaveBeenCalled();
+  });
+
+  it("initializes non-production server Canary from public fallback env", async () => {
+    const { reportError } = await loadAnalytics();
+    // @ts-expect-error - Intentionally deleting window for test
+    delete global.window;
+    process.env = {
+      ...originalEnv,
+      CANARY_ENDPOINT: undefined,
+      CANARY_API_KEY: undefined,
+      NEXT_PUBLIC_CANARY_ENDPOINT: "https://canary.example",
+      NEXT_PUBLIC_CANARY_API_KEY: "public-key",
+      NODE_ENV: "development",
+    };
+
+    const error = new Error("Test error");
+    reportError(error, { route: "coach" });
+
     expect(canaryMocks.initCanary).toHaveBeenCalledWith({
       endpoint: "https://canary.example",
       apiKey: "public-key",
       service: "volume",
-      environment: "production",
+      environment: "development",
       scrubPii: true,
     });
     expect(canaryMocks.captureException).toHaveBeenCalledWith(error, {

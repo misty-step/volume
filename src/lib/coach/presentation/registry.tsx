@@ -78,6 +78,10 @@ type LegacyClientActionProps = Omit<
 >;
 type LegacyUndoProps = Omit<Extract<CoachBlock, { type: "undo" }>, "type">;
 
+function arrayOrEmpty<T>(value: T[] | null | undefined): T[] {
+  return Array.isArray(value) ? value : [];
+}
+
 function useCoachActionHandlers() {
   return useActions().handlers;
 }
@@ -343,15 +347,15 @@ const { registry: presentationRegistry } = defineRegistry(
           longestStreak={props.longestStreak}
           workoutDays={props.workoutDays}
           recentVolume={props.recentVolume}
-          recentPrs={props.recentPrs.map((entry) => ({
+          recentPrs={arrayOrEmpty(props.recentPrs).map((entry) => ({
             ...entry,
             detail: entry.detail ?? undefined,
           }))}
-          overload={props.overload.map((entry) => ({
+          overload={arrayOrEmpty(props.overload).map((entry) => ({
             ...entry,
             note: entry.note ?? undefined,
           }))}
-          focusSuggestions={props.focusSuggestions}
+          focusSuggestions={arrayOrEmpty(props.focusSuggestions)}
         />
       ),
       ExerciseInsight: ({ props }) => (
@@ -380,10 +384,10 @@ const { registry: presentationRegistry } = defineRegistry(
       ),
       HistoryTimeline: ({ props }) => (
         <HistoryTimelineScene
-          sessions={props.sessions.map((session) => ({
+          sessions={arrayOrEmpty(props.sessions).map((session) => ({
             dateLabel: session.dateLabel,
             summary: session.summary ?? undefined,
-            rows: session.rows.map((row) => ({
+            rows: arrayOrEmpty(session.rows).map((row) => ({
               ...row,
               meta: row.meta ?? undefined,
             })),

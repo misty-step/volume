@@ -49,9 +49,10 @@ The three enforcement layers:
 2. **Dagger pipeline** (`dagger/src/`, `dagger.json`) — canonical pipeline.
    Runs `dagger call check --source .` identically locally and remote.
 3. **GitHub Actions** (`.github/workflows/ci.yml` + siblings) — remote
-   merge-gate: setup → `{lint, typecheck, architecture, test, security-audit, build}`
-   → merge-gate. E2E, trufflehog, release-please, Claude bot, PR size labeler
-   run in sibling workflows.
+   thin wrapper: checkout the tested SHA → `dagger call check --source=.` via
+   `dagger/dagger-for-github` → publish the merge-gate status. E2E,
+   trufflehog, release-please, Claude bot, PR size labeler run in sibling
+   workflows.
 
 Emergency bypass: `SKIP_QUALITY_GATES=1 git push`. Always documented in the
 PR/release notes. Never silent.

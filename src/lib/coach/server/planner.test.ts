@@ -9,6 +9,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockLogSetExecute = vi.fn();
 const mockGetTodaySummaryExecute = vi.fn();
+const mockGetHistoryOverviewExecute = vi.fn();
+const mockManageExerciseExecute = vi.fn();
+const mockModifySetExecute = vi.fn();
 
 vi.mock("@/lib/coach/tools/tool-log-set", () => ({
   runLogSetTool: (...args: unknown[]) => mockLogSetExecute(...args),
@@ -17,6 +20,20 @@ vi.mock("@/lib/coach/tools/tool-log-set", () => ({
 vi.mock("@/lib/coach/tools/tool-today-summary", () => ({
   runTodaySummaryTool: (...args: unknown[]) =>
     mockGetTodaySummaryExecute(...args),
+}));
+
+vi.mock("@/lib/coach/tools/tool-history-overview", () => ({
+  runHistoryOverviewTool: (...args: unknown[]) =>
+    mockGetHistoryOverviewExecute(...args),
+}));
+
+vi.mock("@/lib/coach/tools/tool-manage-exercise", () => ({
+  runManageExerciseTool: (...args: unknown[]) =>
+    mockManageExerciseExecute(...args),
+}));
+
+vi.mock("@/lib/coach/tools/tool-modify-set", () => ({
+  runModifySetTool: (...args: unknown[]) => mockModifySetExecute(...args),
 }));
 
 // ---------------------------------------------------------------------------
@@ -311,6 +328,9 @@ describe("runPlannerTurn", () => {
   beforeEach(() => {
     mockLogSetExecute.mockReset();
     mockGetTodaySummaryExecute.mockReset();
+    mockGetHistoryOverviewExecute.mockReset();
+    mockManageExerciseExecute.mockReset();
+    mockModifySetExecute.mockReset();
   });
 
   it("executes a tool then returns assistant text", async () => {
@@ -437,18 +457,8 @@ describe("runPlannerTurn", () => {
       outputForModel: { status: "ok" },
     });
 
-    let callCount = 0;
     const runtime = makeRuntime(async () => {
-      callCount++;
-      if (callCount === 1) {
-        return {
-          stream: toolCallStream("query_workouts", {
-            action: "today_summary",
-          }),
-          rawCall: {},
-        };
-      }
-      return { stream: textStream("Summary."), rawCall: {} };
+      throw new Error("Exact workspace prompts should bypass model routing.");
     });
 
     const result = await runPlannerTurn({
@@ -457,20 +467,23 @@ describe("runPlannerTurn", () => {
       history: [{ role: "user", content: "show today's summary" }],
     });
 
+    expect(runtime.model.doStreamCalls).toHaveLength(0);
     expect(result.kind).toBe("ok");
-    expect(result.toolsUsed).toContain("query_workouts");
+    expect(result.toolsUsed).toEqual(["query_workouts"]);
+    expect(result.toolResults[0]?.input).toEqual({ action: "today_summary" });
   });
 
-  it("adds an explicit action hint for forced history overview routes", async () => {
+  it("runs forced history overview routes with deterministic tool args", async () => {
     const { runPlannerTurn } = await import("./planner");
 
-    const model = new MockLanguageModelV3({
-      doStream: async () => ({
-        stream: textStream("History."),
-        rawCall: {},
-      }),
+    mockGetHistoryOverviewExecute.mockResolvedValue({
+      summary: "history",
+      blocks: [],
+      outputForModel: { status: "ok" },
     });
-    const runtime = { model, modelId: "test-model" };
+    const runtime = makeRuntime(async () => {
+      throw new Error("Exact workspace prompts should bypass model routing.");
+    });
 
     const result = await runPlannerTurn({
       runtime,
@@ -479,15 +492,257 @@ describe("runPlannerTurn", () => {
     });
 
     expect(result.kind).toBe("ok");
-    expect(model.doStreamCalls[0]?.toolChoice).toEqual({
-      type: "tool",
-      toolName: "query_workouts",
-    });
-    expect(JSON.stringify(model.doStreamCalls[0]?.prompt)).toContain(
-      "history_overview"
+    expect(runtime.model.doStreamCalls).toHaveLength(0);
+    expect(mockGetHistoryOverviewExecute).toHaveBeenCalledWith(
+      { limit: undefined },
+      expect.objectContaining({ turnId: "turn-test" })
     );
-    expect(JSON.stringify(model.doStreamCalls[0]?.prompt)).toContain(
-      "query_workouts"
+    expect(result.toolsUsed).toEqual(["query_workouts"]);
+    expect(result.toolResults[0]?.input).toEqual({
+      action: "history_overview",
+    });
+  });
+
+  it("runs forced route prompts even when user messages include non-text parts", async () => {
+    const { runPlannerTurn } = await import("./planner");
+
+    mockGetHistoryOverviewExecute.mockResolvedValue({
+      summary: "history",
+      blocks: [],
+      outputForModel: { status: "ok" },
+    });
+    const runtime = makeRuntime(async () => {
+      throw new Error("Exact workspace prompts should bypass model routing.");
+    });
+
+    const result = await runPlannerTurn({
+      runtime,
+      ...DEFAULT_ARGS,
+      history: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "show history overview" },
+            {
+              type: "file",
+              data: new Uint8Array([102, 111, 114, 109]),
+              mediaType: "text/plain",
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(result.kind).toBe("ok");
+    expect(runtime.model.doStreamCalls).toHaveLength(0);
+    expect(result.toolsUsed).toEqual(["query_workouts"]);
+    expect(result.toolResults[0]?.input).toEqual({
+      action: "history_overview",
+    });
+  });
+
+  it("runs simple manage-exercise commands with deterministic tool args", async () => {
+    const { runPlannerTurn } = await import("./planner");
+
+    mockManageExerciseExecute.mockResolvedValue({
+      summary: "archived",
+      blocks: [
+        {
+          type: "status",
+          tone: "success",
+          title: "Exercise archived",
+          description: "Archived.",
+        },
+      ],
+      outputForModel: { status: "ok" },
+    });
+    const runtime = makeRuntime(async () => {
+      throw new Error(
+        "Simple manage-exercise commands should bypass model routing."
+      );
+    });
+
+    const result = await runPlannerTurn({
+      runtime,
+      ...DEFAULT_ARGS,
+      history: [{ role: "user", content: 'archive exercise "PushupsCodex"' }],
+    });
+
+    expect(result.kind).toBe("ok");
+    expect(runtime.model.doStreamCalls).toHaveLength(0);
+    expect(mockManageExerciseExecute).toHaveBeenCalledWith(
+      { action: "delete", exercise_name: "PushupsCodex" },
+      expect.objectContaining({ turnId: "turn-test" })
+    );
+    expect(result.toolsUsed).toEqual(["manage_exercise"]);
+    expect(result.toolResults[0]?.input).toEqual({
+      action: "delete",
+      exercise_name: "PushupsCodex",
+    });
+  });
+
+  it("runs restore exercise commands with deterministic tool args", async () => {
+    const { runPlannerTurn } = await import("./planner");
+
+    mockManageExerciseExecute.mockResolvedValue({
+      summary: "restored",
+      blocks: [
+        {
+          type: "status",
+          tone: "success",
+          title: "Exercise restored",
+          description: "Restored.",
+        },
+      ],
+      outputForModel: { status: "ok" },
+    });
+    const runtime = makeRuntime(async () => {
+      throw new Error("Restore commands should bypass model routing.");
+    });
+
+    const result = await runPlannerTurn({
+      runtime,
+      ...DEFAULT_ARGS,
+      history: [{ role: "user", content: 'restore exercise "PushupsCodex"' }],
+    });
+
+    expect(result.kind).toBe("ok");
+    expect(runtime.model.doStreamCalls).toHaveLength(0);
+    expect(mockManageExerciseExecute).toHaveBeenCalledWith(
+      { action: "restore", exercise_name: "PushupsCodex" },
+      expect.objectContaining({ turnId: "turn-test" })
+    );
+    expect(result.toolsUsed).toEqual(["manage_exercise"]);
+    expect(result.toolResults[0]?.input).toEqual({
+      action: "restore",
+      exercise_name: "PushupsCodex",
+    });
+  });
+
+  it("runs simple reps log commands with deterministic tool args", async () => {
+    const { runPlannerTurn } = await import("./planner");
+
+    mockLogSetExecute.mockResolvedValue({
+      summary: "logged",
+      blocks: [
+        {
+          type: "status",
+          tone: "success",
+          title: "Set logged",
+          description: "Logged.",
+        },
+      ],
+      outputForModel: { status: "ok" },
+    });
+    const runtime = makeRuntime(async () => {
+      throw new Error("Simple log commands should bypass model routing.");
+    });
+
+    const result = await runPlannerTurn({
+      runtime,
+      ...DEFAULT_ARGS,
+      history: [
+        {
+          role: "user",
+          content: 'log 10 reps of "Critical Flow Summit Squat"',
+        },
+      ],
+    });
+
+    expect(result.kind).toBe("ok");
+    expect(runtime.model.doStreamCalls).toHaveLength(0);
+    expect(mockLogSetExecute).toHaveBeenCalledWith(
+      { exercise_name: "Critical Flow Summit Squat", reps: 10 },
+      expect.objectContaining({ turnId: "turn-test" }),
+      undefined
+    );
+    expect(result.toolsUsed).toEqual(["log_sets"]);
+    expect(result.toolResults[0]?.input).toEqual({
+      action: "log_set",
+      set: {
+        exercise_name: "Critical Flow Summit Squat",
+        reps: 10,
+      },
+    });
+  });
+
+  it("runs quoted delete-set commands with deterministic exercise-name args", async () => {
+    const { runPlannerTurn } = await import("./planner");
+
+    mockModifySetExecute.mockResolvedValue({
+      summary: "deleted",
+      blocks: [
+        {
+          type: "status",
+          tone: "success",
+          title: "Set deleted",
+          description: "Deleted.",
+        },
+      ],
+      outputForModel: { status: "ok" },
+    });
+    const runtime = makeRuntime(async () => {
+      throw new Error(
+        "Simple set-delete commands should bypass model routing."
+      );
+    });
+
+    const result = await runPlannerTurn({
+      runtime,
+      ...DEFAULT_ARGS,
+      history: [
+        {
+          role: "user",
+          content: 'delete set "Critical Flow Summit Squat"',
+        },
+      ],
+    });
+
+    expect(result.kind).toBe("ok");
+    expect(runtime.model.doStreamCalls).toHaveLength(0);
+    expect(mockModifySetExecute).toHaveBeenCalledWith(
+      { action: "delete", exercise_name: "Critical Flow Summit Squat" },
+      expect.objectContaining({ turnId: "turn-test" })
+    );
+    expect(result.toolsUsed).toEqual(["modify_set"]);
+    expect(result.toolResults[0]?.input).toEqual({
+      action: "delete",
+      exercise_name: "Critical Flow Summit Squat",
+    });
+  });
+
+  it("runs unquoted delete-set commands with deterministic set-id args", async () => {
+    const { runPlannerTurn } = await import("./planner");
+
+    mockModifySetExecute.mockResolvedValue({
+      summary: "deleted",
+      blocks: [],
+      outputForModel: { status: "ok" },
+    });
+    const runtime = makeRuntime(async () => {
+      throw new Error(
+        "Simple set-delete commands should bypass model routing."
+      );
+    });
+
+    const result = await runPlannerTurn({
+      runtime,
+      ...DEFAULT_ARGS,
+      history: [
+        {
+          role: "user",
+          content: "delete set j9711x7g1bb5y4990wh4hjwfjd85cmag",
+        },
+      ],
+    });
+
+    expect(result.kind).toBe("ok");
+    expect(mockModifySetExecute).toHaveBeenCalledWith(
+      {
+        action: "delete",
+        set_id: "j9711x7g1bb5y4990wh4hjwfjd85cmag",
+      },
+      expect.objectContaining({ turnId: "turn-test" })
     );
   });
 

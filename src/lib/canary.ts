@@ -33,6 +33,19 @@ function getDedicatedServerCanaryConfig(env: EnvSource) {
   return { endpoint, apiKey };
 }
 
+function allowsPublicServerFallback(env: EnvSource): boolean {
+  if (env.VERCEL_ENV === "production") return false;
+  if (env.VERCEL_ENV === "preview") return true;
+  return env.NODE_ENV !== "production";
+}
+
+function getServerCanaryConfig(env: EnvSource) {
+  return (
+    getDedicatedServerCanaryConfig(env) ??
+    (allowsPublicServerFallback(env) ? getPublicCanaryConfig(env) : null)
+  );
+}
+
 export function getServerCanaryConfigSource(
   env: EnvSource = process.env
 ): ServerCanaryConfigSource | null {
@@ -40,7 +53,7 @@ export function getServerCanaryConfigSource(
     return "dedicated";
   }
 
-  if (getPublicCanaryConfig(env)) {
+  if (allowsPublicServerFallback(env) && getPublicCanaryConfig(env)) {
     return "public_fallback";
   }
 
@@ -53,7 +66,7 @@ export function getCanaryInitOptions(
 ): InitOptions | null {
   const config =
     target === "server"
-      ? (getDedicatedServerCanaryConfig(env) ?? getPublicCanaryConfig(env))
+      ? getServerCanaryConfig(env)
       : getPublicCanaryConfig(env);
 
   if (!config) {

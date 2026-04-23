@@ -61,6 +61,7 @@ setup("authenticate", async ({ page }) => {
   // /coach is also gated by subscription and Convex bootstrap state.
   await waitForAuthenticatedRedirect(page);
   await expect(page).not.toHaveURL(/\/sign-in(?:\/.*)?(?:\?.*)?$/);
+  await page.goto("/coach");
   await expect(page).toHaveURL(/\/coach(?:\?.*)?$/);
 
   // Save authenticated state for reuse in all tests

@@ -44,6 +44,7 @@ const mockMessages: Array<{
   role: string;
   parts: Array<{ type: string; text?: string }>;
 }> = [];
+let mockStatus = "ready";
 
 const mockUseChat = vi.fn(
   (options?: {
@@ -54,7 +55,7 @@ const mockUseChat = vi.fn(
     chatCallbacks.onFinish = options?.onFinish;
     return {
       messages: [...mockMessages],
-      status: "ready",
+      status: mockStatus,
       error: undefined,
       sendMessage: mockSendMessage,
     };
@@ -73,6 +74,7 @@ describe("useCoachChat", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockMessages.length = 0;
+    mockStatus = "ready";
     chatCallbacks.onData = undefined;
     chatCallbacks.onFinish = undefined;
     window.localStorage.clear();
@@ -242,6 +244,41 @@ describe("useCoachChat", () => {
       { text: "show today's summary" },
       expect.any(Object)
     );
+  });
+
+  it("lets generated UI handlers captured during streaming submit after the chat becomes idle", async () => {
+    mockStatus = "streaming";
+    const { result, rerender } = renderHook(() => useCoachChat());
+    const staleSubmit = result.current.jsonRenderHandlers.submit_prompt;
+
+    mockStatus = "ready";
+    rerender();
+
+    await waitFor(() => {
+      expect(getOrCreateTodaySessionMock).toHaveBeenCalled();
+    });
+
+    await act(async () => {
+      await staleSubmit?.({ prompt: "restore exercise PushupsCodex" });
+    });
+
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      { text: "restore exercise PushupsCodex" },
+      expect.any(Object)
+    );
+  });
+
+  it("blocks generated UI submits while the chat is still streaming", async () => {
+    mockStatus = "streaming";
+    const { result } = renderHook(() => useCoachChat());
+
+    await act(async () => {
+      await result.current.jsonRenderHandlers.submit_prompt?.({
+        prompt: "restore exercise PushupsCodex",
+      });
+    });
+
+    expect(mockSendMessage).not.toHaveBeenCalled();
   });
 
   it("prefills the composer without sending when prefill_prompt runs", async () => {
