@@ -20,9 +20,11 @@ After auth, visiting `/` renders the coach workspace (not `/today`), and `Kickof
 ## Shape cues
 
 - **Files likely touched:**
-  - `src/app/(app)/coach/page.tsx` — delete (redirect disappears)
-  - `src/app/(app)/page.tsx` — create, renders coach workspace (move/rename current `(app)/coach/` page content)
+  - `src/app/page.tsx` — render public landing for signed-out visitors and coach workspace for signed-in users
+  - `src/app/(app)/coach/page.tsx` — preserve `/coach` as a compatibility redirect to `/`
+  - `src/components/layout/app-shell.tsx` — share authenticated shell between root and app routes
   - `e2e/coach-flows.spec.ts:22` — change entry URL `/coach` → `/`
+  - `e2e/subscription-flow.spec.ts` — assert `/coach` compatibility redirect resolves to the workspace
   - `e2e/critical-flow.spec.ts` — audit for hardcoded `/coach` or `/today` route assumptions
   - `src/lib/analytics.ts` — add 3 `AnalyticsEventDefinitions` entries: `Kickoff Reached`, `First Message`, `First Log`
   - `src/lib/coach/run-turn.ts` (or nearest turn-handler) — fire `First Message` + `First Log` events
