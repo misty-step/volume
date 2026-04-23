@@ -6,7 +6,7 @@ import {
   MEMORY_SOURCES,
   type MemoryCategory,
   type MemorySource,
-} from "@/lib/coach/memory";
+} from "@/lib/domain/memory";
 
 // Derive validator from GOAL_TYPES constant (single source of truth)
 // Type assertion needed because v.union loses literal inference with spread

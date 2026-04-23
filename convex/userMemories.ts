@@ -18,7 +18,7 @@ import {
   RECENT_OBSERVATION_LIMIT,
   type MemoryCategory,
   type MemorySource,
-} from "@/lib/coach/memory";
+} from "@/lib/domain/memory";
 
 type UserMemoryDoc = Doc<"userMemories">;
 
