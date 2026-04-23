@@ -64,7 +64,7 @@ test.describe("Paywall Gate", () => {
 
   test("Settings redirect resolves to the workspace", async ({ page }) => {
     await page.goto("/settings");
-    await expect(page).toHaveURL(/\/coach(?:\?.*)?$/);
+    await expect(page).toHaveURL(/\/(?:\?.*)?$/);
     await waitForCoachText(page, /Training preferences/i);
     await expect(coachInput(page)).toBeVisible();
     await expect(coachInput(page)).toBeEnabled();

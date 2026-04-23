@@ -1,4 +1,4 @@
-export const COACH_HOME_PATH = "/coach";
+export const COACH_HOME_PATH = "/";
 export const DASHBOARD_PATH = "/today";
 
 export function buildCoachPromptPath(prompt: string): string {

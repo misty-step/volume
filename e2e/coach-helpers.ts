@@ -67,7 +67,7 @@ export async function openCoachWorkspace(
   entryPath = "/"
 ): Promise<void> {
   await ensureAuthenticated(page, entryPath);
-  await expect(page).toHaveURL(/\/coach(?:\?.*)?$/);
+  await expect(page).toHaveURL(/\/(?:\?.*)?$/);
   await expect(coachTimeline(page)).toBeVisible();
   await expect(coachInput(page)).toBeVisible();
   await waitForCoachIdle(page);

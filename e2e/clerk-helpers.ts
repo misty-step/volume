@@ -43,7 +43,11 @@ export async function ensureAuthenticated(
       return;
     }
 
-    await page.goto("/coach");
+    if ((await page.getByTestId("coach-composer").count()) > 0) {
+      return;
+    }
+
+    await page.goto("/today");
     if (!isSignInUrl(page.url())) {
       await page.goto(entryPath);
       return;

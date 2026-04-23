@@ -22,13 +22,6 @@ type BootstrapPhase =
 
 const BOOTSTRAP_TIMEOUT_MS = 8000;
 
-const BOOTSTRAP_MESSAGES: Record<BootstrapPhase, string> = {
-  clerk: "Checking your session...",
-  convex_auth: "Connecting your account...",
-  subscription_query: "Loading your workspace...",
-  user_bootstrap: "Setting up your account...",
-};
-
 /**
  * PaywallGate - Wraps authenticated routes to enforce subscription access
  *
@@ -356,17 +349,15 @@ export function PaywallGate({ children }: PaywallGateProps) {
     subscriptionStatus === undefined ||
     subscriptionStatus === null
   ) {
-    const loadingMessage = bootstrapPhase
-      ? BOOTSTRAP_MESSAGES[bootstrapPhase]
-      : "Loading your workspace...";
-
     return (
       <div
         data-testid="paywall-loading"
         className="flex min-h-screen flex-col items-center justify-center gap-4"
       >
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">{loadingMessage}</p>
+        <p className="text-sm text-muted-foreground">
+          Loading your workspace...
+        </p>
       </div>
     );
   }
