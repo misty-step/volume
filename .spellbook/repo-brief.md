@@ -210,7 +210,8 @@ mutation for exercise creation · ADR-0008 OpenRouter model portfolio.
   carmack, grug, beck, critic, planner, builder, a11y-auditor, a11y-critic,
   a11y-fixer).
 - 26 local skills in the shared root. 25 are marked `installed-by: tailor`,
-  plus `/ship` synced from spellbook on 2026-04-23. Category mix spans
+  plus `/ship` synced from spellbook and tightened to own the final quality
+  triad on 2026-04-23. Category mix spans
   universal / workflow / domain-invented (`volume-manual-qa`). Added
   `/harness` and `/agent-readiness` during the 2026-04-20 migration pass.
 - Per-harness settings: `.claude/settings.local.json` (existing, preserved),

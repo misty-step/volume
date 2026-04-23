@@ -1,12 +1,11 @@
 ---
 name: ship
 description: |
-  Final mile. Take a merge-ready branch to shipped: squash-merge, archive
-  the backlog ticket(s) with Closes-backlog trailers preserved into the
-  merge commit, update touched docs, run /reflect, and apply its outputs.
-  Assumes /settle has already left the branch merge-ready — ship does not
-  run CI, code-review, or refactor itself. If those aren't done, run
-  /settle first.
+  Final mile. Take a branch from merge candidate to shipped: run the
+  /ci + /refactor + /code-review triad in parallel subagents, integrate
+  fixes, and repeat until the branch is lean, green, clean, and shiny.
+  Then archive backlog ticket(s) with Closes-backlog trailers preserved
+  into the squash merge, land it, run /reflect, and apply its outputs.
   Use when: "ship it", "merge and close out", "final mile", "land and
   reflect", "finish this ticket".
   Trigger: /ship.
@@ -15,9 +14,11 @@ argument-hint: "[branch-or-pr]"
 
 # /ship
 
-The final mile. Branch is merge-ready; `/ship` lands it, archives the
-ticket(s), syncs docs, runs `/reflect`, and threads reflect's outputs back
-into the repo. One command from "green" to "shipped and learned from."
+The final mile. `/ship` owns the quality loop and the landing. It runs
+`/ci`, `/refactor`, and `/code-review` as a parallel triad, integrates
+their outputs, repeats until the branch is lean, green, clean, and shiny,
+then archives tickets, squash-merges, runs `/reflect`, and threads
+reflect's outputs back into the repo.
 
 ## Stance
 
@@ -32,9 +33,15 @@ into the repo. One command from "green" to "shipped and learned from."
 4. **Reflect's harness edits never touch master.** They land on a
    `harness/reflect-outputs` branch for human review. This is a hard
    invariant from `reflect/SKILL.md`.
-5. **Not a CI runner, not a reviewer, not a refactorer.** `/ship` assumes
-   `/settle` already proved the branch clean. If `/settle` wasn't run,
-   refuse and route the operator back.
+5. **The quality triad is mandatory.** Fan out `/ci`, `/refactor`, and
+   `/code-review` in parallel subagents on the current branch. Integrate
+   their findings, commit the fixes, and rerun the triad until all three
+   converge on the latest HEAD.
+6. **Lean, green, clean, shiny is a gate, not a slogan.** Lean means
+   `/refactor` reports no material simplification left. Green means `/ci`
+   is passing. Clean means `/code-review` returns `ship` or a satisfied
+   `conditional`. Shiny means docs, backlog state, trailers, and PR body
+   are coherent enough to survive the squash merge.
 
 ## Prerequisites
 
@@ -45,12 +52,11 @@ Assert at start; refuse with a clear reason on any miss.
   The numeric capture is the **primary backlog ID** being shipped.
 - Working tree clean (`git status --short` empty).
 - If a PR exists for the branch: `gh pr view --json mergeable,mergeStateStatus`
-  reports mergeable. A conflicted or blocked PR means `/settle` isn't done.
-- CI green. In GitHub mode: `gh pr checks` all passing. In git-native mode:
-  `/ci` must have been run recently on this HEAD.
-- A verdict at `refs/verdicts/<branch>` reads `ship` or `conditional`, OR
-  the GitHub PR has at least one approving review. Use
-  `source scripts/lib/verdicts.sh && verdict_check_landable "<branch>"`.
+  is not `CONFLICTING`. A conflicted PR is a settlement problem, not a
+  shipping problem.
+- `/ci`, `/refactor`, and `/code-review` are installed and runnable in the
+  repo-local harness.
+- No merge, rebase, or cherry-pick is already in progress.
 
 ## Process
 
@@ -128,7 +134,36 @@ git commit -m "$msg"
 
 Body stays minimal. The trailers are the contract; prose is optional.
 
-### 5. Squash-merge
+### 5. Run the quality triad to convergence
+
+The final branch state must pass the quality triad after all archive/doc
+edits are committed. Run `/ci`, `/refactor`, and `/code-review` as
+parallel subagents against the current branch and base.
+
+Commission each subagent with a bounded role:
+
+- `/ci` owns green: run the repo's gates, fix mechanical lint/format/config
+  failures, and report any remaining blocker with the failing command.
+- `/refactor` owns lean: simplify the branch diff, remove unnecessary code,
+  and report when no material simplification remains.
+- `/code-review` owns clean: review for behavioral regressions, missing tests,
+  repo invariant violations, and unresolved review comments.
+
+Integrate their outputs on the shipping branch, commit the fixes, then
+rerun the triad on the new HEAD. Stop only when all three are true:
+
+- **Lean:** `/refactor` reports no material simplification left.
+- **Green:** `/ci` reports every required local/remote gate passing.
+- **Clean:** `/code-review` records `ship` or a satisfied `conditional`
+  verdict, with all blocking findings fixed.
+
+"Shiny" is the final human-facing polish check: PR body, docs, backlog
+state, trailers, and final report all describe the same shipped work.
+
+If a loop produces no progress and still has blockers, refuse with the
+blocking evidence instead of merging.
+
+### 6. Squash-merge
 
 **GitHub mode** (PR exists, `gh` available):
 
@@ -160,7 +195,7 @@ Detect mode by: remote URL + `gh` on PATH + `gh pr view` exit code.
 GitHub mode is preferred when available because it records the merge in
 the PR timeline.
 
-### 6. Pull master and verify trailers
+### 7. Pull master and verify trailers
 
 ```sh
 git checkout master
@@ -173,7 +208,7 @@ closing set. If any are missing, **stop and escalate** — the squash body
 construction dropped them and the fix must happen before `/groom` next
 sweeps.
 
-### 7. Invoke `/reflect cycle`
+### 8. Invoke `/reflect cycle`
 
 Bounded scope: the just-shipped work only. Pass as context:
 
@@ -188,7 +223,7 @@ Capture reflect's outputs:
 - Harness-tuning proposals (skill/agent/hook/AGENTS.md edits).
 - Retro notes and coaching output.
 
-### 8. Apply reflect's backlog mutations on master
+### 9. Apply reflect's backlog mutations on master
 
 Reflect may propose new tickets, edits to open tickets, or deletions. Apply
 them in-tree: add files to `backlog.d/`, edit existing tickets. Commit to
@@ -200,7 +235,7 @@ chore(backlog): apply reflect outputs from shipping <primary-id>
 
 If reflect proposed no backlog mutations, skip this commit.
 
-### 9. Apply harness-tuning outputs to a harness branch
+### 10. Apply harness-tuning outputs to a harness branch
 
 Reflect's harness proposals **never** land on master. Create or checkout
 the branch:
@@ -226,13 +261,14 @@ Return to master before finishing:
 git checkout master
 ```
 
-### 10. Final report
+### 11. Final report
 
 Emit a single block covering:
 
 - Merged SHA on master and PR number (if GitHub).
 - Closing IDs archived.
 - Reference IDs noted.
+- Quality triad result: loop count, CI state, refactor verdict, review verdict.
 - Docs touched (path list) or "none required."
 - Reflect outputs grouped by category: backlog mutations applied, harness
   proposals on `harness/reflect-outputs`, retro notes, coaching.
@@ -246,9 +282,10 @@ Stop and surface to the user instead of shipping:
 - Branch name doesn't match `^(type)/(\d+)-` — no primary ID extractable.
 - Working tree dirty.
 - On `master` / `main` directly.
-- Verdict ref reads `dont-ship` (`verdict_check_landable` returns 2).
-- `gh pr checks` red. Do not add a `--force` flag; refuse.
-- PR is not mergeable per `gh pr view --json mergeable,mergeStateStatus`.
+- Final `/code-review` verdict is `dont-ship`.
+- The quality triad cannot converge: `/ci`, `/refactor`, or `/code-review`
+  still reports blockers after fixes have stopped making progress.
+- PR is conflicted or otherwise not mergeable after the quality triad.
 - Primary ID has no `backlog.d/<id>-*.md` file AND no closing trailers on
   any branch commit — shipping with no backlog association. Operator must
   add a ticket or add a marker commit and re-run.
@@ -290,23 +327,34 @@ the merge. Behavior is otherwise identical: squash-only, trailer-preserving.
 
 ## Interactions
 
-- **Upstream:** `/settle` leaves the branch merge-ready. `/ship` assumes
-  that work is done; it does not re-run CI, code-review, or refactor.
-- **Invokes:** `/reflect cycle` for retro, backlog mutations, and
+- **Invokes before merge:** `/ci`, `/refactor`, and `/code-review` in a
+  repeated parallel triad until the latest HEAD is lean, green, clean, and
+  shiny.
+- **Invokes after merge:** `/reflect cycle` for retro, backlog mutations, and
   harness proposals.
+- **Complements `/settle`:** `/settle` can unblock a broken PR. `/ship` owns
+  the final quality loop and landing once the branch is ready to converge.
 - **Invoked by:** `/flywheel` as the landing + reflection stage of each
   cycle. `/flywheel` reads `/ship`'s final report to decide the next
   cycle.
 - **Complements `/yeet`:** `/yeet` ships the working tree to the remote
   (commits + push). `/ship` ships the branch to master (merge + archive
-  - reflect). Both are imperative finals; they operate at different
-    layers.
+  with reflection). Both are imperative finals; they operate at different
+  layers.
 
 ## Gotchas
 
 - **GitHub default squash body drops trailers.** `gh pr merge --squash`
   with no `--body` often uses the PR title + description, not commit
   trailers. Always pass `--body` with the trailer block explicitly.
+- **One green signal is not convergence.** A passing `/ci` run is necessary
+  but not enough. The final HEAD must have a fresh `/ci` pass, a fresh
+  `/refactor` "lean" verdict, and a fresh `/code-review` `ship` or satisfied
+  `conditional` verdict.
+- **Sequential self-review is not the triad.** The value comes from separate
+  subagents with fresh context checking CI, simplification, and review in
+  parallel. If the harness cannot dispatch subagents, say so and refuse rather
+  than quietly doing a weaker local approximation.
 - **All trailers live in ONE contiguous block at the end of the message.**
   A blank line between `Closes-backlog: NNN` lines and `Co-Authored-By:`
   splits the block; `git interpret-trailers --parse` only recognizes
@@ -345,6 +393,7 @@ Single report, plain text:
 Merged:     <sha> on master (PR #<n>)
 Closed:     029, 031
 Referenced: 024
+Quality:    3 triad loops; CI green; refactor lean; review ship
 Docs:       docs/context/lane-runtime.md (synced)
 Reflect:    2 backlog mutations applied, 3 harness proposals on
             harness/reflect-outputs, retro in .spellbook/reflect/<cycle>/
