@@ -176,15 +176,16 @@ The tailored inner/outer loop. Invoke via slash trigger; each skill's SKILL.md b
 
 ### Outer loop (merge → prod → watch → learn)
 
-| Skill                   | What it does here                                                                                                              |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `/settle` (`/land`)     | GitHub mode: fixes CI/conflicts/reviews; three bot-comment endpoints; squash-merge policy                                      |
-| `/yeet` (`/ship-local`) | Slices worktree into Conventional Commits; push; never master                                                                  |
-| `/deploy`               | Dual-target: Vercel auto + `CONVEX_DEPLOYMENT=prod:whimsical-marten-631 bunx convex deploy -y`; verifies env; produces receipt |
-| `/monitor`              | 10-min grace window over `/api/health`, Canary, Convex logs, Vercel state                                                      |
-| `/diagnose`             | Four-phase (root cause → pattern → hypothesis → fix); opens `INCIDENT-<UTC>.md` at repo root                                   |
-| `/flywheel`             | Drives backlog items through the full outer loop                                                                               |
-| `/reflect`              | Session/cycle retro; codifies into hooks, skills, memory, backlog                                                              |
+| Skill                   | What it does here                                                                                                                 |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `/settle` (`/land`)     | GitHub mode: fixes CI/conflicts/reviews; three bot-comment endpoints; squash-merge policy                                         |
+| `/ship`                 | Final mile from merge-ready to shipped: archive backlog tickets, preserve trailers in squash merge, run `/reflect`, apply outputs |
+| `/yeet` (`/ship-local`) | Slices worktree into Conventional Commits; push; never master                                                                     |
+| `/deploy`               | Dual-target: Vercel auto + `CONVEX_DEPLOYMENT=prod:whimsical-marten-631 bunx convex deploy -y`; verifies env; produces receipt    |
+| `/monitor`              | 10-min grace window over `/api/health`, Canary, Convex logs, Vercel state                                                         |
+| `/diagnose`             | Four-phase (root cause → pattern → hypothesis → fix); opens `INCIDENT-<UTC>.md` at repo root                                      |
+| `/flywheel`             | Drives backlog items through the full outer loop                                                                                  |
+| `/reflect`              | Session/cycle retro; codifies into hooks, skills, memory, backlog                                                                 |
 
 ### Maintenance
 

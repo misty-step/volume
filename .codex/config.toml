@@ -3,7 +3,7 @@
 # Cross-harness parity: the canonical skill root for this repo is
 # `.agents/skills/` (see .spellbook/repo-brief.md). `.claude/skills/` is a
 # symlink bridge to that same directory; Codex should discover the same
-# 23 tailored skills (universal / workflow / domain-invented) from there.
+# local workflow/domain skill bench from there.
 #
 # Per-harness settings merge additively — user-added entries in this file
 # (or in ~/.codex/config.toml) survive future /tailor runs. Only the
@@ -94,6 +94,10 @@ enabled = true
 
 [[skills.config]]
 path = "/Users/phaedrus/Development/volume/.agents/skills/settle/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "/Users/phaedrus/Development/volume/.agents/skills/ship/SKILL.md"
 enabled = true
 
 [[skills.config]]
