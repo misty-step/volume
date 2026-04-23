@@ -7,6 +7,7 @@ export type KickoffSource = "page_load" | "deeplink";
 const COACH_SESSION_STORAGE_PREFIX = "volume:coach-session";
 const COACH_SESSION_STORAGE_KEY_PREFIX = `${COACH_SESSION_STORAGE_PREFIX}:`;
 const COACH_SESSION_STORAGE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const COACH_SESSION_STORAGE_MAX_SESSIONS = 50;
 
 function logStorageWarning(
   operation: "read" | "write" | "prune",
@@ -21,6 +22,16 @@ function logStorageWarning(
 
 function getCoachSessionStorageKey(sessionId: string, suffix: string): string {
   return `${COACH_SESSION_STORAGE_PREFIX}:${sessionId}:${suffix}`;
+}
+
+function getSessionIdFromStorageKey(key: string): string | null {
+  if (!key.startsWith(COACH_SESSION_STORAGE_KEY_PREFIX)) return null;
+
+  const remainder = key.slice(COACH_SESSION_STORAGE_KEY_PREFIX.length);
+  const suffixSeparatorIndex = remainder.lastIndexOf(":");
+  if (suffixSeparatorIndex <= 0) return null;
+
+  return remainder.slice(0, suffixSeparatorIndex);
 }
 
 function readSessionStorageValue(
@@ -63,6 +74,10 @@ function pruneSessionTracking(now: number = Date.now()): void {
 
   try {
     const keysToRemove: string[] = [];
+    const sessionRecords = new Map<
+      string,
+      { latestTimestamp: number; keys: string[] }
+    >();
 
     for (let index = 0; index < window.localStorage.length; index += 1) {
       const key = window.localStorage.key(index);
@@ -70,8 +85,38 @@ function pruneSessionTracking(now: number = Date.now()): void {
 
       const storedValue = window.localStorage.getItem(key);
       const timestamp = Number(storedValue);
-      if (!Number.isFinite(timestamp) || timestamp < cutoff) {
+      const sessionId = getSessionIdFromStorageKey(key);
+      if (!Number.isFinite(timestamp) || timestamp < cutoff || !sessionId) {
         keysToRemove.push(key);
+        continue;
+      }
+
+      const existingRecord = sessionRecords.get(sessionId);
+      if (existingRecord) {
+        existingRecord.keys.push(key);
+        existingRecord.latestTimestamp = Math.max(
+          existingRecord.latestTimestamp,
+          timestamp
+        );
+        continue;
+      }
+
+      sessionRecords.set(sessionId, {
+        latestTimestamp: timestamp,
+        keys: [key],
+      });
+    }
+
+    const sessionsOverLimit =
+      sessionRecords.size - COACH_SESSION_STORAGE_MAX_SESSIONS;
+
+    if (sessionsOverLimit > 0) {
+      const oldestSessionRecords = Array.from(sessionRecords.values())
+        .sort((first, second) => first.latestTimestamp - second.latestTimestamp)
+        .slice(0, sessionsOverLimit);
+
+      for (const sessionRecord of oldestSessionRecords) {
+        keysToRemove.push(...sessionRecord.keys);
       }
     }
 
@@ -121,6 +166,7 @@ export function trackCoachKickoff(
     source,
   });
   markSessionEventTracked(sessionId, "kickoff_reached");
+  pruneSessionTracking();
 }
 
 export function trackCoachFirstTurn(trace: CoachTraceData): void {
@@ -149,4 +195,6 @@ export function trackCoachFirstTurn(trace: CoachTraceData): void {
     });
     markSessionEventTracked(trace.session_id, "first_log");
   }
+
+  pruneSessionTracking();
 }

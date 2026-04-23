@@ -81,7 +81,7 @@ CONVEX_DEPLOYMENT=prod:whimsical-marten-631 bunx convex deploy -y
 
 ## Env Vars
 
-**Next.js (Vercel):** `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_*_PRICE_ID`, `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `OPENROUTER_API_KEY`
+**Next.js (Vercel):** `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_*_PRICE_ID`, `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_CANARY_ENDPOINT`, `NEXT_PUBLIC_CANARY_API_KEY`, `CANARY_ENDPOINT`, `CANARY_API_KEY`, `OPENROUTER_API_KEY`
 
 **Convex (both deployments):** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `CLERK_JWT_ISSUER_DOMAIN`, `OPENROUTER_API_KEY`
 
@@ -121,7 +121,7 @@ curl https://volume.fitness/api/health | jq
 # 2. Check logs
 CONVEX_DEPLOYMENT=prod:whimsical-marten-631 bunx convex logs --history 100
 
-# 3. Check dashboards (Stripe webhooks, Clerk logs, Sentry)
+# 3. Check dashboards (Stripe webhooks, Clerk logs, Canary)
 ```
 
 ## References

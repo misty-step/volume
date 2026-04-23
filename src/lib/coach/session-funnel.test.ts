@@ -117,4 +117,31 @@ describe("session-funnel", () => {
       tool_calls_count: 1,
     });
   });
+
+  it("caps retained session tracking data to recent sessions", () => {
+    for (let index = 0; index < 51; index += 1) {
+      window.localStorage.setItem(
+        `volume:coach-session:session_${index}:kickoff_at`,
+        String(now - 51 + index)
+      );
+      window.localStorage.setItem(
+        `volume:coach-session:session_${index}:first_message`,
+        String(now - 51 + index)
+      );
+    }
+
+    trackCoachKickoff("session_new", "page_load");
+
+    const retainedSessionIds = new Set<string>();
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      const match = key?.match(/^volume:coach-session:([^:]+):/);
+      if (match) retainedSessionIds.add(match[1]);
+    }
+
+    expect(retainedSessionIds.size).toBe(50);
+    expect(retainedSessionIds.has("session_0")).toBe(false);
+    expect(retainedSessionIds.has("session_1")).toBe(false);
+    expect(retainedSessionIds.has("session_new")).toBe(true);
+  });
 });

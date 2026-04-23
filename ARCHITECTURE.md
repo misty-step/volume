@@ -14,14 +14,15 @@ Browser (Next.js)  <-->  Convex Cloud  <-->  External Services
 
 React components render state; hooks encapsulate behavior. No business logic lives here.
 
-| Directory | Owns | Does NOT Own |
-|-----------|------|--------------|
-| `app/` | Routes, layouts, pages | Data fetching logic |
-| `components/` | UI primitives, composed views | Business rules |
-| `hooks/` | Derived state, form logic | Persistence |
-| `lib/` | Pure utilities (dates, math, analytics) | Side effects |
+| Directory     | Owns                                    | Does NOT Own        |
+| ------------- | --------------------------------------- | ------------------- |
+| `app/`        | Routes, layouts, pages                  | Data fetching logic |
+| `components/` | UI primitives, composed views           | Business rules      |
+| `hooks/`      | Derived state, form logic               | Persistence         |
+| `lib/`        | Pure utilities (dates, math, analytics) | Side effects        |
 
 **Entry points:**
+
 - `app/(app)/page.tsx` - Dashboard (log workout)
 - `app/(app)/history/page.tsx` - Set history
 - `app/(app)/exercises/page.tsx` - Exercise management
@@ -32,15 +33,15 @@ React components render state; hooks encapsulate behavior. No business logic liv
 
 Convex functions own all data mutations. Every user action flows through here.
 
-| File | Owns | Interface |
-|------|------|-----------|
-| `schema.ts` | Data shapes, indexes | Single source of truth |
-| `exercises.ts` | CRUD + soft delete + muscle groups | `create`, `list`, `delete` |
-| `sets.ts` | Logging + validation | `logSet`, `listSets`, `deleteSet` |
-| `users.ts` | Profile + preferences + subscriptions | `get`, `update`, `getSubscriptionStatus` |
-| `analytics.ts` | Weekly aggregation, AI reports | Scheduled cron |
-| `crons.ts` | Scheduled jobs | Automatic |
-| `http.ts` | Stripe webhooks | POST handlers |
+| File           | Owns                                  | Interface                                |
+| -------------- | ------------------------------------- | ---------------------------------------- |
+| `schema.ts`    | Data shapes, indexes                  | Single source of truth                   |
+| `exercises.ts` | CRUD + soft delete + muscle groups    | `create`, `list`, `delete`               |
+| `sets.ts`      | Logging + validation                  | `logSet`, `listSets`, `deleteSet`        |
+| `users.ts`     | Profile + preferences + subscriptions | `get`, `update`, `getSubscriptionStatus` |
+| `analytics.ts` | Weekly aggregation, AI reports        | Scheduled cron                           |
+| `crons.ts`     | Scheduled jobs                        | Automatic                                |
+| `http.ts`      | Stripe webhooks                       | POST handlers                            |
 
 **Security pattern:** Every mutation verifies auth (`ctx.auth.getUserIdentity()`) and ownership before write.
 
@@ -48,13 +49,13 @@ Convex functions own all data mutations. Every user action flows through here.
 
 ### 3. External Services
 
-| Service | Purpose | Integration Point |
-|---------|---------|-------------------|
-| Clerk | Auth, user management | Middleware + Convex auth |
-| OpenAI | Muscle group classification, reports | `convex/ai/` actions |
-| Stripe | Payments, subscriptions | `convex/http.ts` webhooks |
-| Sentry | Error tracking | Client + server configs |
-| Vercel Analytics | Product metrics | `lib/analytics.ts` |
+| Service          | Purpose                              | Integration Point                          |
+| ---------------- | ------------------------------------ | ------------------------------------------ |
+| Clerk            | Auth, user management                | Middleware + Convex auth                   |
+| OpenAI           | Muscle group classification, reports | `convex/ai/` actions                       |
+| Stripe           | Payments, subscriptions              | `convex/http.ts` webhooks                  |
+| Canary           | Error tracking                       | `src/instrumentation.ts` + client reporter |
+| Vercel Analytics | Product metrics                      | `lib/analytics.ts`                         |
 
 ## Data Flow
 
@@ -80,24 +81,28 @@ Real-time update <---- Subscription pushes change
 ## Key Patterns
 
 ### Soft Delete (exercises)
+
 Exercises are never hard-deleted. `deletedAt` timestamp hides from UI while preserving history. Creating an exercise with the same name auto-restores the soft-deleted version.
 
 ### Rate Limiting
+
 `rateLimits` table + `assertRateLimit` helper. Fixed-window counters prevent AI endpoint abuse. See [ADR-0001](docs/adr/ADR-0001-rate-limits.md).
 
 ### Subscription Gating
+
 `PaywallGate` component + `getSubscriptionStatus` query. Trial users get 14 days; expired users see upgrade prompt. Stripe webhooks keep status in sync.
 
 ### Real-time Sync
+
 Convex queries automatically subscribe to changes. No manual polling or cache invalidation.
 
 ## Shallow Modules (use carefully)
 
-| Module | Why It's Shallow | Mitigation |
-|--------|------------------|------------|
-| `lib/analytics.ts` | Large interface, many event types | Use typed helpers |
-| `convex/crons.ts` | Growing list of jobs | Document each job's purpose |
-| `components/ui/` | Thin wrappers over shadcn | Accept as intentional pass-through |
+| Module             | Why It's Shallow                  | Mitigation                         |
+| ------------------ | --------------------------------- | ---------------------------------- |
+| `lib/analytics.ts` | Large interface, many event types | Use typed helpers                  |
+| `convex/crons.ts`  | Growing list of jobs              | Document each job's purpose        |
+| `components/ui/`   | Thin wrappers over shadcn         | Accept as intentional pass-through |
 
 ## Where to Start Reading
 

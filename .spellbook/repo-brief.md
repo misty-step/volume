@@ -18,17 +18,17 @@ programming app. A measurement instrument with opinions.
 
 ## Stack & Boundaries
 
-| Layer                  | Stack                                       | Owns                                                                  |
-| ---------------------- | ------------------------------------------- | --------------------------------------------------------------------- |
-| `src/app/`             | Next.js 16 App Router + React 19            | Routes, layouts, pages — no business logic                            |
-| `src/components/`      | Tailwind 3 + shadcn/Radix                   | UI primitives + composed views — no persistence, no direct fetch      |
-| `src/hooks/`           | React                                       | Derived state, form logic — no side effects beyond what's wrapped     |
-| `src/lib/`             | Node/browser                                | Pure utilities — dates, math, analytics, logger, architecture-checker |
-| `convex/`              | Convex runtime                              | ALL data mutations, auth checks, subscription state                   |
-| `packages/canary-sdk/` | Workspace lib                               | `@canary-obs/sdk` — custom observability SDK                          |
-| `e2e/`                 | Playwright                                  | End-to-end specs, Clerk/Convex fixtures                               |
-| `dagger/`              | Dagger TS SDK                               | Local-equals-remote CI pipeline                                       |
-| External               | Clerk · Stripe · OpenRouter · Sentry/Canary | Auth · payments · AI via AI SDK v6 · observability                    |
+| Layer                  | Stack                                | Owns                                                                  |
+| ---------------------- | ------------------------------------ | --------------------------------------------------------------------- |
+| `src/app/`             | Next.js 16 App Router + React 19     | Routes, layouts, pages — no business logic                            |
+| `src/components/`      | Tailwind 3 + shadcn/Radix            | UI primitives + composed views — no persistence, no direct fetch      |
+| `src/hooks/`           | React                                | Derived state, form logic — no side effects beyond what's wrapped     |
+| `src/lib/`             | Node/browser                         | Pure utilities — dates, math, analytics, logger, architecture-checker |
+| `convex/`              | Convex runtime                       | ALL data mutations, auth checks, subscription state                   |
+| `packages/canary-sdk/` | Workspace lib                        | `@canary-obs/sdk` — custom observability SDK                          |
+| `e2e/`                 | Playwright                           | End-to-end specs, Clerk/Convex fixtures                               |
+| `dagger/`              | Dagger TS SDK                        | Local-equals-remote CI pipeline                                       |
+| External               | Clerk · Stripe · OpenRouter · Canary | Auth · payments · AI via AI SDK v6 · observability                    |
 
 Package manager is **bun 1.3.9**. Workspaces: `packages/*`. Lockfile: `bun.lock`.
 No `pnpm`, `npm install`, or `yarn` — if a skill reaches for those, it's wrong.
@@ -167,7 +167,7 @@ mutation for exercise creation · ADR-0008 OpenRouter model portfolio.
 - **Soft delete** — exercises only. `deletedAt` timestamp. Same-name create
   auto-restores (ADR-0002).
 - **Canary** — `packages/canary-sdk`, the custom observability SDK. Consumed
-  by `src/instrumentation.ts` + Sentry server/edge configs.
+  by `src/instrumentation.ts` + `src/components/canary-client-reporter.tsx`.
 - **Incident trace** — `INCIDENT-<UTC-timestamp>.md` at repo root during an
   active incident; moves to `docs/postmortems/` after resolution.
 - **Backlog item** — `backlog.d/<NNN>-<slug>.md`. Archive to `backlog.d/_done/`
