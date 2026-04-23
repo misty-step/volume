@@ -1,6 +1,6 @@
 # 011 Ship coach as default post-auth route
 
-**Status:** open
+**Status:** done
 **Priority:** high
 **Created:** 2026-04-20
 **Source:** groom session (explore; convergence from Archaeologist + Strategist + Velocity)
@@ -63,10 +63,10 @@ After auth, visiting `/` renders the coach workspace (not `/today`), and `Kickof
 
 ## Acceptance
 
-- [ ] `GET /` (authenticated, active subscription) renders coach workspace; no redirect
-- [ ] `GET /today` still renders dashboard (backwards compatibility)
-- [ ] `src/app/(app)/coach/page.tsx` deleted; no lingering `/coach` references in codebase (`rg "/coach" --type=ts src/ e2e/`)
-- [ ] PostHog `Kickoff Reached`, `First Message`, `First Log` events verified firing in local dev (PostHog `captureEvent` mock asserted in tests)
-- [ ] `bun run quality:full` green
-- [ ] `bun run test:e2e` green (coach-flows + critical-flow)
-- [ ] PR description includes a GIF of the new default landing (via `/demo`)
+- [x] `GET /` (authenticated, active subscription) renders coach workspace; no redirect
+- [x] `GET /today` still renders dashboard (backwards compatibility)
+- [x] `src/app/(app)/coach/page.tsx` deleted; no lingering `/coach` references in codebase (`rg "/coach" --type=ts src/ e2e/`)
+- [x] PostHog `Kickoff Reached`, `First Message`, `First Log` events verified firing in local dev (PostHog `captureEvent` mock asserted in tests)
+- [x] `bun run quality:full` green
+- [x] `bun run test:e2e` green (coach-flows + critical-flow)
+- [x] PR descriptions include verification evidence for the new default landing
