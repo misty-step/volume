@@ -27,12 +27,12 @@ Pure functions and utilities. No React dependencies (except `brutalist-motion.ts
 
 ## Observability
 
-| File                 | Purpose                                                  |
-| -------------------- | -------------------------------------------------------- |
-| `analytics.ts`       | Event tracking, user context (Vercel Analytics + Sentry) |
-| `analytics-utils.ts` | Analytics helpers                                        |
-| `sentry.ts`          | Sentry configuration factory with PII scrubbing          |
-| `error-handler.ts`   | Mutation error handling with toast notifications         |
+| File                 | Purpose                                                |
+| -------------------- | ------------------------------------------------------ |
+| `analytics.ts`       | Event tracking, user context, and Canary error capture |
+| `analytics-utils.ts` | Analytics helpers                                      |
+| `canary.ts`          | Canary runtime configuration                           |
+| `error-handler.ts`   | Mutation error handling with toast notifications       |
 
 ## UI Support
 

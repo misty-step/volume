@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getCanaryInitOptions } from "@/lib/canary";
+import {
+  getCanaryInitOptions,
+  getServerCanaryConfigSource,
+} from "@/lib/canary";
+import { hasInvalidHttpUrl } from "@/lib/http-url";
 import { resolveVersion } from "@/lib/version";
 import { getDeploymentEnvironment } from "@/lib/environment";
 import {
@@ -41,7 +45,7 @@ function getStripeKeyMode(
  * - Convex: Backend connectivity
  * - Stripe: Payment configuration (checkout and pricing)
  * - Coach runtime: OpenRouter API key availability for agent execution
- * - Error tracking: Canary and/or Sentry runtime capture for browser + server
+ * - Error tracking: Canary runtime capture for browser + server
  *
  * @returns 200 with health status when healthy, 503 when unhealthy
  */
@@ -74,19 +78,34 @@ export async function GET() {
   const stripeHealthy = stripeConfigured && !keyEnvMismatch;
   const coachRuntimeHealthy = isOpenRouterConfigured();
   const coachRuntimeMetadata = getCoachRuntimeHealthMetadata();
-  const clientSentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN?.trim();
-  const serverSentryDsn = process.env.SENTRY_DSN?.trim();
   const clientCanaryConfigured = Boolean(getCanaryInitOptions("client"));
-  const serverCanaryConfigured = Boolean(getCanaryInitOptions("server"));
-  const clientErrorTrackingHealthy = Boolean(
-    clientSentryDsn || clientCanaryConfigured
+  const serverCanaryConfigSource = getServerCanaryConfigSource();
+  const serverCanaryConfigured = serverCanaryConfigSource !== null;
+  const serverCanaryDedicated = serverCanaryConfigSource === "dedicated";
+  const clientCanaryEndpointInvalid = hasInvalidHttpUrl(
+    process.env.NEXT_PUBLIC_CANARY_ENDPOINT
   );
-  const serverErrorTrackingHealthy = Boolean(
-    serverSentryDsn || serverCanaryConfigured
+  const dedicatedServerCanaryEndpointInvalid = hasInvalidHttpUrl(
+    process.env.CANARY_ENDPOINT
   );
   const errorTrackingHealthy =
-    clientErrorTrackingHealthy && serverErrorTrackingHealthy;
-  const sentryHealthy = Boolean(clientSentryDsn && serverSentryDsn);
+    clientCanaryConfigured &&
+    serverCanaryConfigured &&
+    (!isProd || serverCanaryDedicated);
+  let errorTrackingReason: string | undefined;
+  if (!errorTrackingHealthy) {
+    if (clientCanaryEndpointInvalid && dedicatedServerCanaryEndpointInvalid) {
+      errorTrackingReason = "invalid public and dedicated Canary endpoint URL";
+    } else if (clientCanaryEndpointInvalid) {
+      errorTrackingReason = "invalid public Canary endpoint URL";
+    } else if (isProd && dedicatedServerCanaryEndpointInvalid) {
+      errorTrackingReason = "invalid dedicated Canary endpoint URL";
+    } else if (isProd && !serverCanaryDedicated) {
+      errorTrackingReason = "missing dedicated server Canary configuration";
+    } else if (!clientCanaryConfigured || !serverCanaryConfigured) {
+      errorTrackingReason = "missing required Canary configuration";
+    }
+  }
 
   const isHealthy =
     clientRuntimeHealthy &&
@@ -125,30 +144,15 @@ export async function GET() {
       }),
       errorTracking: errorTrackingHealthy
         ? createCheck("pass", {
-            clientProviders: {
-              sentry: Boolean(clientSentryDsn),
-              canary: clientCanaryConfigured,
-            },
-            serverProviders: {
-              sentry: Boolean(serverSentryDsn),
-              canary: serverCanaryConfigured,
-            },
+            clientConfigured: clientCanaryConfigured,
+            serverConfigured: serverCanaryConfigured,
+            serverKeySource: serverCanaryConfigSource ?? "missing",
           })
         : createCheck("fail", {
-            clientProviders: {
-              sentry: Boolean(clientSentryDsn),
-              canary: clientCanaryConfigured,
-            },
-            serverProviders: {
-              sentry: Boolean(serverSentryDsn),
-              canary: serverCanaryConfigured,
-            },
-            reason: "missing required error-tracking configuration",
-          }),
-      sentry: sentryHealthy
-        ? createCheck("pass")
-        : createCheck("fail", {
-            reason: "missing required error-tracking configuration",
+            clientConfigured: clientCanaryConfigured,
+            serverConfigured: serverCanaryConfigured,
+            serverKeySource: serverCanaryConfigSource ?? "missing",
+            reason: errorTrackingReason,
           }),
     },
   };

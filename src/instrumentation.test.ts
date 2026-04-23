@@ -29,7 +29,19 @@ describe("instrumentation register", () => {
     process.env = originalEnv;
   });
 
-  it("initializes server Canary from public fallback env", async () => {
+  it("does not initialize production server Canary from public fallback env", async () => {
+    process.env.NEXT_PUBLIC_CANARY_ENDPOINT = "https://canary.example";
+    process.env.NEXT_PUBLIC_CANARY_API_KEY = "public-key";
+
+    vi.resetModules();
+    const { register } = await import("./instrumentation");
+    register();
+
+    expect(initCanaryMock).not.toHaveBeenCalled();
+  });
+
+  it("initializes non-production server Canary from public fallback env", async () => {
+    process.env.NODE_ENV = "development";
     process.env.NEXT_PUBLIC_CANARY_ENDPOINT = "https://canary.example";
     process.env.NEXT_PUBLIC_CANARY_API_KEY = "public-key";
 
@@ -41,7 +53,7 @@ describe("instrumentation register", () => {
       endpoint: "https://canary.example",
       apiKey: "public-key",
       service: "volume",
-      environment: "production",
+      environment: "development",
       scrubPii: true,
     });
   });

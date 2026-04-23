@@ -1,6 +1,8 @@
 import type { InitOptions } from "@canary-obs/sdk";
+import { readHttpUrl } from "@/lib/http-url";
 
 export type CanaryTarget = "client" | "server";
+export type ServerCanaryConfigSource = "dedicated" | "public_fallback";
 
 type EnvSource = NodeJS.ProcessEnv;
 
@@ -9,28 +11,71 @@ function readNonEmpty(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-export function getCanaryInitOptions(
-  target: CanaryTarget,
-  env: EnvSource = process.env
-): InitOptions | null {
-  const endpoint =
-    target === "server"
-      ? (readNonEmpty(env.CANARY_ENDPOINT) ??
-        readNonEmpty(env.NEXT_PUBLIC_CANARY_ENDPOINT))
-      : readNonEmpty(env.NEXT_PUBLIC_CANARY_ENDPOINT);
-  const apiKey =
-    target === "server"
-      ? (readNonEmpty(env.CANARY_API_KEY) ??
-        readNonEmpty(env.NEXT_PUBLIC_CANARY_API_KEY))
-      : readNonEmpty(env.NEXT_PUBLIC_CANARY_API_KEY);
+function getPublicCanaryConfig(env: EnvSource) {
+  const endpoint = readHttpUrl(env.NEXT_PUBLIC_CANARY_ENDPOINT);
+  const apiKey = readNonEmpty(env.NEXT_PUBLIC_CANARY_API_KEY);
 
   if (!endpoint || !apiKey) {
     return null;
   }
 
+  return { endpoint, apiKey };
+}
+
+function getDedicatedServerCanaryConfig(env: EnvSource) {
+  const endpoint = readHttpUrl(env.CANARY_ENDPOINT);
+  const apiKey = readNonEmpty(env.CANARY_API_KEY);
+
+  if (!endpoint || !apiKey) {
+    return null;
+  }
+
+  return { endpoint, apiKey };
+}
+
+function allowsPublicServerFallback(env: EnvSource): boolean {
+  if (env.VERCEL_ENV === "production") return false;
+  if (env.VERCEL_ENV === "preview") return true;
+  return env.NODE_ENV !== "production";
+}
+
+function getServerCanaryConfig(env: EnvSource) {
+  return (
+    getDedicatedServerCanaryConfig(env) ??
+    (allowsPublicServerFallback(env) ? getPublicCanaryConfig(env) : null)
+  );
+}
+
+export function getServerCanaryConfigSource(
+  env: EnvSource = process.env
+): ServerCanaryConfigSource | null {
+  if (getDedicatedServerCanaryConfig(env)) {
+    return "dedicated";
+  }
+
+  if (allowsPublicServerFallback(env) && getPublicCanaryConfig(env)) {
+    return "public_fallback";
+  }
+
+  return null;
+}
+
+export function getCanaryInitOptions(
+  target: CanaryTarget,
+  env: EnvSource = process.env
+): InitOptions | null {
+  const config =
+    target === "server"
+      ? getServerCanaryConfig(env)
+      : getPublicCanaryConfig(env);
+
+  if (!config) {
+    return null;
+  }
+
   return {
-    endpoint,
-    apiKey,
+    endpoint: config.endpoint,
+    apiKey: config.apiKey,
     service: "volume",
     environment: env.NODE_ENV ?? "production",
     scrubPii: true,

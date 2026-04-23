@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { reportError } from "@/lib/analytics";
+import { COACH_HOME_PATH } from "@/lib/coach/routes";
 import { createChildLogger } from "@/lib/logger";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/../convex/_generated/api";
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
           quantity: 1,
         },
       ],
-      success_url: `${baseUrl}/today?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${baseUrl}${COACH_HOME_PATH}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/pricing?checkout=canceled`,
       metadata: {
         clerkUserId: userId,

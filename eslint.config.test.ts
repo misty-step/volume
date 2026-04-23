@@ -61,7 +61,7 @@ describe("Next env direct access guard", () => {
 describe("client env guard", () => {
   it("rejects direct server-only env reads in .client modules", async () => {
     const messages = await lintClientText(
-      "export const sentryDsn = process.env.SENTRY_DSN;"
+      "export const canaryKey = process.env.CANARY_API_KEY;"
     );
 
     expect(messages).toContain(
@@ -71,7 +71,7 @@ describe("client env guard", () => {
 
   it("rejects aliased process.env access in .client modules", async () => {
     const messages = await lintClientText(
-      "const env = process.env;\nexport const sentryDsn = env.SENTRY_DSN;"
+      "const env = process.env;\nexport const canaryKey = env.CANARY_API_KEY;"
     );
 
     expect(messages).toContain(
@@ -81,7 +81,7 @@ describe("client env guard", () => {
 
   it("rejects computed process.env access in .client modules", async () => {
     const messages = await lintClientText(
-      "const key = 'SENTRY_DSN';\nexport const sentryDsn = process.env[key];"
+      "const key = 'CANARY_API_KEY';\nexport const canaryKey = process.env[key];"
     );
 
     expect(messages).toContain(

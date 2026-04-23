@@ -6,17 +6,17 @@ Subagents: before dispatch, read `.spellbook/repo-brief.md` — the shared spine
 
 ## Stack & Boundaries
 
-| Layer                  | Owns                                                                                            | Runtime                           | Constraints                                           |
-| ---------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------- | ----------------------------------------------------- |
-| `src/app/`             | Routes, layouts, pages (App Router)                                                             | Next.js 16 + React 19             | No business logic; data via Convex hooks              |
-| `src/components/`      | UI primitives + composed views                                                                  | React + Tailwind 3 + shadcn/Radix | No persistence; no direct fetch                       |
-| `src/hooks/`           | Derived state, form logic                                                                       | React                             | No side effects beyond what the hook wraps            |
-| `src/lib/`             | Pure utilities (dates, math, analytics, logger, architecture-checker)                           | Node/browser                      | No Convex/Clerk imports except as typed utilities     |
-| `convex/`              | ALL data mutations, auth checks, subscription state                                             | Convex runtime                    | No Next.js imports; `@/lib/...` alias only            |
-| `packages/canary-sdk/` | Custom observability SDK (`@canary-obs/sdk`)                                                    | Workspace lib                     | Consumed by `src/instrumentation.ts` + server configs |
-| `e2e/`                 | Playwright specs, Clerk/Convex fixtures                                                         | Node                              | Runs against `bun run dev`                            |
-| `dagger/`              | Local-equals-remote CI pipeline                                                                 | Dagger TS SDK                     | `dagger call check --source .`                        |
-| External               | Clerk (auth), Stripe (payments), OpenRouter (AI via AI SDK v6), Sentry + Canary (observability) | —                                 | See env-var contract below                            |
+| Layer                  | Owns                                                                                   | Runtime                           | Constraints                                            |
+| ---------------------- | -------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------ |
+| `src/app/`             | Routes, layouts, pages (App Router)                                                    | Next.js 16 + React 19             | No business logic; data via Convex hooks               |
+| `src/components/`      | UI primitives + composed views                                                         | React + Tailwind 3 + shadcn/Radix | No persistence; no direct fetch                        |
+| `src/hooks/`           | Derived state, form logic                                                              | React                             | No side effects beyond what the hook wraps             |
+| `src/lib/`             | Pure utilities (dates, math, analytics, logger, architecture-checker)                  | Node/browser                      | No Convex/Clerk imports except as typed utilities      |
+| `convex/`              | ALL data mutations, auth checks, subscription state                                    | Convex runtime                    | No Next.js imports; `@/lib/...` alias only             |
+| `packages/canary-sdk/` | Custom observability SDK (`@canary-obs/sdk`)                                           | Workspace lib                     | Consumed by `src/instrumentation.ts` + client reporter |
+| `e2e/`                 | Playwright specs, Clerk/Convex fixtures                                                | Node                              | Runs against `bun run dev`                             |
+| `dagger/`              | Local-equals-remote CI pipeline                                                        | Dagger TS SDK                     | `dagger call check --source .`                         |
+| External               | Clerk (auth), Stripe (payments), OpenRouter (AI via AI SDK v6), Canary (observability) | —                                 | See env-var contract below                             |
 
 Package manager: **bun 1.3.9**. Workspaces: `packages/*`. Lockfile: `bun.lock`.
 
@@ -29,7 +29,7 @@ Package manager: **bun 1.3.9**. Workspaces: `packages/*`. Lockfile: `bun.lock`.
 | `src/lib/architecture-checker.ts` | Import boundaries + cycle rules (driven by `bun run architecture:check`)                                                                                    |
 | `vitest.config.ts`                | Coverage thresholds: lines 52, branches 83, functions 73, statements 52; excludes                                                                           |
 | `.lefthook.yml`                   | Local quality gates (pre-commit, commit-msg, pre-push, post-checkout)                                                                                       |
-| `.github/workflows/ci.yml`        | Remote merge-gate: setup → {lint, typecheck, architecture, test, security-audit, build} → merge-gate                                                        |
+| `.github/workflows/ci.yml`        | Remote merge-gate thin wrapper: checkout → `dagger call check --source .` → merge-gate status                                                               |
 | `dagger.json` + `dagger/src/`     | Canonical pipeline                                                                                                                                          |
 | `docs/adr/ADR-0001..0008.md`      | Rate limits · soft delete · Stripe webhook · AI report versioning · platform stats · subscription state machine · action-vs-mutation · OpenRouter portfolio |
 | `docs/patterns/coach-tools.md`    | Coach tool development pattern                                                                                                                              |
@@ -110,7 +110,7 @@ Package manager: **bun 1.3.9**. Workspaces: `packages/*`. Lockfile: `bun.lock`.
 | Lefthook `commit-msg`                              | commit                  | commitlint (Conventional Commits)                                                                                                                                                                                   |
 | Lefthook `pre-push`                                | `git push` (parallel)   | `NODE_ENV=test CI=true bun run test:coverage` · `bun run security:audit` · `bun run architecture:check` · `bun run build` (master: `bun run analyze`) · `./scripts/verify-env.sh --prod-only --quiet` (master only) |
 | Lefthook `post-checkout`                           | branch switch           | Convex type regeneration reminder                                                                                                                                                                                   |
-| GitHub Actions `ci.yml`                            | push/PR                 | Parallel {lint, typecheck, architecture, test (+coverage), security-audit, build} → merge-gate commit status                                                                                                        |
+| GitHub Actions `ci.yml`                            | push/PR                 | Thin wrapper around `dagger call check --source .` that publishes the merge-gate commit status                                                                                                                      |
 | GitHub Actions `e2e.yml`                           | PR                      | Playwright                                                                                                                                                                                                          |
 | GitHub Actions `trufflehog.yml`                    | PR                      | Secret scan                                                                                                                                                                                                         |
 | GitHub Actions `release-please.yml`                | master merge            | Release PR / tag / GitHub release                                                                                                                                                                                   |
@@ -120,15 +120,17 @@ Package manager: **bun 1.3.9**. Workspaces: `packages/*`. Lockfile: `bun.lock`.
 
 ### Env-var contract (verified by `./scripts/verify-env.sh`)
 
-| Vercel (Next)                          | Convex (both deployments) |
-| -------------------------------------- | ------------------------- |
-| `STRIPE_SECRET_KEY`                    | `STRIPE_SECRET_KEY`       |
-| `NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID`  | `STRIPE_WEBHOOK_SECRET`   |
-| `NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID`   | `CLERK_JWT_ISSUER_DOMAIN` |
-| `NEXT_PUBLIC_CONVEX_URL`               | `OPENROUTER_API_KEY`      |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`    |                           |
-| `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN` |                           |
-| `OPENROUTER_API_KEY`                   |                           |
+| Vercel (Next)                         | Convex (both deployments) |
+| ------------------------------------- | ------------------------- |
+| `STRIPE_SECRET_KEY`                   | `STRIPE_SECRET_KEY`       |
+| `NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID` | `STRIPE_WEBHOOK_SECRET`   |
+| `NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID`  | `CLERK_JWT_ISSUER_DOMAIN` |
+| `NEXT_PUBLIC_CONVEX_URL`              | `OPENROUTER_API_KEY`      |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`   |                           |
+| `NEXT_PUBLIC_CANARY_ENDPOINT`         |                           |
+| `NEXT_PUBLIC_CANARY_API_KEY`          |                           |
+| `CANARY_ENDPOINT`, `CANARY_API_KEY`   |                           |
+| `OPENROUTER_API_KEY`                  |                           |
 
 Prod Convex deployment: `prod:whimsical-marten-631`.
 
@@ -179,7 +181,7 @@ The tailored inner/outer loop. Invoke via slash trigger; each skill's SKILL.md b
 | `/settle` (`/land`)     | GitHub mode: fixes CI/conflicts/reviews; three bot-comment endpoints; squash-merge policy                                      |
 | `/yeet` (`/ship-local`) | Slices worktree into Conventional Commits; push; never master                                                                  |
 | `/deploy`               | Dual-target: Vercel auto + `CONVEX_DEPLOYMENT=prod:whimsical-marten-631 bunx convex deploy -y`; verifies env; produces receipt |
-| `/monitor`              | 10-min grace window over `/api/health`, Sentry, Canary, Convex logs, Vercel state                                              |
+| `/monitor`              | 10-min grace window over `/api/health`, Canary, Convex logs, Vercel state                                                      |
 | `/diagnose`             | Four-phase (root cause → pattern → hypothesis → fix); opens `INCIDENT-<UTC>.md` at repo root                                   |
 | `/flywheel`             | Drives backlog items through the full outer loop                                                                               |
 | `/reflect`              | Session/cycle retro; codifies into hooks, skills, memory, backlog                                                              |

@@ -42,6 +42,23 @@ function _testValidEvents(): void {
     setCount: 12,
   });
 
+  trackEvent("Kickoff Reached", {
+    session_id: "session-1",
+    source: "page_load",
+  });
+
+  trackEvent("First Message", {
+    session_id: "session-1",
+    turn_index: 0,
+    tool_calls_count: 1,
+  });
+
+  trackEvent("First Log", {
+    session_id: "session-1",
+    exercise: "Push-ups",
+    time_to_first_log_ms: 1200,
+  });
+
   trackEvent("Coach Message Sent", {
     messageLength: 42,
     turnIndex: 0,

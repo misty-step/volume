@@ -35,19 +35,35 @@ vi.mock("@/lib/analytics", () => ({
 }));
 
 const mockSendMessage = vi.fn();
+const chatCallbacks: {
+  onData?: ((dataPart: unknown) => void) | undefined;
+  onFinish?: ((event: Record<string, unknown>) => void) | undefined;
+} = {};
 const mockMessages: Array<{
   id: string;
   role: string;
   parts: Array<{ type: string; text?: string }>;
 }> = [];
+let mockStatus = "ready";
+
+const mockUseChat = vi.fn(
+  (options?: {
+    onData?: (dataPart: unknown) => void;
+    onFinish?: (event: Record<string, unknown>) => void;
+  }) => {
+    chatCallbacks.onData = options?.onData;
+    chatCallbacks.onFinish = options?.onFinish;
+    return {
+      messages: [...mockMessages],
+      status: mockStatus,
+      error: undefined,
+      sendMessage: mockSendMessage,
+    };
+  }
+);
 
 vi.mock("@ai-sdk/react", () => ({
-  useChat: vi.fn(() => ({
-    messages: [...mockMessages],
-    status: "ready",
-    error: undefined,
-    sendMessage: mockSendMessage,
-  })),
+  useChat: (options?: unknown) => mockUseChat(options),
 }));
 
 describe("useCoachChat", () => {
@@ -58,6 +74,10 @@ describe("useCoachChat", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockMessages.length = 0;
+    mockStatus = "ready";
+    chatCallbacks.onData = undefined;
+    chatCallbacks.onFinish = undefined;
+    window.localStorage.clear();
     vi.stubGlobal("fetch", mockFetch);
     mockFetch.mockResolvedValue({
       ok: false,
@@ -89,6 +109,20 @@ describe("useCoachChat", () => {
     });
   });
 
+  it("tracks kickoff reached once per session when the workspace boots", async () => {
+    renderHook(() => useCoachChat());
+
+    await waitFor(() => {
+      expect(analyticsMocks.mockTrackEvent).toHaveBeenCalledWith(
+        "Kickoff Reached",
+        {
+          session_id: "session_123",
+          source: "page_load",
+        }
+      );
+    });
+  });
+
   it("sends a prompt via useChat sendMessage", async () => {
     const { result } = renderHook(() => useCoachChat());
 
@@ -115,6 +149,84 @@ describe("useCoachChat", () => {
     );
   });
 
+  it("tracks first message and first log from streamed coach trace data", async () => {
+    const { result } = renderHook(() => useCoachChat());
+
+    await waitFor(() => {
+      expect(getOrCreateTodaySessionMock).toHaveBeenCalled();
+    });
+
+    await act(async () => {
+      await result.current.sendPrompt("log 10 pushups");
+    });
+
+    act(() => {
+      chatCallbacks.onData?.({
+        type: "data-coach_trace",
+        data: {
+          session_id: "session_123",
+          tool_calls_count: 1,
+          turn_index: 0,
+          first_logged_exercise: "Push-ups",
+        },
+      });
+      chatCallbacks.onFinish?.({
+        isAbort: false,
+        isDisconnect: false,
+        isError: false,
+      });
+    });
+
+    expect(analyticsMocks.mockTrackEvent).toHaveBeenCalledWith(
+      "First Message",
+      {
+        session_id: "session_123",
+        turn_index: 0,
+        tool_calls_count: 1,
+      }
+    );
+    expect(analyticsMocks.mockTrackEvent).toHaveBeenCalledWith("First Log", {
+      session_id: "session_123",
+      exercise: "Push-ups",
+      time_to_first_log_ms: expect.any(Number),
+    });
+  });
+
+  it.each([
+    { isAbort: true, isDisconnect: false, isError: false },
+    { isAbort: false, isDisconnect: true, isError: false },
+    { isAbort: false, isDisconnect: false, isError: true },
+    { isAbort: false, isDisconnect: false, isError: false },
+  ])(
+    "does not track first-turn events when finish is not eligible: %j",
+    async (finishEvent) => {
+      renderHook(() => useCoachChat());
+
+      await waitFor(() => {
+        expect(getOrCreateTodaySessionMock).toHaveBeenCalled();
+      });
+
+      analyticsMocks.mockTrackEvent.mockClear();
+
+      act(() => {
+        if (
+          !finishEvent.isError &&
+          !finishEvent.isAbort &&
+          !finishEvent.isDisconnect
+        ) {
+          chatCallbacks.onData?.({
+            type: "data-unknown",
+            data: {},
+          });
+        }
+
+        chatCallbacks.onFinish?.(finishEvent);
+      });
+
+      expect(analyticsMocks.mockTrackEvent).not.toHaveBeenCalled();
+    }
+  );
+
   it("submits follow-up prompts through the typed submit_prompt action", async () => {
     const { result } = renderHook(() => useCoachChat());
 
@@ -132,6 +244,41 @@ describe("useCoachChat", () => {
       { text: "show today's summary" },
       expect.any(Object)
     );
+  });
+
+  it("lets generated UI handlers captured during streaming submit after the chat becomes idle", async () => {
+    mockStatus = "streaming";
+    const { result, rerender } = renderHook(() => useCoachChat());
+    const staleSubmit = result.current.jsonRenderHandlers.submit_prompt;
+
+    mockStatus = "ready";
+    rerender();
+
+    await waitFor(() => {
+      expect(getOrCreateTodaySessionMock).toHaveBeenCalled();
+    });
+
+    await act(async () => {
+      await staleSubmit?.({ prompt: "restore exercise PushupsCodex" });
+    });
+
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      { text: "restore exercise PushupsCodex" },
+      expect.any(Object)
+    );
+  });
+
+  it("blocks generated UI submits while the chat is still streaming", async () => {
+    mockStatus = "streaming";
+    const { result } = renderHook(() => useCoachChat());
+
+    await act(async () => {
+      await result.current.jsonRenderHandlers.submit_prompt?.({
+        prompt: "restore exercise PushupsCodex",
+      });
+    });
+
+    expect(mockSendMessage).not.toHaveBeenCalled();
   });
 
   it("prefills the composer without sending when prefill_prompt runs", async () => {

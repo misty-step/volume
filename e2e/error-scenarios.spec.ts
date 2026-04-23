@@ -65,7 +65,7 @@ test.describe("Coach Composer Validation", () => {
     resetUserData,
   }) => {
     await resetUserData();
-    await openCoachWorkspace(page, "/today");
+    await openCoachWorkspace(page, "/");
 
     const input = coachInput(page);
     const sendButton = coachComposer(page).getByRole("button", {
@@ -84,7 +84,7 @@ test.describe("Network Error Handling", () => {
     context,
   }) => {
     // This test requires offline simulation which may need special setup
-    await page.goto("/today");
+    await page.goto("/");
 
     // Go offline
     await context.setOffline(true);

@@ -10,10 +10,28 @@ import type { Id } from "@/../convex/_generated/dataModel";
 import { useWeightUnit } from "@/contexts/WeightUnitContext";
 import { useTactileSoundPreference } from "@/hooks/useTactileSoundPreference";
 import { trackEvent, reportError } from "@/lib/analytics";
+import {
+  trackCoachFirstTurn,
+  trackCoachKickoff,
+  type KickoffSource,
+} from "@/lib/coach/session-funnel";
+import type { ZodType } from "zod";
+import {
+  CoachSpecDataSchema,
+  CoachTraceDataSchema,
+  type CoachTraceData,
+  type CoachUIData,
+  type CoachUIMessage,
+} from "@/lib/coach/ui-message";
 
 type JsonRenderActionHandler = (
   params: Record<string, unknown>
 ) => Promise<unknown> | unknown;
+
+const coachTraceDataPartSchemas = {
+  coach_trace: CoachTraceDataSchema,
+  spec: CoachSpecDataSchema,
+} as const satisfies { [K in keyof CoachUIData]: ZodType<CoachUIData[K]> };
 
 function parseAgentActionId(actionId: string): Id<"agentActions"> | null {
   const trimmed = actionId.trim();
@@ -60,10 +78,11 @@ function buildQuickLogPrompt(params: unknown): string | null {
   return weight ? `${corePrompt} @ ${weight} ${unit}` : corePrompt;
 }
 
-export function useCoachChat() {
+export function useCoachChat(options?: { kickoffSource?: KickoffSource }) {
   const router = useRouter();
   const { unit, setUnit } = useWeightUnit();
   const { soundEnabled, setSoundEnabled } = useTactileSoundPreference();
+  const kickoffSource = options?.kickoffSource ?? "page_load";
   const getOrCreateTodaySession = useMutation(
     api.coachSessions.getOrCreateTodaySession
   );
@@ -73,9 +92,11 @@ export function useCoachChat() {
   // delay). No React state needed — nothing in the render tree reads it.
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const isWorkingRef = useRef(false);
   const sessionBootstrapRef = useRef<Promise<string | null> | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const sessionDateRef = useRef<string | null>(null);
+  const latestCoachTraceRef = useRef<CoachTraceData | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   async function ensureSessionId(): Promise<string | null> {
@@ -112,27 +133,50 @@ export function useCoachChat() {
   }
 
   useEffect(() => {
-    void ensureSessionId();
+    let cancelled = false;
+
+    void ensureSessionId().then((sessionId) => {
+      if (cancelled || !sessionId) return;
+      trackCoachKickoff(sessionId, kickoffSource);
+    });
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [kickoffSource]);
 
   const transport = useMemo(
     () => new DefaultChatTransport({ api: "/api/coach" }),
     []
   );
 
-  const { messages, sendMessage, status, error } = useChat({
+  const { messages, sendMessage, status, error } = useChat<CoachUIMessage>({
     transport,
+    dataPartSchemas: coachTraceDataPartSchemas,
     onError: (error) => {
       reportError(error instanceof Error ? error : new Error(String(error)), {
         component: "useCoachChat",
         operation: "useChat",
       });
     },
+    onData: (dataPart) => {
+      if (dataPart.type === "data-coach_trace") {
+        latestCoachTraceRef.current = dataPart.data;
+      }
+    },
+    onFinish: ({ isAbort, isDisconnect, isError }) => {
+      const trace = latestCoachTraceRef.current;
+      latestCoachTraceRef.current = null;
+
+      if (isAbort || isDisconnect || isError || !trace) return;
+      trackCoachFirstTurn(trace);
+    },
   });
 
   const isWorking =
     isSending || status === "streaming" || status === "submitted";
+  isWorkingRef.current = isWorking;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -140,8 +184,9 @@ export function useCoachChat() {
 
   async function sendPrompt(prompt: string) {
     const trimmed = prompt.trim();
-    if (!trimmed || isWorking) return;
+    if (!trimmed || isWorkingRef.current) return;
 
+    isWorkingRef.current = true;
     setIsSending(true);
     setInput("");
 
@@ -174,6 +219,7 @@ export function useCoachChat() {
         }
       );
     } finally {
+      isWorkingRef.current = false;
       setIsSending(false);
     }
   }

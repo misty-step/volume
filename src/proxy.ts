@@ -1,6 +1,8 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { COACH_HOME_PATH } from "@/lib/coach/routes";
+import { buildContentSecurityPolicy } from "@/lib/content-security-policy";
 
 const isPublicRoute = createRouteMatcher([
   "/",
@@ -23,29 +25,19 @@ const isPublicRoute = createRouteMatcher([
   "/apple-icon",
   // Health check for uptime monitoring
   "/api/health",
+  // E2E reset route authenticates in-handler so browser fetches can rely on
+  // the active Clerk session plus X-TEST-SECRET without middleware redirecting
+  // them to /404 first.
+  "/api/test/reset",
   // Public release notes
   "/releases",
   "/releases/(.*)",
 ]);
 
-const cspHeader = `
-  default-src 'self';
-  script-src 'self' 'unsafe-inline' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://challenges.cloudflare.com https://vercel.live https://va.vercel-scripts.com;
-  style-src 'self' 'unsafe-inline' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev;
-  img-src 'self' https: data: blob:;
-  font-src 'self' data:;
-  worker-src 'self' blob:;
-  connect-src 'self' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud https://va.vercel-scripts.com https://vitals.vercel-insights.com https://clerk-telemetry.com https://*.posthog.com;
-  frame-src 'self' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://challenges.cloudflare.com https://vercel.live https://*.posthog.com;
-  object-src 'none';
-  base-uri 'self';
-  form-action 'self';
-  frame-ancestors 'none';
-  block-all-mixed-content;
-  ${process.env.NODE_ENV === "production" ? "upgrade-insecure-requests;" : ""}
-`
-  .replace(/\s{2,}/g, " ")
-  .trim();
+const cspHeader = buildContentSecurityPolicy({
+  canaryEndpoint: process.env.NEXT_PUBLIC_CANARY_ENDPOINT,
+  includeUpgradeInsecureRequests: process.env.NODE_ENV === "production",
+});
 
 const applySecurityHeaders = (response: NextResponse) => {
   response.headers.set("Content-Security-Policy", cspHeader);
@@ -64,7 +56,7 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   if (request.nextUrl.pathname === "/") {
     const session = await auth();
     if (session.userId) {
-      const redirectUrl = new URL("/today", request.url);
+      const redirectUrl = new URL(COACH_HOME_PATH, request.url);
       const redirectResponse = NextResponse.redirect(redirectUrl);
       return applySecurityHeaders(redirectResponse);
     }

@@ -332,9 +332,10 @@ export const dismissOnboardingNudge = mutation({
       throw new Error("User not found");
     }
 
+    const dismissedAt = Date.now();
     await ctx.db.patch(user._id, {
-      onboardingDismissedAt: Date.now(),
-      updatedAt: Date.now(),
+      onboardingDismissedAt: dismissedAt,
+      updatedAt: dismissedAt,
     });
   },
 });

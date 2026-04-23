@@ -36,7 +36,7 @@ You are the executive orchestrator.
 Take the PR through three phases until it reaches:
 
 - No merge conflicts against `origin/master`
-- CI green: merge-gate job in `.github/workflows/ci.yml` (setup + lint + typecheck + architecture + test + security-audit + build)
+- CI green: merge-gate job in `.github/workflows/ci.yml` (`dagger call check --source .`)
 - Every review finding addressed across all three comment endpoints
 - Architecture reviewed with hindsight lens (auth checks, soft delete, `@/lib/logger` usage, no relative imports in `convex/`)
 - Tests audited for coverage and quality (`bun run test:coverage`)
@@ -155,7 +155,7 @@ Invoke `/refactor` for this branch as the simplification engine.
 2. **Select one bounded change** — deletion > consolidation > state reduction
    > naming clarity > abstraction. Watch for shallow `useDashboard`-style hook
    > pass-throughs and duplicated auth boilerplate in `convex/*.ts`.
-3. **Implement + verify** — preserve behavior, run `bun run test --run` and
+3. **Implement + verify** — preserve behavior, run `bun run test` and
    `bun run quality:full`, commit.
 
 **Mandatory when diff >200 LOC net.** For smaller diffs, Ousterhout manual
@@ -215,7 +215,7 @@ releases).
 - Reflexive dismissal of bot reviews with "by design" without steelmanning
 - Batch-reply instead of addressing each thread inline
 - Polish without re-running `bun run quality:full`
-- Refactoring without `bun run test --run` passing
+- Refactoring without `bun run test` passing
 - Using `--admin` to bypass merge-gate
 - Merging without confirming `mergeStateStatus` is clean
 - Hard-deleting exercises (always soft delete)

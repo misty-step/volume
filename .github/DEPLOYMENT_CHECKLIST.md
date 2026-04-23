@@ -14,7 +14,7 @@ Use this checklist before deploying Convex functions to production.
 ### 2. Testing
 
 - [ ] `bun run typecheck` passes without errors
-- [ ] `bun run test --run` passes all tests
+- [ ] `bun run test` passes all tests
 - [ ] `bun run build` succeeds without errors
 - [ ] Manual testing completed for new features
 
@@ -82,8 +82,10 @@ Ensure production environment variables are set correctly:
 - [ ] `OPENROUTER_API_KEY` - OpenRouter API key for `/api/coach`
 - [ ] `NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID` - Stripe monthly price ID
 - [ ] `NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID` - Stripe annual price ID
-- [ ] `NEXT_PUBLIC_SENTRY_DSN` - Sentry DSN for browser error capture
-- [ ] `SENTRY_DSN` - Sentry DSN for server error capture
+- [ ] `NEXT_PUBLIC_CANARY_ENDPOINT` - Canary base URL for browser error capture
+- [ ] `NEXT_PUBLIC_CANARY_API_KEY` - Canary ingest-only key for browser error capture
+- [ ] `CANARY_ENDPOINT` - Canary base URL for server error capture
+- [ ] `CANARY_API_KEY` - Canary ingest-only key for server error capture
 
 ### Verification
 

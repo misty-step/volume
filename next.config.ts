@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
-import { withSentryConfig } from "@sentry/nextjs";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { buildContentSecurityPolicy } from "./src/lib/content-security-policy";
 import { isServerProductionDeployment } from "./src/lib/environment";
 
 // Read package.json version at build time
@@ -68,15 +68,10 @@ const nextConfig: NextConfig = {
           // Convex real-time sync requires eval for WebSocket message handling
           {
             key: "Content-Security-Policy",
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://*.convex.cloud https://browser.sentry-cdn.com",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https: blob:",
-              "connect-src 'self' https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud https://*.ingest.sentry.io",
-              "font-src 'self' data:",
-              "frame-src https://*.clerk.com https://clerk.volume.fitness https://*.clerk.accounts.dev",
-            ].join("; "),
+            value: buildContentSecurityPolicy({
+              canaryEndpoint: process.env.NEXT_PUBLIC_CANARY_ENDPOINT,
+              includeUpgradeInsecureRequests: true,
+            }),
           },
         ],
       },
@@ -89,25 +84,4 @@ const bundleAnalyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
-// Sentry source map upload configuration
-const sentryWebpackPluginOptions = {
-  // Only run in CI or when auth token present
-  silent: !process.env.CI,
-  // Hide source maps from generated client bundles (security)
-  hideSourceMaps: true,
-  // Tree-shake Sentry logger statements in production (bundle size)
-  disableLogger: true,
-  // Upload more files for better stack traces
-  widenClientFileUpload: true,
-  // Enable automatic Vercel cron monitoring
-  automaticVercelMonitors: true,
-  // Disable upload if no auth token (local dev)
-  sourcemaps: {
-    disable: !process.env.SENTRY_AUTH_TOKEN,
-  },
-};
-
-export default withSentryConfig(
-  bundleAnalyzer(nextConfig),
-  sentryWebpackPluginOptions
-);
+export default bundleAnalyzer(nextConfig);

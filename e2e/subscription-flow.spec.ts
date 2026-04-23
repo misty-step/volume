@@ -57,14 +57,14 @@ test.describe("Paywall Gate", () => {
   test("Authenticated user lands in the coach workspace instead of a paywall page", async ({
     page,
   }) => {
-    await openCoachWorkspace(page, "/today");
+    await openCoachWorkspace(page, "/");
     await expect(coachInput(page)).toBeVisible();
     await expect(coachInput(page)).toBeEnabled();
   });
 
   test("Settings redirect resolves to the workspace", async ({ page }) => {
     await page.goto("/settings");
-    await expect(page).toHaveURL(/\/today(?:\?.*)?$/);
+    await expect(page).toHaveURL(/\/coach(?:\?.*)?$/);
     await waitForCoachText(page, /Training preferences/i);
     await expect(coachInput(page)).toBeVisible();
     await expect(coachInput(page)).toBeEnabled();
@@ -122,7 +122,7 @@ test.describe("Paywall Gate", () => {
     const mobilePage = await mobileContext.newPage();
 
     try {
-      await openCoachWorkspace(mobilePage, "/today");
+      await openCoachWorkspace(mobilePage, "/");
       await expect(coachInput(mobilePage)).toBeVisible();
       await expect(coachInput(mobilePage)).toBeEnabled();
 

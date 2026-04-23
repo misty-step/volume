@@ -46,6 +46,12 @@ bun run test:e2e         # runs e2e/*.spec.ts
 open playwright-report/  # HTML report after a run
 ```
 
+If a healthy local app is already running elsewhere, point Playwright at it:
+
+```bash
+PLAYWRIGHT_BASE_URL=http://localhost:3100 bun run test:e2e
+```
+
 Specs live in `/Users/phaedrus/Development/volume/e2e/`:
 
 - `critical-flow.spec.ts` — quick-log, exercise CRUD, auth
@@ -65,6 +71,12 @@ Invoke via `Skill(volume-manual-qa)` or `/volume-manual-qa`. Covers:
 - Clerk sign-in + `PaywallGate` behavior
 - Today workspace set logging
 - Coach composer send
+
+If the app is already running on a known URL, reuse it instead of booting a fresh dev server:
+
+```bash
+APP_URL=http://localhost:3100 SKIP_APP_START=1 bash .agents/skills/volume-manual-qa/scripts/run-volume-manual-qa.sh
+```
 
 Produces screenshots/GIFs as evidence. Run before PR land, after any
 auth/subscription/coach diff, and whenever a user reports flow breakage.
@@ -119,7 +131,7 @@ Follow-up tickets → `backlog.d/<next-id>-<slug>.md`.
 
 ## Gotchas
 
-- **"Tests pass" is not QA.** `bun run test --run` and `bun run test:e2e` green still leaves paywall state, Stripe sync, and coach `ModelMessage[]` continuity unverified.
+- **"Tests pass" is not QA.** `bun run test` and `bun run test:e2e` green still leaves paywall state, Stripe sync, and coach `ModelMessage[]` continuity unverified.
 - **Stripe TypeScript types lie.** Docs > types for mode-dependent params — verify webhook payloads live via `stripe listen`, not via compile success.
 - **Convex can't import `@/lib/logger`.** When reading server-side output during QA, expect `console.warn`/`console.error` in `bunx convex logs`, not structured JSON.
 - **Do not suppress `assistantText` when reproducing coach bugs.** It is the model's memory across turns — dropping it hides the real defect.

@@ -4,11 +4,16 @@ import {
   type AssistantModelMessage,
   type ModelMessage,
   type ToolModelMessage,
+  type UserModelMessage,
 } from "ai";
 import { COACH_AGENT_SYSTEM_PROMPT } from "@/lib/coach/agent-prompt";
 import { catalog } from "@/lib/coach/catalog";
+import {
+  findForcedCoachRouteMatch,
+  type ForcedCoachRouteIntent,
+} from "@/lib/coach/workspace-prompts";
 import { normalizeAssistantText } from "./blocks";
-import { createCoachTools } from "./coach-tools";
+import { createCoachTools, runCoachToolByName } from "./coach-tools";
 import type { ToolExecutionRecord } from "@/lib/coach/presentation/types";
 import type { PromptCoachMemory } from "@/lib/coach/memory";
 import type { CoachToolContext } from "@/lib/coach/tools/types";
@@ -54,6 +59,106 @@ const CATALOG_CUSTOM_RULES = [
 
 function quotePromptValue(value: string) {
   return JSON.stringify(value);
+}
+
+function getModelMessageText(message: ModelMessage): string {
+  if (typeof message.content === "string") {
+    return message.content;
+  }
+
+  if (!Array.isArray(message.content)) {
+    return "";
+  }
+
+  return message.content
+    .filter(
+      (part): part is { type: "text"; text: string } => part.type === "text"
+    )
+    .map((part) => part.text)
+    .join("\n");
+}
+
+function buildForcedRouteHint(
+  prompt: string,
+  route: ForcedCoachRouteIntent
+): string {
+  if (!route.actionHint) return prompt;
+
+  return `${prompt}\n\n${buildRouteIntentTag(route)}`;
+}
+
+function buildRouteIntentTag(route: ForcedCoachRouteIntent): string {
+  return `<route-intent tool="${route.toolName}" action="${route.actionHint}" />`;
+}
+
+function appendForcedRouteHint(
+  message: UserModelMessage,
+  prompt: string,
+  route: ForcedCoachRouteIntent
+): UserModelMessage["content"] {
+  if (!route.actionHint) return message.content;
+  if (typeof message.content === "string") {
+    return buildForcedRouteHint(prompt, route);
+  }
+  if (Array.isArray(message.content)) {
+    return [
+      ...message.content,
+      { type: "text", text: buildRouteIntentTag(route) },
+    ];
+  }
+  return message.content;
+}
+
+function getLatestUserMessageIndex(history: ModelMessage[]): number {
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    if (history[index]?.role === "user") {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function buildForcedPlannerInput(history: ModelMessage[]) {
+  const latestUserIndex = getLatestUserMessageIndex(history);
+  const latestUserMessage =
+    latestUserIndex >= 0 ? history[latestUserIndex] : undefined;
+  const prompt = latestUserMessage
+    ? getModelMessageText(latestUserMessage).trim()
+    : "";
+  const forcedMatch = findForcedCoachRouteMatch(prompt);
+
+  if (!forcedMatch) {
+    return {
+      history,
+      toolChoice: undefined,
+      forcedRoute: null,
+      deterministicArgs: null,
+    };
+  }
+
+  const forcedRoute = forcedMatch.intent;
+  const nextHistory = history.slice();
+  if (
+    forcedRoute.actionHint &&
+    latestUserIndex >= 0 &&
+    latestUserMessage?.role === "user"
+  ) {
+    nextHistory[latestUserIndex] = {
+      ...latestUserMessage,
+      content: appendForcedRouteHint(latestUserMessage, prompt, forcedRoute),
+    };
+  }
+
+  return {
+    history: nextHistory,
+    forcedRoute,
+    deterministicArgs: forcedMatch.deterministicArgs,
+    toolChoice: {
+      type: "tool" as const,
+      toolName: forcedRoute.toolName,
+    },
+  };
 }
 
 export function buildPlannerSystemPrompt({
@@ -287,6 +392,31 @@ export async function runPlannerTurn({
     observations,
   });
 
+  const {
+    history: plannerHistory,
+    toolChoice,
+    forcedRoute,
+    deterministicArgs,
+  } = buildForcedPlannerInput(history);
+
+  if (forcedRoute && deterministicArgs) {
+    const record = await runCoachToolByName(
+      forcedRoute.toolName,
+      deterministicArgs,
+      ctx
+    );
+    if (record) {
+      return {
+        kind: "ok",
+        assistantText: "",
+        toolsUsed: [record.toolName],
+        hitToolLimit: false,
+        responseMessages: [],
+        toolResults: [record],
+      };
+    }
+  }
+
   const tools = createCoachTools(ctx, {
     onToolResult: (record) => {
       toolResults.push(record);
@@ -299,8 +429,9 @@ export async function runPlannerTurn({
     const result = streamText({
       model: runtime.model,
       system: systemPrompt,
-      messages: history,
+      messages: plannerHistory,
       tools,
+      ...(toolChoice ? { toolChoice } : {}),
       stopWhen: stepCountIs(MAX_TOOL_ROUNDS),
       onChunk: ({ chunk }) => {
         if (chunk.type === "tool-call") {

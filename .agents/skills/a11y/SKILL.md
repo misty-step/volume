@@ -200,7 +200,7 @@ Non-negotiable, drawn from `CLAUDE.md`, `DESIGN_SYSTEM.md`, and design memory:
 | Tool                                                | Layer  | When                                                                                        |
 | --------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------- |
 | `eslint-plugin-jsx-a11y` (via `eslint-config-next`) | Lint   | `bun run lint` — pre-commit via Lefthook                                                    |
-| Vitest `*.test.tsx`                                 | Unit   | `bun run test --run` / `bun run test:affected`                                              |
+| Vitest `*.test.tsx`                                 | Unit   | `bun run test` / `bun run test:affected`                                                    |
 | `@axe-core/playwright` in `e2e/`                    | E2E    | `bun run test:e2e` (CI + targeted)                                                          |
 | axe DevTools (Chrome)                               | Dev    | Manual spot-checks via Claude-in-Chrome MCP: navigate + inject axe + `javascript_tool` read |
 | VoiceOver (macOS Cmd+F5)                            | Manual | Quick-log, paywall, coach composer critical flows                                           |

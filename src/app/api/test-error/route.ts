@@ -1,7 +1,7 @@
 import { reportError } from "@/lib/analytics";
 
 /**
- * Temporary API route for testing server-side Sentry error capture.
+ * Temporary API route for testing server-side Canary error capture.
  * DELETE before production deployment.
  *
  * Usage:

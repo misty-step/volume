@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
+import { buildCoachPromptPath } from "@/lib/coach/routes";
 
 export default function SettingsPage() {
-  redirect("/today?prompt=show%20settings%20overview");
+  redirect(buildCoachPromptPath("show settings overview"));
 }

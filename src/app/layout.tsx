@@ -8,6 +8,7 @@ import { WeightUnitProvider } from "@/contexts/WeightUnitContext";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ToasterProvider } from "@/components/toaster-provider";
 import { PostHogProvider } from "@/components/posthog-provider";
+import { CanaryClientReporter } from "@/components/canary-client-reporter";
 import { getServerClerkPublishableKey } from "@/lib/public-service-config.server";
 
 const bricolage = Bricolage_Grotesque({
@@ -72,6 +73,7 @@ export default function RootLayout({
               <ConvexClientProvider>{children}</ConvexClientProvider>
             </WeightUnitProvider>
           </ThemeProvider>
+          <CanaryClientReporter />
           <ToasterProvider />
           <SpeedInsights />
         </PostHogProvider>

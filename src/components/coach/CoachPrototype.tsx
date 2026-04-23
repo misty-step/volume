@@ -144,6 +144,8 @@ export function CoachPrototype() {
   const promptedRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const promptFromQuery = searchParams.get("prompt");
+  const kickoffSource = promptFromQuery ? "deeplink" : "page_load";
   const {
     input,
     setInput,
@@ -153,7 +155,7 @@ export function CoachPrototype() {
     endRef,
     sendPrompt,
     jsonRenderHandlers,
-  } = useCoachChat();
+  } = useCoachChat({ kickoffSource });
 
   // Refocus input whenever the agent finishes working.
   const prevWorking = useRef(isWorking);
@@ -163,8 +165,6 @@ export function CoachPrototype() {
     }
     prevWorking.current = isWorking;
   }, [isWorking]);
-
-  const promptFromQuery = searchParams.get("prompt");
 
   useEffect(() => {
     const viewport = window.visualViewport;

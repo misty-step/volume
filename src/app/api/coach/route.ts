@@ -7,6 +7,7 @@ import { auth } from "@clerk/nextjs/server";
 import { api } from "@/../convex/_generated/api";
 import { CoachPreferencesSchema, MAX_COACH_MESSAGES } from "@/lib/coach/schema";
 import { streamCoachPresentation } from "@/lib/coach/presentation/compose";
+import { buildLegacyBlocksSpec } from "@/lib/coach/presentation/legacy-spec";
 import {
   sliceRecentWholeTurns,
   type StoredCoachMessage,
@@ -22,8 +23,10 @@ import {
   summarizeObservation,
   type MemoryTranscriptMessage,
 } from "@/lib/coach/server/memory-pipeline";
+import { buildCoachTraceData } from "@/lib/coach/server/trace";
 import { buildRuntimeUnavailableResponse } from "@/lib/coach/server/blocks";
 import { sanitizeError } from "@/lib/coach/sanitize-error";
+import type { CoachUIMessage } from "@/lib/coach/ui-message";
 import {
   generateText,
   convertToModelMessages,
@@ -63,6 +66,67 @@ function deserializeStoredMessage(content: string): ModelMessage | null {
     });
     return null;
   }
+}
+
+function getToolPartId(part: unknown, type: string): string | null {
+  if (!part || typeof part !== "object") return null;
+  const record = part as Record<string, unknown>;
+  return record.type === type && typeof record.toolCallId === "string"
+    ? record.toolCallId
+    : null;
+}
+
+function sanitizeIncompleteToolHistory(messages: ModelMessage[]) {
+  const resultIds = new Set<string>();
+
+  for (const message of messages) {
+    if (!Array.isArray(message.content)) continue;
+    for (const part of message.content) {
+      const toolCallId = getToolPartId(part, "tool-result");
+      if (toolCallId) resultIds.add(toolCallId);
+    }
+  }
+
+  const messagesWithResolvedCalls = messages
+    .map((message): ModelMessage | null => {
+      if (message.role !== "assistant" || !Array.isArray(message.content)) {
+        return message;
+      }
+
+      const content = message.content.filter((part) => {
+        const toolCallId = getToolPartId(part, "tool-call");
+        return !toolCallId || resultIds.has(toolCallId);
+      });
+
+      if (content.length === 0) return null;
+      return { ...message, content } as ModelMessage;
+    })
+    .filter((message): message is ModelMessage => message !== null);
+
+  const keptCallIds = new Set<string>();
+  for (const message of messagesWithResolvedCalls) {
+    if (!Array.isArray(message.content)) continue;
+    for (const part of message.content) {
+      const toolCallId = getToolPartId(part, "tool-call");
+      if (toolCallId) keptCallIds.add(toolCallId);
+    }
+  }
+
+  return messagesWithResolvedCalls
+    .map((message): ModelMessage | null => {
+      if (message.role !== "tool" || !Array.isArray(message.content)) {
+        return message;
+      }
+
+      const content = message.content.filter((part) => {
+        const toolCallId = getToolPartId(part, "tool-result");
+        return !toolCallId || keptCallIds.has(toolCallId);
+      });
+
+      if (content.length === 0) return null;
+      return { ...message, content } as ModelMessage;
+    })
+    .filter((message): message is ModelMessage => message !== null);
 }
 
 function serializeUserMessage(text: string): string {
@@ -148,7 +212,7 @@ async function buildCoachHistory({
 }) {
   if (!sessionId) {
     return {
-      history: fallbackHistory,
+      history: sanitizeIncompleteToolHistory(fallbackHistory),
       conversationSummary: undefined as string | undefined,
     };
   }
@@ -228,13 +292,15 @@ async function buildCoachHistory({
     }
   }
 
+  const history = [
+    ...recentMessages
+      .map((message) => deserializeStoredMessage(message.content))
+      .filter((message): message is ModelMessage => message !== null),
+    latestUserMessage,
+  ];
+
   return {
-    history: [
-      ...recentMessages
-        .map((message) => deserializeStoredMessage(message.content))
-        .filter((message): message is ModelMessage => message !== null),
-      latestUserMessage,
-    ],
+    history: sanitizeIncompleteToolHistory(history),
     conversationSummary,
   };
 }
@@ -271,6 +337,31 @@ async function persistCoachTurn({
       turnId,
     });
   }
+}
+
+function buildResponseMessagesForPersistence(
+  plannerResult: Awaited<ReturnType<typeof runPlannerTurn>>
+): ModelMessage[] {
+  if (plannerResult.responseMessages.length > 0) {
+    return plannerResult.responseMessages as ModelMessage[];
+  }
+
+  if (plannerResult.kind !== "ok" || plannerResult.toolResults.length === 0) {
+    return [];
+  }
+
+  const summaries = plannerResult.toolResults
+    .map((record) => record.summary.trim())
+    .filter(Boolean);
+
+  if (summaries.length === 0) return [];
+
+  return [
+    {
+      role: "assistant",
+      content: summaries.join("\n"),
+    },
+  ];
 }
 
 function modelMessageToTranscriptMessage(
@@ -744,6 +835,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const followUpPrompts =
+      buildEndOfTurnSuggestions(plannerResult.toolsUsed) ?? [];
     const presentationContext = {
       latestUserText,
       conversationSummary,
@@ -759,25 +852,34 @@ export async function POST(request: Request) {
         hitToolLimit: plannerResult.hitToolLimit,
         toolResults: plannerResult.toolResults,
       },
-      followUpPrompts: buildEndOfTurnSuggestions(plannerResult.toolsUsed) ?? [],
+      followUpPrompts,
     };
-
-    const presentation = streamCoachPresentation({
-      runtime,
-      signal: createModelAbortSignal(request.signal),
-      context: presentationContext,
-    });
+    const legacySpec =
+      plannerResult.kind === "ok" && plannerResult.responseMessages.length === 0
+        ? buildLegacyBlocksSpec(plannerResult.toolResults, followUpPrompts)
+        : null;
+    const responseMessagesForPersistence =
+      buildResponseMessagesForPersistence(plannerResult);
+    const presentation = legacySpec
+      ? null
+      : streamCoachPresentation({
+          runtime,
+          signal: createModelAbortSignal(request.signal),
+          context: presentationContext,
+        });
 
     after(async () => {
-      try {
-        await presentation.finishReason;
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        reportError(err, {
-          route: "coach",
-          operation: "presentation_finish",
-        });
-        return;
+      if (presentation) {
+        try {
+          await presentation.finishReason;
+        } catch (error) {
+          const err = error instanceof Error ? error : new Error(String(error));
+          reportError(err, {
+            route: "coach",
+            operation: "presentation_finish",
+          });
+          return;
+        }
       }
 
       try {
@@ -786,24 +888,51 @@ export async function POST(request: Request) {
           sessionId,
           latestUserText,
           turnId,
-          responseMessages: plannerResult.responseMessages as ModelMessage[],
+          responseMessages: responseMessagesForPersistence,
         });
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
         reportError(err, { route: "coach", operation: "persist_turn" });
       }
 
-      await processCoachMemory({
-        convex,
-        runtime,
-        history,
-        responseMessages: plannerResult.responseMessages as ModelMessage[],
-      });
+      if (responseMessagesForPersistence.length > 0) {
+        await processCoachMemory({
+          convex,
+          runtime,
+          history,
+          responseMessages: responseMessagesForPersistence,
+        });
+      }
     });
 
-    const stream = createUIMessageStream({
+    const coachTrace = buildCoachTraceData({
+      sessionId,
+      history,
+      plannerResult,
+    });
+
+    const stream = createUIMessageStream<CoachUIMessage>({
       execute: async ({ writer }) => {
         try {
+          writer.write({
+            type: "data-coach_trace",
+            data: coachTrace,
+            transient: true,
+          });
+
+          if (legacySpec) {
+            writer.write({
+              type: "data-spec",
+              data: { type: "flat", spec: legacySpec },
+            });
+            writer.write({ type: "finish", finishReason: "stop" });
+            return;
+          }
+
+          if (!presentation) {
+            throw new Error("Missing coach presentation stream.");
+          }
+
           writer.merge(
             pipeJsonRender(
               presentation.toUIMessageStream({ sendFinish: false })

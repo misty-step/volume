@@ -22,7 +22,7 @@ You are the executive orchestrator.
 
 - Keep upgrade policy, risk acceptance, and final merge-readiness judgment on the lead model.
 - Delegate per-package analysis and bounded upgrade work to focused subagents.
-- Parallelize across disjoint package clusters (e.g., test infra vs. AI SDK vs. Sentry) where safe.
+- Parallelize across disjoint package clusters (e.g., test infra vs. AI SDK vs. Canary) where safe.
 
 ## Routing
 
@@ -65,7 +65,7 @@ Six phases, gated. Each phase must complete before the next begins.
 Run the full quality pipeline before touching any dep:
 
 ```bash
-bun run typecheck && bun run lint && bun run test --run && bun run build
+bun run typecheck && bun run lint && bun run test && bun run build
 bun run security:audit   # = bun audit --audit-level=high
 ```
 
@@ -86,8 +86,8 @@ bun pm scan              # reachability/tree inspection
 Categorize each outdated dependency. Volume hot deps deserve special flags:
 
 - **Patch** (1.2.3 → 1.2.4): safe. Group into a single commit.
-- **Minor** (1.2.3 → 1.3.0): usually safe. Changelog scan; flag `convex`, `@clerk/nextjs`, `stripe`, `ai`, `@ai-sdk/react`, `@openrouter/ai-sdk-provider`, `@sentry/nextjs`, `vitest`, `lefthook` as sensitive even on minor.
-- **Major** (1.2.3 → 2.0.0): full analysis. Always-hot: `next@^16.1.6`, `react@^19.2.4`, `convex@^1.31.7`, `@clerk/nextjs@^6.37.4`, `stripe@^20.3.1`, `@sentry/nextjs@^10.39.0`, `ai@^6.0.0`, `vitest@^3.2.4`.
+- **Minor** (1.2.3 → 1.3.0): usually safe. Changelog scan; flag `convex`, `@clerk/nextjs`, `stripe`, `ai`, `@ai-sdk/react`, `@openrouter/ai-sdk-provider`, `@canary-obs/sdk`, `vitest`, `lefthook` as sensitive even on minor.
+- **Major** (1.2.3 → 2.0.0): full analysis. Always-hot: `next@^16.1.6`, `react@^19.2.4`, `convex@^1.31.7`, `@clerk/nextjs@^6.37.4`, `stripe@^20.3.1`, `ai@^6.0.0`, `vitest@^3.2.4`, `@canary-obs/sdk`.
 
 Cross-check Volume's `overrides` block in `package.json` (currently `flatted`, `minimatch`, `picomatch`, `rollup`, `terser-webpack-plugin`). An upstream bump may obsolete an override — do not silently drop them without a `bun run security:audit` pass.
 
@@ -97,7 +97,7 @@ Gate: structured list of outdated deps + CVE list + override re-check.
 
 For each non-patch update AND every `bun audit` finding, analyze three concerns. Parallelize across packages, not within a single package.
 
-**Changelog:** Read release notes. Call out anything touching Next.js App Router config (`next.config.ts`), Convex schema/types (`convex/_generated/api.d.ts`), Clerk middleware (`middleware.ts`, `e2e/auth.setup.ts`), Stripe webhook shape (ADR-0003), Sentry wrapping, or AI SDK `ModelMessage[]` conversation format. Verdict: `migration_required: yes | no | unknown`.
+**Changelog:** Read release notes. Call out anything touching Next.js App Router config (`next.config.ts`), Convex schema/types (`convex/_generated/api.d.ts`), Clerk middleware (`middleware.ts`, `e2e/auth.setup.ts`), Stripe webhook shape (ADR-0003), Canary instrumentation, or AI SDK `ModelMessage[]` conversation format. Verdict: `migration_required: yes | no | unknown`.
 
 **Reachability:** Trace import chains from the CVE-affected symbol into Volume code:
 
@@ -199,7 +199,7 @@ For **security** mode: include only the Security and Reachability sections.
 - [ ] `bun run test:e2e` green when framework/auth/billing/coach touched.
 - [ ] `./scripts/verify-env.sh --prod-only` still passes; no new required env var.
 - [ ] Breaking-change notes written into PR body with changelog links.
-- [ ] Override list and `patches/test-exclude@7.0.2.patch` re-verified; pinned transitives didn't drift (`import-in-the-middle`/`require-in-the-middle` pairs with `@sentry/nextjs`).
+- [ ] Override list and `patches/test-exclude@7.0.2.patch` re-verified; pinned transitives didn't drift.
 - [ ] CI green end-to-end — never merge on "informational" red.
 
 ## Hand-offs
@@ -211,13 +211,12 @@ For **security** mode: include only the Security and Reachability sections.
 
 ## Gotchas
 
-- **Skipping baseline.** If `bun run typecheck && bun run lint && bun run test --run` is red before the bump, you cannot attribute regressions. Fix first.
+- **Skipping baseline.** If `bun run typecheck && bun run lint && bun run test && bun run build` or `bun run security:audit` is red before the bump, you cannot attribute regressions. Fix first.
 - **Treating all CVEs equally.** A critical CVE in an unreachable function is lower priority than a medium CVE in `convex/sets.ts` or `src/app/(app)/page.tsx`. 92–97% of CVEs sit in functions never called — `bun pm scan` + `rg` first.
 - **Batch-upgrading everything.** One 40-package PR is unbisectable. Atomic groups by risk tier; one curated PR per concern (e.g., "bump AI SDK ecosystem").
 - **Forgetting `bunx convex dev` after a convex bump.** Stale `convex/_generated/api.d.ts` fails typecheck with confusing errors.
 - **Bumping `ai` / `@ai-sdk/react` / `@openrouter/ai-sdk-provider` without verifying `ModelMessage[]` conversation handling.** Regressions silently break coach memory across turns.
 - **Dropping overrides silently.** `flatted`, `minimatch`, `picomatch`, `rollup`, `terser-webpack-plugin` are pinned for transitive vuln fixes. Removing one without re-running `bun run security:audit` reintroduces the CVE.
-- **`@sentry/nextjs` pair drift.** `import-in-the-middle` and `require-in-the-middle` must track Sentry's tested versions — don't let them float.
 - **Hand-editing `bun.lock`.** Let bun regenerate. Merge conflicts → `bun install` to re-resolve.
 - **Major bumps without migration guides.** Escalate via `/groom`; don't guess Next.js/React/Convex migrations.
 - **Assuming single workspace.** `packages/canary-sdk` has its own `package.json`; when bumping a shared dep, check both manifests.

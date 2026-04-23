@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
+import { buildCoachPromptPath } from "@/lib/coach/routes";
 
 export default function AnalyticsPage() {
-  redirect("/today?prompt=show%20analytics%20overview");
+  redirect(buildCoachPromptPath("show analytics overview"));
 }

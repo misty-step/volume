@@ -3,20 +3,19 @@ import { describe, expect, it } from "vitest";
 import { resolveVersion } from "./version";
 
 describe("resolveVersion", () => {
-  it("prefers SENTRY_RELEASE over other sources", () => {
+  it("prefers VERCEL_GIT_COMMIT_SHA over other sources", () => {
     const env = {
-      SENTRY_RELEASE: "release-1.2.3",
       VERCEL_GIT_COMMIT_SHA: "deadbeef",
       NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: "cafebabe",
+      NEXT_PUBLIC_PACKAGE_VERSION: "0.3.0",
       npm_package_version: "0.2.0",
     };
 
-    expect(resolveVersion(env)).toBe("release-1.2.3");
+    expect(resolveVersion(env)).toBe("deadbee");
   });
 
-  it("uses VERCEL_GIT_COMMIT_SHA when SENTRY_RELEASE is absent", () => {
+  it("uses VERCEL_GIT_COMMIT_SHA when NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA is also present", () => {
     const env = {
-      SENTRY_RELEASE: undefined,
       VERCEL_GIT_COMMIT_SHA: "1234567890abcdef",
       NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: "fedcba9876",
       npm_package_version: "0.2.0",
@@ -27,7 +26,6 @@ describe("resolveVersion", () => {
 
   it("falls back to NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA when server SHA is missing", () => {
     const env = {
-      SENTRY_RELEASE: undefined,
       VERCEL_GIT_COMMIT_SHA: undefined,
       NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: "abcdef123456",
       npm_package_version: "0.2.0",
@@ -36,9 +34,8 @@ describe("resolveVersion", () => {
     expect(resolveVersion(env)).toBe("abcdef1");
   });
 
-  it("uses npm_package_version when no release or git SHA exists", () => {
+  it("uses npm_package_version when no git SHA or public package version exists", () => {
     const env = {
-      SENTRY_RELEASE: undefined,
       VERCEL_GIT_COMMIT_SHA: undefined,
       NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: undefined,
       npm_package_version: "0.3.1",
@@ -49,7 +46,6 @@ describe("resolveVersion", () => {
 
   it("falls back to dev when nothing is provided", () => {
     const env = {
-      SENTRY_RELEASE: undefined,
       VERCEL_GIT_COMMIT_SHA: undefined,
       NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: undefined,
       npm_package_version: undefined,
@@ -60,7 +56,6 @@ describe("resolveVersion", () => {
 
   it("does not shorten non-hex identifiers", () => {
     const env = {
-      SENTRY_RELEASE: undefined,
       VERCEL_GIT_COMMIT_SHA: "not-a-sha-value",
       NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: undefined,
       npm_package_version: undefined,
@@ -71,7 +66,6 @@ describe("resolveVersion", () => {
 
   it("treats empty strings as absent and falls back through priority chain", () => {
     const env = {
-      SENTRY_RELEASE: "",
       VERCEL_GIT_COMMIT_SHA: "",
       NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: "",
       NEXT_PUBLIC_PACKAGE_VERSION: "0.3.1",
@@ -82,9 +76,9 @@ describe("resolveVersion", () => {
   });
 
   describe("Empty String Handling", () => {
-    it("filters out empty string for SENTRY_RELEASE", () => {
+    it("filters out empty string for VERCEL_GIT_COMMIT_SHA", () => {
       const env = {
-        SENTRY_RELEASE: "",
+        VERCEL_GIT_COMMIT_SHA: "",
         NEXT_PUBLIC_PACKAGE_VERSION: "0.2.0",
       };
       expect(resolveVersion(env)).toBe("0.2.0");
@@ -108,8 +102,8 @@ describe("resolveVersion", () => {
 
     it("falls back through all empty strings to dev", () => {
       const env = {
-        SENTRY_RELEASE: "",
         VERCEL_GIT_COMMIT_SHA: "",
+        NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: "",
         NEXT_PUBLIC_PACKAGE_VERSION: "",
         npm_package_version: "",
       };
@@ -118,7 +112,7 @@ describe("resolveVersion", () => {
   });
 
   describe("NEXT_PUBLIC_PACKAGE_VERSION Priority", () => {
-    it("uses NEXT_PUBLIC_PACKAGE_VERSION as priority 3", () => {
+    it("uses NEXT_PUBLIC_PACKAGE_VERSION ahead of npm_package_version", () => {
       const env = {
         NEXT_PUBLIC_PACKAGE_VERSION: "0.3.0",
         npm_package_version: "0.2.0",
@@ -134,19 +128,18 @@ describe("resolveVersion", () => {
       expect(resolveVersion(env)).toBe("abcdef1");
     });
 
-    it("prefers SENTRY_RELEASE over NEXT_PUBLIC_PACKAGE_VERSION", () => {
+    it("prefers NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA over NEXT_PUBLIC_PACKAGE_VERSION", () => {
       const env = {
-        SENTRY_RELEASE: "release-2.0.0",
+        NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: "1234567890abcdef",
         NEXT_PUBLIC_PACKAGE_VERSION: "0.3.0",
       };
-      expect(resolveVersion(env)).toBe("release-2.0.0");
+      expect(resolveVersion(env)).toBe("1234567");
     });
   });
 
   describe("Production Environment Simulation", () => {
     it("matches Vercel production environment (empty git vars)", () => {
       const env = {
-        SENTRY_RELEASE: "",
         VERCEL_GIT_COMMIT_SHA: "",
         NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: "",
         NEXT_PUBLIC_PACKAGE_VERSION: "0.1.0", // Injected at build

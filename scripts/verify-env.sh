@@ -125,6 +125,10 @@ VERCEL_REQUIRED_VARS=(
   "STRIPE_SECRET_KEY"
   "NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID"
   "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID"
+  "NEXT_PUBLIC_CANARY_ENDPOINT"
+  "NEXT_PUBLIC_CANARY_API_KEY"
+  "CANARY_ENDPOINT"
+  "CANARY_API_KEY"
   "$OPENROUTER_API_KEY_VAR"
 )
 
@@ -135,6 +139,10 @@ VERCEL_REQUIRED_DESCRIPTIONS=(
   "Stripe API key for checkout and billing"
   "Stripe monthly price ID"
   "Stripe annual price ID"
+  "Canary base URL for browser error capture"
+  "Canary ingest-only key for browser error capture"
+  "Dedicated Canary base URL for server error capture"
+  "Dedicated Canary ingest-only key for server error capture"
   "OpenRouter API for coach runtime"
 )
 
@@ -148,6 +156,8 @@ VERCEL_OPTIONAL_VALUE_VALIDATED_VARS=(
 VERCEL_VALUE_VALIDATED_VARS=(
   "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
   "CLERK_JWT_ISSUER_DOMAIN"
+  "NEXT_PUBLIC_CANARY_ENDPOINT"
+  "NEXT_PUBLIC_CANARY_API_KEY"
   "NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID"
   "NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID"
 )
@@ -251,6 +261,17 @@ value_has_literal_newline_escape() {
   [[ "$unquoted_value" == *\\n* || "$unquoted_value" == *\\r* ]]
 }
 
+is_valid_http_url() {
+  local value="$1"
+  bun -e '
+    const value = process.argv[1];
+    if (!URL.canParse(value)) process.exit(1);
+    const url = new URL(value);
+    if (!url.hostname) process.exit(1);
+    if (url.protocol !== "http:" && url.protocol !== "https:") process.exit(1);
+  ' "$value" >/dev/null 2>&1
+}
+
 # Validate Stripe key type matches deployment environment
 # Returns: 0 = valid, 1 = mismatch, 2 = can't validate (unknown format)
 validate_stripe_key_type() {
@@ -340,19 +361,15 @@ check_production_health() {
     return 1
   fi
 
-  local canary_env_ready=false
-  if vercel_var_exists "NEXT_PUBLIC_CANARY_ENDPOINT" "$env_names" && \
-    vercel_var_exists "NEXT_PUBLIC_CANARY_API_KEY" "$env_names"; then
-    canary_env_ready=true
-  fi
-
-  if echo "$health_json" | jq -e '(.checks.errorTracking.status // .checks.sentry.status) == "pass"' >/dev/null; then
-    :
-  elif [[ "$canary_env_ready" == "true" ]]; then
-    log "    [OK] runtime error-tracking env present (Canary)"
-  else
+  if ! echo "$health_json" | jq -e '.checks.errorTracking.status == "pass"' >/dev/null; then
     log "    [INVALID] runtime error-tracking health failed"
     MISSING_VARS+=("Vercel:ERROR_TRACKING (HEALTH CHECK FAIL)")
+    return 1
+  fi
+
+  if ! echo "$health_json" | jq -e '.checks.errorTracking.serverKeySource == "dedicated"' >/dev/null; then
+    log "    [INVALID] dedicated server Canary runtime configuration missing"
+    MISSING_VARS+=("Vercel:CANARY_ENDPOINT/CANARY_API_KEY (HEALTH CHECK FAIL)")
     return 1
   fi
 
@@ -493,6 +510,13 @@ check_vercel_environment() {
     if value_has_literal_newline_escape "$raw_value"; then
       log "    [INVALID] $var - literal newline escape sequence"
       MISSING_VARS+=("Vercel:${var} (LITERAL NEWLINE ESCAPE)")
+      missing_here=$((missing_here + 1))
+      continue
+    fi
+
+    if [[ "$var" == "NEXT_PUBLIC_CANARY_ENDPOINT" ]] && ! is_valid_http_url "$trimmed_value"; then
+      log "    [INVALID] $var - must be a valid http(s) URL"
+      MISSING_VARS+=("Vercel:${var} (INVALID URL)")
       missing_here=$((missing_here + 1))
       continue
     fi

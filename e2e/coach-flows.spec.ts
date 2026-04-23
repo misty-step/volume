@@ -19,7 +19,7 @@ test.describe("Coach chat flows", () => {
   test.describe.configure({ mode: "serial" });
 
   test.beforeEach(async ({ page }) => {
-    await openCoachWorkspace(page, "/coach");
+    await openCoachWorkspace(page, "/");
   });
 
   test("shows the coach workspace shell", async ({ page }) => {
@@ -43,7 +43,7 @@ test.describe("Coach chat flows", () => {
     expect(await waitForSetCountIncrease(page, setCountBefore)).toBe(
       setCountBefore + 1
     );
-    await openCoachWorkspace(page, "/coach");
+    await openCoachWorkspace(page, "/");
     await requestTodaySummary(page);
   });
 
@@ -53,10 +53,44 @@ test.describe("Coach chat flows", () => {
     const exerciseName = createUniqueExerciseName("PushupsCodex");
     await createExerciseForCurrentUser(page, exerciseName);
 
-    await sendCoachMessage(page, `archive exercise ${exerciseName}`);
-    await waitForCoachIdle(page);
+    await sendCoachMessage(page, `archive exercise "${exerciseName}"`);
 
-    await sendCoachMessage(page, "yes");
+    let archiveState: "pending" | "confirm" | "archived" = "pending";
+    await expect
+      .poll(
+        async () => {
+          if (
+            await coachTimeline(page)
+              .getByText(/Exercise archived/i)
+              .last()
+              .isVisible()
+              .catch(() => false)
+          ) {
+            archiveState = "archived";
+            return archiveState;
+          }
+
+          if (
+            await coachTimeline(page)
+              .getByText(/confirm|verify exercise name|go ahead/i)
+              .last()
+              .isVisible()
+              .catch(() => false)
+          ) {
+            archiveState = "confirm";
+            return archiveState;
+          }
+
+          return archiveState;
+        },
+        { timeout: 30_000 }
+      )
+      .not.toBe("pending");
+
+    if (archiveState === "confirm") {
+      await sendCoachMessage(page, exerciseName);
+    }
+
     await waitForCoachText(page, /Exercise archived/i);
     await waitForCoachText(page, /Need it back\?/i);
 

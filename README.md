@@ -68,6 +68,10 @@ bash .agents/skills/volume-manual-qa/scripts/run-volume-manual-qa.sh
 ```
 
 Requires local `agent-browser`, `jq`, `CLERK_TEST_USER_EMAIL`, `CLERK_TEST_USER_PASSWORD`, and `OPENROUTER_API_KEY`. The script boots its own Next dev server on `PORT` (default `3100`).
+If you already have a healthy local app running, reuse it with
+`APP_URL=http://localhost:3100 SKIP_APP_START=1 bash .agents/skills/volume-manual-qa/scripts/run-volume-manual-qa.sh`.
+For Playwright against an existing local app, use
+`PLAYWRIGHT_BASE_URL=http://localhost:3100 bun run test:e2e`.
 
 ## First-Time Setup
 

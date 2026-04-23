@@ -1,7 +1,7 @@
 /**
- * Volume CI pipeline — local replica of .github/workflows/ci.yml
+ * Volume CI pipeline — canonical owner invoked by .github/workflows/ci.yml
  *
- * Runs lint, typecheck, architecture, test, security-audit, and build
+ * Runs lint, typecheck, architecture, test:coverage, security-audit, and build
  * in parallel inside containers, matching the same Bun/Node versions
  * and commands as GitHub Actions.
  *
@@ -25,16 +25,17 @@ export class Volume {
       .withExec(["sh", "-c", `npm install -g bun@${BUN_VERSION}`])
       .withMountedCache("/app/node_modules", dag.cacheVolume("node-modules"))
       .withDirectory("/app", source, {
-        exclude: [
-          "node_modules",
-          ".next",
-          "coverage",
-          "test-results",
-          "dagger",
-        ],
+        exclude: ["node_modules", ".next", "coverage", "test-results"],
       })
       .withWorkdir("/app")
       .withExec(["bun", "install", "--frozen-lockfile"]);
+  }
+
+  private withCoverageTest(container: Container): Container {
+    return container
+      .withEnvVariable("CI", "true")
+      .withEnvVariable("NODE_ENV", "test")
+      .withExec(["bun", "run", "test:coverage"]);
   }
 
   /** ESLint with zero warnings tolerance */
@@ -57,13 +58,10 @@ export class Volume {
       .stdout();
   }
 
-  /** Vitest unit tests */
+  /** Vitest unit tests with coverage thresholds enforced */
   @func()
   async test(source: Directory): Promise<string> {
-    return this.base(source)
-      .withEnvVariable("CI", "true")
-      .withExec(["bun", "run", "test", "--run"])
-      .stdout();
+    return this.withCoverageTest(this.base(source)).stdout();
   }
 
   /** Dependency vulnerability scan */
@@ -96,10 +94,7 @@ export class Volume {
         base.withExec(["bun", "run", "lint"]).stdout(),
         base.withExec(["bun", "run", "typecheck"]).stdout(),
         base.withExec(["bun", "run", "architecture:check"]).stdout(),
-        base
-          .withEnvVariable("CI", "true")
-          .withExec(["bun", "run", "test", "--run"])
-          .stdout(),
+        this.withCoverageTest(base).stdout(),
         base.withExec(["bun", "run", "security:audit"]).stdout(),
         base
           .withEnvVariable("CI", "true")

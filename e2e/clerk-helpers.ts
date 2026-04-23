@@ -21,15 +21,33 @@ function isSignInUrl(url: string): boolean {
   }
 }
 
+export async function waitForAuthenticatedRedirect(
+  page: Page,
+  timeoutMs = 60000
+) {
+  await page.waitForURL((url) => !isSignInUrl(url.toString()), {
+    timeout: timeoutMs,
+  });
+}
+
 export async function ensureAuthenticated(
   page: Page,
-  entryPath = "/today",
+  entryPath = "/",
   timeoutMs = 60000
 ) {
   await page.goto(entryPath);
 
   if (!isSignInUrl(page.url())) {
-    return;
+    const currentPath = new URL(page.url()).pathname;
+    if (currentPath !== "/") {
+      return;
+    }
+
+    await page.goto("/coach");
+    if (!isSignInUrl(page.url())) {
+      await page.goto(entryPath);
+      return;
+    }
   }
 
   const env = loadE2EEnv();
@@ -45,6 +63,7 @@ export async function ensureAuthenticated(
     },
   });
 
+  await waitForAuthenticatedRedirect(page, timeoutMs);
   await page.goto(entryPath);
 }
 

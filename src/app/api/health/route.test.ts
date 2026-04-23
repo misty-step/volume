@@ -2,7 +2,6 @@
 
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
-// Mock resolveVersion before importing the module
 vi.mock("@/lib/version", () => ({
   resolveVersion: () => "test-version-123",
 }));
@@ -11,25 +10,34 @@ describe("GET /api/health", () => {
   const originalEnv = { ...process.env };
 
   beforeEach(() => {
-    // Reset to known state
     process.env = { ...originalEnv };
+    delete process.env.CANARY_ENDPOINT;
+    delete process.env.CANARY_API_KEY;
+    delete process.env.VERCEL_ENV;
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_123";
     process.env.NEXT_PUBLIC_CONVEX_URL = "https://test.convex.cloud";
     process.env.STRIPE_SECRET_KEY = "sk_test_123";
     process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID = "price_monthly";
     process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID = "price_annual";
     process.env.OPENROUTER_API_KEY = "sk-or-v1-test";
-    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://public@sentry.io/456";
-    process.env.SENTRY_DSN = "https://server@sentry.io/123";
+    process.env.NEXT_PUBLIC_CANARY_ENDPOINT = "https://canary.example";
+    process.env.NEXT_PUBLIC_CANARY_API_KEY = "public-key";
   });
 
   afterEach(() => {
     process.env = originalEnv;
   });
 
+  async function loadRoute() {
+    vi.resetModules();
+    vi.mock("@/lib/version", () => ({
+      resolveVersion: () => "test-version-123",
+    }));
+    return await import("./route");
+  }
+
   it("returns pass when all env vars are configured", async () => {
-    // Dynamic import to pick up env changes
-    const { GET } = await import("./route");
+    const { GET } = await loadRoute();
     const response = await GET();
     const data = await response.json();
 
@@ -40,7 +48,9 @@ describe("GET /api/health", () => {
     expect(data.checks.stripe.status).toBe("pass");
     expect(data.checks.coachRuntime.status).toBe("pass");
     expect(data.checks.errorTracking.status).toBe("pass");
-    expect(data.checks.sentry.status).toBe("pass");
+    expect(data.checks.errorTracking.clientConfigured).toBe(true);
+    expect(data.checks.errorTracking.serverConfigured).toBe(true);
+    expect(data.checks.errorTracking.serverKeySource).toBe("public_fallback");
     expect(data.checks.coachRuntime.defaultModel).toBe(
       "google/gemini-3-flash-preview"
     );
@@ -55,11 +65,7 @@ describe("GET /api/health", () => {
   it("reflects the configured coach model override", async () => {
     process.env.COACH_AGENT_MODEL = "openai/gpt-4o-mini";
 
-    vi.resetModules();
-    vi.mock("@/lib/version", () => ({
-      resolveVersion: () => "test-version-123",
-    }));
-    const { GET } = await import("./route");
+    const { GET } = await loadRoute();
     const response = await GET();
     const data = await response.json();
 
@@ -73,12 +79,7 @@ describe("GET /api/health", () => {
   it("returns fail when Convex URL is missing", async () => {
     delete process.env.NEXT_PUBLIC_CONVEX_URL;
 
-    // Re-import to pick up env changes
-    vi.resetModules();
-    vi.mock("@/lib/version", () => ({
-      resolveVersion: () => "test-version-123",
-    }));
-    const { GET } = await import("./route");
+    const { GET } = await loadRoute();
     const response = await GET();
     const data = await response.json();
 
@@ -91,11 +92,7 @@ describe("GET /api/health", () => {
   it("returns fail when OpenRouter key is missing", async () => {
     delete process.env.OPENROUTER_API_KEY;
 
-    vi.resetModules();
-    vi.mock("@/lib/version", () => ({
-      resolveVersion: () => "test-version-123",
-    }));
-    const { GET } = await import("./route");
+    const { GET } = await loadRoute();
     const response = await GET();
     const data = await response.json();
 
@@ -111,11 +108,7 @@ describe("GET /api/health", () => {
   it("treats whitespace-only OpenRouter key as missing", async () => {
     process.env.OPENROUTER_API_KEY = "   ";
 
-    vi.resetModules();
-    vi.mock("@/lib/version", () => ({
-      resolveVersion: () => "test-version-123",
-    }));
-    const { GET } = await import("./route");
+    const { GET } = await loadRoute();
     const response = await GET();
     const data = await response.json();
 
@@ -130,11 +123,7 @@ describe("GET /api/health", () => {
   it("returns fail when Stripe secret key is missing", async () => {
     delete process.env.STRIPE_SECRET_KEY;
 
-    vi.resetModules();
-    vi.mock("@/lib/version", () => ({
-      resolveVersion: () => "test-version-123",
-    }));
-    const { GET } = await import("./route");
+    const { GET } = await loadRoute();
     const response = await GET();
     const data = await response.json();
 
@@ -150,11 +139,7 @@ describe("GET /api/health", () => {
     delete process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID;
     delete process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID;
 
-    vi.resetModules();
-    vi.mock("@/lib/version", () => ({
-      resolveVersion: () => "test-version-123",
-    }));
-    const { GET } = await import("./route");
+    const { GET } = await loadRoute();
     const response = await GET();
     const data = await response.json();
 
@@ -185,11 +170,7 @@ describe("GET /api/health", () => {
         env === "production" ? "production" : "development";
       process.env.STRIPE_SECRET_KEY = key;
 
-      vi.resetModules();
-      vi.mock("@/lib/version", () => ({
-        resolveVersion: () => "test-version-123",
-      }));
-      const { GET } = await import("./route");
+      const { GET } = await loadRoute();
       const response = await GET();
       const data = await response.json();
 
@@ -205,53 +186,134 @@ describe("GET /api/health", () => {
     }
   );
 
-  it("returns pass when Canary public env provides both client and server error tracking", async () => {
-    delete process.env.NEXT_PUBLIC_SENTRY_DSN;
-    delete process.env.SENTRY_DSN;
-    process.env.NEXT_PUBLIC_CANARY_ENDPOINT = "https://canary.example";
-    process.env.NEXT_PUBLIC_CANARY_API_KEY = "public-key";
+  it("returns pass when public Canary env provides both client and server error tracking", async () => {
+    delete process.env.CANARY_ENDPOINT;
+    delete process.env.CANARY_API_KEY;
 
-    vi.resetModules();
-    vi.mock("@/lib/version", () => ({
-      resolveVersion: () => "test-version-123",
-    }));
-    const { GET } = await import("./route");
+    const { GET } = await loadRoute();
     const response = await GET();
     const data = await response.json();
 
     expect(response.status).toBe(200);
     expect(data.status).toBe("pass");
     expect(data.checks.errorTracking.status).toBe("pass");
-    expect(data.checks.errorTracking.clientProviders).toEqual({
-      sentry: false,
-      canary: true,
-    });
-    expect(data.checks.errorTracking.serverProviders).toEqual({
-      sentry: false,
-      canary: true,
-    });
-    expect(data.checks.sentry.status).toBe("fail");
+    expect(data.checks.errorTracking.clientConfigured).toBe(true);
+    expect(data.checks.errorTracking.serverConfigured).toBe(true);
+    expect(data.checks.errorTracking.serverKeySource).toBe("public_fallback");
+  });
+
+  it("returns fail in production when server Canary falls back to public config", async () => {
+    process.env.VERCEL_ENV = "production";
+    process.env.NODE_ENV = "production";
+    process.env.STRIPE_SECRET_KEY = "sk_live_123";
+    delete process.env.CANARY_ENDPOINT;
+    delete process.env.CANARY_API_KEY;
+
+    const { GET } = await loadRoute();
+    const response = await GET();
+    const data = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(data.status).toBe("fail");
+    expect(data.checks.errorTracking.status).toBe("fail");
+    expect(data.checks.errorTracking.clientConfigured).toBe(true);
+    expect(data.checks.errorTracking.serverConfigured).toBe(false);
+    expect(data.checks.errorTracking.serverKeySource).toBe("missing");
+    expect(data.checks.errorTracking.reason).toBe(
+      "missing dedicated server Canary configuration"
+    );
+  });
+
+  it("returns pass in production when dedicated server Canary env is present", async () => {
+    process.env.VERCEL_ENV = "production";
+    process.env.NODE_ENV = "production";
+    process.env.STRIPE_SECRET_KEY = "sk_live_123";
+    process.env.CANARY_ENDPOINT = "https://server-canary.example";
+    process.env.CANARY_API_KEY = "server-key";
+
+    const { GET } = await loadRoute();
+    const response = await GET();
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.status).toBe("pass");
+    expect(data.checks.errorTracking.status).toBe("pass");
+    expect(data.checks.errorTracking.clientConfigured).toBe(true);
+    expect(data.checks.errorTracking.serverConfigured).toBe(true);
+    expect(data.checks.errorTracking.serverKeySource).toBe("dedicated");
+  });
+
+  it("returns fail when no public Canary client configuration is present", async () => {
+    delete process.env.NEXT_PUBLIC_CANARY_ENDPOINT;
+    delete process.env.NEXT_PUBLIC_CANARY_API_KEY;
+    process.env.CANARY_ENDPOINT = "https://server-canary.example";
+    process.env.CANARY_API_KEY = "server-key";
+
+    const { GET } = await loadRoute();
+    const response = await GET();
+    const data = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(data.status).toBe("fail");
+    expect(data.checks.errorTracking.status).toBe("fail");
+    expect(data.checks.errorTracking.clientConfigured).toBe(false);
+    expect(data.checks.errorTracking.serverConfigured).toBe(true);
+    expect(data.checks.errorTracking.serverKeySource).toBe("dedicated");
+    expect(data.checks.errorTracking.reason).toBe(
+      "missing required Canary configuration"
+    );
+  });
+
+  it("returns fail when the public Canary endpoint is invalid", async () => {
+    process.env.NEXT_PUBLIC_CANARY_ENDPOINT = "canary.example";
+
+    const { GET } = await loadRoute();
+    const response = await GET();
+    const data = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(data.status).toBe("fail");
+    expect(data.checks.errorTracking.status).toBe("fail");
+    expect(data.checks.errorTracking.clientConfigured).toBe(false);
+    expect(data.checks.errorTracking.serverConfigured).toBe(false);
+    expect(data.checks.errorTracking.reason).toBe(
+      "invalid public Canary endpoint URL"
+    );
+  });
+
+  it("returns fail in production when the dedicated Canary endpoint is invalid", async () => {
+    process.env.VERCEL_ENV = "production";
+    process.env.NODE_ENV = "production";
+    process.env.STRIPE_SECRET_KEY = "sk_live_123";
+    process.env.CANARY_ENDPOINT = "server-canary.example";
+    process.env.CANARY_API_KEY = "server-key";
+
+    const { GET } = await loadRoute();
+    const response = await GET();
+    const data = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(data.status).toBe("fail");
+    expect(data.checks.errorTracking.status).toBe("fail");
+    expect(data.checks.errorTracking.clientConfigured).toBe(true);
+    expect(data.checks.errorTracking.serverConfigured).toBe(false);
+    expect(data.checks.errorTracking.serverKeySource).toBe("missing");
+    expect(data.checks.errorTracking.reason).toBe(
+      "invalid dedicated Canary endpoint URL"
+    );
   });
 
   it("includes version and timestamp in response", async () => {
-    vi.resetModules();
-    vi.mock("@/lib/version", () => ({
-      resolveVersion: () => "test-version-123",
-    }));
-    const { GET } = await import("./route");
+    const { GET } = await loadRoute();
     const response = await GET();
     const data = await response.json();
 
     expect(data.version).toBe("test-version-123");
-    expect(data.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/); // ISO timestamp
+    expect(data.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
   it("sets no-cache headers", async () => {
-    vi.resetModules();
-    vi.mock("@/lib/version", () => ({
-      resolveVersion: () => "test-version-123",
-    }));
-    const { GET } = await import("./route");
+    const { GET } = await loadRoute();
     const response = await GET();
 
     expect(response.headers.get("Cache-Control")).toBe(
@@ -259,34 +321,10 @@ describe("GET /api/health", () => {
     );
   });
 
-  it("returns fail when no client error-tracking provider is configured", async () => {
-    delete process.env.NEXT_PUBLIC_SENTRY_DSN;
-
-    vi.resetModules();
-    vi.mock("@/lib/version", () => ({
-      resolveVersion: () => "test-version-123",
-    }));
-    const { GET } = await import("./route");
-    const response = await GET();
-    const data = await response.json();
-
-    expect(response.status).toBe(503);
-    expect(data.status).toBe("fail");
-    expect(data.checks.errorTracking.status).toBe("fail");
-    expect(data.checks.sentry.status).toBe("fail");
-    expect(data.checks.errorTracking.reason).toBe(
-      "missing required error-tracking configuration"
-    );
-  });
-
   it("returns fail when Clerk publishable key is missing", async () => {
     delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
-    vi.resetModules();
-    vi.mock("@/lib/version", () => ({
-      resolveVersion: () => "test-version-123",
-    }));
-    const { GET } = await import("./route");
+    const { GET } = await loadRoute();
     const response = await GET();
     const data = await response.json();
 

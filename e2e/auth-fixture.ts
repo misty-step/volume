@@ -5,24 +5,13 @@ type AuthFixtures = {
   resetUserData: () => Promise<void>;
 };
 
-async function resetAuthenticatedE2EState(
-  page: Page,
-  baseURL: string | undefined
-) {
+async function resetAuthenticatedE2EState(page: Page) {
   const secret = process.env.TEST_RESET_SECRET;
   if (!secret) {
     throw new Error(
       "TEST_RESET_SECRET must be set for authenticated E2E reset fixtures."
     );
   }
-
-  if (!baseURL) {
-    throw new Error(
-      "Playwright baseURL must be set for authenticated E2E reset fixtures."
-    );
-  }
-
-  await page.goto(baseURL);
   const response = await page.evaluate(
     async ({ providedSecret }) => {
       const result = await fetch("/api/test/reset", {
@@ -47,16 +36,16 @@ async function resetAuthenticatedE2EState(
 
 export const test = base.extend<AuthFixtures>({
   page: async ({ page, baseURL }, use) => {
-    await ensureAuthenticated(page, "/today");
-    await resetAuthenticatedE2EState(page, baseURL);
+    await ensureAuthenticated(page, "/");
+    await resetAuthenticatedE2EState(page);
     await use(page);
   },
   resetUserData: async ({ page, baseURL }, use) => {
     await use(async () => {
-      await ensureAuthenticated(page, "/today");
-      await resetAuthenticatedE2EState(page, baseURL);
+      await ensureAuthenticated(page, "/");
+      await resetAuthenticatedE2EState(page);
       if (baseURL) {
-        await page.goto(`${baseURL}/today`);
+        await page.goto(`${baseURL}/coach`);
       }
     });
   },

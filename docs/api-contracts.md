@@ -35,14 +35,20 @@ on before changing handlers or callers.
     "convex": { "status": "pass | fail" },
     "stripe": { "status": "pass | fail" },
     "coachRuntime": { "status": "pass | fail" },
-    "errorTracking": { "status": "pass | fail" },
-    "sentry": { "status": "pass | fail" }
+    "errorTracking": {
+      "status": "pass | fail",
+      "clientConfigured": "boolean",
+      "serverConfigured": "boolean",
+      "serverKeySource": "dedicated | public_fallback | missing"
+    }
   }
 }
 ```
 
 - Invariant: responses are uncached with `Cache-Control: no-cache, no-store,
 must-revalidate`.
+- Production invariant: `checks.errorTracking.serverKeySource` must be
+  `dedicated`; public-key fallback is only acceptable outside production.
 
 ## `POST /api/coach`
 

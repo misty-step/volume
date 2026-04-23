@@ -34,7 +34,7 @@ This repository uses a lean local Pi foundation in `.pi/` to keep agent work rep
 
 Use the lightest proof that matches risk, then escalate:
 
-- Targeted: `bun run test --run ...` or `bun run test:affected <changed-files>`
+- Targeted: `bun run test -- <paths>` or `bun run test:affected <changed-files>`
 - Baseline: `bun run typecheck`, `bun run lint`
 - Release-safety parity: `NODE_ENV=test CI=true bun run test:coverage`, `bun run build`
 - Integration safety: `./scripts/verify-env.sh --prod-only --quiet`
