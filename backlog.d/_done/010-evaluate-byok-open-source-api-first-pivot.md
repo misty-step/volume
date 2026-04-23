@@ -1,7 +1,7 @@
 # Evaluate BYOK, open-source, API-first product pivot
 
 Priority: high
-Status: proposed
+Status: done
 Estimate: M
 
 ## Goal
@@ -19,13 +19,13 @@ a concrete go/no-go recommendation with a migration outline.
 
 ## Oracle
 
-- [ ] [behavioral] A context packet or spec exists under `docs/` describing the recommended target architecture
-- [ ] [behavioral] The exploration compares at least 3 auth models for machine access and recommends one
-- [ ] [behavioral] The exploration compares at least 2 deployment models for open-source/self-host use and recommends one
-- [ ] [behavioral] The exploration defines how BYOK works for model providers, secret storage, and fallback behavior
-- [ ] [behavioral] The exploration defines the public API surface ownership boundary: domain actions, HTTP API, OpenAPI, and MCP
-- [ ] [behavioral] The exploration includes a phased migration plan with explicit keep/change/delete decisions for Convex, Clerk, Stripe, and the current coach route
-- [ ] [behavioral] The exploration ends with a clear go/no-go rubric, major risks, and a recommended next step
+- [x] [behavioral] A context packet or spec exists under `docs/` describing the recommended target architecture
+- [x] [behavioral] The exploration compares at least 3 auth models for machine access and recommends one
+- [x] [behavioral] The exploration compares at least 2 deployment models for open-source/self-host use and recommends one
+- [x] [behavioral] The exploration defines how BYOK works for model providers, secret storage, and fallback behavior
+- [x] [behavioral] The exploration defines the public API surface ownership boundary: domain actions, HTTP API, OpenAPI, and MCP
+- [x] [behavioral] The exploration includes a phased migration plan with explicit keep/change/delete decisions for Convex, Clerk, Stripe, and the current coach route
+- [x] [behavioral] The exploration ends with a clear go/no-go rubric, major risks, and a recommended next step
 
 ## Notes
 
@@ -61,3 +61,17 @@ The recommendation must answer these questions directly:
 - `convex/auth.config.ts`
 - `src/proxy.ts`
 - `src/app/api/stripe/checkout/route.ts`
+
+## What Was Built
+
+- Added `docs/specs/010-byok-open-source-api-first-pivot.md` with the target
+  architecture recommendation.
+- Recommended a selective hybrid API-first pivot: public domain actions over
+  HTTP/OpenAPI, MCP as a thin adapter, OpenRouter-compatible BYOK first, and
+  self-host parity through Convex before any database rewrite.
+- Compared four machine-auth models and three deployment models.
+- Defined BYOK provider, secret-storage, and fallback behavior.
+- Captured keep/change/delete decisions for Convex, Clerk, Stripe, and the
+  current coach route.
+- Added a phased migration plan, go/no-go rubric, risks, verification plan, and
+  source list.
