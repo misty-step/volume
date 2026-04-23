@@ -547,6 +547,14 @@ export class ArchitectureChecker {
       return "src/hooks";
     }
 
+    if (relativePath.startsWith("src/lib/coach/")) {
+      return "src/lib/coach";
+    }
+
+    if (relativePath.startsWith("src/lib/domain/")) {
+      return "src/lib/domain";
+    }
+
     if (relativePath.startsWith("src/lib/")) {
       return "src/lib";
     }

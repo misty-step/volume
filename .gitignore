@@ -67,3 +67,4 @@ thinktank_*/
 
 # Claude agent worktrees
 .claude/worktrees/
+.agents/worktrees/

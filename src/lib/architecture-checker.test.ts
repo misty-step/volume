@@ -184,6 +184,26 @@ describe("ArchitectureChecker", () => {
     );
   });
 
+  it("fails when domain modules depend on coach modules", () => {
+    const repoRoot = createRepo({
+      "src/lib/coach/tools/schemas.ts": "export const schema = true;\n",
+      "src/lib/domain/actions/schemas.ts":
+        'import { schema } from "@/lib/coach/tools/schemas";\nexport const actionSchema = schema;\n',
+    });
+
+    const checker = new ArchitectureChecker(repoRoot);
+    const result = checker.check();
+
+    expect(result.passed).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        code: "boundary",
+        file: "src/lib/domain/actions/schemas.ts",
+        importPath: "@/lib/coach/tools/schemas",
+      })
+    );
+  });
+
   it("fails when src/components depends on app routes", () => {
     const repoRoot = createRepo({
       "src/app/page.tsx": "export const page = 'home';\n",

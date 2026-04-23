@@ -5,6 +5,8 @@ export type ModuleDomain =
   | "src/components"
   | "src/contexts"
   | "src/hooks"
+  | "src/lib/coach"
+  | "src/lib/domain"
   | "src/lib"
   | "other";
 
@@ -54,6 +56,29 @@ export const BOUNDARY_RULES: BoundaryRule[] = [
       "Library modules must stay independent of route, UI, and hook layers.",
   },
   {
+    fromDomain: "src/lib/coach",
+    forbiddenDomains: [
+      "src/app",
+      "src/components",
+      "src/contexts",
+      "src/hooks",
+    ],
+    message:
+      "Coach library modules must stay independent of route, UI, and hook layers.",
+  },
+  {
+    fromDomain: "src/lib/domain",
+    forbiddenDomains: [
+      "src/app",
+      "src/components",
+      "src/contexts",
+      "src/hooks",
+      "src/lib/coach",
+    ],
+    message:
+      "Domain modules must stay independent of route, UI, hook, and coach layers.",
+  },
+  {
     fromDomain: "packages/core",
     forbiddenDomains: [
       "convex",
@@ -61,6 +86,8 @@ export const BOUNDARY_RULES: BoundaryRule[] = [
       "src/components",
       "src/contexts",
       "src/hooks",
+      "src/lib/coach",
+      "src/lib/domain",
       "src/lib",
     ],
     message:

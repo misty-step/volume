@@ -4,7 +4,7 @@ import { api } from "./_generated/api";
 import schema from "./schema";
 import type { TestConvex } from "convex-test";
 import type { Id } from "./_generated/dataModel";
-import { MAX_ACTIVE_FACT_MEMORIES } from "@/lib/coach/memory";
+import { MAX_ACTIVE_FACT_MEMORIES } from "@/lib/domain/memory";
 
 declare global {
   interface ImportMeta {

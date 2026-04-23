@@ -1,4 +1,4 @@
-import { z, type ZodTypeAny } from "zod";
+import type { ZodTypeAny } from "zod";
 import { runAnalyticsOverviewTool } from "@/lib/coach/tools/tool-analytics-overview";
 import { runBulkLogTool } from "@/lib/coach/tools/tool-bulk-log";
 import { runDateRangeSetsTool } from "@/lib/coach/tools/tool-date-range-sets";
@@ -42,30 +42,26 @@ import type {
   ToolResult,
 } from "@/lib/coach/tools/types";
 import {
+  getDomainActionDefinition,
+  type DomainActionName,
+} from "@/lib/domain/actions/registry";
+import {
   BulkLogArgsSchema,
   DateRangeSetsArgsSchema,
   DeleteSetArgsSchema,
   EditSetArgsSchema,
+  EmptyArgsSchema,
   ExerciseHistoryArgsSchema,
   ExerciseNameArgsSchema,
   ExerciseReportArgsSchema,
-  GetInsightsArgsSchema,
   HistoryArgsSchema,
   LogSetArgsSchema,
-  LogSetsArgsSchema,
-  ManageExerciseArgsSchema,
-  ManageMemoriesArgsSchema,
   MergeExerciseArgsSchema,
-  ModifySetArgsSchema,
-  QueryExerciseArgsSchema,
-  QueryWorkoutsArgsSchema,
   RenameExerciseArgsSchema,
-  ReportHistoryArgsSchema,
   SetSoundArgsSchema,
   SetWeightUnitArgsSchema,
   UpdateMuscleGroupsArgsSchema,
   UpdatePreferencesArgsSchema,
-  UpdateSettingsArgsSchema,
   WorkoutSessionArgsSchema,
 } from "@/lib/coach/tools/schemas";
 
@@ -82,8 +78,6 @@ export type CoachToolDefinition = {
   run: CoachToolRunner;
 };
 
-const EmptyArgsSchema = z.object({});
-
 function defineTool(
   name: string,
   description: string,
@@ -93,72 +87,51 @@ function defineTool(
   return { name, description, inputSchema, run };
 }
 
+function defineDomainTool(
+  name: DomainActionName,
+  run: CoachToolRunner
+): CoachToolDefinition {
+  const action = getDomainActionDefinition(name);
+  if (!action) {
+    throw new Error(`Unknown domain action: ${name}`);
+  }
+
+  return defineTool(action.name, action.description, action.inputSchema, run);
+}
+
 export const coachToolDefinitions = [
-  defineTool(
-    "log_sets",
-    "Log one or more workout sets. Use action=log_set with a single set object for one set, or action=bulk_log with a sets array when the user reports multiple sets or exercises.",
-    LogSetsArgsSchema,
-    (rawArgs, ctx, options) => runLogSetsTool(rawArgs, ctx, options)
+  defineDomainTool("log_sets", (rawArgs, ctx, options) =>
+    runLogSetsTool(rawArgs, ctx, options)
   ),
-  defineTool(
-    "query_workouts",
-    "Read workout-level data. Use action=today_summary for today's totals, workout_session for one day, date_range for a span, or history_overview for recent sets.",
-    QueryWorkoutsArgsSchema,
-    (rawArgs, ctx) => runQueryWorkoutsTool(rawArgs, ctx)
+  defineDomainTool("query_workouts", (rawArgs, ctx) =>
+    runQueryWorkoutsTool(rawArgs, ctx)
   ),
-  defineTool(
-    "query_exercise",
-    "Read one exercise's data. Use action=snapshot for summary stats, trend for 14-day progression, or history for recent logged sets.",
-    QueryExerciseArgsSchema,
-    (rawArgs, ctx) => runQueryExerciseTool(rawArgs, ctx)
+  defineDomainTool("query_exercise", (rawArgs, ctx) =>
+    runQueryExerciseTool(rawArgs, ctx)
   ),
-  defineTool(
-    "manage_exercise",
-    "Manage exercise library entries. Use action=rename, delete, restore, merge, or update_muscle_groups.",
-    ManageExerciseArgsSchema,
-    (rawArgs, ctx) => runManageExerciseTool(rawArgs, ctx)
+  defineDomainTool("manage_exercise", (rawArgs, ctx) =>
+    runManageExerciseTool(rawArgs, ctx)
   ),
-  defineTool(
-    "modify_set",
-    "Modify an existing set. Use action=edit to change a set or action=delete to remove a set by set_id or latest exercise set.",
-    ModifySetArgsSchema,
-    (rawArgs, ctx) => runModifySetTool(rawArgs, ctx)
+  defineDomainTool("modify_set", (rawArgs, ctx) =>
+    runModifySetTool(rawArgs, ctx)
   ),
-  defineTool(
-    "update_settings",
-    "Update coach settings. Use action=weight_unit, sound, or preferences.",
-    UpdateSettingsArgsSchema,
-    (rawArgs, ctx) => runUpdateSettingsTool(rawArgs, ctx)
+  defineDomainTool("update_settings", (rawArgs, ctx) =>
+    runUpdateSettingsTool(rawArgs, ctx)
   ),
-  defineTool(
-    "get_insights",
-    "Read coach insights. Use action=analytics_overview for streaks and PRs, or focus_suggestions for today's training priorities.",
-    GetInsightsArgsSchema,
-    (rawArgs, ctx) => runGetInsightsTool(rawArgs, ctx)
+  defineDomainTool("get_insights", (rawArgs, ctx) =>
+    runGetInsightsTool(rawArgs, ctx)
   ),
-  defineTool(
-    "get_settings_overview",
-    "Get profile preferences, subscription status, and billing actions.",
-    EmptyArgsSchema,
-    async (_rawArgs, ctx) => runSettingsOverviewTool(ctx)
+  defineDomainTool("get_settings_overview", async (_rawArgs, ctx) =>
+    runSettingsOverviewTool(ctx)
   ),
-  defineTool(
-    "manage_memories",
-    "Remember or forget durable user context such as injuries, goals, and preferences.",
-    ManageMemoriesArgsSchema,
-    (rawArgs, ctx) => runManageMemoriesTool(rawArgs, ctx)
+  defineDomainTool("manage_memories", (rawArgs, ctx) =>
+    runManageMemoriesTool(rawArgs, ctx)
   ),
-  defineTool(
-    "get_exercise_library",
-    "List exercise library including archived entries and available actions.",
-    EmptyArgsSchema,
-    async (_rawArgs, ctx) => runExerciseLibraryTool(ctx)
+  defineDomainTool("get_exercise_library", async (_rawArgs, ctx) =>
+    runExerciseLibraryTool(ctx)
   ),
-  defineTool(
-    "get_report_history",
-    "List recent AI report history entries.",
-    ReportHistoryArgsSchema,
-    (rawArgs, ctx) => runReportHistoryTool(rawArgs, ctx)
+  defineDomainTool("get_report_history", (rawArgs, ctx) =>
+    runReportHistoryTool(rawArgs, ctx)
   ),
   defineTool(
     "show_workspace",
