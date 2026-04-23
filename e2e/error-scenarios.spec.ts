@@ -60,11 +60,7 @@ test.describe("404 and Navigation Errors", () => {
 });
 
 test.describe("Coach Composer Validation", () => {
-  test("Send action stays disabled for blank input", async ({
-    page,
-    resetUserData,
-  }) => {
-    await resetUserData();
+  test("Send action stays disabled for blank input", async ({ page }) => {
     await openCoachWorkspace(page, "/");
 
     const input = coachInput(page);
